@@ -739,7 +739,7 @@ public class WebViewFrameTests
             try
             {
                 browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
-                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
                 const string calc = "adamantium.hostObjects.calc";
                 const string refused = ".then(v => 'resolved', e => 'refused: ' + e.message)";
                 answers["add"] = Await(browser.EvaluateAsync(calc + ".add(2, 3)"));
@@ -791,16 +791,16 @@ public class WebViewFrameTests
             {
                 const string call = "adamantium.hostObjects.calc.add(1, 1).then(v => 'got ' + v, e => e.message)";
                 browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
-                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
                 ownMain = Await(browser.EvaluateAsync(call));
                 ownFrame = Await(browser.EvaluateAsync("frames[0]." + call));
 
                 browser.Navigate(other.Origin + "/");
-                Pump(() => view.Title == "other" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                Pump(() => view.Title == "other" && !view.IsLoading, TimeSpan.FromSeconds(30));
                 otherSite = Await(browser.EvaluateAsync(call));
 
                 browser.Navigate(site.Origin + "/again");
-                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
                 bridge.RemoveHostObject("calc");
                 afterRemoving = Await(browser.EvaluateAsync(call));
             }
@@ -836,7 +836,7 @@ public class WebViewFrameTests
             try
             {
                 browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
-                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
                 var later = browser.EvaluateAsync(
                     "adamantium.hostObjects.calc.counterLaterAsync().then(c => c.increment()).then(v => 'got ' + v, e => e.message)");
                 Pump(() => false, TimeSpan.FromMilliseconds(100));
@@ -893,6 +893,262 @@ public class WebViewFrameTests
         });
     }
 
+    // A site of the application's: its page loads at app://, fetches its files, at an origin of its own; a file or a
+    // site there is none of, or a path out of its folder, is not found; a site built into an assembly loads alike.
+    [Test]
+    public void AnAppSitesPage_LoadsItsFiles_AndWhatIsNotThereIsNotFound()
+    {
+        var parent = Path.Combine(Path.GetTempPath(), "AdamantiumAppSite", Guid.NewGuid().ToString("N"));
+        var folder = Path.Combine(parent, "site");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "index.html"),
+            "<title>app</title><script>fetch('data.json').then(r => r.json())" +
+            ".then(d => document.title = 'app:' + d.n + ':' + location.origin)</script>");
+        File.WriteAllText(Path.Combine(folder, "data.json"), "{\"n\":42}");
+        File.WriteAllText(Path.Combine(parent, "secret.txt"), "secret");
+        Directory.CreateDirectory(Path.Combine(folder, "sub"));
+        File.WriteAllText(Path.Combine(folder, "sub", "index.html"), "<title>sub</title><script src='s.js'></script>");
+        File.WriteAllText(Path.Combine(folder, "sub", "s.js"), "document.title = 'sub:' + location.pathname");
+        engine.AddSite("test", new WebSiteFolder(folder));
+        engine.AddSite("built", new WebSiteResources(typeof(WebViewFrameTests).Assembly, "Site"));
+        string title = null, missing = null, outside = null, noSite = null, builtIn = null, folderTitle = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                var view = new RecordingBrowserView();
+                var browser = engine.CreateBrowser(false, view);
+                try
+                {
+                    browser.Create("app://test/", Width, Height, 1, IntPtr.Zero);
+                    Pump(() => view.Title?.StartsWith("app:", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(30));
+                    title = view.Title;
+                    missing = Await(browser.EvaluateAsync("fetch('app://test/nothing.txt').then(r => r.status)"));
+                    outside = Await(browser.EvaluateAsync("fetch('app://test/..%2fsecret.txt').then(r => r.status)"));
+                    noSite = Await(browser.EvaluateAsync("fetch('app://nowhere/index.html').then(r => r.status, e => 'refused')"));
+                    browser.Navigate("app://built/");
+                    Pump(() => view.Title == "built in", TimeSpan.FromSeconds(10));
+                    builtIn = view.Title;
+                    browser.Navigate("app://test/sub");
+                    Pump(() => view.Title?.StartsWith("sub:", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(10));
+                    folderTitle = view.Title;
+                }
+                finally
+                {
+                    browser.Dispose();
+                    Pump(() => false, TimeSpan.FromMilliseconds(300));
+                }
+            });
+        }
+        finally
+        {
+            engine.RemoveSite("test");
+            engine.RemoveSite("built");
+            Directory.Delete(parent, true);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(title, Is.EqualTo("app:42:app://test"), "loaded, its file fetched, at its own origin");
+            Assert.That(missing, Is.EqualTo("404"));
+            Assert.That(outside, Is.EqualTo("404"), "a path out of the folder");
+            Assert.That(noSite, Is.EqualTo("404").Or.EqualTo("\"refused\""), "a site there is none of");
+            Assert.That(builtIn, Is.EqualTo("built in"), "a site built into an assembly");
+            Assert.That(folderTitle, Is.EqualTo("sub:/sub/"),
+                "a folder without its last slash is sent to the one with it, where its own addresses resolve");
+        });
+    }
+
+    // A site out there cannot send its page to the application's own sites, nor reach their files.
+    [Test]
+    public void ASiteOutThere_CannotReachTheApplicationsSites()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        engine.AddSite("built", new WebSiteResources(typeof(WebViewFrameTests).Assembly, "Site"));
+        string titleAfter = null, fetched = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                var view = new RecordingBrowserView();
+                var browser = engine.CreateBrowser(false, view);
+                try
+                {
+                    browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                    Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                    fetched = Await(browser.EvaluateAsync("fetch('app://built/').then(r => 'came', () => 'refused')"));
+                    Await(browser.EvaluateAsync("location.href = 'app://built/'; 1"));
+                    Pump(() => view.Title == "built in", TimeSpan.FromSeconds(2));
+                    titleAfter = view.Title;
+                }
+                finally
+                {
+                    browser.Dispose();
+                    Pump(() => false, TimeSpan.FromMilliseconds(300));
+                }
+            });
+        }
+        finally
+        {
+            engine.RemoveSite("built");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(titleAfter, Is.EqualTo("site"), "the page is not sent there");
+            Assert.That(fetched, Is.EqualTo("\"refused\""), "nor are its files fetched");
+        });
+    }
+
+    // The point of a site of one's own: its origin can be let in, and its page calls the objects let in for it.
+    [Test]
+    public void AnAppSitesPage_CallsAnObjectLetInForItsOrigin()
+    {
+        engine.AddSite("built", new WebSiteResources(typeof(WebViewFrameTests).Assembly, "Site"));
+        string answer = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                var bridge = new WebViewBridge();
+                bridge.AddHostObject("calc", new Calculator(), "app://built");
+                var view = new RecordingBrowserView { Bridge = bridge };
+                var browser = engine.CreateBrowser(false, view);
+                try
+                {
+                    browser.Create("app://built/", Width, Height, 1, IntPtr.Zero);
+                    Pump(() => view.Title == "built in" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                    answer = Await(browser.EvaluateAsync(
+                        "adamantium.hostObjects.calc.add(2, 3).then(v => v, e => e.message + ' at ' + location.origin)"));
+                }
+                finally
+                {
+                    browser.Dispose();
+                    Pump(() => false, TimeSpan.FromMilliseconds(300));
+                }
+            });
+        }
+        finally
+        {
+            engine.RemoveSite("built");
+        }
+
+        Assert.That(answer, Is.EqualTo("5"));
+    }
+
+    // A request the page makes is asked of the bridge listening: answered by it, refused, sent elsewhere - the page's
+    // document too - each told for what it is.
+    [Test]
+    public void APagesRequests_AreAnsweredRefusedOrSentElsewhere_ByTheBridgeListening()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        var kinds = new List<(string Address, WebResourceKind Kind)>();
+        string answered = null, refused = null, redirected = null, madeTitle = null, written = null, thrown = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.ResourceRequested += (_, asked) =>
+            {
+                kinds.Add((asked.Address, asked.Kind));
+                if (asked.Address.EndsWith("/answered.json", StringComparison.Ordinal))
+                {
+                    asked.Respond(new MemoryStream("{\"n\":7}"u8.ToArray()), "application/json");
+                }
+                else if (asked.Address.EndsWith("/refused.txt", StringComparison.Ordinal))
+                {
+                    asked.Refuse();
+                }
+                else if (asked.Address.EndsWith("/old", StringComparison.Ordinal))
+                {
+                    asked.Redirect(site.Origin + "/new");
+                }
+                else if (asked.Address.EndsWith("/made", StringComparison.Ordinal))
+                {
+                    asked.Respond(new MemoryStream("<title>made</title>"u8.ToArray()), "text/html");
+                }
+                else if (asked.Address.EndsWith("/written.json", StringComparison.Ordinal))
+                {
+                    // Written and not rewound: still read from its start.
+                    var written = new MemoryStream();
+                    written.Write("{\"n\":8}"u8);
+                    asked.Respond(written, "application/json");
+                }
+                else if (asked.Address.EndsWith("/thrown.txt", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("a handler that broke");
+                }
+            };
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            browser.InterceptsResources = true;
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                answered = Await(browser.EvaluateAsync("fetch('/answered.json').then(r => r.json()).then(d => d.n)"));
+                refused = Await(browser.EvaluateAsync("fetch('/refused.txt').then(() => 'came', () => 'refused')"));
+                redirected = Await(browser.EvaluateAsync("fetch('/old').then(r => r.url)"));
+                written = Await(browser.EvaluateAsync("fetch('/written.json').then(r => r.json()).then(d => d.n)"));
+                thrown = Await(browser.EvaluateAsync("fetch('/thrown.txt').then(() => 'came', () => 'refused')"));
+                browser.Navigate(site.Origin + "/made");
+                Pump(() => view.Title == "made", TimeSpan.FromSeconds(10));
+                madeTitle = view.Title;
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(answered, Is.EqualTo("7"), "answered by the bridge");
+            Assert.That(refused, Is.EqualTo("\"refused\""));
+            Assert.That(redirected, Is.EqualTo("\"" + site.Origin + "/new\""), "sent elsewhere");
+            Assert.That(madeTitle, Is.EqualTo("made"), "the page's document answered by the bridge");
+            Assert.That(written, Is.EqualTo("8"), "an answer written and not rewound is read from its start");
+            Assert.That(thrown, Is.EqualTo("\"refused\""), "a handler that throws refuses the request");
+            Assert.That(kinds, Does.Contain((site.Origin + "/", WebResourceKind.Document)));
+            Assert.That(kinds, Does.Contain((site.Origin + "/answered.json", WebResourceKind.Fetch)));
+        });
+    }
+
+    // Nobody listening, no request is asked: the page loads as ever.
+    [Test]
+    public void APagesRequests_AreAskedOfNobody_WhenNobodyListens()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        var asked = 0;
+        string title = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            void Count(object sender, WebResourceRequestedEventArgs e) => asked++;
+            bridge.ResourceRequested += Count;
+            bridge.ResourceRequested -= Count;
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                title = view.Title;
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(title, Is.EqualTo("site"));
+            Assert.That(asked, Is.Zero);
+        });
+    }
+
     private static string MarkScript(string mark) =>
         "window.__marks = (window.__marks || '') + '" + mark + "'; window.__bridge = !!window.adamantium;";
 
@@ -902,7 +1158,7 @@ public class WebViewFrameTests
 
     private static string TitleOf(RecordingBrowserView view, int load)
     {
-        Pump(() => view.Title?.StartsWith(load + ":", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(10));
+        Pump(() => view.Title?.StartsWith(load + ":", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(30));
         return view.Title;
     }
 

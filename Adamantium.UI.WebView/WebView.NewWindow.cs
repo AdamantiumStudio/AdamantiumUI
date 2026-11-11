@@ -54,6 +54,7 @@ public partial class WebView
         }
 
         browser = adopted;
+        ResourceInterceptionChanged();
         adopted.Adopt(this, waited);
         adopted.Resize(width, height, scale);
         return adopted;

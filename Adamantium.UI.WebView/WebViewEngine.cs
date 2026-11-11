@@ -26,8 +26,11 @@ public sealed unsafe class WebViewEngine : IDisposable
     private readonly Timer pumpTimer;
     private readonly List<WebViewBrowser> browsers = [];
     private readonly WebViewSitePermissions sitePermissions;
+    private readonly Lock sitesLock = new();
+    private readonly Dictionary<string, IWebSiteContent> sites = new(StringComparer.OrdinalIgnoreCase);
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
+    private WebSiteSchemeHandlerFactory siteFactory;
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
@@ -53,6 +56,44 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         devices.DeviceChangeBegin += OnDeviceChanging;
         devices.DeviceChangeEnd += OnDeviceChanged;
+    }
+
+    /// <summary>Serves <paramref name="content"/> as the site <c>app://<paramref name="host"/>/</c>, at an origin of
+    /// its own - one an object of the application's can be let in for - with what a secure site has: fetch, modules,
+    /// storage. A site added under the host before is replaced; every page of every view reaches it.</summary>
+    public void AddSite(string host, IWebSiteContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (string.IsNullOrEmpty(host) || Uri.CheckHostName(host) != UriHostNameType.Dns)
+        {
+            throw new ArgumentException($"'{host}' is no host name.", nameof(host));
+        }
+
+        lock (sitesLock)
+        {
+            sites[ChromiumHost(host)] = content;
+        }
+    }
+
+    // A host as Chromium asks for it: an international name in punycode.
+    private static string ChromiumHost(string host) => new System.Globalization.IdnMapping().GetAscii(host);
+
+    /// <summary>The site <c>app://<paramref name="host"/>/</c> is served no more; false for one not added.</summary>
+    public bool RemoveSite(string host)
+    {
+        lock (sitesLock)
+        {
+            return !string.IsNullOrEmpty(host) && sites.Remove(ChromiumHost(host));
+        }
+    }
+
+    // The site a request names, asked on CEF's IO thread.
+    private IWebSiteContent Site(string host)
+    {
+        lock (sitesLock)
+        {
+            return sites.GetValueOrDefault(host);
+        }
     }
 
     /// <summary>The answers sites were given - what each may use, or may not - kept in the profile, so a site is not
@@ -421,6 +462,18 @@ public sealed unsafe class WebViewEngine : IDisposable
             CefStrings.Clear(&settings.log_file);
         }
 
+        siteFactory = new WebSiteSchemeHandlerFactory(Site);
+        var scheme = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&scheme, WebViewSchemes.App);
+            CefInterop.CefRegisterSchemeHandlerFactory(&scheme, null, siteFactory.Shared);
+        }
+        finally
+        {
+            CefStrings.Clear(&scheme);
+        }
+
         initialized = true;
     }
 
@@ -448,6 +501,8 @@ public sealed unsafe class WebViewEngine : IDisposable
     {
         app?.Release();
         app = null;
+        siteFactory?.Release();
+        siteFactory = null;
         browserProcess?.Release();
         browserProcess = null;
         mainArguments?.Dispose();

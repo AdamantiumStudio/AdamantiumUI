@@ -20,6 +20,12 @@
         <Compile Include="..\Adamantium.UI.WebView\Cef\CefLibrary.cs" Link="Cef\CefLibrary.cs" />
         <Compile Include="..\Adamantium.UI.WebView\Cef\CefMainArguments.cs" Link="Cef\CefMainArguments.cs" />
         <Compile Include="..\Adamantium.UI.WebView\Cef\CefSubprocess.cs" Link="Cef\CefSubprocess.cs" />
+        <!-- The application's schemes, registered in every process alike. -->
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefObject.cs" Link="Cef\CefObject.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefRefCounting.cs" Link="Cef\CefRefCounting.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefStrings.cs" Link="Cef\CefStrings.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\WebViewSchemes.cs" Link="Cef\WebViewSchemes.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\WebViewSubprocessApp.cs" Link="Cef\WebViewSubprocessApp.cs" />
     </ItemGroup>
 
     <ItemGroup>

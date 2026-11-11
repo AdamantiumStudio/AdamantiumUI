@@ -232,6 +232,9 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void HostContextGone(WebViewBrowser browser, string context) => Bridge?.OnHostContextGone(browser, context);
 
+    public void ResourceRequested(WebViewBrowser browser, WebResourceRequestedEventArgs asked) =>
+        Bridge?.OnResourceRequested(asked);
+
     public void LoadFailed(WebViewBrowser browser, WebViewLoadError error) => Error = error;
 
     public bool StartDragging(WebViewBrowser browser, DataPackage data, DragDropEffects allowed)

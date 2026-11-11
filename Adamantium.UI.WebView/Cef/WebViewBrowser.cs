@@ -27,6 +27,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
+    private volatile bool interceptsResources;
     private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewJsDialogHandler jsDialogHandler;
     private readonly WebViewDialogHandler dialogHandler;
@@ -341,7 +342,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return false;
         }
 
-        var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this));
+        var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this),
+            asked => this.view.ResourceRequested(this, asked));
         if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
         {
             // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
@@ -351,6 +353,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
         popup.address = url;
         popup.createdWith = url;
+        // Its requests are the opener's view's to decide while nobody shows it - from its very first.
+        popup.interceptsResources = interceptsResources;
         popup.ViewSize = ViewSize;
         popup.Scale = Scale;
         popup.parentWindow = parentWindow;
@@ -1644,6 +1648,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devToolsSocket?.Dispose();
         devToolsSocket = null;
         closing = true;
+        // The page's requests are asked of nobody now, and what still waits is refused while CEF is there.
+        interceptsResources = false;
+        requestHandler.RefuseWaiting();
         // What the page still asks is answered while CEF is there to hear it: the view may answer only later, CEF gone.
         askedDialog?.Answer(false, null);
         askedDialog = null;
@@ -1683,6 +1690,20 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         dialogHandler.Release();
         permissionHandler.Release();
     }
+
+    /// <summary>Whether the view listens to the page's requests: each is asked of it then, else none is - read on
+    /// CEF's IO thread.</summary>
+    public bool InterceptsResources
+    {
+        get => interceptsResources;
+        set => interceptsResources = value;
+    }
+
+    /// <summary>Whether the browser is closing, or closed.</summary>
+    internal bool IsClosing => closing;
+
+    /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
+    internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);
 
     private void Close()
     {
