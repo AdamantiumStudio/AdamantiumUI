@@ -7,6 +7,16 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.PlaneBounds`: the plane's edges. Empty - the default - leaves it endless, as before. With edges the
+  camera stays on the plane through every move - drag, wheel, zoom, inertia, fit: scrolled no further than its edges,
+  centered across where it is narrower than the viewport, at the top where it is shorter; zooming out centers it and a
+  zoom near an edge presses it to the edge. A finger pulls it a little past an edge against a growing pull and it
+  springs back; a flick meets the edge the same way, a mouse's coast stops at it. Scroll bars (`PART_HorizontalScrollBar`,
+  `PART_VerticalScrollBar` in the canvas's template) show the camera along an axis there is somewhere to go and move
+  it. `ClampToPlane` says where a camera would be kept. The canvas's panel edits the edges.
+- `InfiniteCanvas.WheelMode` (`CanvasWheelMode.Zoom`, `Scroll`, `None`): the wheel zooms, as before, or scrolls as
+  through a document - down and up, across with Shift or a tilted wheel, Ctrl with the wheel zooming - or does nothing.
+  The canvas's panel chooses it.
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
   scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
   shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.
@@ -208,6 +218,7 @@ All packages share one version.
 
 ### Changed
 
+- `InfiniteCanvas.ZoomWithWheel` is gone: `WheelMode` says what the wheel does - `Zoom` for true, `None` for false.
 - A `WebView` out of sight - a tab not shown, a minimized window, a page another opened and not yet looked at - gives
   its frame surfaces back to the GPU (a few, each the page's size in pixels: ~26 MB at 4K) and gets new ones with a
   whole frame once it is seen; each background tab of a browser held them for good.

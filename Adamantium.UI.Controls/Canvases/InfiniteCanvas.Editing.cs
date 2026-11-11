@@ -1086,12 +1086,22 @@ public partial class InfiniteCanvas
 
     private void OnWheel(object sender, PointerWheelEventArgs e)
     {
-        if (!ZoomWithWheel || e.Handled) return;
+        if (WheelMode == CanvasWheelMode.None || e.Handled) return;
 
         // A wheel a control on the plane left alone is the camera's - a node has nothing to scroll. Only a panel, or a
         // scroller with somewhere to go, keeps it even unused: one at its end leaves the wheel unhandled, and a zoom
         // there would be a list that jumped into the camera at its last row.
         if (WheelStaysWith(e.OriginalSource)) return;
+
+        var control = (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+        if (WheelMode == CanvasWheelMode.Scroll && !control)
+        {
+            // Shift turns the wheel across; a tilted wheel is across already, turned right moving the view right.
+            var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+            ScrollByWheel(e.IsHorizontal ? -e.Delta : e.Delta, e.IsHorizontal || shift);
+            e.Handled = true;
+            return;
+        }
 
         // ZoomStep is one standard notch (120) raised to how far the wheel turned, so a hi-res wheel firing many
         // fractional events zooms the same total as a standard one.
@@ -1537,7 +1547,7 @@ public partial class InfiniteCanvas
 
         if (e.State == ManipulationState.Started)
         {
-            CatchCamera();
+            TakeByHand();
             _coast.ResetTracking();
             _zoomCoast.ResetTracking();
 
@@ -1555,15 +1565,18 @@ public partial class InfiniteCanvas
         if (e.State == ManipulationState.Completed)
         {
             // Both throws at once: a pinch let go while spreading coasts the zoom about where it was, and drifts.
-            var coasts = IsInertiaEnabled && (_coast.Release(e.Timestamp) | _zoomCoast.Release(e.Timestamp));
-            if (!coasts) RememberLayout();
+            var panCoasts = IsInertiaEnabled && _coast.Release(e.Timestamp);
+            var zoomCoasts = IsInertiaEnabled && _zoomCoast.Release(e.Timestamp);
+            LetGoByHand(panCoasts, zoomCoasts);
+            if (!panCoasts && !zoomCoasts) RememberLayout();
             return;
         }
 
         if (e.State != ManipulationState.Delta) return;
 
-        if (e.Scale != 1) SetScaleAt(e.Origin - e.Translation, Scale * e.Scale);
-        if (e.Translation != Vector2<double>.Zero) Travel(_travel + e.Translation);
+        if (e.Scale != 1) ScaleByHand(e.Origin - e.Translation, e.Scale);
+
+        if (e.Translation != Vector2<double>.Zero) MoveByHand(e.Translation);
 
         _coast.Track(e.Timestamp);
 
@@ -1611,6 +1624,9 @@ public partial class InfiniteCanvas
             // threw away every press meant for the drawing. The pane is met first walking up, which is the whole fix.
             if (at is CanvasPane) return true;
             if (ReferenceEquals(at, _chromeLayer)) return false;
+
+            // The scroll bars move the camera themselves; a press on one is not a press on the plane.
+            if (ReferenceEquals(at, _horizontalBar) || ReferenceEquals(at, _verticalBar)) return true;
 
             // A LAYER THAT HOSTS CONTROLS, whichever of them it is: a press on any of them came from something standing
             // on the plane rather than from the plane.
