@@ -223,8 +223,8 @@ public class CanvasMouseBandTests
     {
         var canvas = Sized(Plane);
         var at = PullRight(canvas, 100);
-        for (var i = 1; i <= 5; i++) MoveTo(canvas, 200 - i * 60, at += Step);
-        Assume.That(canvas.Offset.X, Is.GreaterThan(-200), "let go near the edge");
+        for (var i = 1; i <= 5; i++) MoveTo(canvas, 200 - i * 30, at += Step);   // ends 50 inside, 3000 px/s
+        Assert.That(canvas.Offset.X, Is.EqualTo(-50).Within(1e-9), "let go just inside the edge");
         var letGo = canvas.Offset.X;
         Release(canvas, at);
 

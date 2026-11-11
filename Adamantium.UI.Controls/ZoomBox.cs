@@ -138,7 +138,9 @@ public class ZoomBox : ContentControl
         _zoom.Stop();
         var anchor = this.TranslatePoint(e.Origin - e.Translation, _scroll);
         var next = Math.Clamp(ScaleX * e.Scale, MinScale, MaxScale);
-        var target = ((_pendingOffset ?? _scroll.ScrollOffset) + anchor) * (float)(next / ScaleX) - anchor - e.Translation;
+        // From where the content is SHOWN, a rubber band's stretch included, so the pinch does not jump it by that much.
+        var shown = _scroll.ScrollOffset + _scroll.OverscrollOffset;
+        var target = ((_pendingOffset ?? shown) + anchor) * (float)(next / ScaleX) - anchor - e.Translation;
         if (next == ScaleX)
         {
             if (_pendingOffset != null)

@@ -24,16 +24,15 @@ public partial class InfiniteCanvas
     // How far one notch of the wheel scrolls, in screen pixels - three lines, as a scroll viewer's.
     private const double WheelScrollPixels = 48;
 
-    // How the band pulls: the further past the edge, the less a move of the hand moves the plane - never past a
-    // viewport's length however far it is pulled.
-    private const double BandStiffness = 0.55;
-
     // The wheel's scroll, gliding to where the notches add up to - written like any other move, so kept on the plane.
     private readonly PanInertia _glide;
 
-    // The way back from past an edge: it glides how far the plane is past its edge down to nothing, measured against
-    // the edge as it is at each step - so a zoom or a resize meanwhile does not leave it aimed at an edge long gone.
-    private readonly PanInertia _springBack;
+    // A hand's flick on a plane with edges, and the way back from past one: written as it is, past the edges, and kept
+    // in by the inertia itself against the edge as it is at each step - so a zoom or a resize meanwhile does not leave
+    // it aimed at an edge long gone.
+    private readonly PanInertia _edgeCoast;
+
+    private const double FarthestPastShare = 0.12;
 
     // The viewport the camera is kept against. Set by the arrange pass, which is the one that knows it first.
     private Size<double> _viewport;
@@ -127,7 +126,7 @@ public partial class InfiniteCanvas
     private void Reclamp()
     {
         // A flick running past an edge is measured against the edge as it is at each step, and brought back by itself.
-        if (!HasPlaneBounds || _stretching || _takingByHand || _planeCoasting) return;
+        if (!HasPlaneBounds || _stretching || _takingByHand || _edgeCoast.IsActive) return;
 
         var held = ClampToPlane(Offset, Scale);
         if (held != Offset) SetCurrentValue(OffsetProperty, held);
@@ -170,11 +169,15 @@ public partial class InfiniteCanvas
         }
     }
 
-    // How far the plane stands past its edge now.
-    private Vector2<double> Overshoot() => Offset - ClampToPlane(Offset, Scale);
+    private Vector2<double> FarthestPast()
+    {
+        // A share of the room along an axis the plane overflows, none along one it fits.
+        var room = Room(Scale, out _, out _);
+        var bounds = PlaneBounds;
 
-    // The plane `over` past its edge as the edge is now.
-    private void Overshoot(Vector2<double> over) => StretchTo(ClampToPlane(Offset, Scale) + over);
+        return new Vector2<double>(bounds.Width * Scale > room.Width ? room.Width * FarthestPastShare : 0,
+            bounds.Height * Scale > room.Height ? room.Height * FarthestPastShare : 0);
+    }
 
     // The hand's offset as the band shows it: on the plane as it is, past an edge pulled back the harder the further -
     // along an axis the plane overflows; one it fits along stays where it stands.
@@ -183,23 +186,10 @@ public partial class InfiniteCanvas
         var held = ClampToPlane(wanted, Scale);
         var room = Room(Scale, out _, out _);
         var bounds = PlaneBounds;
-        var x = bounds.Width * Scale > room.Width ? Band(wanted.X - held.X, room.Width) : 0;
-        var y = bounds.Height * Scale > room.Height ? Band(wanted.Y - held.Y, room.Height) : 0;
+        var x = bounds.Width * Scale > room.Width ? RubberBand.Stretch(wanted.X - held.X, room.Width) : 0;
+        var y = bounds.Height * Scale > room.Height ? RubberBand.Stretch(wanted.Y - held.Y, room.Height) : 0;
 
         return held + new Vector2<double>(x, y);
-    }
-
-    private static Double Band(Double past, Double span) =>
-        past == 0 || span <= 0 ? 0 : Math.Sign(past) * (1 - 1 / (Math.Abs(past) * BandStiffness / span + 1)) * span;
-
-    // What the band shows as `shown` past the edge, the hand pulled this far: its inverse, so a plane caught while it
-    // springs back is taken where it is.
-    private static Double Unband(Double shown, Double span)
-    {
-        if (shown == 0 || span <= 0) return 0;
-
-        var left = 1 - Math.Min(Math.Abs(shown) / span, 0.999);
-        return Math.Sign(shown) * (1 / left - 1) * span / BandStiffness;
     }
 
     // A hand took the plane: what it pulls is the plane where it stands, a stretch included - and the camera is caught
@@ -208,8 +198,8 @@ public partial class InfiniteCanvas
     {
         var held = ClampToPlane(Offset, Scale);
         var room = Room(Scale, out _, out _);
-        _handOffset = held + new Vector2<double>(Unband(Offset.X - held.X, room.Width),
-            Unband(Offset.Y - held.Y, room.Height));
+        _handOffset = held + new Vector2<double>(RubberBand.Unstretch(Offset.X - held.X, room.Width),
+            RubberBand.Unstretch(Offset.Y - held.Y, room.Height));
         _takingByHand = true;
 
         try
@@ -269,9 +259,14 @@ public partial class InfiniteCanvas
     {
         if (panCoasts && !zoomCoasts && HasPlaneBounds)
         {
+            // The hand's speed, as the band showed the plane moving: past an edge, slower than the hand.
             var velocity = _coast.Velocity;
+            var held = ClampToPlane(Offset, Scale);
+            var room = Room(Scale, out _, out _);
             _coast.Stop();
-            CoastOnPlane(velocity);
+            _edgeCoast.Fling(new Vector2<double>(
+                velocity.X * RubberBand.Slope(_handOffset.X - held.X, room.Width),
+                velocity.Y * RubberBand.Slope(_handOffset.Y - held.Y, room.Height)));
             return;
         }
 
@@ -280,7 +275,7 @@ public partial class InfiniteCanvas
 
     private void SpringBack()
     {
-        if (HasPlaneBounds && Overshoot() != Vector2<double>.Zero) _springBack.GlideTo(Vector2<double>.Zero);
+        if (HasPlaneBounds && Offset != ClampToPlane(Offset, Scale)) _edgeCoast.Fling(Vector2<double>.Zero);
     }
 
     // THE SCROLL BARS: the camera shown another way. A bar's range is how far the plane reaches past what it is seen
@@ -389,8 +384,7 @@ public partial class InfiniteCanvas
         _zoom.Stop();
         _coast.Stop();
         _zoomCoast.Stop();
-        _springBack.Stop();
-        StopPlaneCoast();
+        _edgeCoast.Stop();
         _glide.GlideTo(ClampToPlane(_glide.Target + by, Scale));
     }
 }

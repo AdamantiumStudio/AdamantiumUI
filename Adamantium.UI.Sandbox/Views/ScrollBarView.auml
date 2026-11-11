@@ -31,9 +31,12 @@
             <ScrollViewer AutomationProperties.AutomationId="Picture" AutomationProperties.LabeledBy="{Binding ElementName=DragToPanLabel}"
                           Width="520" Height="320"
                           PanningMode="Both" IsInertiaEnabled="true"
+                          IsRubberBandEnabled="{Binding RubberBand}"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <Image Source="Content/SandboxContent/Textures/luxfon.tga"/>
             </ScrollViewer>
+            <CheckBox AutomationProperties.AutomationId="RubberBand" Margin="0,12,0,0"
+                      Content="{Localize ScrollBarStrings.RubberBand}" IsChecked="{Binding RubberBand, Mode=TwoWay}"/>
         </StackPanel>
     </StackPanel>
 </View>

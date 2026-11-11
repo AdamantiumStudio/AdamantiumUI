@@ -1477,7 +1477,7 @@ public partial class InfiniteCanvas
                 // comes to rest; one let go past an edge springs back.
                 var coasts = IsInertiaEnabled && _coast.Release(e.Timestamp);
                 LetGoByHand(coasts, false);
-                if (!coasts && !_springBack.IsActive) RememberLayout();
+                if (!coasts && !_edgeCoast.IsActive) RememberLayout();
                 e.Handled = true;
                 return;
             }
@@ -1553,7 +1553,7 @@ public partial class InfiniteCanvas
         _panning = false;
         _panPointer = null;
         SpringBack();
-        if (!_springBack.IsActive) RememberLayout();
+        if (!_edgeCoast.IsActive) RememberLayout();
     }
 
     private void LetGo()

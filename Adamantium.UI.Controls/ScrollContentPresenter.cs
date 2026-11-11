@@ -19,6 +19,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     // threshold keeps a plain click on interactive content from being swallowed as a pan.
     private const double PanThreshold = 4;
     private bool _isPanning;
+    private bool _panPressed;
     private Vector2<double> _panStartPoint;
     private Vector2<double> _panStartOffset;
 
@@ -31,6 +32,12 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     private Size<double> _viewport;
     private Vector2<double> _offset;
     private readonly PanInertia _inertia;
+
+    // How far past its end the content is shown, pulled there by a hand or run there by a flick: on top of the offset,
+    // which itself stays inside the ends - the scroll bars and whatever binds the offset never see it.
+    private Vector2<double> _stretch;
+    private bool _rubberBand = true;
+    private const double FarthestPastShare = 0.12;
 
     /// <summary>Flick velocity decay per second - higher stops a fling sooner (coasts less), lower glides further.</summary>
     public double InertiaFriction
@@ -64,6 +71,22 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     /// turn it off to get instant scrolling back.</summary>
     public bool IsInertiaEnabled { get; set; } = true;
 
+    /// <summary>Whether a hand pulls the content past its end on a band and a flick runs out past it and turns back -
+    /// see <see cref="ScrollViewer.IsRubberBandEnabled"/>.</summary>
+    public bool IsRubberBandEnabled
+    {
+        get => _rubberBand;
+        set
+        {
+            if (_rubberBand == value) return;
+
+            _rubberBand = value;
+            _inertia.Stop();
+            _inertia.Edges = value ? Ends : null;
+            LetGoOfStretch();
+        }
+    }
+
     // When CanContentScroll is on and the hosted content contains an IScrollableContent (a virtualizing panel), this
     // presenter delegates the scroll mechanism to it instead of physically translating: the panel realizes only the
     // visible window. WPF's CanContentScroll, on the clean IScrollableContent seam.
@@ -80,7 +103,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     public ScrollContentPresenter()
     {
-        _inertia = new PanInertia(() => Offset, SetOffsetCore);
+        _inertia = new PanInertia(() => Shown, ShowAt) { Edges = Ends, FarthestPast = FarthestPast };
 
         // The whole point of the presenter: the overflowing content is scissored to this viewport (see the renderer's
         // per-unit clip, which intersects every ClipToBounds ancestor).
@@ -92,6 +115,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnFingerMoved), handledEventsToo: true);
         AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnFingerReleased), handledEventsToo: true);
         AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnFingerGone), handledEventsToo: true);
+        AddHandler(PointerEvents.PointerCaptureLostEvent, new PointerEventHandler(OnPanCaptureLost));
     }
 
     /// <summary>This clip is a VIEWPORT, so it binds adorners too: a focus ring on a row scrolled half out of the list
@@ -125,7 +149,75 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     public void SetOffset(Vector2<double> offset)
     {
         _inertia.Stop();
+        LetGoOfStretch();
         SetOffsetCore(offset);
+    }
+
+    /// <summary>How far past its ends the content is shown on top of <see cref="Offset"/>; zero at rest.</summary>
+    public Vector2<double> Stretch => _stretch;
+
+    // Where the content is shown: the offset, and how far past an end it is stretched.
+    private Vector2<double> Shown => Offset + _stretch;
+
+    private Vector2<double> Ends(Vector2<double> shown) => ClampOffset(shown, Extent, Viewport);
+
+    // How far past an end a flick may run: a share of the viewport along an axis with somewhere to go, none along one
+    // without.
+    private Vector2<double> FarthestPast() => new(
+        Overflows(true) ? _viewport.Width * FarthestPastShare : 0,
+        Overflows(false) ? _viewport.Height * FarthestPastShare : 0);
+
+    private bool Overflows(bool across) => across
+        ? CanScrollHorizontally && Extent.Width > _viewport.Width
+        : CanScrollVertically && Extent.Height > _viewport.Height;
+
+    // Shows the content at `shown` as it is, past an end too - what the inertia writes; it keeps it in itself.
+    private void ShowAt(Vector2<double> shown)
+    {
+        var inside = Ends(shown);
+        SetStretch(_rubberBand ? shown - inside : Vector2<double>.Zero);
+        SetOffsetCore(inside);
+    }
+
+    // Where a hand put the content, ends ignored, as the band shows it: past an end pulled back the harder the further.
+    private void ShowByHand(Vector2<double> wanted)
+    {
+        var inside = Ends(wanted);
+        var past = wanted - inside;
+        SetStretch(_rubberBand
+            ? new Vector2<double>(Overflows(true) ? RubberBand.Stretch(past.X, _viewport.Width) : 0,
+                Overflows(false) ? RubberBand.Stretch(past.Y, _viewport.Height) : 0)
+            : Vector2<double>.Zero);
+        SetOffsetCore(inside);
+    }
+
+    // Where a hand taking the content now holds it, ends ignored: a stretch is taken where it is shown.
+    private Vector2<double> HandOffset() => Offset + new Vector2<double>(
+        RubberBand.Unstretch(_stretch.X, _viewport.Width), RubberBand.Unstretch(_stretch.Y, _viewport.Height));
+
+    private void SetStretch(Vector2<double> stretch)
+    {
+        if (stretch == _stretch) return;
+
+        _stretch = stretch;
+        InvalidateArrange();
+    }
+
+    // Let go past an end: back to it on the spring, or at once without inertia.
+    private void SpringBack()
+    {
+        if (_stretch == Vector2<double>.Zero) return;
+
+        if (IsInertiaEnabled) _inertia.Fling(Vector2<double>.Zero);
+        else SetStretch(Vector2<double>.Zero);
+    }
+
+    private void LetGoOfStretch() => SetStretch(Vector2<double>.Zero);
+
+    // The hand let go: a flick runs on - out past an end and back - and anything else springs back.
+    private void LetGo(uint timestamp)
+    {
+        if (!(IsInertiaEnabled && _inertia.Release(timestamp))) SpringBack();
     }
 
     // The actual offset set, WITHOUT canceling inertia - used by the inertia ticker itself.
@@ -171,8 +263,9 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _inertia.Stop();
         _inertia.ResetTracking();
         _isPanning = false;
+        _panPressed = true;
         _panStartPoint = e.GetPosition(this);
-        _panStartOffset = Offset;
+        _panStartOffset = HandOffset();
         e.Pointer.Capture(this);
     }
 
@@ -200,7 +293,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             PanningMode.VerticalOnly => new Vector2<double>(0, raw.Y),
             _ => raw
         };
-        SetOffsetCore(_panStartOffset - delta);   // pan drives the offset directly (Down already stopped inertia)
+        ShowByHand(_panStartOffset - delta);   // the hand drives it directly (Down already stopped inertia)
         _inertia.Track(e.Timestamp);
         e.Handled = true;
     }
@@ -221,7 +314,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _inertia.ResetTracking();
         _finger = e.Pointer;
         _fingerStart = e.GetPosition(this);
-        _fingerStartOffset = Offset;
+        _fingerStartOffset = HandOffset();
         _fingerScrolling = false;
     }
 
@@ -235,7 +328,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         if (e.Pointer.IsInGesture)
         {
             _fingerStart = e.GetPosition(this);
-            _fingerStartOffset = Offset;
+            _fingerStartOffset = HandOffset();
             _inertia.ResetTracking();
             return;
         }
@@ -248,6 +341,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
                 e.Pointer.Captured is ScrollContentPresenter inner && !ReferenceEquals(inner, this))
             {
                 _finger = null;
+                SpringBack();
                 return;
             }
 
@@ -261,7 +355,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             e.Pointer.Capture(this);
         }
 
-        SetOffsetCore(_fingerStartOffset - Scrollable(e.GetPosition(this) - _fingerStart));
+        ShowByHand(_fingerStartOffset - Scrollable(e.GetPosition(this) - _fingerStart));
         _inertia.Track(e.Timestamp);
         e.Handled = true;
     }
@@ -278,15 +372,13 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _fingerScrolling = false;
         if (!scrolled)
         {
+            SpringBack();
             return;
         }
 
         e.Handled = true;   // a scroll, not a tap
         if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
-        if (IsInertiaEnabled)
-        {
-            _inertia.Release(e.Timestamp);
-        }
+        LetGo(e.Timestamp);
     }
 
     private void OnFingerGone(object sender, PointerEventArgs e)
@@ -295,6 +387,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
         _finger = null;
         _fingerScrolling = false;
+        SpringBack();
     }
 
     /// <summary>Whether <paramref name="pointer"/> may carry <paramref name="element"/> - a dragged row, a tab - now. The
@@ -336,20 +429,38 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             return;
         }
 
+        // Only a press of this area's own; ended before the capture goes, so letting go of it is not read as taken away.
+        if (!_panPressed) return;
+
+        var panned = _isPanning;
+        _isPanning = false;
+        _panPressed = false;
+
         if (ReferenceEquals(e.Pointer.Captured, this))
         {
             e.Pointer.Capture(null);
         }
 
-        if (_isPanning)
+        if (panned)
         {
             e.Handled = true;   // it was a pan, not a click
-            if (IsInertiaEnabled)
-            {
-                _inertia.Release(e.Timestamp);
-            }
+            LetGo(e.Timestamp);
         }
+        else
+        {
+            SpringBack();
+        }
+    }
+
+    // The mouse's press taken away - by the system, a window over this one, an outer area - without its release: before
+    // the pan began as well, since the press already stopped a spring-back where it stood.
+    private void OnPanCaptureLost(object sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, this) || !_panPressed || ReferenceEquals(e.Pointer, _finger)) return;
+
+        _panPressed = false;
         _isPanning = false;
+        SpringBack();
     }
 
     protected override Size<double> MeasureOverride(Size<double> availableSize)
@@ -427,7 +538,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
                 // per-scroll-frame arrange marks ONE node (a 64-byte matrix rewrite + replay) instead of the global
                 // transform flag (which re-baked every instance in the window - the scroll full-walk).
                 if (inner is Base.UIComponent innerUi) innerUi.IsRenderMotionNode = true;
-                inner.Arrange(new Rect(-offset.X, -offset.Y, finalSize.Width, finalSize.Height));
+                inner.Arrange(new Rect(-offset.X - _stretch.X, -offset.Y - _stretch.Y, finalSize.Width, finalSize.Height));
             }
             RaiseMetricsChanged();
             return finalSize;
@@ -441,7 +552,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             // ClipToBounds scissor trims the overflow to the viewport.
             var width = Math.Max(_extent.Width, finalSize.Width);
             var height = Math.Max(_extent.Height, finalSize.Height);
-            content.Arrange(new Rect(-_offset.X, -_offset.Y, width, height));
+            content.Arrange(new Rect(-_offset.X - _stretch.X, -_offset.Y - _stretch.Y, width, height));
         }
 
         RaiseMetricsChanged();
