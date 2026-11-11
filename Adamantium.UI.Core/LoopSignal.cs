@@ -82,7 +82,7 @@ public static class LoopSignal
     }
 
     /// <summary>Queues work that must not wait for a frame - another loop's turn, say: it runs on the loop thread the
-    /// moment the loop is between frames, and asks for no frame itself. An idle loop wakes for it.</summary>
+    /// moment the loop is between frames, and asks for no frame itself. An idle loop runs it and sleeps on.</summary>
     public static void PostBetweenFrames(Action action)
     {
         Interlocked.Increment(ref _requests);
@@ -159,9 +159,7 @@ public static class LoopSignal
             catch (Exception ex) { Console.WriteLine(ex); }
         }
 
-        for (var waiting = BetweenFrames.Count; waiting > 0 && RunOneBetweenFrames(); waiting--)
-        {
-        }
+        RunWaitingBetweenFrames();
     }
 
     private static bool RunOneBetweenFrames()
@@ -177,38 +175,76 @@ public static class LoopSignal
         return true;
     }
 
-    /// <summary>Blocks the loop thread until something is in the pipe, or <paramref name="timeoutMs"/> elapses; not at all
-    /// while work posted between frames waits. The timeout is a
-    /// safety net, not a schedule: every source that needs a frame writes here, so it only bounds the damage of one nobody
-    /// thought of - a late frame rather than a frozen window.</summary>
+    /// <summary>Blocks the loop thread until work is in the pipe or a frame is asked for, or <paramref name="timeoutMs"/>
+    /// elapses; work posted between frames is run meanwhile, and sleeping goes on after it. The timeout is a safety net,
+    /// not a schedule: every source that needs a frame writes here, so it only bounds the damage of one nobody thought of
+    /// - a late frame rather than a frozen window.</summary>
     public static void Wait(int timeoutMs, CancellationToken token)
     {
-        if (!BetweenFrames.IsEmpty)
-        {
-            return;
-        }
-
+        var deadline = Stopwatch.GetTimestamp() + timeoutMs * Stopwatch.Frequency / 1000;
+        var frames = FrameRequests;
         try
         {
-            // What woke the last sleep may have been drained since: ask the pipe again.
-            if (_sleep is { IsCompleted: true }) _sleep = null;
-
-            if (_sleep == null)
+            while (true)
             {
-                var pending = Pipe.Reader.WaitToReadAsync(token);
-                if (pending.IsCompleted)
+                while (Pipe.Reader.TryPeek(out var first) && ReferenceEquals(first, WakeToken))
                 {
-                    pending.GetAwaiter().GetResult();   // observe the result; the items stay in the pipe for Drain
+                    Pipe.Reader.TryRead(out _);
+                    Interlocked.Exchange(ref _wakePending, 0);
+                }
+
+                if (FrameRequests != frames || Pipe.Reader.TryPeek(out _))
+                {
                     return;
                 }
 
-                // Only allocates when the loop actually goes to sleep - i.e. when the UI is idle, which is exactly when nobody cares.
-                _sleep = pending.AsTask();
-            }
+                if (RunWaitingBetweenFrames())
+                {
+                    continue;
+                }
 
-            if (_sleep.Wait(timeoutMs, token)) _sleep = null;
+                var left = (int)Math.Ceiling(Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline).TotalMilliseconds);
+                if (left <= 0)
+                {
+                    return;
+                }
+
+                // What woke the last sleep may have been read since: ask the pipe again.
+                if (_sleep is { IsCompleted: true }) _sleep = null;
+
+                if (_sleep == null)
+                {
+                    var pending = Pipe.Reader.WaitToReadAsync(token);
+                    if (pending.IsCompleted)
+                    {
+                        pending.GetAwaiter().GetResult();   // observe the result; the items stay in the pipe
+                        continue;
+                    }
+
+                    // Only allocates when the loop actually goes to sleep - i.e. when the UI is idle, which is exactly when nobody cares.
+                    _sleep = pending.AsTask();
+                }
+
+                if (!_sleep.Wait(left, token))
+                {
+                    return;
+                }
+
+                _sleep = null;
+            }
         }
         catch (OperationCanceledException) { _sleep = null; /* shutting down */ }
         catch (AggregateException) { _sleep = null; /* the wait was canceled */ }
+    }
+
+    private static bool RunWaitingBetweenFrames()
+    {
+        var ran = false;
+        for (var waiting = BetweenFrames.Count; waiting > 0 && RunOneBetweenFrames(); waiting--)
+        {
+            ran = true;
+        }
+
+        return ran;
     }
 }
