@@ -543,7 +543,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     {
         if (Interlocked.Exchange(ref pumpPosted, 1) == 0)
         {
-            LoopSignal.Post(DoPumpWork);
+            LoopSignal.PostBetweenFrames(DoPumpWork);
         }
     }
 

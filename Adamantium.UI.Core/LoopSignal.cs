@@ -19,8 +19,8 @@ public static class LoopSignal
 
     private static int _wakePending;   // 0/1 - at most one wake token is ever queued at a time
 
-    private static readonly ConcurrentQueue<Action> Awaited = new();
-    private static readonly ManualResetEventSlim AwaitedArrived = new(false, 0);
+    private static readonly ConcurrentQueue<Action> BetweenFrames = new();
+    private static readonly ManualResetEventSlim BetweenFramesArrived = new(false, 0);
 
     private static int _posted;
     private static long _requests;
@@ -76,13 +76,24 @@ public static class LoopSignal
     public static void PostAwaited(Action action)
     {
         Interlocked.Increment(ref _posted);
-        Awaited.Enqueue(action);
-        AwaitedArrived.Set();
+        BetweenFrames.Enqueue(action);
+        BetweenFramesArrived.Set();
         Request();
     }
 
-    /// <summary>Holds the loop thread between frames for <paramref name="milliseconds"/>, running awaited work as it
-    /// arrives.</summary>
+    /// <summary>Queues work that must not wait for a frame - another loop's turn, say: it runs on the loop thread the
+    /// moment the loop is between frames, and asks for no frame itself. An idle loop wakes for it.</summary>
+    public static void PostBetweenFrames(Action action)
+    {
+        Interlocked.Increment(ref _requests);
+        Interlocked.Increment(ref _posted);
+        BetweenFrames.Enqueue(action);
+        BetweenFramesArrived.Set();
+        Wake();
+    }
+
+    /// <summary>Holds the loop thread between frames for <paramref name="milliseconds"/>, running work posted between
+    /// frames as it arrives.</summary>
     public static void Pause(double milliseconds, CancellationToken token)
     {
         var deadline = Stopwatch.GetTimestamp() + (long)(milliseconds * Stopwatch.Frequency / 1000);
@@ -90,13 +101,13 @@ public static class LoopSignal
         {
             for (var left = milliseconds; left >= 1.0; left = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), deadline).TotalMilliseconds)
             {
-                if (!AwaitedArrived.Wait((int)left, token))
+                if (!BetweenFramesArrived.Wait((int)left, token))
                 {
                     return;
                 }
 
-                AwaitedArrived.Reset();
-                RunAwaited();
+                BetweenFramesArrived.Reset();
+                RunBetweenFrames();
             }
         }
         catch (OperationCanceledException)
@@ -109,6 +120,11 @@ public static class LoopSignal
     {
         Interlocked.Increment(ref _frameRequests);
         Interlocked.Increment(ref _requests);
+        Wake();
+    }
+
+    private static void Wake()
+    {
         if (Interlocked.Exchange(ref _wakePending, 1) == 0)
         {
             Pipe.Writer.TryWrite(WakeToken);
@@ -121,7 +137,7 @@ public static class LoopSignal
     {
         Volatile.Write(ref _loopThread, Environment.CurrentManagedThreadId);
         Interlocked.Exchange(ref _wakePending, 0);
-        RunAwaited();
+        RunBetweenFrames();
         while (Pipe.Reader.TryRead(out var action))
         {
             if (ReferenceEquals(action, WakeToken)) continue;
@@ -131,9 +147,9 @@ public static class LoopSignal
         }
     }
 
-    private static void RunAwaited()
+    private static void RunBetweenFrames()
     {
-        while (Awaited.TryDequeue(out var action))
+        while (BetweenFrames.TryDequeue(out var action))
         {
             Interlocked.Decrement(ref _posted);
             try { action(); }

@@ -8,8 +8,8 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// Work another thread waits on is run while the loop holds between frames, not a frame later; ordinary posted work keeps
-/// waiting for the frame.
+/// Work another thread waits on, and work posted between frames, is run while the loop holds between frames, not a frame
+/// later; ordinary posted work keeps waiting for the frame.
 /// </summary>
 [TestFixture]
 public class LoopSignalTests
@@ -160,6 +160,58 @@ public class LoopSignalTests
         }
 
         Assert.That(ticks, Is.Zero, "a restart waits its own delay");
+    }
+
+    [Test]
+    public void WorkBetweenFrames_RunsDuringThePause_AskingForNoFrame()
+    {
+        var loop = Thread.CurrentThread;
+        Thread ranOn = null;
+        double ranAt = -1;
+        var frames = LoopSignal.FrameRequests;
+        var clock = Stopwatch.StartNew();
+        var poster = Task.Run(() =>
+        {
+            Thread.Sleep(50);
+            LoopSignal.PostBetweenFrames(() =>
+            {
+                ranOn = Thread.CurrentThread;
+                ranAt = clock.Elapsed.TotalMilliseconds;
+            });
+        });
+
+        LoopSignal.Pause(2000, CancellationToken.None);
+        poster.Wait();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ranOn, Is.SameAs(loop));
+            Assert.That(ranAt, Is.GreaterThan(0).And.LessThan(1000));
+            Assert.That(LoopSignal.HasPostedWork, Is.False);
+            Assert.That(LoopSignal.FrameRequests, Is.EqualTo(frames));
+        });
+    }
+
+    [Test]
+    public void WorkBetweenFrames_WakesAnIdleLoop()
+    {
+        var clock = Stopwatch.StartNew();
+        var poster = Task.Run(() =>
+        {
+            Thread.Sleep(50);
+            LoopSignal.PostBetweenFrames(() => { });
+        });
+
+        LoopSignal.Wait(5000, CancellationToken.None);
+        var woke = clock.ElapsedMilliseconds;
+        poster.Wait();
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(woke, Is.LessThan(2000));
+            Assert.That(LoopSignal.HasPostedWork, Is.False);
+        });
     }
 
     [Test]
