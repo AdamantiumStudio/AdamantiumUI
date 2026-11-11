@@ -55,4 +55,23 @@ public sealed class WebDownloadRequestedEventArgs : EventArgs
 
         return Save(chosen);
     }
+
+    /// <summary>Saves it in <paramref name="folder"/>, a full path, unasked - as a browser set to save downloads
+    /// straight to a folder does: under its suggested name, numbered "name (1).ext" when that is taken by a file or by
+    /// another download. True when it is saved.</summary>
+    public bool SaveInFolder(string folder)
+    {
+        if (string.IsNullOrEmpty(folder) || !Path.IsPathFullyQualified(folder))
+        {
+            throw new ArgumentException($"'{folder}' is no full path of a folder.", nameof(folder));
+        }
+
+        if (File.Exists(folder))
+        {
+            throw new ArgumentException($"'{folder}' is a file, not a folder.", nameof(folder));
+        }
+
+        Handled = true;
+        return Save(Download.FreePathIn(folder));
+    }
 }

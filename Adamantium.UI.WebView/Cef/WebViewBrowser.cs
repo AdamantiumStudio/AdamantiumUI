@@ -500,6 +500,31 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
+    /// <summary>Downloads <paramref name="url"/> as a link to it would, asked of the view like any download; false when
+    /// there is no live browser to start it.</summary>
+    public bool StartDownload(string url)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return false;
+        }
+
+        var target = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&target, url);
+            host->start_download(host, &target);
+        }
+        finally
+        {
+            CefStrings.Clear(&target);
+            CefRefCounting.ReleaseCef(host);
+        }
+
+        return true;
+    }
+
     /// <summary>Tells the browser the view's new size or scale.</summary>
     public void Resize(int width, int height, float scale)
     {

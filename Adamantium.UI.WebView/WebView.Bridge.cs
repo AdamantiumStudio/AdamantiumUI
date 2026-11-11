@@ -25,6 +25,8 @@ public partial class WebView
 
     internal void Navigate(Uri address) => browser?.Navigate(address.AbsoluteUri);
 
+    internal bool StartDownload(Uri address) => browser?.StartDownload(address.AbsoluteUri) == true;
+
     internal Task<string> ExecuteScriptAsync(string script) =>
         browser?.EvaluateAsync(script) ?? Task.FromException<string>(new WebViewScriptException("There is no page."));
 

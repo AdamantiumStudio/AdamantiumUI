@@ -132,6 +132,22 @@ public sealed class WebViewBridge
     /// browser's address does, which setting <see cref="WebView.Source"/> to the address it has cannot.</summary>
     public void Navigate(Uri address) => Page().Navigate(address);
 
+    /// <summary>Downloads <paramref name="address"/> - an http, https or application site's address - from the page's
+    /// browser, as a link to it would: asked through <see cref="DownloadRequested"/> like any download; the page stays as
+    /// it is. Again, a download from the list (<see cref="WebViewEngine.Downloads"/>) is fetched anew this way. False
+    /// while the page's browser is still being made, or closing; throws, as the page's other calls do, when the bridge
+    /// is bound to no view with a page.</summary>
+    public bool StartDownload(Uri address)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        if (!address.IsAbsoluteUri || address.Scheme is not ("http" or "https" or WebViewSchemes.App))
+        {
+            throw new ArgumentException($"'{address}' is no web address to download.", nameof(address));
+        }
+
+        return Page().StartDownload(address);
+    }
+
     /// <summary>Shows <paramref name="html"/> as the page.</summary>
     public void LoadHtml(string html) => Page().LoadHtml(html);
 

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -11,7 +13,8 @@ namespace Adamantium.UI.Platforms.Linux;
 
 /// <summary>The desktop's file manager through its D-Bus interface, <c>org.freedesktop.FileManager1</c>, which Files,
 /// Dolphin and the rest serve: the folder opens with the file selected. The answer is not waited for - a file manager
-/// started cold takes its time, and the window asking must not stop meanwhile.</summary>
+/// started cold takes its time, and the window asking must not stop meanwhile. A file is opened through xdg-open.
+/// </summary>
 internal sealed class DesktopFileManager : IFileManagerPlatform
 {
     private const string Service = "org.freedesktop.FileManager1";
@@ -34,6 +37,24 @@ internal sealed class DesktopFileManager : IFileManagerPlatform
 
         _ = AskAsync(bus, uri);
         return true;
+    }
+
+    // xdg-open asks the desktop which application opens the file, as the file manager would.
+    public bool OpenItem(string path)
+    {
+        try
+        {
+            using var open = Process.Start(new ProcessStartInfo("xdg-open")
+            {
+                ArgumentList = { path },
+                UseShellExecute = false
+            });
+            return open != null;
+        }
+        catch (Exception e) when (e is Win32Exception or IOException or ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static async Task AskAsync(DBusConnection bus, string uri)
