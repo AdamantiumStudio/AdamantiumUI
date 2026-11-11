@@ -673,7 +673,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public InfiniteCanvas()
     {
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
-        _coast = new PanInertia(() => _travel, Travel, CoastSettled);
+        _coast = new PanInertia(() => _travel, Travel, RememberLayout);
         _glide = new PanInertia(() => Offset, to => SetCurrentValue(OffsetProperty, to), RememberLayout);
         _springBack = new PanInertia(Overshoot, Overshoot, RememberLayout);
         _zoomCoast = new FlingValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyCoastedZoom,
@@ -709,6 +709,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         PointerReleased += OnPointerUp;
         PointerExited += OnPointerLeft;
         PointerCanceled += OnPointerCanceled;
+        PointerCaptureLost += OnPointerCaptureLost;
         AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
         KeyDown += OnKeyPressed;
         KeyUp += OnKeyReleased;
@@ -1500,6 +1501,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     // screen is the one showing it.
     private void OnShownAgain(object sender, VisualTreeAttachmentEventArgs e)
     {
+        // Taken away while stretched past an edge, it comes back on the plane.
+        if (!_panning) Reclamp();
+
         if (!_sceneTaken || IsDiscarded || Scene is not { } scene)
         {
             return;

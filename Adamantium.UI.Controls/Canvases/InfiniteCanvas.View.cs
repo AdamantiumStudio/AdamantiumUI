@@ -345,7 +345,7 @@ public partial class InfiniteCanvas
         _zoomCoast.Stop();
         _glide.Stop();
         _springBack.Stop();
-        _touchCoast = false;
+        StopPlaneCoast();
         Reclamp();
     }
 
@@ -353,14 +353,16 @@ public partial class InfiniteCanvas
     {
         if (component is not InfiniteCanvas canvas || e.NewValue is true) return;
 
-        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive;
+        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive || canvas._springBack.IsActive ||
+                     canvas._planeCoasting;
         canvas.StopCoasting();
         if (moving) canvas.RememberLayout();
     }
 
     private void CatchCamera()
     {
-        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _springBack.IsActive;
+        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _springBack.IsActive ||
+                     _planeCoasting;
 
         StopZoom();
         if (moving) RememberLayout();
@@ -369,15 +371,6 @@ public partial class InfiniteCanvas
     private void Travel(Vector2<double> to)
     {
         var by = to - _travel;
-
-        // A finger's flick meets the edge with the band: past it, each step carries a quarter, and the plane springs
-        // back once the flick dies.
-        if (_touchCoast)
-        {
-            if (Offset != ClampToPlane(Offset, Scale)) by *= PastEdgeStep;
-            MoveByHand(by);
-            return;
-        }
 
         // What the edge let through is what the camera travelled: a step it stops is no step, and a coast ends there.
         var before = Offset;
