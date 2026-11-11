@@ -158,11 +158,11 @@ public class CanvasChromeTests
     }
 
     [Test]
-    public void ADockedPaneTakesItsWidthFromTheSideItIsOn()
+    public void ADockedPaneTakesItsWidthAndItsInsetFromTheSideItIsOn()
     {
         var layer = Laid(Pane(CanvasPanePlacement.Left, width: 60, docked: true));
 
-        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(60, 0, 0, 0)));
+        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(70, 0, 0, 0)), "the pane and the strip it stands off by");
     }
 
     [Test]
@@ -170,7 +170,7 @@ public class CanvasChromeTests
     {
         var layer = Laid(Pane(CanvasPanePlacement.BottomCenter, width: 100, height: 30, docked: true));
 
-        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(0, 0, 0, 30)));
+        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(0, 0, 0, 40)));
     }
 
     // Two docked to one edge sit one above the other, so together they take the width of the WIDER - not of both, which
@@ -182,7 +182,7 @@ public class CanvasChromeTests
             Pane(CanvasPanePlacement.TopLeft, width: 60, docked: true),
             Pane(CanvasPanePlacement.BottomLeft, width: 90, docked: true));
 
-        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(90, 0, 0, 0)));
+        Assert.That(layer.Inset(), Is.EqualTo(new Thickness(100, 0, 0, 0)));
     }
 
     // A pane that FOLLOWS the selection is shown by there being one. With no canvas behind the layer there is no
