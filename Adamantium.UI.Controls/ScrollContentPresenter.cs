@@ -20,6 +20,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     private const double PanThreshold = 4;
     private bool _isPanning;
     private bool _panPressed;
+    private MouseButtons _panButton = MouseButtons.Left;
     private Vector2<double> _panStartPoint;
     private Vector2<double> _panStartOffset;
 
@@ -144,6 +145,10 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     /// <summary>Whether a finger scrolls the content - see <see cref="ScrollViewer.IsTouchScrollEnabled"/>.</summary>
     public bool IsTouchScrollEnabled { get; set; } = true;
 
+    /// <summary>Whether the middle mouse button drags the content - see
+    /// <see cref="ScrollViewer.IsMiddleButtonPanEnabled"/>.</summary>
+    public bool IsMiddleButtonPanEnabled { get; set; } = true;
+
     public event EventHandler ScrollMetricsChanged;
 
     public void SetOffset(Vector2<double> offset)
@@ -253,18 +258,31 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        // A finger scrolls by its own rule (OnFingerPressed); PanningMode is the mouse's and a pen's.
-        if (e.Handled || PanningMode == PanningMode.None || e.ChangedButton != MouseButtons.Left ||
-            e.Pointer.Type == PointerType.Touch)
+
+        // A finger scrolls by its own rule (OnFingerPressed). The middle button drags along the axes with somewhere to
+        // go, wherever the press lands; the left one only where PanningMode lets it, since it selects and clicks.
+        var middle = e.ChangedButton == MouseButtons.Middle && IsMiddleButtonPanEnabled &&
+                     Scrollable(Vector2<double>.One) != Vector2<double>.Zero;
+        var left = e.ChangedButton == MouseButtons.Left && PanningMode != PanningMode.None;
+        // ...and not one something inside already took for itself - a 3D view turning on its buttons, an inner area.
+        var takenInside = e.Pointer.Captured != null && !ReferenceEquals(e.Pointer.Captured, this);
+        var panning = _panPressed && ReferenceEquals(e.Pointer.Captured, this);
+        if (e.Handled || takenInside || panning || e.Pointer.Type == PointerType.Touch || !(middle || left))
         {
             return;
         }
 
-        _inertia.Stop();
-        _inertia.ResetTracking();
         _isPanning = false;
         _panPressed = true;
+        _panButton = e.ChangedButton;
         _panStartPoint = e.GetPosition(this);
+
+        // The middle button is only NOTED here: the drag decides, as a finger's does, which area takes it - the nearest
+        // that can move the way it goes. Neither taken nor handled until then, so a click stays a click for everyone.
+        if (middle) return;
+
+        _inertia.Stop();
+        _inertia.ResetTracking();
         _panStartOffset = HandOffset();
         e.Pointer.Capture(this);
     }
@@ -272,8 +290,19 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (!ReferenceEquals(e.Pointer.Captured, this) || ReferenceEquals(e.Pointer, _finger))
+        if (!_panPressed || ReferenceEquals(e.Pointer, _finger)) return;
+
+        var middle = _panButton == MouseButtons.Middle;
+        var taken = ReferenceEquals(e.Pointer.Captured, this);
+        if (!taken && !(middle && !_isPanning && !e.Handled && e.Pointer.Captured == null))
         {
+            return;
+        }
+
+        // A middle press whose release went elsewhere is over: a move with the button up starts nothing.
+        if (middle && !taken && (e.Modifiers & InputModifiers.MiddleMouseButton) == 0)
+        {
+            _panPressed = false;
             return;
         }
 
@@ -282,17 +311,36 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         {
             // Hold off until the drag clears the threshold, so a plain click isn't consumed as a (zero) pan.
             if (Math.Abs(raw.X) < PanThreshold && Math.Abs(raw.Y) < PanThreshold) return;
+
+            if (middle)
+            {
+                // The middle drag goes to the nearest area that can move the way it goes; this one cannot, so the
+                // move goes on to the one around it.
+                if (Scrollable(raw) == Vector2<double>.Zero)
+                {
+                    _panPressed = false;
+                    return;
+                }
+
+                _inertia.Stop();
+                _inertia.ResetTracking();
+                _panStartOffset = HandOffset();
+                e.Pointer.Capture(this);
+            }
+
             _isPanning = true;
         }
 
         // Restrict to the allowed axis (the other stays put). Dragging the content one way reveals what's behind it,
         // i.e. the offset moves opposite the pointer.
-        var delta = PanningMode switch
-        {
-            PanningMode.HorizontalOnly => new Vector2<double>(raw.X, 0),
-            PanningMode.VerticalOnly => new Vector2<double>(0, raw.Y),
-            _ => raw
-        };
+        var delta = _panButton == MouseButtons.Middle
+            ? Scrollable(raw)
+            : PanningMode switch
+            {
+                PanningMode.HorizontalOnly => new Vector2<double>(raw.X, 0),
+                PanningMode.VerticalOnly => new Vector2<double>(0, raw.Y),
+                _ => raw
+            };
         ShowByHand(_panStartOffset - delta);   // the hand drives it directly (Down already stopped inertia)
         _inertia.Track(e.Timestamp);
         e.Handled = true;
@@ -424,7 +472,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
-        if (e.ChangedButton != MouseButtons.Left || ReferenceEquals(e.Pointer, _finger))
+        if (e.ChangedButton != _panButton || ReferenceEquals(e.Pointer, _finger))
         {
             return;
         }

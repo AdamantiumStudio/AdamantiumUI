@@ -81,6 +81,10 @@ public class ScrollViewer : ContentControl
         nameof(IsTouchScrollEnabled), typeof(bool), typeof(ScrollViewer),
         new PropertyMetadata(true, OnIsTouchScrollEnabledChanged));
 
+    public static readonly AdamantiumProperty IsMiddleButtonPanEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsMiddleButtonPanEnabled), typeof(bool), typeof(ScrollViewer),
+        new PropertyMetadata(true, OnIsMiddleButtonPanEnabledChanged));
+
     public static readonly AdamantiumProperty CanContentScrollProperty = AdamantiumProperty.Register(
         nameof(CanContentScroll), typeof(bool), typeof(ScrollViewer),
         new PropertyMetadata(false, OnCanContentScrollChanged));
@@ -189,6 +193,20 @@ public class ScrollViewer : ContentControl
         if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.IsTouchScrollEnabled = sv.IsTouchScrollEnabled;
     }
 
+    /// <summary>Whether the middle mouse button, held, drags the content along the axes that have somewhere to go -
+    /// wherever it is pressed, the left button keeping its clicks and selections. The nearest area that can scroll takes
+    /// it. On by default; <see cref="PanningMode"/> is the left button's.</summary>
+    public bool IsMiddleButtonPanEnabled
+    {
+        get => GetValue<bool>(IsMiddleButtonPanEnabledProperty);
+        set => SetValue(IsMiddleButtonPanEnabledProperty, value);
+    }
+
+    private static void OnIsMiddleButtonPanEnabledChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.IsMiddleButtonPanEnabled = sv.IsMiddleButtonPanEnabled;
+    }
+
     /// <summary>When true, scrolling is delegated to a virtualizing panel inside the content (item scrolling) rather
     /// than pixel-translating the whole content. Set by item controls whose panel virtualizes.</summary>
     public bool CanContentScroll
@@ -275,6 +293,7 @@ public class ScrollViewer : ContentControl
             _presenter.CanScrollVertically = VerticalScrollBarVisibility != ScrollBarVisibility.Disabled;
             _presenter.PanningMode = PanningMode;
             _presenter.IsTouchScrollEnabled = IsTouchScrollEnabled;
+            _presenter.IsMiddleButtonPanEnabled = IsMiddleButtonPanEnabled;
             _presenter.CanContentScroll = CanContentScroll;
             PushInertiaSettings();
             _presenter.ScrollMetricsChanged += OnScrollMetricsChanged;
