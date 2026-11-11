@@ -16,6 +16,24 @@ public partial class WebPageViewModel : TabPageViewModel
         Bridge.NewWindowRequested += OnNewWindowRequested;
         Bridge.FileDialogRequested += (_, e) => e.AnswerFromFileDialog();
         Bridge.PermissionRequested += OnPermissionRequested;
+        Bridge.DownloadRequested += (_, e) => e.SaveFromFileDialog();
+    }
+
+    /// <summary>The files the pages downloaded, coming in and done, under the page.</summary>
+    public System.Collections.Generic.IReadOnlyList<WebDownload> Downloads => Engine.Downloads;
+
+    [Command] private void PauseDownload(object download) => (download as WebDownload)?.Pause();
+
+    [Command] private void ResumeDownload(object download) => (download as WebDownload)?.Resume();
+
+    [Command] private void CancelDownload(object download) => (download as WebDownload)?.Cancel();
+
+    [Command] private void ForgetDownload(object download)
+    {
+        if (download is WebDownload finished)
+        {
+            Engine.ForgetDownload(finished);
+        }
     }
 
     /// <summary>A site asking to use something, shown over the page until answered; none while nobody asks.</summary>

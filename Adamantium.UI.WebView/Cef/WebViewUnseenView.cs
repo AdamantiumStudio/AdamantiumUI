@@ -5,9 +5,10 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>The view of the blank page <see cref="WebViewEngine.StartAhead"/> keeps Chromium's processes up with: shown
-/// nowhere, it takes nothing the page offers and lets it ask for nothing.</summary>
-internal sealed class WebViewWarmUpView : IWebViewBrowserView
+/// <summary>The view of a page shown nowhere - the blank page <see cref="WebViewEngine.StartAhead"/> keeps Chromium's
+/// processes up with, a page closed while its downloads come in: it takes nothing the page offers and lets it ask for
+/// nothing.</summary>
+internal sealed class WebViewUnseenView : IWebViewBrowserView
 {
     public void Show(WebViewBrowser browser, SharedSurfaceDescriptor descriptor)
     {
@@ -131,4 +132,6 @@ internal sealed class WebViewWarmUpView : IWebViewBrowserView
     public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request) => false;
 
     public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
+
+    public bool DownloadRequested(WebViewBrowser browser, WebDownload download) => false;
 }

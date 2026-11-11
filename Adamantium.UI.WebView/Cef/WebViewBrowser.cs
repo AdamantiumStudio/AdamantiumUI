@@ -33,6 +33,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewJsDialogHandler jsDialogHandler;
     private readonly WebViewDialogHandler dialogHandler;
     private readonly WebViewPermissionHandler permissionHandler;
+    private readonly WebViewDownloadHandler downloadHandler;
     private readonly WebViewDevTools devTools;
     private IWebViewBrowserView view;
     private WebViewBrowser opener;
@@ -62,6 +63,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private string createdWith;
     private bool requested;
     private bool closing;
+    private bool keptForDownloads;
     private bool disposed;
     private bool repaintOwed;
     private bool hidden;
@@ -108,9 +110,20 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         jsDialogHandler = new WebViewJsDialogHandler(this);
         dialogHandler = new WebViewDialogHandler(this);
         permissionHandler = new WebViewPermissionHandler(this);
+        downloadHandler = new WebViewDownloadHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
-            contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler);
+            contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler, downloadHandler);
     }
+
+    /// <summary>The download Chromium numbers <paramref name="id"/>, the engine's one for the profile.</summary>
+    internal WebDownload Download(uint id) => engine.Download(id);
+
+    /// <summary>Chromium told of <paramref name="download"/>: one it says no more of is let go of when not saved.</summary>
+    internal void DownloadHeard(WebDownload download) => engine.DownloadHeard(download);
+
+    /// <summary>The page downloads a file: asked of the view, false when it cannot ask - the download is refused.
+    /// </summary>
+    internal bool OnDownloadRequested(WebDownload download) => !closing && view.DownloadRequested(this, download);
 
     /// <summary>The page's file field asks for files: asked of the view, false when it cannot ask.</summary>
     internal bool OnFileDialog(WebViewFileDialogRequest request)
@@ -344,7 +357,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this),
-            asked => this.view.ResourceRequested(this, asked));
+            asked => this.view.ResourceRequested(this, asked),
+            download => !closing && this.view.DownloadRequested(this, download));
         if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
         {
             // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
@@ -1679,7 +1693,22 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         popupProducer = null;
         if (browser != null)
         {
-            Close();
+            if (engine.HasDownloadsComingIn(this))
+            {
+                // Its downloads are the profile's, not the page's: the page, shown nowhere now, goes once they are done.
+                keptForDownloads = true;
+                view = new WebViewUnseenView();
+                var host = Host();
+                if (host != null)
+                {
+                    host->was_hidden(host, 1);
+                    CefRefCounting.ReleaseCef(host);
+                }
+            }
+            else
+            {
+                Close();
+            }
         }
         else if (!requested)
         {
@@ -1696,6 +1725,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         jsDialogHandler.Release();
         dialogHandler.Release();
         permissionHandler.Release();
+        downloadHandler.Release();
     }
 
     /// <summary>Whether the view listens to the page's requests: each is asked of it then, else none is - read on
@@ -1711,6 +1741,24 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>Whether CEF has made the browser, and it is not closed yet.</summary>
     internal bool IsMade => browser != null;
+
+    /// <summary>Whether the page was closed while its downloads came in, and waits for them to be done.</summary>
+    internal bool IsKeptForDownloads => keptForDownloads;
+
+    /// <summary>Closes a page kept for its downloads: the last is done, or CEF shuts down.</summary>
+    internal void CloseKept()
+    {
+        if (!keptForDownloads)
+        {
+            return;
+        }
+
+        keptForDownloads = false;
+        if (browser != null)
+        {
+            Close();
+        }
+    }
 
     /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
     internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);

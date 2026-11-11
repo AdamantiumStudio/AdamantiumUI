@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- Downloads in `WebView`: a file a page downloads - a link to one, an attachment, a link to one opened as a new
+  page - is asked of the view model (`WebViewBridge.DownloadRequested`), which saves it where it says (`Save`, or
+  `SaveFromFileDialog` asking the user through the platform's dialog) or refuses it; unasked, it is refused, as before.
+  A `WebDownload` tells its address, suggested name, type, size, bytes come in, speed, progress and state as they
+  change (`INotifyPropertyChanged`), and pauses, goes on and cancels. Saved ones are listed in
+  `WebViewEngine.Downloads` until `ForgetDownload`. A download outlives the page that started it: closed while one
+  comes in, the page is kept, shown nowhere, until the last is done. The sandbox's Web tab lists them under the page.
 - `WebViewEngine.StartAhead()`: Chromium started before the first page - CEF, and its processes (the GPU's, the
   network's, a page's) kept up by a blank page shown nowhere until the first browser is made, which then shows its
   page without waiting for them to start. Until then they hold their memory; an application calls it as it starts.

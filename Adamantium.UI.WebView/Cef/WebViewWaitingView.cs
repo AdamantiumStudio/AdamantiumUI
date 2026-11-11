@@ -14,6 +14,7 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
 {
     private readonly IReadOnlyList<WebDocumentScript> openersScripts;
     private readonly Action<WebResourceRequestedEventArgs> openersRequests;
+    private readonly Func<WebDownload, bool> openersDownloads;
     private string address;
     private string title;
     private bool isLoading;
@@ -26,14 +27,16 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     private ImageSource icon;
     private bool? isSecure;
 
-    /// <summary>A view for a page the page with <paramref name="openersScripts"/> opens: its documents run those, and
-    /// its requests are asked of <paramref name="openersRequests"/>, until a view takes it up - it is the application's
-    /// page as much as its opener.</summary>
+    /// <summary>A view for a page the page with <paramref name="openersScripts"/> opens: its documents run those, its
+    /// requests are asked of <paramref name="openersRequests"/> and its downloads of <paramref name="openersDownloads"/>,
+    /// until a view takes it up - it is the application's page as much as its opener. A link to a file opened as a new
+    /// page downloads it this way.</summary>
     public WebViewWaitingView(IReadOnlyList<WebDocumentScript> openersScripts,
-        Action<WebResourceRequestedEventArgs> openersRequests)
+        Action<WebResourceRequestedEventArgs> openersRequests, Func<WebDownload, bool> openersDownloads)
     {
         this.openersScripts = openersScripts;
         this.openersRequests = openersRequests;
+        this.openersDownloads = openersDownloads;
     }
 
     /// <summary>Whether the browser can no longer be shown as it is: CEF gave it up, or its frames cannot come as they
@@ -200,4 +203,6 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request) => false;
 
     public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
+
+    public bool DownloadRequested(WebViewBrowser browser, WebDownload download) => openersDownloads(download);
 }

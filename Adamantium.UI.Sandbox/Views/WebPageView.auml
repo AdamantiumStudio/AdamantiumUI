@@ -6,7 +6,7 @@
     <!-- The WebView as its steps come: back, forward, reload or stop and the address, which follows the page; the page;
          and below, for the stand, how its frames come and what it is doing. Popups come with their step. Kept between
          visits, so the page is where it was when the tab comes back. -->
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
         <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="8" ColumnSpacing="6">
             <Button Command="{Binding GoBackCommand, ElementName=Page}" ToolTipService.ToolTip="Back" Padding="8 4"
                     AutomationProperties.AutomationId="WebBack" AutomationProperties.Name="Back">
@@ -82,7 +82,32 @@
                 </ContentControl.ContentTemplate>
             </ContentControl>
         </Grid>
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8" Spacing="16">
+        <!-- The files the pages downloaded, where the user said to save them: how far each has come, paused, gone on,
+             cancelled, and taken off the list once done. -->
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Downloads}" Margin="8,0,8,0"
+                      AutomationProperties.AutomationId="WebDownloads">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" Margin="0,2">
+                        <TextBlock Text="{Binding FilePath}" VerticalAlignment="Center" TextTrimming="CharEllipses"/>
+                        <ProgressBar Grid.Column="1" Width="160" Height="6" Minimum="0" Maximum="1"
+                                     Value="{Binding Progress}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding ReceivedBytes}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{Binding State}" VerticalAlignment="Center"/>
+                        <Button Grid.Column="4" Content="Pause" Padding="8 2" CommandParameter="{Binding}"
+                                Command="{Ancestor View, DataContext.PauseDownloadCommand}"/>
+                        <Button Grid.Column="5" Content="Resume" Padding="8 2" CommandParameter="{Binding}"
+                                Command="{Ancestor View, DataContext.ResumeDownloadCommand}"/>
+                        <Button Grid.Column="6" Content="Cancel" Padding="8 2" CommandParameter="{Binding}"
+                                Command="{Ancestor View, DataContext.CancelDownloadCommand}"/>
+                        <Button Grid.Column="7" Content="Remove" Padding="8 2" CommandParameter="{Binding}"
+                                Command="{Ancestor View, DataContext.ForgetDownloadCommand}"
+                                Visibility="{Binding IsFinished, Converter={conv:BoolToVisibilityConverter}}"/>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="8" Spacing="16">
             <CheckBox Content="Shared texture" IsChecked="{Binding AllowSharedTexture, Mode=TwoWay}"
                       AutomationProperties.AutomationId="WebSharedTexture"/>
             <CheckBox Content="DevTools" IsChecked="{Binding DevToolsOpen, Mode=TwoWay}"
