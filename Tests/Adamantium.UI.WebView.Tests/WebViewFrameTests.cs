@@ -25,7 +25,7 @@ namespace Adamantium.UI.WebView.Tests;
 /// </summary>
 [TestFixture]
 [NonParallelizable]
-public class WebViewFrameTests
+public partial class WebViewFrameTests
 {
     private const int Width = 64;
     private const int Height = 48;

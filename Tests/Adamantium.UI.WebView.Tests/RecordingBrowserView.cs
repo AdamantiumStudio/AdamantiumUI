@@ -181,6 +181,18 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
         return true;
     }
 
+    /// <summary>The downloads the page asked about, in order.</summary>
+    public List<WebDownload> Downloads { get; } = [];
+
+    /// <summary>Whether downloads are taken to be answered; false refuses them unasked.</summary>
+    public bool TakesDownloads { get; set; } = true;
+
+    public bool DownloadRequested(WebViewBrowser browser, WebDownload download)
+    {
+        Downloads.Add(download);
+        return TakesDownloads;
+    }
+
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 
     public void TitleChanged(WebViewBrowser browser, string title) => Title = title;

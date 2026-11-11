@@ -28,6 +28,9 @@ public sealed unsafe class WebViewEngine : IDisposable
     private readonly WebViewSitePermissions sitePermissions;
     private readonly Lock sitesLock = new();
     private readonly Dictionary<string, IWebSiteContent> sites = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<uint, WebDownload> downloadsById = [];
+    private readonly HashSet<uint> downloadsGivenUp = [];
+    private readonly Adamantium.Core.Collections.TrackingCollection<WebDownload> downloads = [];
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
@@ -95,6 +98,117 @@ public sealed unsafe class WebViewEngine : IDisposable
         {
             return sites.GetValueOrDefault(host);
         }
+    }
+
+    /// <summary>The downloads the application said where to save, in the order it did - those coming in and those
+    /// finished, until forgotten (<see cref="ForgetDownload"/>). Changes are told as a collection's, on the UI thread.
+    /// </summary>
+    public IReadOnlyList<WebDownload> Downloads => downloads;
+
+    /// <summary>Takes a finished download off <see cref="Downloads"/> - its file stays where it is; false for one not
+    /// there or not finished.</summary>
+    public bool ForgetDownload(WebDownload download)
+    {
+        if (download is not { IsFinished: true } || !downloads.Remove(download))
+        {
+            return false;
+        }
+
+        if (download.Ended)
+        {
+            downloadsById.Remove(download.Id);
+            download.Origin = null;
+        }
+
+        return true;
+    }
+
+    /// <summary>The download Chromium numbers <paramref name="id"/>: made the first time it is heard of.</summary>
+    internal WebDownload Download(uint id)
+    {
+        if (!downloadsById.TryGetValue(id, out var download))
+        {
+            download = new WebDownload(id, downloads.Add, DownloadHeard);
+            downloadsById[id] = download;
+        }
+
+        return download;
+    }
+
+    /// <summary>A download Chromium says no more of, not on <see cref="Downloads"/>, is not kept; the page closed while
+    /// it came in goes once its last download is done.</summary>
+    internal void DownloadHeard(WebDownload download)
+    {
+        if (!download.IsFinished)
+        {
+            return;
+        }
+
+        if (download.IsGivenUp)
+        {
+            downloadsGivenUp.Add(download.Id);
+        }
+
+        if (!downloads.Contains(download))
+        {
+            downloadsById.Remove(download.Id);
+        }
+
+        var origin = download.Origin;
+        if (download.Ended)
+        {
+            // Done with: it holds the page it came from no longer.
+            download.Origin = null;
+        }
+
+        if (origin is { IsKeptForDownloads: true } && !HasDownloadsComingIn(origin))
+        {
+            // Out of Chromium's callback, which is telling of the download now.
+            LoopSignal.Post(origin.CloseKept);
+        }
+    }
+
+    /// <summary>Whether the download Chromium numbers <paramref name="id"/> was given up here, interrupted: Chromium keeps
+    /// it to resume, and is answered no each time it tries.</summary>
+    internal bool IsDownloadGivenUp(uint id) => downloadsGivenUp.Contains(id);
+
+    /// <summary>Refuses the downloads <paramref name="browser"/> asked about and the application has not answered: the
+    /// page goes, and an answer coming later would start a download nobody hears of.</summary>
+    internal void RefuseAsked(WebViewBrowser browser)
+    {
+        List<WebDownload> refused = null;
+        foreach (var download in downloadsById.Values)
+        {
+            if (ReferenceEquals(download.Origin, browser) && download.IsAsked)
+            {
+                (refused ??= []).Add(download);
+            }
+        }
+
+        if (refused == null)
+        {
+            return;
+        }
+
+        foreach (var download in refused)
+        {
+            download.Refuse();
+            DownloadHeard(download);
+        }
+    }
+
+    /// <summary>Whether a download <paramref name="browser"/> started is still coming in - paused too.</summary>
+    internal bool HasDownloadsComingIn(WebViewBrowser browser)
+    {
+        foreach (var download in downloadsById.Values)
+        {
+            if (ReferenceEquals(download.Origin, browser) && !download.IsFinished && !download.IsAsked)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>The answers sites were given - what each may use, or may not - kept in the profile, so a site is not
@@ -356,7 +470,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         try
         {
             EnsureInitialized();
-            warmUp = new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewWarmUpView());
+            warmUp = new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewUnseenView());
             browsers.Add(warmUp);
             ArmPumpTimer(MaxPumpDelayMs);
             warmUp.SetHidden(true);
@@ -421,15 +535,24 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         if (initialized)
         {
+            // Downloads end with the application: a page kept for them closes too.
             for (var i = browsers.Count - 1; i >= 0; i--)
             {
-                browsers[i].Dispose();
+                var browser = browsers[i];
+                browser.Dispose();
+                browser.CloseKept();
             }
 
             for (var turn = 0; turn < CloseTurns && browsers.Count > 0; turn++)
             {
                 CefInterop.CefDoMessageLoopWork();
                 Thread.Sleep(CloseTurnMs);
+            }
+
+            // What Chromium gave the downloads goes while it is there to take it back.
+            foreach (var download in downloadsById.Values)
+            {
+                download.LetGo();
             }
 
             CefInterop.CefShutdown();
