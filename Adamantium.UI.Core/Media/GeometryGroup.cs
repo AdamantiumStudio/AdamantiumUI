@@ -58,7 +58,29 @@ public class GeometryGroup : Geometry, IContainer
     }
 
     public override Rect Bounds => bounds;
-    
+
+    /// <summary>Its children's filled figures together, under the group's <see cref="FillRule"/>, with its
+    /// <see cref="Geometry.Transform"/>.</summary>
+    internal override (List<Vector2<double>[]> Rings, FillRule Rule) Area()
+    {
+        var rings = new List<Vector2<double>[]>();
+        foreach (var child in Children ?? [])
+        {
+            foreach (var ring in child.Area().Rings)
+            {
+                var points = (Vector2<double>[])ring.Clone();
+                if (Transform is { } transform)
+                {
+                    Vector2<double>.TransformCoordinate(points, transform.Matrix, points);
+                }
+
+                rings.Add(points);
+            }
+        }
+
+        return (rings, FillRule);
+    }
+
     public override Geometry Clone()
     {
         throw new System.NotImplementedException();

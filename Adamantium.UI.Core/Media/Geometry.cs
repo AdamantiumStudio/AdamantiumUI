@@ -172,6 +172,23 @@ public abstract class Geometry : AdamantiumComponent
    /// from its mesh.</summary>
    protected internal virtual List<(Vector2<double>[] Points, bool IsClosed)> FiguresCore() => null;
 
+   /// <summary>What the geometry fills, as a combination reads it: the rings of its filled figures with its
+   /// <see cref="Transform"/> - an open one closed, as a fill closes it - and the rule telling inside from out. By
+   /// default every figure, even-odd; a geometry with figures it does not fill, or a rule of its own, says so.</summary>
+   internal virtual (List<Vector2<double>[]> Rings, FillRule Rule) Area()
+   {
+      var rings = new List<Vector2<double>[]>();
+      foreach (var (points, _) in GetFigures())
+      {
+         if (points.Length >= 3)
+         {
+            rings.Add(points);
+         }
+      }
+
+      return (rings, FillRule.EvenOdd);
+   }
+
    /// <summary>The contours a stroke runs along, as the renderer strokes them: the ones <see cref="ProcessGeometry"/>
    /// made, while the geometry is as it was then; otherwise made now, from the mesh as it is, and not kept.</summary>
    internal PreparedStroke StrokeForDrawing =>

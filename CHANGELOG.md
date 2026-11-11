@@ -366,9 +366,22 @@ All packages share one version.
 - An `Ellipse` drawn as a ring (`RingThickness`) swept through part of a turn is the band it says: it was cut from a
   sector by a boolean whose two sectors share their radial edges, which hung the render thread from about 295 degrees
   on and at other sweeps (45, 135) filled the hole and left the band empty. The band is now built as its outline - out
-  along the outer arc, back along the inner. A `CombinedGeometry` whose walk of contours falls into such a loop stops
-  after as many steps as it has segments, its contour cut short rather than the thread lost; one whose outlines share a
-  segment no longer throws as it is cut into triangles.
+  along the outer arc, back along the inner.
+- `CombinedGeometry` combines exactly outlines that cross, touch, overlap or run along one another. The two are laid
+  over each other: every edge is cut wherever another crosses or touches it, and the pieces lying on one another are
+  made one. A piece is kept where the mode fills one side of it and not the other. Which side is filled is counted by
+  winding: a ray from the piece's middle, across it, counts each operand's winding by the operand's own fill rule. The
+  kept pieces are joined into closed rings that part where they meet at a point, and the rings are filled by ear
+  clipping, face by face.
+  - Before, shared edges were guessed at: a sector less the sector inside it hung the thread or filled the wrong side,
+    and squares meeting along an edge drew that edge twice.
+  - A `PathGeometry` operand was combined as nothing: its figures stood twice in its mesh.
+  - An operand's `FillRule` and figures it does not fill (`IsFilled`) are now heeded, and a `GeometryGroup` operand is its
+    children under its rule.
+  - Points closer than a ten-millionth of the shapes' size are one; turned, tiny, huge or far-off shapes combine as
+    they do at their own size.
+  - The operands' own meshes are no longer changed by combining them.
+  - Large shapes combine many times faster: 2000 points against 2000 took 16 s, now about 25 ms.
 - A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
   again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
   process for good.
