@@ -31,6 +31,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
+    private WebViewBrowser warmUp;
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
@@ -336,8 +337,45 @@ public sealed unsafe class WebViewEngine : IDisposable
         var browser = new WebViewBrowser(this, made, path, view);
         browsers.Add(browser);
         ArmPumpTimer(MaxPumpDelayMs);
+        warmUp?.Dispose();
+        warmUp = null;
         return browser;
     }
+
+    /// <summary>Starts Chromium ahead of the first page: CEF, and its processes - the GPU's, the network's, a page's -
+    /// kept up by a blank page shown nowhere until the first browser is made. That page then shows without waiting for
+    /// them; until it does, they hold their memory - the blank page draws nothing and takes no device. On the UI loop;
+    /// nothing while a browser is open, or with no CEF beside the application.</summary>
+    public void StartAhead()
+    {
+        if (!IsAvailable || warmUp != null || browsers.Count > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            EnsureInitialized();
+            warmUp = new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewWarmUpView());
+            browsers.Add(warmUp);
+            ArmPumpTimer(MaxPumpDelayMs);
+            warmUp.SetHidden(true);
+            warmUp.Create(WebViewBrowser.Blank, 1, 1, 1f, IntPtr.Zero);
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "Chromium could not be started ahead of the first page");
+            warmUp?.Dispose();
+            warmUp = null;
+        }
+    }
+
+    /// <summary>Whether the blank page of <see cref="StartAhead"/> keeps Chromium up: made by CEF, no browser made since.
+    /// </summary>
+    internal bool IsStartedAhead => warmUp is { IsMade: true };
+
+    /// <summary>The browsers made and not closed yet - the blank page of <see cref="StartAhead"/> among them.</summary>
+    internal int BrowserCount => browsers.Count;
 
     /// <summary>A browser for a page another one opens, its frames coming as its opener's do: CEF makes it, from the
     /// opener's request. None while the device is lost and not made anew.</summary>
@@ -373,6 +411,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
 
         shutDown = true;
+        warmUp = null;
         devices.DeviceChangeBegin -= OnDeviceChanging;
         devices.DeviceChangeEnd -= OnDeviceChanged;
         if (application != null)
@@ -543,7 +582,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     {
         if (Interlocked.Exchange(ref pumpPosted, 1) == 0)
         {
-            LoopSignal.Post(DoPumpWork);
+            LoopSignal.PostBetweenFrames(DoPumpWork);
         }
     }
 
