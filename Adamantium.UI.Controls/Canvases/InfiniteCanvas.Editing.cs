@@ -1116,16 +1116,27 @@ public partial class InfiniteCanvas
             new PropertyMetadata(Brushes.Transparent, OnGroundBrushSet));
     }
 
-    private void OnPointerDown(object sender, PointerPressedEventArgs e) => PointerDown(sender, e);
-
-    private void PointerDown(object sender, PointerPressedEventArgs e)
+    private void OnPointerDown(object sender, PointerPressedEventArgs e)
     {
         if (e.Handled) return;
 
         // A press catches a moving camera where it is, as a hand on a sliding sheet does - a coast, or a wheel's zoom
-        // still easing, which would otherwise be counted into a drag as if the hand had moved it.
-        CatchCamera();
+        // still easing, which would otherwise be counted into a drag as if the hand had moved it. Caught stretch and
+        // all, so a press that pans takes the plane from where it is shown; one that does not lets it spring back.
+        TakeByHand();
 
+        try
+        {
+            PointerDown(e);
+        }
+        finally
+        {
+            if (!_panning) SpringBack();
+        }
+    }
+
+    private void PointerDown(PointerPressedEventArgs e)
+    {
         if (e.Pointer.Type == PointerType.Touch && (_panning || Tool is { IsInk: true } && !FingersInk() && PenTouches()))
         {
             return;
@@ -1190,13 +1201,12 @@ public partial class InfiniteCanvas
             return;
         }
 
-        var pans = e.ChangedButton == MouseButtons.Middle || (e.ChangedButton == MouseButtons.Left && _spaceHeld);
-        if (pans)
+        if (e.ChangedButton == MouseButtons.Middle || (e.ChangedButton == MouseButtons.Left && _spaceHeld))
         {
             _panning = true;
             _panPointer = e.Pointer;
             _panFrom = e.GetPosition(this);
-            _panOffsetFrom = Offset;
+            _panOffsetFrom = _handOffset;
             _coast.ResetTracking();
 
             e.Pointer.Capture(this);
@@ -1257,7 +1267,7 @@ public partial class InfiniteCanvas
             _panning = true;
             _panPointer = e.Pointer;
             _panFrom = at;
-            _panOffsetFrom = Offset;
+            _panOffsetFrom = _handOffset;
             _coast.ResetTracking();
 
             e.Pointer.Capture(this);
@@ -1307,9 +1317,11 @@ public partial class InfiniteCanvas
         _activePointer = e.Pointer;
         if (_panning && ReferenceEquals(e.Pointer, _panPointer))
         {
-            // From where the drag STARTED, not from the last move: accumulating deltas drifts, and the camera has
-            // nothing to clamp against that would hide it.
-            Travel(_travel + (_panOffsetFrom + (e.GetPosition(this) - _panFrom) - Offset));
+            // From where the drag STARTED, not from the last move: accumulating deltas drifts. On a plane with edges
+            // the hand pulls it past them.
+            var wanted = _panOffsetFrom + (e.GetPosition(this) - _panFrom);
+            if (HasPlaneBounds) MoveByHand(wanted - _handOffset);
+            else Travel(_travel + (wanted - Offset));
             _coast.Track(e.Timestamp);
             e.Handled = true;
             return;
@@ -1461,8 +1473,11 @@ public partial class InfiniteCanvas
                 e.Pointer.Capture(null);
 
                 // When the gesture ends, not while it runs: a pan raises the camera on every mouse move. A plane let go
-                // while still moving coasts on, and is remembered where it comes to rest.
-                if (!(IsInertiaEnabled && _coast.Release(e.Timestamp))) RememberLayout();
+                // while still moving coasts on - out past an edge and back on a spring - and is remembered where it
+                // comes to rest; one let go past an edge springs back.
+                var coasts = IsInertiaEnabled && _coast.Release(e.Timestamp);
+                LetGoByHand(coasts, false);
+                if (!coasts && !_springBack.IsActive) RememberLayout();
                 e.Handled = true;
                 return;
             }
@@ -1507,13 +1522,9 @@ public partial class InfiniteCanvas
         }
 
         // A finger panning under an ink tool is taken over by a pinch: the pan ends here, whatever the tool takes,
-        // or it would stand open and every later touch would be read as more of it.
-        if (_panning && ReferenceEquals(e.Pointer, _panPointer))
-        {
-            _panning = false;
-            _panPointer = null;
-            RememberLayout();
-        }
+        // or it would stand open and every later touch would be read as more of it. Left past an edge, it springs back -
+        // and a gesture taking over catches it where it is.
+        if (_panning && ReferenceEquals(e.Pointer, _panPointer)) EndPan();
 
         if (TakesManyPointers)
         {
@@ -1530,6 +1541,19 @@ public partial class InfiniteCanvas
 
         LetGo();
         if (pressed) EndEdit();
+    }
+
+    private void OnPointerCaptureLost(object sender, PointerEventArgs e)
+    {
+        if (_panning && ReferenceEquals(e.Pointer, _panPointer)) EndPan();
+    }
+
+    private void EndPan()
+    {
+        _panning = false;
+        _panPointer = null;
+        SpringBack();
+        if (!_springBack.IsActive) RememberLayout();
     }
 
     private void LetGo()
