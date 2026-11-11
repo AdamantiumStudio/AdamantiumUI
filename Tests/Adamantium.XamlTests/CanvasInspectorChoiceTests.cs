@@ -324,6 +324,34 @@ public class CanvasInspectorChoiceTests
         Assert.That(messages, Is.Empty);
     }
 
+    // THE WHEEL LINE offers every mode the enum has, filled from the enum itself, and shows the one set.
+    [Test]
+    public void TheWheelLineOffersEveryModeAndShowsTheOneSet()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene(), WheelMode = CanvasWheelMode.Scroll };
+        canvas.ApplyCurrentTheme();
+        Settle(canvas);
+
+        PropertyRow wheel = null;
+        foreach (var row in Rows(Found<CanvasInspector>(canvas)))
+        {
+            if (row.Definition is ChoiceProperty && Equals(row.Definition.Header, "Wheel")) wheel = row;
+        }
+
+        Assert.That(wheel, Is.Not.Null, "the canvas's lines have no wheel line");
+
+        var offered = new List<object>();
+        foreach (var mode in ((ChoiceProperty)wheel.Definition).Choices()) offered.Add(mode);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(offered, Is.EqualTo(new object[] { CanvasWheelMode.Zoom, CanvasWheelMode.Scroll, CanvasWheelMode.None }));
+            Assert.That((wheel.Editor as DropDown)?.SelectedItem, Is.EqualTo(CanvasWheelMode.Scroll));
+        });
+    }
+
     // What a socket may carry, as an application says it.
     private sealed class Carries : ICanvasSocketKind
     {

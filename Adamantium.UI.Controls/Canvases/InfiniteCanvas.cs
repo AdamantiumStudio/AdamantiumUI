@@ -439,15 +439,6 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     public IEnumerable GridStyles => GetValue<IEnumerable>(GridStylesProperty);
 
-    private static readonly IReadOnlyList<CanvasWheelMode> Wheels =
-        [CanvasWheelMode.Zoom, CanvasWheelMode.Scroll, CanvasWheelMode.None];
-
-    /// <summary>What the wheel can be made to do, for the line that chooses it.</summary>
-    public static readonly AdamantiumProperty WheelModesProperty = AdamantiumProperty.Register(nameof(WheelModes),
-        typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Wheels));
-
-    public IEnumerable WheelModes => GetValue<IEnumerable>(WheelModesProperty);
-
     /// <summary>Whether the plane is a <see cref="DrawingBoard"/>, as a switch a binding can ask. A line offered only on
     /// a drawing - snapping, which a graph does none of - says so itself: <c>IsVisible="{Binding IsDrawing}"</c>, with no
     /// help from whatever panel it is written in.</summary>
