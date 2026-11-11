@@ -22,4 +22,11 @@ public static class FileManager
     public static bool OpenItem(string path) =>
         Platform != null && !string.IsNullOrEmpty(path) && (File.Exists(path) || Directory.Exists(path)) &&
         Platform.OpenItem(Path.GetFullPath(path));
+
+    /// <summary>The user's downloads folder: where the desktop keeps it, else "Downloads" in the home folder. A full
+    /// path; the folder may not be there yet.</summary>
+    public static string DownloadsFolder =>
+        Platform?.DownloadsFolder is { Length: > 0 } folder && Path.IsPathFullyQualified(folder)
+            ? folder
+            : Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"));
 }

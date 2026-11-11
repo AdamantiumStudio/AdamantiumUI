@@ -22,6 +22,10 @@ All packages share one version.
 - `FileManager.OpenItem(path)`: opens a file or folder with the application the desktop opens it with, as a double
   click in the file manager does - the shell on Windows, asking which application when none opens its kind; `open` on
   macOS; `xdg-open` on Linux.
+- `FileManager.DownloadsFolder`: the user's downloads folder where the desktop keeps it - on Windows as the shell
+  records it (User Shell Folders, moved if the user moved it), on Linux as xdg-user-dirs names it (in the user's
+  language, read as glib reads `user-dirs.dirs`; set to the home folder, the home folder), on macOS Downloads in the
+  home folder - else "Downloads" in the home folder.
 - Downloads in `WebView`: a file a page downloads - a link to one, an attachment, a link to one opened as a new
   page - is asked of the view model (`WebViewBridge.DownloadRequested`), which saves it where it says (`Save`, or
   `SaveFromFileDialog` asking the user through the platform's dialog) or refuses it; unasked, it is refused, as before.
@@ -260,7 +264,7 @@ All packages share one version.
 
 ### Changed
 
-- `IFileManagerPlatform` has `OpenItem`: a platform of an application's own implements it too.
+- `IFileManagerPlatform` has `OpenItem` and `DownloadsFolder`: a platform of an application's own implements them too.
 - Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
   low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
   each time. `LoopSignal.PostBetweenFrames` runs work so: while the loop holds between frames, up to the frame's due
