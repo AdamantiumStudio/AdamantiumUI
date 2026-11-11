@@ -16,7 +16,8 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed unsafe class WebViewBrowser : IDisposable
 {
     private const double ZoomStep = 1.2;
-    private const string Blank = "about:blank";
+    /// <summary>The blank page's address.</summary>
+    internal const string Blank = "about:blank";
 
     private readonly WebViewEngine engine;
     private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];
@@ -1115,6 +1116,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// </summary>
     internal bool OnScriptDialog(WebViewScriptDialogRequest request)
     {
+        // A closing page asks nobody: kept by an answer to stay, it would never close.
+        if (closing)
+        {
+            return false;
+        }
+
         askedDialog = request;
         return view.ScriptDialogRequested(this, request);
     }
@@ -1701,6 +1708,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>Whether the browser is closing, or closed.</summary>
     internal bool IsClosing => closing;
+
+    /// <summary>Whether CEF has made the browser, and it is not closed yet.</summary>
+    internal bool IsMade => browser != null;
 
     /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
     internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);

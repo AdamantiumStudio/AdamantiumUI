@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WebViewEngine.StartAhead()`: Chromium started before the first page - CEF, and its processes (the GPU's, the
+  network's, a page's) kept up by a blank page shown nowhere until the first browser is made, which then shows its
+  page without waiting for them to start. Until then they hold their memory; an application calls it as it starts.
 - `InfiniteCanvas.PlaneBounds`: the plane's edges. Empty - the default - leaves it endless, as before. With edges the
   camera stays on the plane through every move - drag, wheel, zoom, inertia, fit: scrolled no further than its edges,
   centered across where it is narrower than the viewport, at the top where it is shorter; zooming out centers it and a
@@ -219,6 +222,12 @@ All packages share one version.
 
 ### Changed
 
+- Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
+  low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
+  each time. `LoopSignal.PostBetweenFrames` runs work so: while the loop holds between frames, up to the frame's due
+  time, and in an idle loop's sleep, which goes on after it - no frame asked for, no pass of the loop run for it. Work
+  posted with `LoopSignal.Post` keeps running first in a frame, and what it has Chromium ask for runs in the same
+  frame.
 - `InfiniteCanvas.ZoomWithWheel` is gone: `WheelMode` says what the wheel does - `Zoom` for true, `None` for false.
 - A `WebView` out of sight - a tab not shown, a minimized window, a page another opened and not yet looked at - gives
   its frame surfaces back to the GPU (a few, each the page's size in pixels: ~26 MB at 4K) and gets new ones with a
@@ -311,6 +320,9 @@ All packages share one version.
 
 ### Fixed
 
+- A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
+  again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
+  process for good.
 - A rectangle, ellipse or regular polygon whose brush changes into one no batch can record drew nothing: it had been
   built for the batch and was left without a body of its own. It gets one - with its edge and outline - and is drawn;
   a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
