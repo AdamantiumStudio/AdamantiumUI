@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Extensions;
@@ -984,9 +985,11 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         PrepareBuiltLate(transform, projection, renderScale);
     }
 
-    /// <summary>The shape this ellipse actually is. A RING is the outer shape with the inner one taken out of it - the
+    /// <summary>The shape this ellipse actually is. A RING is the band between the outer shape and the inner one - the
     /// tessellated twin of what the batch does by subtracting the field's own inward offset. Both cut a band with RADIAL
-    /// ends (see EllipseBatchCollector's cut bake), which is the one closing where the two constructions agree exactly.</summary>
+    /// ends (see EllipseBatchCollector's cut bake), which is the one closing where the two constructions agree exactly.
+    /// The band is drawn as the outline it is - out along the outer arc, back along the inner - never cut from a sector
+    /// by a boolean, whose edges the two sectors share.</summary>
     private static Geometry EllipseShape(EllipsePayload payload)
     {
         var outer = new EllipseGeometry(payload.DestinationRect, payload.StartAngle, payload.SweepAngle, payload.EllipseType);
@@ -999,12 +1002,53 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         // nonsense, so it is the solid shape that answers there.
         if (inner.Width <= 0 || inner.Height <= 0) return outer;
 
-        return new CombinedGeometry
+        return RingBand(payload.DestinationRect, inner, payload.StartAngle, Math.Min(payload.SweepAngle, 360));
+    }
+
+    // Degrees of an arc between its points: a ring's arcs as smooth as the ellipse's own, whatever their sweep.
+    private const double RingStepDegrees = 5;
+
+    private static Geometry RingBand(Rect outer, Rect inner, double start, double sweep)
+    {
+        var steps = Math.Max(2, (int)Math.Ceiling(sweep / RingStepDegrees));
+        var band = new StreamGeometry { FillRule = FillRule.EvenOdd };
+        var figures = band.Open();
+        if (sweep >= 360)
         {
-            GeometryCombineMode = GeometryCombineMode.Exclude,
-            Geometry1 = outer,
-            Geometry2 = new EllipseGeometry(inner, payload.StartAngle, payload.SweepAngle, EllipseType.Sector)
-        };
+            // A whole turn: the outer ring and the inner, the hole between them by the even-odd rule.
+            // The last point of a whole turn is its first: the figure closes on it instead.
+            figures.BeginFigure(ArcPoint(outer, start), true, true)
+                .PolylineLineTo(Arc(outer, start, 360, steps).Skip(1).Take(steps - 1));
+            figures.BeginFigure(ArcPoint(inner, start), true, true)
+                .PolylineLineTo(Arc(inner, start, 360, steps).Skip(1).Take(steps - 1));
+            return band;
+        }
+
+        var back = Arc(inner, start, sweep, steps);
+        back.Reverse();
+        figures.BeginFigure(ArcPoint(outer, start), true, true)
+            .PolylineLineTo(Arc(outer, start, sweep, steps).Skip(1).Concat(back));
+        return band;
+    }
+
+    // Points along the ellipse in rect from start through sweep degrees, clockwise on the screen, as EllipseGeometry
+    // measures its sectors.
+    private static List<Vector2<double>> Arc(Rect rect, double start, double sweep, int steps)
+    {
+        var points = new List<Vector2<double>>(steps + 1);
+        for (var i = 0; i <= steps; i++)
+        {
+            points.Add(ArcPoint(rect, start + sweep * i / steps));
+        }
+
+        return points;
+    }
+
+    private static Vector2<double> ArcPoint(Rect rect, double degrees)
+    {
+        var angle = double.DegreesToRadians(degrees);
+        return new Vector2<double>(rect.Center.X + rect.Width / 2 * Math.Cos(angle),
+            rect.Center.Y + rect.Height / 2 * Math.Sin(angle));
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)

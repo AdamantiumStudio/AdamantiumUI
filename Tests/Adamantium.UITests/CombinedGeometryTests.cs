@@ -1,6 +1,7 @@
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
+using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -129,6 +130,25 @@ public class CombinedGeometryTests
         var offsets = new[] { (0, 0), (0, -60), (0, 60), (-60, 0), (60, 0), (0, -20), (0, 20), (35, 35), (-35, -35) };
         foreach (var (dx, dy) in offsets)
             Assert.IsTrue(Covered(m, new Vector2<double>(100 + dx, 100 + dy)), $"interior point ({dx},{dy}) must be filled (no strip)");
+    }
+
+    // Regression: a sector less the sector inside it - outlines sharing their radial edges - left a spur the walk of
+    // contours looped round for ever, hanging the render thread (sweeps from 295 degrees on). The walk is bounded now:
+    // whatever the boolean makes of such edges, it finishes. Single-threaded: a hang fails the run, never leaks a thread.
+    [Test, Timeout(60_000)]
+    public void SectorsSharingEdges_AreCombined_InBoundedTime()
+    {
+        foreach (var size in new[] { 22.0, 100.0 })
+        {
+            for (var sweep = 290; sweep <= 360; sweep++)
+            {
+                var outer = new EllipseGeometry(new Rect(0, 0, size, size), 0, sweep, EllipseType.Sector);
+                var inner = new EllipseGeometry(new Rect(2, 2, size - 4, size - 4), 0, sweep, EllipseType.Sector);
+                Combine(GeometryCombineMode.Exclude, outer, inner);
+            }
+        }
+
+        Assert.Pass();
     }
 
     // ---- helpers ----

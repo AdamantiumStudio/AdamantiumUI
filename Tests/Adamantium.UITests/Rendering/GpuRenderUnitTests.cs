@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Core.Models;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
@@ -201,6 +202,96 @@ public class GpuRenderUnitTests
         {
             EllipseBatchCollector.Enabled = batched;
         }
+    }
+
+    // A ring's band was cut from a sector by a boolean that shares the sectors' radial edges: at some sweeps it never
+    // finished (from 295 degrees on), at others it filled the hole and left the band empty (45, 135). Built as the
+    // outline it is, the band covers what lies between the arcs within the sweep, and nothing else.
+    [TestCase(22.0)]
+    [TestCase(100.0)]
+    public void ARingsBand_CoversTheBand_AndNothingElse_AtEverySweep(double size)
+    {
+        const double thickness = 2;
+        var box = new Rect(0, 0, size, size);
+        var batched = EllipseBatchCollector.Enabled;
+        EllipseBatchCollector.Enabled = false;
+        var wrong = new List<string>();
+        try
+        {
+            foreach (var sweep in new[] { 1.0, 45, 92, 135, 180, 270, 295, 297, 299, 330, 359, 360 })
+            {
+                var payload = new EllipsePayload(Brushes.Red, box, 0, sweep, EllipseType.Sector, null) { RingThickness = thickness };
+                var unit = new EllipseRenderUnit(Command(payload), Ctx((UIBasicEffect)_effect.Clone()));
+                var mesh = unit.GeometryRenderer.Mesh;
+                var misses = 0;
+                for (var y = 0.25; y < size; y += size / 60)
+                {
+                    for (var x = 0.25; x < size; x += size / 60)
+                    {
+                        if (RingSays(x, y, size, thickness, sweep) is { } inBand && CoveredByMesh(mesh, x, y) != inBand)
+                        {
+                            misses++;
+                        }
+                    }
+                }
+
+                if (misses > 0)
+                {
+                    wrong.Add($"{sweep} deg: {misses} points");
+                }
+            }
+        }
+        finally
+        {
+            EllipseBatchCollector.Enabled = batched;
+        }
+
+        Assert.That(wrong, Is.Empty);
+    }
+
+    // Whether a point is in the band - between the circles, within the sweep clockwise from 0 - or null for one too
+    // near an edge for a tessellated arc to be held to it.
+    private static bool? RingSays(double x, double y, double size, double thickness, double sweep)
+    {
+        var r = size / 2;
+        var (dx, dy) = (x - r, y - r);
+        var distance = Math.Sqrt(dx * dx + dy * dy);
+        var angle = (Math.Atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        var margin = size / 40;
+        var angleMargin = margin / Math.Max(distance, 1) * 180 / Math.PI;
+        if (Math.Abs(distance - r) < margin || Math.Abs(distance - (r - thickness)) < margin)
+        {
+            return null;
+        }
+
+        if (sweep < 360 && (angle < angleMargin || Math.Abs(angle - sweep) < angleMargin || angle > 360 - angleMargin))
+        {
+            return null;
+        }
+
+        return distance < r && distance > r - thickness && (sweep >= 360 || angle <= sweep);
+    }
+
+    private static bool CoveredByMesh(Mesh mesh, double x, double y)
+    {
+        var points = mesh.Points;
+        var indices = mesh.Indices;
+        var count = indices is { Length: > 0 } ? indices.Length : points.Length;
+        for (var i = 0; i + 2 < count; i += 3)
+        {
+            var (a, b, c) = indices is { Length: > 0 }
+                ? (points[indices[i]], points[indices[i + 1]], points[indices[i + 2]])
+                : (points[i], points[i + 1], points[i + 2]);
+            var d1 = (x - b.X) * (a.Y - b.Y) - (a.X - b.X) * (y - b.Y);
+            var d2 = (x - c.X) * (b.Y - c.Y) - (b.X - c.X) * (y - c.Y);
+            var d3 = (x - a.X) * (c.Y - a.Y) - (c.X - a.X) * (y - a.Y);
+            if (!((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     [Test]
