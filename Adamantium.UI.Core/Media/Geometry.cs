@@ -186,6 +186,54 @@ public abstract class Geometry : AdamantiumComponent
    internal PreparedFill FillForDrawing =>
       _readyFill is { } ready && ready.Version == Version ? ready : PreparedFill.Of(this, Version);
 
+   private Curves.PathCurves _curves;
+
+   /// <summary>The outline as quadratic curves, its <see cref="Transform"/> applied - what the GPU fills and strokes at
+   /// any zoom. Made once for each <see cref="Version"/>, on whatever thread asks first.</summary>
+   internal Curves.PathCurves CurvesForDrawing
+   {
+      get
+      {
+         if (_curves is { } made && made.Version == Version)
+         {
+            return made;
+         }
+
+         var version = Version;
+         var builder = new Curves.PathCurveBuilder();
+         if (AppendCurves(builder))
+         {
+            return _curves = builder.Build(version, Transform?.Matrix, CurveFillRule);
+         }
+
+         // The figures as points, the transform applied already: a geometry that keeps no curves of its own.
+         foreach (var (points, isClosed) in GetFigures())
+         {
+            if (points.Length == 0)
+            {
+               continue;
+            }
+
+            builder.BeginFigure(points[0], true);
+            for (var i = 1; i < points.Length; i++)
+            {
+               builder.LineTo(points[i]);
+            }
+
+            builder.EndFigure(isClosed);
+         }
+
+         return _curves = builder.Build(version, null, CurveFillRule);
+      }
+   }
+
+   /// <summary>Which points the curves enclose: the geometry's own rule where it has one, else non-zero.</summary>
+   protected internal virtual FillRule CurveFillRule => FillRule.NonZero;
+
+   /// <summary>Gives the geometry's figures to <paramref name="builder"/> as curves, before its
+   /// <see cref="Transform"/>; false for one that keeps none, whose figures are then given as their points.</summary>
+   private protected virtual bool AppendCurves(Curves.PathCurveBuilder builder) => false;
+
    /// <summary>Bumped every time the content is invalidated. A geometry can be REFILLED in place (a Polygon reopens its
    /// one StreamGeometry with new points on every render), so the instance stays the same while what it describes does
    /// not - and a render payload comparing instances alone would call that "unchanged" and keep the stale GPU mesh.</summary>

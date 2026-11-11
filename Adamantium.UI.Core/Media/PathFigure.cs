@@ -66,6 +66,18 @@ public sealed class PathFigure : AdamantiumComponent
         isSegmentProcessed = true;
     }
 
+    /// <summary>Gives the figure to <paramref name="builder"/> as curves.</summary>
+    internal void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        builder.BeginFigure(StartPoint, IsFilled);
+        foreach (var segment in Segments)
+        {
+            segment.AppendCurves(builder);
+        }
+
+        builder.EndFigure(IsClosed);
+    }
+
     public bool IsClosed
     {
         get => GetValue<bool>(IsClosedProperty);

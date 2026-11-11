@@ -43,6 +43,8 @@ public class PathGeometry : Geometry
         RaiseComponentUpdated();
     }
 
+    protected internal override FillRule CurveFillRule => FillRule;
+
     public FillRule FillRule
     {
         get => GetValue<FillRule>(FillRuleProperty);
@@ -96,6 +98,16 @@ public class PathGeometry : Geometry
         var minX = points.Select(x => x.X).Min();
         var minY = points.Select(y => y.Y).Min();
         bounds = new Rect(new Vector2<double>(minX, minY), new Vector2<double>(maxX, maxY));
+    }
+
+    private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        foreach (var figure in Figures ?? [])
+        {
+            figure.AppendCurves(builder);
+        }
+
+        return true;
     }
 
     protected internal override void ProcessGeometryCore(GeometryType geometryType)

@@ -45,6 +45,19 @@ public class GeometryGroup : Geometry, IContainer
         set => SetValue(FillRuleProperty, value);
     }
 
+    protected internal override FillRule CurveFillRule => FillRule;
+
+    // Each child's curves as it makes them, its own transform applied; the group's goes over them all.
+    private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        foreach (var child in Children)
+        {
+            builder.Append(child.CurvesForDrawing);
+        }
+
+        return true;
+    }
+
     private void ChildrenOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         InvalidateGeometry();
