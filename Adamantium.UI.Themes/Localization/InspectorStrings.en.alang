@@ -80,6 +80,9 @@
     <Phrase Key="Least" Text="Least"/>
     <Phrase Key="Most" Text="Most"/>
     <Phrase Key="Origin" Text="Origin"/>
+    <Phrase Key="Wheel" Text="Wheel"/>
+    <Phrase Key="Edges" Text="Edges"/>
+    <Phrase Key="EdgesHint" Text="Where the plane ends; the camera stays on it. No width or height - endless."/>
     <Phrase Key="Home" Text="Home"/>
     <Phrase Key="Remember" Text="Remember"/>
     <Phrase Key="Panels" Text="Panels"/>

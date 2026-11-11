@@ -10,6 +10,16 @@ All packages share one version.
 - `WebViewEngine.StartAhead()`: Chromium started before the first page - CEF, and its processes (the GPU's, the
   network's, a page's) kept up by a blank page shown nowhere until the first browser is made, which then shows its
   page without waiting for them to start. Until then they hold their memory; an application calls it as it starts.
+- `InfiniteCanvas.PlaneBounds`: the plane's edges. Empty - the default - leaves it endless, as before. With edges the
+  camera stays on the plane through every move - drag, wheel, zoom, inertia, fit: scrolled no further than its edges,
+  centered across where it is narrower than the viewport, at the top where it is shorter; zooming out centers it and a
+  zoom near an edge presses it to the edge. A finger pulls it a little past an edge against a growing pull and it
+  springs back; a flick meets the edge the same way, a mouse's coast stops at it. Scroll bars (`PART_HorizontalScrollBar`,
+  `PART_VerticalScrollBar` in the canvas's template) show the camera along an axis there is somewhere to go and move
+  it. `ClampToPlane` says where a camera would be kept. The canvas's panel edits the edges.
+- `InfiniteCanvas.WheelMode` (`CanvasWheelMode.Zoom`, `Scroll`, `None`): the wheel zooms, as before, or scrolls as
+  through a document - down and up, across with Shift or a tilted wheel, Ctrl with the wheel zooming - or does nothing.
+  The canvas's panel chooses it.
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
   scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
   shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.
@@ -54,6 +64,25 @@ All packages share one version.
   stencil masks, forms and their transparency groups, soft masks and blend modes, axial, radial and function shadings,
   tiling patterns, optional content and annotations' appearances; what it could not draw is told in `Problems`. The
   sandbox's "PDF page" tab shows the page of a sample written there or of a file of one's own.
+- `RadialGradientBrush.GradientOriginRadius`: the gradient between two circles - the origin's of this radius, as a
+  fraction of the end ellipse's, and the end one - as Canvas 2D's `createRadialGradient` and SVG 2's `fr` draw it;
+  where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
+  shadings are drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked
+  out point by point into a picture where it is not. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
+  and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
+- `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
+  triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
+  shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it, seen through as one
+  where they are translucent, and a mesh past a million triangles is told. The sandbox's "PDF
+  drawing" tab shows a color wheel of them.
+- `Pen.MiterLimit` and `Shape.StrokeMiterLimit`: how far a miter join's point may reach, in half thicknesses (10 by
+  default); a sharper corner is beveled, as SVG, WPF and PDF do - before, every miter was cut short at four half
+  thicknesses, sharper corners with a slanted stub. A PDF page's `M` reaches its pens. The sandbox's "Shapes" tab has
+  a slider for it. `Pen.ClampMiterLimit` and `Pen.MostMiterLimit` say what is drawn (1 to 1000; 10 for NaN).
+- `ImageSource.Sampling` (`ImageSampling.Smooth`, `Pixelated`): a picture enlarged in hard squares, the nearest pixel,
+  and reduced smoothly - for every way a picture is drawn, `Image`, `DrawImage` and image brushes. A PDF image that
+  does not ask to be interpolated is drawn so (`Interpolate` is false by default). The sandbox's "Image" tab shows an
+  8×8 picture enlarged both ways.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
 - `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the
@@ -195,9 +224,10 @@ All packages share one version.
 - Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
   low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
   each time. `LoopSignal.PostBetweenFrames` runs work so: while the loop holds between frames, up to the frame's due
-  time, and in an idle loop's sleep, which goes on after it - no frame asked for, no pass of the loop run for it. Work posted with `LoopSignal.Post` keeps running first in a
-  frame, and what it has Chromium ask for runs in the same frame.
-
+  time, and in an idle loop's sleep, which goes on after it - no frame asked for, no pass of the loop run for it. Work
+  posted with `LoopSignal.Post` keeps running first in a frame, and what it has Chromium ask for runs in the same
+  frame.
+- `InfiniteCanvas.ZoomWithWheel` is gone: `WheelMode` says what the wheel does - `Zoom` for true, `None` for false.
 - A `WebView` out of sight - a tab not shown, a minimized window, a page another opened and not yet looked at - gives
   its frame surfaces back to the GPU (a few, each the page's size in pixels: ~26 MB at 4K) and gets new ones with a
   whole frame once it is seen; each background tab of a browser held them for good.
@@ -292,6 +322,19 @@ All packages share one version.
 - A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
   again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
   process for good.
+- A rectangle, ellipse or regular polygon whose brush changes into one no batch can record drew nothing: it had been
+  built for the batch and was left without a body of its own. It gets one - with its edge and outline - and is drawn;
+  a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
+  rectangle spans its gradient over the body's box, so it takes the body's colors.
+- A regular polygon whose outline pen changed kept its old outline.
+- A `BitmapImage` made from pixels in memory was never drawn by `Image`: it did not count as loaded.
+- A group that blends by a mode inside a group that only cuts mixed with nothing: the cut is drawn apart from what
+  lies under it. A cut holding such a group now starts from a copy of what lies under it and is laid back in its place,
+  so the blend mixes with that. The sandbox's "PDF drawing" tab shows discs multiplied inside a star.
+- The frame verifier no longer reports as lost the text the glyph batch cannot pack and draws by itself (turned
+  against its element), nor text in a group of draws left out of sight.
+- A gradient with more than eight stops drew its first eight and padded past them; how many are drawn is now said
+  (`GradientBrush.MaxRenderedStops`).
 - `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
   helper did not live through - and a key typed reaches the page as the key in that place (`KeyboardEvent.code`), from
   its XKB code. The evdev key table is one public type, `EvdevKeyCodes`, both ways.

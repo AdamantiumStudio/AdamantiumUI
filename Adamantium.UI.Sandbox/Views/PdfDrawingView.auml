@@ -43,6 +43,14 @@
                     <TextBlock Text="{Localize PdfDrawingStrings.Nested}" MarginBottom="4"/>
                     <ctl:DrawingGroupSample AutomationProperties.AutomationId="Nested" Sample="Nested" Width="200" Height="140"/>
                 </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.BlendInClip}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="BlendInClip" Sample="BlendInClip" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.ColoredMesh}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="ColoredMesh" Sample="ColoredMesh" Width="200" Height="140"/>
+                </StackPanel>
             </WrapPanel>
 
             <TextBlock x:Name="BlendHeading" Text="{Localize PdfDrawingStrings.BlendModes}" FontSize="16" Margin="0,12,0,8"/>

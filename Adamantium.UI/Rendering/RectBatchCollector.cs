@@ -58,6 +58,10 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     {
         if (pen == null) return true;
         if (pen.Brush is not SolidColorBrush) return false;
+        // The analytic stroke always miters its corners. The sharpest corner of a shape these batches draw is a
+        // triangle's, whose miter reaches twice the half width: a lower limit would bevel some corner, which only the
+        // per-unit stroke does.
+        if (pen.PenLineJoin == PenLineJoin.Miter && Pen.ClampMiterLimit(pen.MiterLimit) < 2) return false;
         var dash = pen.Dashes;
         if (dash is not { Count: > 0 }) return true;
         if (!IsDashPatternBatchable(dash)) return false;

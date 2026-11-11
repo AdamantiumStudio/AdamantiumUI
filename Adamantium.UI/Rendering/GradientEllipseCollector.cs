@@ -31,6 +31,7 @@ internal sealed class GradientEllipseCollector : BrushSdfCollector<GradientRectI
         if (!Enabled) return false;
         if (p.Brush is not GradientBrush g) return false;
         if (g is not MeshGradientBrush && g.GradientStops.Count == 0) return false;   // mesh carries corners, not stops
+        if (!GradientBake.FitsBatch(g)) return false;
         if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
         return p.StartAngle <= 0.0 && p.SweepAngle >= 360.0;
     }

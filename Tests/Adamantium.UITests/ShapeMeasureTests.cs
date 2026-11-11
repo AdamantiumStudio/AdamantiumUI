@@ -44,8 +44,8 @@ public class ShapeMeasureTests
         });
     }
 
-    // A Polygon with a sharp MITER corner: RenderBounds must reach the clamped miter spike (half / sin(angle/2),
-    // capped at 4*half), well past a flat geometry-bbox + half inflate. (Guards the original stroke-poke fix.)
+    // A Polygon with a sharp MITER corner: RenderBounds must reach the miter spike (half / sin(angle/2), within the
+    // miter limit), well past a flat geometry-bbox + half inflate. (Guards the original stroke-poke fix.)
     [Test]
     public void Polygon_MiterCorner_BoundsReachTheSpike()
     {
@@ -62,6 +62,27 @@ public class ShapeMeasureTests
         // bbox bottom = 110; a flat +half would give 115. The sharp tip's miter spike pushes to ~121.
         var bottom = poly.RenderBounds.Y + poly.RenderBounds.Height;
         Assert.That(bottom, Is.GreaterThan(117), "miter spike at the sharp tip must extend the bounds past bbox+half");
+    }
+
+    // The same tip's miter reaches 2.24 half thicknesses: past a limit of 2 it is beveled, and the bounds stop at the
+    // bevel - short of the bbox + half a flat inflate gives.
+    [Test]
+    public void Polygon_MiterPastItsLimit_BoundsStopAtTheBevel()
+    {
+        var poly = new Polygon
+        {
+            Points = new PointsCollection([new Vector2<double>(10, 10), new Vector2<double>(110, 10), new Vector2<double>(60, 110)]),
+            StrokeThickness = 10,
+            Stroke = Brushes.Red,
+            StrokeLineJoin = PenLineJoin.Miter,
+            StrokeMiterLimit = 2
+        };
+
+        poly.Measure(new Size<double>(1280, 720));
+
+        var bottom = poly.RenderBounds.Y + poly.RenderBounds.Height;
+        Assert.That(bottom, Is.EqualTo(115).Within(0.01), "the floor - bbox + half - and no spike past it");
+        Assert.That(poly.GetPen().MiterLimit, Is.EqualTo(2));
     }
 
     // A Path whose Data is a boolean geometry must size from its geometry bounds, not collapse to 0. (Regression:

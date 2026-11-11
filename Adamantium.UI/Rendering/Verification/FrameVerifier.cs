@@ -361,12 +361,13 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             }
         }
 
-        // Text that should be on screen and is batched by kind, but has no run at all: it never reaches the shader.
+        // Text that should be on screen and is batched by kind, but has no run at all and was not drawn by itself either:
+        // it never reaches the shader.
         foreach (var unit in live.DescribeUnits())
         {
             if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun.Count: > 0 } text } && !_textWithRuns.Contains(unit)
                 && unit.Component is { } component && _facts.TryGetValue(component, out var fact) && !fact.Hidden && !fact.Pending
-                && !live.WasCulled(unit) && live.BatchesText(text))
+                && !live.WasCulled(unit) && !live.DrewTextItself(unit) && live.BatchesText(text))
             {
                 Alarm($"{ComponentText.Of(component)}: has {text.GlyphRun.Count} glyphs to draw, but none of them is in the glyph batch" +
                       $" - {live.DescribeTextGroup(unit)}");

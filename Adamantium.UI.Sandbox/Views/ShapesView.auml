@@ -34,14 +34,14 @@
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
             <Polygon Points="60,0 120,96 0,96" Fill="#F59E0B" Margin="10"
                      Stroke="{Binding Stroke.StrokeBrush}" StrokeThickness="{Binding Stroke.StrokeWidth}"
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
             <Path Fill="Magenta" Width="200" Height="200" Margin="10"
                   Data="F0 M110,10 L168.78,190.9 L14.89,79.1 L205.11,79.1 L51.22,190.9 Z"
@@ -49,7 +49,7 @@
                   StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                   StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                   StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                  StrokeLineJoin="{Binding Stroke.Join}"
+                  StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                   StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           <!-- A mesh of triangles cut beforehand - a frame: a square with a square hole - drawn as given. -->
           <StackPanel Orientation="Vertical" Margin="10">
@@ -60,7 +60,7 @@
                   StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                   StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                   StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                  StrokeLineJoin="{Binding Stroke.Join}"
+                  StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                   StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}">
                 <Path.Data>
                     <MeshGeometry Positions="0,0 120,0 120,120 0,120 40,40 80,40 80,80 40,80"
@@ -78,7 +78,7 @@
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
             <!-- Quadratic Bézier curve (open, stroke-only). -->
@@ -98,7 +98,7 @@
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" 
                                   StartLineCap="{Binding Stroke.StartCap}" 
                                   EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}"
                                   StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
@@ -114,7 +114,7 @@
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
             <!-- B-spline curve (open, stroke-only). -->
@@ -133,7 +133,7 @@
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" 
                      StartLineCap="{Binding Stroke.StartCap}" 
                      EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeLineJoin="{Binding Stroke.Join}"
+                     StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}"
                      StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
@@ -242,6 +242,14 @@
                         <DropDown AutomationProperties.LabeledBy="{Binding ElementName=JoinLabel}" Width="176" EnumType="{x:Type m:PenLineJoin}" SelectedItem="{Binding Stroke.Join, Mode=TwoWay}"
                                   ItemTemplate="{ResourceReference ShapesWord}"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock x:Name="MiterLimitLabel" Text="{Localize ShapesStrings.MiterLimit}" MinWidth="80" VerticalAlignment="Center"/>
+                        <Slider AutomationProperties.AutomationId="MiterLimit" AutomationProperties.LabeledBy="{Binding ElementName=MiterLimitLabel}"
+                                IsValueToolTipEnabled="true" Width="130" Minimum="1" Maximum="10" Value="{Binding Stroke.MiterLimit, Mode=TwoWay}"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=MiterLimitLabel}" Width="88" Minimum="1" Maximum="10"
+                                       SmallChange="0.5" StringFormat="N1" IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding Stroke.MiterLimit, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
                     <!-- A closed contour's perimeter almost never divides by the dash period, and the remainder lands
                          at the seam (for a rounded rect, its bottom-right corner - where the arc length starts). This
                          stretches the pattern to a whole number of periods so the ring closes on itself. -->
@@ -294,7 +302,7 @@
                            StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                            StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                            StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                           StrokeLineJoin="{Binding Stroke.Join}"
+                           StrokeLineJoin="{Binding Stroke.Join}" StrokeMiterLimit="{Binding Stroke.MiterLimit}"
                            StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,24,0"/>
                 <Ellipse Width="160" Height="120" Fill="#1E293B" Stroke="{Binding Stroke.StrokeBrush}"

@@ -28,7 +28,7 @@ float4 Backdrop;
 // The group's opacity.
 float GroupAlpha;
 
-// The blend mode, in BlendMode's order: 0 Normal ... 15 Luminosity.
+// The blend mode, in BlendMode's order: 0 Normal ... 15 Luminosity; 16 the content in place of the backdrop.
 float BlendMode;
 
 float Luminance(float3 c) { return dot(c, float3(0.3, 0.59, 0.11)); }
@@ -136,11 +136,15 @@ float4 GroupCompositePS(GroupVSOutput input) : SV_Target
     float2 at = saturate(inRegion);
     float shown = GroupAlpha * inside * MaskValue(Mask0Texture, Mask0, at) * MaskValue(Mask1Texture, Mask1, at)
                   * MaskValue(Mask2Texture, Mask2, at);
-    float4 source = SourceTexture.SampleLevel(SourceSampler, at * LayerTexels.xy, 0) * shown;
+    float4 drawn = SourceTexture.SampleLevel(SourceSampler, at * LayerTexels.xy, 0);
+    float4 source = drawn * shown;
     int mode = int(BlendMode + 0.5);
     if (mode == 0) return source;
 
     float4 under = BackdropTexture.SampleLevel(SourceSampler, at * Backdrop.xy, 0);
+    // A cut whose content started as what lay under it: that content in its place, where the masks let it through.
+    if (mode == 16) return lerp(under, drawn, shown);
+
     float3 cs = source.a > 0.0 ? saturate(source.rgb / source.a) : float3(0.0, 0.0, 0.0);
     float3 cb = under.a > 0.0 ? saturate(under.rgb / under.a) : float3(0.0, 0.0, 0.0);
     float3 mixed = Blend(mode, cb, cs);

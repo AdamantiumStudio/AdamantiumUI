@@ -103,8 +103,10 @@ float MaskAt(float2 pixel)
         float2 c = saturate(uv);
         return lerp(lerp(MaskAlpha0.x, MaskAlpha0.y, c.x), lerp(MaskAlpha0.z, MaskAlpha0.w, c.x), c.y);
     }
-    float t = GradientSpread(GradientParam(type, MaskGeom0, MaskGeom1, uv), int(MaskParams.y));
-    return MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5))));
+    float raw = GradientParam(type, MaskGeom0, MaskGeom1, uv);
+    float t = GradientSpread(raw, int(MaskParams.y));
+    float alpha = MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5))));
+    return raw <= GradientNowhere ? 0.0 : alpha;   // between two circles, where none passes
 }
 
 // What the layer drew at a point of its region (0..1 across it), with its mask and soft edge: premultiplied, nothing

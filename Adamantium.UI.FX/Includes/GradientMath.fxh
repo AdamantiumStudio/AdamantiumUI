@@ -11,8 +11,46 @@ float GradientSpread(float t, int spread)
     return saturate(t);
 }
 
+// What GradientParam answers where a gradient between two circles has no circle passing: nothing is painted there.
+static const float GradientNowhere = -1e30;
+
 float GradientParam(int type, float4 geom0, float4 geom1, float2 uv)
 {
+    // Between two circles (Canvas 2D createRadialGradient): in the end ellipse's unit space the start circle stands at
+    // the origin point with radius geom1.z, the end circle at 0 with radius 1, and t is the largest at which the circle
+    // c(t), r(t) >= 0, passes through the point.
+    if (type == 5)
+    {
+        float2 center = geom0.xy;
+        float2 radius = max(geom0.zw, float2(1e-4, 1e-4));
+        float2 focal = (geom1.xy - center) / radius;
+        float r0 = geom1.z;
+        float2 p = (uv - center) / radius - focal;
+        float2 cd = -focal;
+        float dr = 1.0 - r0;
+        float a = dot(cd, cd) - dr * dr;
+        float b = dot(p, cd) + r0 * dr;
+        float c = dot(p, p) - r0 * r0;
+        if (abs(a) < 1e-6)
+        {
+            if (abs(b) < 1e-9) return GradientNowhere;
+            float t = c / (2.0 * b);
+            return r0 + t * dr >= 0.0 ? t : GradientNowhere;
+        }
+
+        float disc = b * b - a * c;
+        if (disc < 0.0) return GradientNowhere;
+        // q / a and c / q: neither root is a difference of near-equal numbers, so a near 0 loses nothing.
+        float q = b + (b >= 0.0 ? 1.0 : -1.0) * sqrt(disc);
+        if (abs(q) < 1e-12) return 0.0;
+        float t1 = q / a;
+        float t2 = c / q;
+        float hi = max(t1, t2);
+        float lo = min(t1, t2);
+        if (r0 + hi * dr >= 0.0) return hi;
+        return r0 + lo * dr >= 0.0 ? lo : GradientNowhere;
+    }
+
     if (type == 2)
     {
         float2 center = geom0.xy;

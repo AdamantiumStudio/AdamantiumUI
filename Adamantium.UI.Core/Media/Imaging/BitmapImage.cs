@@ -45,6 +45,8 @@ public sealed class BitmapImage : BitmapSource
       format,
       pixels)
    {
+      // Its pixels are here already: ready the moment it exists, as one made from a decoded bitmap is.
+      IsLoaded = true;
    }
 
    public BitmapImage(IRawBitmap bitmap) : base(

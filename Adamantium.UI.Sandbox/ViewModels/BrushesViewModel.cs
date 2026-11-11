@@ -126,6 +126,11 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private double _gradientAngle = 45;
     [Bindable] private double _gradientSpan = 1.0;
     [Bindable] private double _gradientRadius = 0.5;
+
+    // The radial's origin: how far right of the center it stands, and the radius of the circle around it - above 0 the
+    // gradient runs between two circles.
+    [Bindable] private double _gradientOriginShift;
+    [Bindable] private double _gradientOriginRadius;
     [Bindable] private double _gradientCorner = 16;
     [Bindable] private double _gradientStartAngle;
     [Bindable] private GradientSpreadMethod _gradientSpread = GradientSpreadMethod.Pad;
@@ -140,6 +145,8 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnGradientAngleChanged(double value) => ApplyGradientGeometry();
     partial void OnGradientSpanChanged(double value) => ApplyGradientGeometry();
     partial void OnGradientRadiusChanged(double value) => ApplyGradientGeometry();
+    partial void OnGradientOriginShiftChanged(double value) => ApplyGradientGeometry();
+    partial void OnGradientOriginRadiusChanged(double value) => ApplyGradientGeometry();
     partial void OnGradientStartAngleChanged(double value) => ApplyGradientGeometry();
 
     partial void OnGradientSpreadChanged(GradientSpreadMethod value)
@@ -181,9 +188,10 @@ public partial class BrushesViewModel : TabPageViewModel
         LiveLinear.EndPoint = new Vector2<double>(0.5 + dx, 0.5 + dy);
 
         LiveRadial.Center = new Vector2<double>(0.5, 0.5);
-        LiveRadial.GradientOrigin = new Vector2<double>(0.5, 0.5);
+        LiveRadial.GradientOrigin = new Vector2<double>(0.5 + _gradientOriginShift, 0.5);
         LiveRadial.RadiusX = _gradientRadius;
         LiveRadial.RadiusY = _gradientRadius;
+        LiveRadial.GradientOriginRadius = _gradientOriginRadius;
 
         LiveConic.Center = new Vector2<double>(0.5, 0.5);
         LiveConic.StartAngle = _gradientStartAngle;

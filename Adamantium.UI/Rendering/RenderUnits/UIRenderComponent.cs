@@ -11,6 +11,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Retained;
 using Adamantium.Vulkan.Core;
@@ -227,6 +228,13 @@ public class GeometryRenderComponent : UIRenderComponent
             return;
         }
 
+        // A gradient the batches turned away - one they have no room to record.
+        if (brush is GradientBrush gradient)
+        {
+            RenderGradient(gradient);
+            return;
+        }
+
         // A brush this path cannot paint is DRAWN NOT AT ALL. It used to fall through to base.Render() with no pass
         // applied, so the geometry was drawn with whatever effect state the PREVIOUS draw left bound - in practice the
         // glyph pass, which smeared the font atlas across the frame and cost hours to trace. Nothing on screen is the
@@ -251,6 +259,32 @@ public class GeometryRenderComponent : UIRenderComponent
             UIBasicEffect.Opacity.SetValue(0f);
         }
         UIBasicEffect.BasicSolidColorPass.Apply();
+
+        base.Render();
+    }
+
+    private GradientUniforms _gradient;
+
+    /// <summary>The box a gradient fill spans, in the shape's local units, when it is not the mesh's own: a rect, ellipse
+    /// or polygon spans its whole destination, as its batch spans it, so the gradient does not jump between the two.
+    /// </summary>
+    public Rect? GradientBox { get; set; }
+
+    // The gradient across the shape's box, packed as the batches pack it.
+    private void RenderGradient(GradientBrush gradient)
+    {
+        var box = GradientBox ?? Box;
+        if (box.Width <= 0 || box.Height <= 0)
+        {
+            return;
+        }
+
+        var bounds = new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height);
+        UIBasicEffect.Wvp.SetValue(RenderData.TransformMatrix * RenderData.ProjectionMatrix);
+        UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
+        UIBasicEffect.FillBounds.SetValue(bounds);
+        (_gradient ??= new GradientUniforms(UIBasicEffect)).Set(gradient, (float)gradient.Opacity, bounds);
+        UIBasicEffect.BasicGradientFillPass.Apply();
 
         base.Render();
     }
@@ -292,7 +326,7 @@ public class GeometryRenderComponent : UIRenderComponent
         UIBasicEffect.TexRepeat.SetValue(layout.Repeats ? 1f : 0f);
         UIBasicEffect.TexMirror.SetValue(layout.Mirror);
         UIBasicEffect.ShaderTexture.SetResource(texture);
-        UIBasicEffect.SampleType.SetResource(SamplerStates.LinearClampToEdge);
+        UIBasicEffect.SampleType.SetResource(ImageSamplers.Of(image));
         UIBasicEffect.BasicTexturedFillPass.Apply();
 
         base.Render();
@@ -347,7 +381,11 @@ public class ImageRenderComponent : UIRenderComponent
     /// <summary>The palette of a frame array whose layers hold palette indices; null when they hold the colors.</summary>
     public ITexture FramePalette { get; set; }
 
-    public SamplerState Sampler { get; set; }
+    /// <summary>The picture drawn, whose <see cref="ImageSource.Sampling"/> the sampler follows - read at every draw, so
+    /// a change shows at once.</summary>
+    public ImageSource Image { get; set; }
+
+    private SamplerState Sampler => ImageSamplers.Of(Image);
 
     /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
     /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>

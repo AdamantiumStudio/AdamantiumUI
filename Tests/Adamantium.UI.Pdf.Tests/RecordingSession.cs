@@ -37,6 +37,7 @@ internal sealed class RecordingSession : IDrawingSession
                 DrawnGeometry g => g with { Depth = g.Depth - 1 },
                 DrawnGlyphs g => g with { Depth = g.Depth - 1 },
                 DrawnImage g => g with { Depth = g.Depth - 1 },
+                DrawnMesh g => g with { Depth = g.Depth - 1 },
                 OpenedGroup g => g with { Depth = g.Depth - 1 },
                 var other => other
             };
@@ -72,6 +73,12 @@ internal sealed class RecordingSession : IDrawingSession
     public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4<float> transform)
     {
         Calls.Add(new DrawnImage(image, transform, Depth));
+        return this;
+    }
+
+    public IDrawingSession DrawColoredMesh(ColoredMesh mesh, Matrix4x4<float> transform)
+    {
+        Calls.Add(new DrawnMesh(mesh, transform, Depth));
         return this;
     }
 

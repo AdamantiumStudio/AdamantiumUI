@@ -61,6 +61,21 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding GradientRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=RadiusLabel}"/>
                     </StackPanel>
+                    <TextBlock x:Name="OriginShiftLabel" Text="{Localize BrushesStrings.OriginShift}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="8">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=OriginShiftLabel}" Value="{Binding GradientOriginShift, Mode=TwoWay}" Minimum="-0.5" Maximum="0.5" IsMoveToPointEnabled="true" Width="190"/>
+                        <NumericUpDown Width="96" Minimum="-0.5" Maximum="0.5" SmallChange="0.05" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding GradientOriginShift, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=OriginShiftLabel}"/>
+                    </StackPanel>
+                    <!-- Above 0 the gradient runs between two circles: the origin's and the end one. -->
+                    <TextBlock x:Name="OriginRadiusLabel" Text="{Localize BrushesStrings.OriginRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="8">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=OriginRadiusLabel}" Value="{Binding GradientOriginRadius, Mode=TwoWay}" Minimum="0" Maximum="1" IsMoveToPointEnabled="true" Width="190"/>
+                        <NumericUpDown Width="96" Minimum="0" Maximum="1" SmallChange="0.05" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding GradientOriginRadius, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="8" AutomationProperties.LabeledBy="{Binding ElementName=OriginRadiusLabel}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Vertical" Visibility="{Binding GradientKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Conic}">
@@ -160,6 +175,26 @@
                         <GradientStop Color="#A7F3D0" Offset="0"/>
                         <GradientStop Color="#14B8A6" Offset="0.6"/>
                         <GradientStop Color="#0F766E" Offset="1"/>
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <!-- between two circles, one inside the other: a ring - the inner circle paints offset 0 -->
+            <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5" RadiusX="0.5" RadiusY="0.5"
+                                         GradientOriginRadius="0.5">
+                        <GradientStop Color="#1E3A8A" Offset="0"/>
+                        <GradientStop Color="#93C5FD" Offset="1"/>
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+            <!-- between two circles apart: a cone of circles, painted only where one passes -->
+            <Rectangle Width="150" Height="96" CornerRadius="14" Margin="10">
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="0.7,0.5" GradientOrigin="0.15,0.5" RadiusX="0.25" RadiusY="0.4"
+                                         GradientOriginRadius="0.2">
+                        <GradientStop Color="#F97316" Offset="0"/>
+                        <GradientStop Color="#7C3AED" Offset="1"/>
                     </RadialGradientBrush>
                 </Rectangle.Fill>
             </Rectangle>

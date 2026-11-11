@@ -171,6 +171,14 @@
                     <TextBlock Text="{Localize ImageStrings.MipLevel}"/>
                     <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/elephant.png" MipLevel="2" Opacity="{Binding Opacity}"/>
                 </StackPanel>
+                <StackPanel Margin="8">
+                    <TextBlock Text="{Localize ImageStrings.SmoothPixels}"/>
+                    <Image AutomationProperties.AutomationId="SmoothPixels" Width="188" Height="150" Source="{Binding SmoothPixels}" Opacity="{Binding Opacity}"/>
+                </StackPanel>
+                <StackPanel Margin="8">
+                    <TextBlock Text="{Localize ImageStrings.PixelatedPixels}"/>
+                    <Image AutomationProperties.AutomationId="PixelatedPixels" Width="188" Height="150" Source="{Binding PixelatedPixels}" Opacity="{Binding Opacity}"/>
+                </StackPanel>
             </WrapPanel>
 
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>

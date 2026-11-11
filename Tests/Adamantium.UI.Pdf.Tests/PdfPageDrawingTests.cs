@@ -79,6 +79,15 @@ public class PdfPageDrawingTests
     }
 
     [Test]
+    public void AStrokesMiterLimitIsItsPens_TwoLimitsTwoPens()
+    {
+        var (_, session) = Draw(new TestPdf(), "3 M 0 0 m 10 10 l 20 0 l S 0.5 M 0 20 m 10 30 l 20 20 l S");
+        var pens = session.All<DrawnGeometry>().Select(d => d.Pen).ToArray();
+        Assert.That(pens[0].MiterLimit, Is.EqualTo(3));
+        Assert.That(pens[1].MiterLimit, Is.EqualTo(1), "below 1 a miter limit is 1");
+    }
+
+    [Test]
     public void AZeroWidthLineIsTheThinnestTheScreenShows()
     {
         var (_, session) = Draw(new TestPdf(), "0 w 0 0 m 10 0 l S");

@@ -33,6 +33,9 @@ public partial class RenderCache
     private readonly List<CommandGroup> _groupsCut = [];
     private readonly List<CommandGroup> _groupsLeftOut = [];
 
+    // The units the last walk passed over with a group it left out, out of sight or clear.
+    private readonly HashSet<Core.Graphics.IRenderUnit> _unitsLeftOutWithGroup = new();
+
     // Something the recorded groups were placed from moves this frame: a replay places each again where it now stands.
     private bool _groupsMove;
 
@@ -165,6 +168,14 @@ public partial class RenderCache
                     _groupsLeftOut.Add(state);
                 }
 
+                if (_recording)
+                {
+                    for (var i = index + 1; i < end && i < group.Units.Count; i++)
+                    {
+                        _unitsLeftOutWithGroup.Add(group.Units[i]);
+                    }
+                }
+
                 return end;
             case CommandGroupMode.Pass:
                 _openGroups.Push(state);
@@ -237,7 +248,8 @@ public partial class RenderCache
         }
 
         // Past its end mark: a group nothing of which is drawn is left out whole.
-        end = ScanGroup(units, begin, out contentAt, out var content, out var clip, out var clipped) + 1;
+        end = ScanGroup(units, begin, out contentAt, out var content, out var clip, out var clipped, out var holdsBlend) + 1;
+        state.HoldsBlend = holdsBlend;
         var options = state.Options;
         if (content.IsEmpty || contentAt < 0 || options.Opacity <= 0)
         {
@@ -374,7 +386,9 @@ public partial class RenderCache
 
     private Rect2D OpenGroupContent(IGraphicsDevice device, CommandGroup state, Rect2D fullScissor)
     {
-        if (state.Options.BlendMode != BlendMode.Normal)
+        // A cut is no group of its own: what blends inside one mixes with what lies under it, as it would uncut.
+        state.StartsFromBackdrop = OnlyCuts(state.Options) && state.HoldsBlend;
+        if (state.Options.BlendMode != BlendMode.Normal || state.StartsFromBackdrop)
         {
             while (_groupBackdrops.Count <= state.Depth)
             {
@@ -385,9 +399,19 @@ public partial class RenderCache
         }
 
         _contentOpen.Add(state);
-        return DrawIn(_offscreenLayers.BeginGroupTarget(device, state.ContentKey, state.Region, Colors.Transparent,
+        var space = DrawIn(_offscreenLayers.BeginGroupTarget(device, state.ContentKey, state.Region, Colors.Transparent,
             _projectionMatrix, fullScissor));
+        if (state.StartsFromBackdrop && state.BackdropTaken)
+        {
+            _offscreenLayers.FillFromBackdrop(device, _groupBackdrops[state.Depth], state.Region);
+        }
+
+        return space;
     }
+
+    private static bool OnlyCuts(DrawingGroupOptions options) =>
+        options.Mask == null && options.BlendMode == BlendMode.Normal && options.Opacity >= 1;
+
 
     private Rect2D CloseGroup(IGraphicsDevice device, CommandGroup state)
     {
@@ -402,7 +426,8 @@ public partial class RenderCache
         var scissor = Intersect(state.Region, state.OuterScissor is { } outer ? Intersect(fullScissor, outer) : fullScissor);
         var backdrop = state.BackdropTaken ? _groupBackdrops[state.Depth] : null;
         _offscreenLayers.LayDownGroup(device, content, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(state.Masks),
-            backdrop, state.Options.BlendMode, (float)Math.Clamp(state.Options.Opacity, 0, 1), scissor);
+            backdrop, state.Options.BlendMode, (float)Math.Clamp(state.Options.Opacity, 0, 1), scissor,
+            state.StartsFromBackdrop && state.BackdropTaken);
         return fullScissor;
     }
 
@@ -515,14 +540,15 @@ public partial class RenderCache
 
     // Walks the group whose begin mark is at `begin`: where its content starts, where it ends (past the last unit when
     // its element left it open), what its content covers, and what its masks that cut by coverage leave of it, in window
-    // units - `clipped` saying whether any does.
+    // units - `clipped` saying whether any does; `holdsBlend` whether a group inside it blends by a mode.
     private int ScanGroup(List<IRenderUnit> units, int begin, out int contentAt, out Rect content, out Rect clip,
-        out bool clipped)
+        out bool clipped, out bool holdsBlend)
     {
         contentAt = -1;
         content = Rect.Empty;
         clip = Rect.Empty;
         clipped = false;
+        holdsBlend = false;
         var hasContent = false;
         var section = 0;   // 0 between, 1 a mask, 2 the content
         var depth = 0;
@@ -536,6 +562,7 @@ public partial class RenderCache
                 switch (mark.Kind)
                 {
                     case GroupMarkKind.Begin:
+                        holdsBlend |= mark.Payload.Options.BlendMode != BlendMode.Normal;
                         depth++;
                         continue;
                     case GroupMarkKind.End when depth == 0:

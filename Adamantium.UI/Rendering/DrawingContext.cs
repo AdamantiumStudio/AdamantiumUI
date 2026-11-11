@@ -304,6 +304,13 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawColoredMesh(ColoredMesh mesh, Matrix4x4F transform)
+   {
+      ArgumentNullException.ThrowIfNull(mesh);
+      if (mesh.Vertices.Count > 0) CreateCommand(new ColoredMeshPayload(mesh, transform));
+      return this;
+   }
+
    IDrawingSession IDrawingSession.DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer)
    {
       var payload = new ImagePayload(filter, image, destinationRect, corners, null, frameLayer);

@@ -33,6 +33,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         if (!Enabled) return false;
         if (p.Brush is not GradientBrush g) return false;
         if (g is not MeshGradientBrush && g.GradientStops.Count == 0) return false;   // mesh carries corners, not stops
+        if (!GradientBake.FitsBatch(g)) return false;
         if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
         return true;
     }
@@ -70,6 +71,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         if (!Enabled) return false;
         if (p.Brush is not GradientBrush g) return false;
         if (g is not MeshGradientBrush && g.GradientStops.Count == 0) return false;   // mesh carries corners, not stops
+        if (!GradientBake.FitsBatch(g)) return false;
         if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
         return !RegularPolygonCollector.NeedsArcLength(p.Pen);
     }
@@ -105,6 +107,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         item = default;
         const float eps = 1e-4f;
         if (Math.Abs(world.M12) > eps || Math.Abs(world.M21) > eps) return false;   // rotation/shear -> per-unit
+        if (!GradientBake.FitsBatch(g)) return false;   // its Geom1.z is the record's shape flag
 
         var sx = world.M11; var sy = world.M22; var tx = world.M41; var ty = world.M42;
         var alpha = (float)(opacity * g.Opacity);

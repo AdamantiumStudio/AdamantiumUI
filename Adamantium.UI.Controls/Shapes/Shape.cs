@@ -23,8 +23,8 @@ public abstract class Shape : InputUIComponent
    }
 
    // Measures a shape defined by intrinsic geometry (Line/Polygon/Path). The painted bounds are the GPU stroke's exact
-   // extent (TryComputeStrokeBounds mirrors StrokeEffect.fx, including the clamped miter spikes at sharp corners such as
-   // star tips). The geometry keeps its authored coordinates (WPF Stretch=None); the element grows to include the stroke
+   // extent (TryComputeStrokeBounds mirrors StrokeEffect.fx, including the miter spikes at sharp corners such as star
+   // tips, up to the miter limit). The geometry keeps its authored coordinates (WPF Stretch=None); the element grows to include the stroke
    // so it no longer pokes past the control. With no visible stroke the bounds collapse to the bare geometry.
    protected Size<double> MeasureStrokedGeometry(Rect geometryBounds, IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours = null)
    {
@@ -44,7 +44,8 @@ public abstract class Shape : InputUIComponent
       }
 
       // Refinement: union the exact stroke extent, which reaches past the bbox floor at sharp MITER corners (star tips).
-      if (TryComputeStrokeBounds(contours, thickness, StrokeLineJoin, StartLineCap, EndLineCap, out var smin, out var smax))
+      if (TryComputeStrokeBounds(contours, thickness, StrokeLineJoin, StrokeMiterLimit, StartLineCap, EndLineCap,
+             out var smin, out var smax))
       {
          min = Vector2<double>.Min(min, smin);
          max = Vector2<double>.Max(max, smax);
@@ -82,12 +83,12 @@ public abstract class Shape : InputUIComponent
    }
 
    // CPU mirror of StrokeEffect.fx (OffsetPair + join/cap extents): the exact bounding box of the GPU stroke, so
-   // RenderBounds/size hug it - including the clamped miter spike (capped at 4*half via the 0.25 clamp) that a flat
-   // half-thickness inflate misses at sharp corners. A closed contour has no caps (every vertex is a join); an open one
-   // caps its two ends. MUST stay in sync with StrokeEffect.fx / GpuStrokeRenderComponent.
+   // RenderBounds/size hug it - including the miter spike that a flat half-thickness inflate misses at sharp corners, and
+   // the bevel a corner past the miter limit gets instead. A closed contour has no caps (every vertex is a join); an open
+   // one caps its two ends. MUST stay in sync with StrokeEffect.fx / GpuStrokeRenderComponent.
    protected static bool TryComputeStrokeBounds(
       IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours,
-      double thickness, PenLineJoin join, PenLineCap startCap, PenLineCap endCap,
+      double thickness, PenLineJoin join, double miterLimit, PenLineCap startCap, PenLineCap endCap,
       out Vector2<double> min, out Vector2<double> max)
    {
       min = new Vector2<double>(double.MaxValue);
@@ -133,10 +134,12 @@ public abstract class Shape : InputUIComponent
 
                var n0 = new Vector2<double>(-d0.Y, d0.X);
                var n1 = new Vector2<double>(-d1.Y, d1.X);
-               if (join == PenLineJoin.Miter)
+               var sum = n0 + n1;
+               var miter = SafeNormalize(sum);
+               var denom = Vector2<double>.Dot(miter, n0);
+               if (join == PenLineJoin.Miter && sum.X * sum.X + sum.Y * sum.Y > 1e-8 &&
+                   denom * Pen.ClampMiterLimit(miterLimit) >= 1.0)
                {
-                  var miter = SafeNormalize(n0 + n1);
-                  var denom = Math.Max(Vector2<double>.Dot(miter, n0), 0.25);   // matches the shader: spike capped at 4*half
                   var len = half / denom;
                   Include(ref min, ref max, ref any, p + miter * len);
                   Include(ref min, ref max, ref any, p - miter * len);
@@ -212,6 +215,10 @@ public abstract class Shape : InputUIComponent
    public static readonly AdamantiumProperty StrokeLineJoinProperty =
       AdamantiumProperty.Register(nameof(StrokeLineJoin), typeof(PenLineJoin), typeof(Shape),
          new PropertyMetadata(PenLineJoin.Miter, PropertyMetadataOptions.AffectsRender));
+
+   public static readonly AdamantiumProperty StrokeMiterLimitProperty =
+      AdamantiumProperty.Register(nameof(StrokeMiterLimit), typeof(Double), typeof(Shape),
+         new PropertyMetadata(10d, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
       
    public static readonly AdamantiumProperty StrokeDashOffsetProperty =
       AdamantiumProperty.Register(nameof(StrokeDashOffset), typeof(Double), typeof(Shape),
@@ -319,6 +326,14 @@ public abstract class Shape : InputUIComponent
       set => SetValue(StrokeLineJoinProperty, value);
    }
 
+   /// <summary>How far a miter join's point may reach, in half thicknesses from the corner; a sharper corner is beveled
+   /// (see <see cref="Pen.MiterLimit"/>).</summary>
+   public Double StrokeMiterLimit
+   {
+      get => GetValue<Double>(StrokeMiterLimitProperty);
+      set => SetValue(StrokeMiterLimitProperty, value);
+   }
+
    public Double StrokeDashOffset
    {
       get => GetValue<Double>(StrokeDashOffsetProperty);
@@ -420,7 +435,10 @@ public abstract class Shape : InputUIComponent
          StrokeDashStartCap,
          StrokeDashEndCap,
          StrokeDashFit,
-         StrokeDashPhase) { BrushMapping = StrokeBrushMapping, Overlap = StrokeOverlap };
+         StrokeDashPhase)
+      {
+         BrushMapping = StrokeBrushMapping, Overlap = StrokeOverlap, MiterLimit = StrokeMiterLimit
+      };
    }
 
    // Expands StrokeDashSymbols ("Dash Dot Dot Dash") into a dash array using the named widths + gap from

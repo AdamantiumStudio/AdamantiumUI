@@ -27,6 +27,19 @@ public class Pen : IEquatable<Pen>
    /// <summary>How the stroke paints where it crosses itself: in one pass, or in two that paint each pixel once.</summary>
    public PenOverlap Overlap { get; init; }
 
+   /// <summary>How far a <see cref="PenLineJoin.Miter"/> join's point may reach, in half thicknesses from the corner:
+   /// a sharper corner, whose point would reach further, is beveled instead. 10 by default; below 1 counts as 1.
+   /// </summary>
+   public Double MiterLimit { get; init; } = 10;
+
+   /// <summary>The highest miter limit drawn: a corner whose point would reach further than this many half widths turns
+   /// back by all but a ninth of a degree.</summary>
+   public const double MostMiterLimit = 1000;
+
+   /// <summary>A miter limit as it is drawn: 1 to <see cref="MostMiterLimit"/>, the default 10 for one that is not a
+   /// number.</summary>
+   public static double ClampMiterLimit(double limit) => double.IsNaN(limit) ? 10 : Math.Clamp(limit, 1, MostMiterLimit);
+
    /// <summary>How far along the line the dash pattern starts, in the same unit as <see cref="DashStrokeArray"/>.
    /// </summary>
    public Double DashOffset { get; }
@@ -153,6 +166,7 @@ public class Pen : IEquatable<Pen>
       MinimumDeviceThickness = of.MinimumDeviceThickness;
       BrushMapping = of.BrushMapping;
       Overlap = of.Overlap;
+      MiterLimit = of.MiterLimit;
       DashOffset = of.DashOffset;
       _dashes = dashes;
       _isRenderCopy = true;
@@ -186,6 +200,7 @@ public class Pen : IEquatable<Pen>
       MinimumDeviceThickness = MinimumDeviceThickness,
       BrushMapping = BrushMapping,
       Overlap = Overlap,
+      MiterLimit = MiterLimit,
    };
 
    public bool Equals(Pen other)
@@ -202,7 +217,7 @@ public class Pen : IEquatable<Pen>
              // moving the moment DashPhase was added and left out).
              DashPhase.Equals(other.DashPhase) && FitDashesToContour == other.FitDashesToContour &&
              ThicknessUnit == other.ThicknessUnit && MinimumDeviceThickness.Equals(other.MinimumDeviceThickness) &&
-             BrushMapping == other.BrushMapping && Overlap == other.Overlap;
+             BrushMapping == other.BrushMapping && Overlap == other.Overlap && MiterLimit.Equals(other.MiterLimit);
    }
 
    public override bool Equals(object obj)
@@ -220,6 +235,6 @@ public class Pen : IEquatable<Pen>
          // pens with different collection instances must not land in different buckets.
          HashCode.Combine(Brush, Thickness, DashOffset, Dashes.Count, (int)StartLineCap, (int)EndLineCap, (int)PenLineJoin),
          HashCode.Combine(TrimStart, TrimEnd, (int)DashStartCap, (int)DashEndCap, DashPhase, FitDashesToContour),
-         (int)ThicknessUnit, MinimumDeviceThickness, (int)BrushMapping, (int)Overlap);
+         (int)ThicknessUnit, MinimumDeviceThickness, (int)BrushMapping, (int)Overlap, MiterLimit);
    }
 }

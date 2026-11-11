@@ -39,6 +39,8 @@
     <Phrase Key="MiddleStop" Text="Средняя точка"/>
     <Phrase Key="LinearTitle" Text="Линейные градиенты — прямоугольники"/>
     <Phrase Key="RadialTitle" Text="Радиальные градиенты — прямоугольники"/>
+    <Phrase Key="OriginShift" Text="Начало правее центра"/>
+    <Phrase Key="OriginRadius" Text="Радиус начальной окружности"/>
     <Phrase Key="ConicTitle" Text="Конические градиенты — угловая развёртка"/>
     <Phrase Key="EllipsesTitle" Text="Градиенты — эллипсы"/>
     <Phrase Key="ShapesTitle" Text="Градиенты — произвольные фигуры (Polygon / Path)"/>
