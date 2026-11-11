@@ -24,9 +24,6 @@ public partial class InfiniteCanvas
     // How far one notch of the wheel scrolls, in screen pixels - three lines, as a scroll viewer's.
     private const double WheelScrollPixels = 48;
 
-    // How much of a flick's step a plane already past its edge still takes: the band holds it back hard.
-    private const double PastEdgeStep = 0.25;
-
     // How the band pulls: the further past the edge, the less a move of the hand moves the plane - never past a
     // viewport's length however far it is pulled.
     private const double BandStiffness = 0.55;
@@ -50,9 +47,6 @@ public partial class InfiniteCanvas
     // Whether a hand - a finger or a dragging mouse - is taking the plane, stretch and all: the camera is not pulled
     // onto the plane meanwhile.
     private bool _takingByHand;
-
-    // Whether the coast running is a hand's flick, which meets the edge with the band rather than stopping dead.
-    private bool _handCoast;
 
     public Rect PlaneBounds
     {
@@ -132,7 +126,8 @@ public partial class InfiniteCanvas
     // panels, the scale, the edges. A written move, so the shown offset and the one kept are the same.
     private void Reclamp()
     {
-        if (!HasPlaneBounds || _stretching || _takingByHand) return;
+        // A flick running past an edge is measured against the edge as it is at each step, and brought back by itself.
+        if (!HasPlaneBounds || _stretching || _takingByHand || _planeCoasting) return;
 
         var held = ClampToPlane(Offset, Scale);
         if (held != Offset) SetCurrentValue(OffsetProperty, held);
@@ -215,7 +210,6 @@ public partial class InfiniteCanvas
         var room = Room(Scale, out _, out _);
         _handOffset = held + new Vector2<double>(Unband(Offset.X - held.X, room.Width),
             Unband(Offset.Y - held.Y, room.Height));
-        _handCoast = false;
         _takingByHand = true;
 
         try
@@ -268,25 +262,20 @@ public partial class InfiniteCanvas
         StretchTo(Stretched(_handOffset));
     }
 
-    // The hand let go: a flick alone coasts on through the band; with a pinch's zoom coasting too it goes the ordinary
-    // way, kept on the plane, since the two would each place the plane their own way; anything else springs back to
-    // the edge.
+    // The hand let go: a flick alone coasts on, out past an edge and back on a spring; with a pinch's zoom coasting too
+    // it goes the ordinary way, kept on the plane, since the two would each place the plane their own way; anything
+    // else springs back to the edge.
     private void LetGoByHand(bool panCoasts, bool zoomCoasts)
     {
-        _handCoast = panCoasts && !zoomCoasts && HasPlaneBounds;
-        if (!_handCoast) SpringBack();
-    }
-
-    // A coast came to rest by itself: one a hand threw past an edge glides back to it.
-    private void CoastSettled()
-    {
-        if (_handCoast)
+        if (panCoasts && !zoomCoasts && HasPlaneBounds)
         {
-            _handCoast = false;
-            SpringBack();
+            var velocity = _coast.Velocity;
+            _coast.Stop();
+            CoastOnPlane(velocity);
+            return;
         }
 
-        RememberLayout();
+        SpringBack();
     }
 
     private void SpringBack()
@@ -401,6 +390,7 @@ public partial class InfiniteCanvas
         _coast.Stop();
         _zoomCoast.Stop();
         _springBack.Stop();
+        StopPlaneCoast();
         _glide.GlideTo(ClampToPlane(_glide.Target + by, Scale));
     }
 }

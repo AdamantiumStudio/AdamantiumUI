@@ -141,6 +141,97 @@ public class CanvasMouseBandTests
         });
     }
 
+    // Pulled fast and let go while still moving: out a little, turned at once and back - no creeping outwards first.
+    [TestCase(-50, 60)]
+    [TestCase(0, 200)]
+    public void AThrowPastAnEdgeRunsOutAndComesBackInOneMotion(int from, int pull)
+    {
+        var canvas = Sized(Plane);
+        canvas.Offset = new Vector2<double>(from, 0);
+        var at = PullRight(canvas, pull);
+        Release(canvas, at);
+        var letGo = canvas.Offset.X;
+
+        var path = new System.Collections.Generic.List<double>();
+        for (var i = 0; i < 45; i++)
+        {
+            Frames(1);
+            path.Add(canvas.Offset.X);
+        }
+
+        var peak = path.IndexOf(System.Linq.Enumerable.Max(path));
+        Assert.Multiple(() =>
+        {
+            Assert.That(peak, Is.LessThan(12), "it turned within a fifth of a second");
+            Assert.That(path[peak], Is.LessThanOrEqualTo(letGo + 0.12 * 400 + 1), "and not far");
+            for (var i = peak + 1; i < path.Count; i++)
+                Assert.That(path[i], Is.LessThanOrEqualTo(path[i - 1]), $"straight back, frame {i}");
+            Assert.That(canvas.Offset.X, Is.EqualTo(0).Within(1e-9), "at the edge in three quarters of a second");
+        });
+    }
+
+    // Flicked from inside the plane into its edge, fast: out no farther than the share of the window, and back.
+    [Test]
+    public void AFlickIntoAnEdgeFromThePlaneRunsOutNoFartherThanItsShare()
+    {
+        var canvas = Sized(Plane);
+        canvas.Offset = new Vector2<double>(-200, 0);
+        var at = PullRight(canvas, 200);   // 8000 px/s, at the edge as it is let go
+        Assume.That(canvas.Offset.X, Is.EqualTo(0).Within(1e-9));
+        Release(canvas, at);
+
+        var farthest = 0.0;
+        for (var i = 0; i < 60; i++)
+        {
+            Frames(1);
+            farthest = System.Math.Max(farthest, canvas.Offset.X);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(farthest, Is.GreaterThan(5).And.LessThanOrEqualTo(0.12 * 400 + 1));
+            Assert.That(canvas.Offset.X, Is.EqualTo(0).Within(1e-9));
+        });
+    }
+
+    // Let go while stretched and moving: the plane goes on at the speed it was SHOWN moving, which the band slowed -
+    // not at the hand's, which would kick it outwards.
+    [Test]
+    public void LettingGoPastAnEdgeDoesNotKickThePlaneOutwards()
+    {
+        var canvas = Sized(Plane);
+        uint at = 1000;
+        Press(canvas, 100, at);
+        var before = 0.0;
+        for (var i = 1; i <= 5; i++)
+        {
+            before = canvas.Offset.X;
+            MoveTo(canvas, 100 + i * 40, at += Step);
+        }
+
+        var shownSpeed = (canvas.Offset.X - before) / (Step / 1000.0);
+        Release(canvas, at);
+        var letGo = canvas.Offset.X;
+        Frames(1);
+
+        Assert.That((canvas.Offset.X - letGo) * 60, Is.LessThanOrEqualTo(shownSpeed * 1.05));
+    }
+
+    // Stretched, then thrown back in: it crosses the edge at speed and coasts on over the plane.
+    [Test]
+    public void AThrowBackInFromAStretchCoastsOnOverThePlane()
+    {
+        var canvas = Sized(Plane);
+        var at = PullRight(canvas, 100);
+        for (var i = 1; i <= 5; i++) MoveTo(canvas, 200 - i * 60, at += Step);
+        Assume.That(canvas.Offset.X, Is.GreaterThan(-200), "let go near the edge");
+        var letGo = canvas.Offset.X;
+        Release(canvas, at);
+
+        Frames(120);
+        Assert.That(canvas.Offset.X, Is.LessThan(letGo - 100), "it went on in, well past where it was let go");
+    }
+
     [Test]
     public void APressWhileSpringingBackCatchesThePlaneWhereItIs()
     {

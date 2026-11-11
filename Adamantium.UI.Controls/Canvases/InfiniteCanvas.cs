@@ -673,7 +673,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public InfiniteCanvas()
     {
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
-        _coast = new PanInertia(() => _travel, Travel, CoastSettled);
+        _coast = new PanInertia(() => _travel, Travel, RememberLayout);
         _glide = new PanInertia(() => Offset, to => SetCurrentValue(OffsetProperty, to), RememberLayout);
         _springBack = new PanInertia(Overshoot, Overshoot, RememberLayout);
         _zoomCoast = new FlingValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyCoastedZoom,

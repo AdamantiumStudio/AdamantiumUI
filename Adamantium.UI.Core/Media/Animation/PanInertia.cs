@@ -51,6 +51,9 @@ public sealed class PanInertia
     /// <summary>Whether a flick or a glide is still moving.</summary>
     public bool IsActive => _active;
 
+    /// <summary>How fast a flick is moving now, in units per second; zero when no flick runs.</summary>
+    public Vector2<double> Velocity => _active && _target is null ? _velocity : default;
+
     /// <summary>Where a glide is going - the live position when nothing glides. What the next wheel notch adds to.</summary>
     public Vector2<double> Target => _active && _target.HasValue ? _target.Value : _read();
 

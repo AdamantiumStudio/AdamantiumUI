@@ -11,12 +11,13 @@ All packages share one version.
   camera stays on the plane through every move - drag, wheel, zoom, inertia, fit: scrolled no further than its edges,
   centered across where it is narrower than the viewport, at the top where it is shorter; zooming out centers it and a
   zoom near an edge presses it to the edge. A finger or a dragging mouse pulls it a little past an edge against a
-  growing pull and it springs back; a flick meets the edge the same way. Scroll bars (`PART_HorizontalScrollBar`,
-  `PART_VerticalScrollBar` in the canvas's template) show the camera along an axis there is somewhere to go and move
-  it. `ClampToPlane` says where a camera would be kept. The canvas's panel edits the edges.
+  growing pull and it springs back; a flick runs out past the edge and turns back on a spring in one motion. Scroll
+  bars (`PART_HorizontalScrollBar`, `PART_VerticalScrollBar` in the canvas's template) show the camera along an axis
+  there is somewhere to go and move it. `ClampToPlane` says where a camera would be kept. The canvas's panel edits the edges.
 - `InfiniteCanvas.WheelMode` (`CanvasWheelMode.Zoom`, `Scroll`, `None`): the wheel zooms, as before, or scrolls as
   through a document - down and up, across with Shift or a tilted wheel, Ctrl with the wheel zooming - or does nothing.
   The canvas's panel chooses it.
+- `PanInertia.Velocity`: how fast a flick is moving now.
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
   scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
   shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.
