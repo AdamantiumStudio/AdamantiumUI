@@ -17,6 +17,8 @@ public class Style : AdamantiumComponent
     private bool _themeOwned;
     private List<Style> _resolvedBases;
 
+    private Tuple<IReadOnlyList<Style>, HashSet<string>[]> _setLater;
+
     private readonly ConditionalWeakTable<IFundamentalUIComponent, List<ITriggerActivator>> _activatorsByComponent = new();
     private readonly ConditionalWeakTable<IFundamentalUIComponent, AppliedBases> _basesByComponent = new();
 
@@ -104,19 +106,58 @@ public class Style : AdamantiumComponent
         }
 
         // BasedOn bases FIRST (base-first, mixin order), so this style's own setters/triggers - applied after - override
-        // them. A base's contributions are tracked under THIS style, so Detach undoes them together.
-        foreach (var baseStyle in GetBasesFor(component))
+        // them. A base's contributions are tracked under THIS style, so Detach undoes them together. A base's setter of a
+        // property a style later in the chain sets is passed over: both write the same slot, and a base's live resource
+        // there wrote over the later value whenever the resource came in.
+        var bases = GetBasesFor(component);
+        var setLater = SetLater(bases);
+        for (var i = 0; i < bases.Count; i++)
         {
-            baseStyle.ApplyContributions(component, this);
+            bases[i].ApplyContributions(component, this, setLater[i]);
         }
 
-        ApplyContributions(component, this);
+        ApplyContributions(component, this, null);
         return true;
     }
 
+    private HashSet<string>[] SetLater(IReadOnlyList<Style> bases)
+    {
+        if (_setLater is { } known && ReferenceEquals(known.Item1, bases))
+        {
+            return known.Item2;
+        }
+
+        var result = new HashSet<string>[bases.Count];
+        HashSet<string> later = null;
+        for (var i = bases.Count; i > 0; i--)
+        {
+            var style = i < bases.Count ? bases[i] : this;
+            if (!style.Selector.HasConditions && style.Setters.Count > 0)
+            {
+                // A set of its own per base: the one handed to the base before keeps only what is after that base.
+                later = later == null ? [] : new HashSet<string>(later);
+                foreach (var setter in style.Setters)
+                {
+                    // Classes are given, not set: every style's add up, and none is passed over.
+                    if (setter.Property != FundamentalUIComponent.ClassesProperty.Name)
+                    {
+                        later.Add(setter.Property);
+                    }
+                }
+            }
+
+            result[i - 1] = later;
+        }
+
+        // One reference, written whole: styling runs on more than one thread.
+        _setLater = Tuple.Create(bases, result);
+        return result;
+    }
+
     // Apply THIS style's own setters + triggers to `component`, tracked under `owner` (this, or - for a BasedOn base -
-    // the deriving style, so the base's contribution is released together with it).
-    private void ApplyContributions(IFundamentalUIComponent component, Style owner)
+    // the deriving style, so the base's contribution is released together with it); setters of `skipped` properties are
+    // passed over.
+    private void ApplyContributions(IFundamentalUIComponent component, Style owner, HashSet<string> skipped)
     {
         if (Selector.HasConditions)
         {
@@ -131,7 +172,10 @@ public class Style : AdamantiumComponent
         {
             foreach (var setter in Setters)
             {
-                setter.Apply(component, owner, owner.Theme);
+                if (skipped == null || !skipped.Contains(setter.Property))
+                {
+                    setter.Apply(component, owner, owner.Theme);
+                }
             }
         }
 

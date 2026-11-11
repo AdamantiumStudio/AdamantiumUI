@@ -155,7 +155,11 @@ public class CanvasChromeLayer : Panel
             if (taken.Bottom > bottom) bottom = taken.Bottom;
         }
 
-        return new Thickness(left, top, right, bottom);
+        // ...and the room between such a pane and its edge: it stands PaneInset off the edge, and the strip it leaves
+        // there is no more to be seen through than the pane - a document's last line lay under the bar.
+        var inset = PaneInset;
+        return new Thickness(left > 0 ? left + inset.Left : 0, top > 0 ? top + inset.Top : 0,
+            right > 0 ? right + inset.Right : 0, bottom > 0 ? bottom + inset.Bottom : 0);
     }
 
     public CanvasChromeLayer()

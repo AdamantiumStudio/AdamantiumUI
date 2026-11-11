@@ -363,6 +363,11 @@ All packages share one version.
 
 ### Fixed
 
+- A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
+  setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
+  back what the derived style said. The base's setter of such a property is passed over now.
+- A canvas's docked pane takes from the view the strip between it and its edge as well as itself: the plane's end and
+  its scroll bar lay under a docked bar, which stands `PaneInset` off the edge.
 - An `Ellipse` drawn as a ring (`RingThickness`) swept through part of a turn is the band it says: it was cut from a
   sector by a boolean whose two sectors share their radial edges, which hung the render thread from about 295 degrees
   on and at other sweeps (45, 135) filled the hole and left the band empty. The band is now built as its outline - out
