@@ -370,6 +370,12 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
     }
 
+    /// <summary>Whether the blank page of <see cref="StartAhead"/> keeps Chromium up, no browser made since.</summary>
+    internal bool IsStartedAhead => warmUp != null;
+
+    /// <summary>The browsers made and not closed yet - the blank page of <see cref="StartAhead"/> among them.</summary>
+    internal int BrowserCount => browsers.Count;
+
     /// <summary>A browser for a page another one opens, its frames coming as its opener's do: CEF makes it, from the
     /// opener's request. None while the device is lost and not made anew.</summary>
     internal WebViewBrowser CreatePopupBrowser(WebViewFramePath path, IWebViewBrowserView view)

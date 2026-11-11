@@ -94,6 +94,38 @@ public class WebViewFrameTests
         });
     }
 
+    // Started ahead, Chromium is kept up by a blank page shown nowhere; the first browser shows its page, and the blank
+    // page goes with nothing left behind.
+    [Test]
+    public void StartedAhead_TheFirstBrowserShowsItsPage_AndTheBlankPageGoes()
+    {
+        bool settled = false, startedAhead = false, aheadWhileShown = true;
+        var (_, frames, _, center) = loop.Run(() =>
+        {
+            Pump(() => engine.BrowserCount == 0, TimeSpan.FromSeconds(10));
+            settled = engine.BrowserCount == 0;
+            engine.StartAhead();
+            startedAhead = engine.IsStartedAhead;
+            Pump(() => false, TimeSpan.FromSeconds(2));
+            return ShowPage(WebViewFramePath.PixelBuffer, RedPage, _ => aheadWhileShown = engine.IsStartedAhead);
+        });
+        var left = loop.Run(() =>
+        {
+            Pump(() => engine.BrowserCount == 0, TimeSpan.FromSeconds(10));
+            return engine.BrowserCount;
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(settled, Is.True, "no browser left from before");
+            Assert.That(startedAhead, Is.True);
+            Assert.That(aheadWhileShown, Is.False, "the first browser ends the blank page");
+            Assert.That(frames, Is.GreaterThan(0));
+            Assert.That(center, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red, as BGRA");
+            Assert.That(left, Is.Zero, "the blank page closed too");
+        });
+    }
+
     // A page with no background of its own shows white, as in a browser; asked for, a transparent one shows through.
     [Test]
     public void APageWithNoBackground_IsWhite_OrSeeThroughWhenAskedFor()
@@ -1339,9 +1371,9 @@ public class WebViewFrameTests
         });
     }
 
-    // A page that asks before it is left asks the view; answered "stay", it stays.
+    // A page that asks before it is left asks the view; answered "stay", it stays - and closed, it closes, asking nobody.
     [Test]
-    public void APageAskingBeforeItIsLeft_StaysWhenTheAnswerIsStay()
+    public void APageAskingBeforeItIsLeft_StaysWhenTheAnswerIsStay_AndClosesWhenClosed()
     {
         const string page = "data:text/html,<body style='margin:0;height:100vh' " +
                             "onload=\"addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; })\">" +
@@ -1360,11 +1392,17 @@ public class WebViewFrameTests
             Pump(() => false, TimeSpan.FromSeconds(1));
             title = view.Title;
         }));
+        var left = loop.Run(() =>
+        {
+            Pump(() => engine.BrowserCount == 0, TimeSpan.FromSeconds(10));
+            return engine.BrowserCount;
+        });
 
         Assert.Multiple(() =>
         {
             Assert.That(asked?.Kind, Is.EqualTo(WebViewScriptDialogKind.LeavePage));
             Assert.That(title, Is.Not.EqualTo("gone"), "the page stayed");
+            Assert.That(left, Is.Zero, "the page closed");
         });
     }
 

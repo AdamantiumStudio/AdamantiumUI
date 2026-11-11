@@ -1116,6 +1116,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// </summary>
     internal bool OnScriptDialog(WebViewScriptDialogRequest request)
     {
+        // A closing page asks nobody: kept by an answer to stay, it would never close.
+        if (closing)
+        {
+            return false;
+        }
+
         askedDialog = request;
         return view.ScriptDialogRequested(this, request);
     }

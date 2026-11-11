@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WebViewEngine.StartAhead()`: Chromium started before the first page - CEF, and its processes (the GPU's, the
+  network's, a page's) kept up by a blank page shown nowhere until the first browser is made, which then shows its
+  page without waiting for them to start. Until then they hold their memory; an application calls it as it starts.
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
   scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
   shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.
@@ -286,6 +289,9 @@ All packages share one version.
 
 ### Fixed
 
+- A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
+  again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
+  process for good.
 - `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
   helper did not live through - and a key typed reaches the page as the key in that place (`KeyboardEvent.code`), from
   its XKB code. The evdev key table is one public type, `EvdevKeyCodes`, both ways.
