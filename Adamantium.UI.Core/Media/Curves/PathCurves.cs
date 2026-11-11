@@ -19,6 +19,26 @@ internal sealed class PathCurves
     /// <summary>Which points the figures enclose.</summary>
     public FillRule FillRule { get; }
 
+    /// <summary>Bands each way at most in <see cref="FillBands"/>; a fill of more pieces has fuller bands.</summary>
+    public const int MostBands = 64;
+
+    private CurveBands _fillBands;
+
+    /// <summary>The fill's curves cut and banded for the shader - made once, by whichever thread asks first.</summary>
+    public CurveBands FillBands
+    {
+        get
+        {
+            if (_fillBands is { } made)
+            {
+                return made;
+            }
+
+            Interlocked.CompareExchange(ref _fillBands, CurveBands.Of(FillCurves(), MostBands), null);
+            return _fillBands;
+        }
+    }
+
     /// <summary>Every curve, the figures' one after another.</summary>
     public IReadOnlyList<QuadraticCurve> Curves { get; }
 

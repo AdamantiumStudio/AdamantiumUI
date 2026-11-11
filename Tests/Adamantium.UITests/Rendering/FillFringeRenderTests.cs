@@ -15,7 +15,7 @@ namespace Adamantium.UITests.Rendering;
 
 /// <summary>
 /// Pixel-level proof that the analytic-AA fill fringe lands OUTSIDE the shape and is exactly one DEVICE pixel wide at any
-/// scale. Both matter and neither is visible from CPU state: the fringe is expanded in the vertex shader in pixels (see
+/// scale, and that a solid fill drawn from its curves covers exactly its own area. Both matter and neither is visible from CPU state: the fringe is expanded in the vertex shader in pixels (see
 /// FillFringeEffect.fx), so a sign slip in the screen-space miter would feather INWARD - eating a pixel of the body
 /// instead of smoothing its edge - and a scale leaking back into the ring geometry would widen it under a zoom.
 /// </summary>
@@ -69,10 +69,37 @@ public class FillFringeRenderTests
         Assert.That(Alpha(pixels, edge + 1, y), Is.EqualTo(0), "the fringe must not reach a second pixel");
     }
 
-    // Solid fill: body AND fringe are drawn by the INSTANCED path (one shared ring per mesh).
-    [TestCase(1.0, 50, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale1")]
-    [TestCase(4.0, 200, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale4")]
-    public void Fringe_IsOutside_AndOnePixelWide(double scale, int edge) => AssertOnePixelEdge(RenderSquare(scale), edge);
+    // Solid fill: drawn from its curves, so a pixel is covered by exactly the share of it inside the shape - no ring
+    // feathered past the contour. The right edge falls in the middle of a device pixel at either scale.
+    [TestCase(1.0, 40.5, 50, TestName = "CurveFill_CoversThePixelItsEdgeHalves_ByHalf_AtScale1")]
+    [TestCase(4.0, 40.125, 200, TestName = "CurveFill_CoversThePixelItsEdgeHalves_ByHalf_AtScale4")]
+    public void CurveFill_CoversThePixelItsEdgeHalves_ByHalf(double scale, double width, int edge)
+    {
+        var pixels = RenderFilled(new RectangleGeometry(new Rect(10, 10, width, 40)), scale);
+        var y = edge / 2;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, edge - 1, y), Is.EqualTo(255), "the last pixel inside stays fully covered");
+            Assert.That(Alpha(pixels, edge, y), Is.InRange(120, 135), "the pixel the edge halves is half covered");
+            Assert.That(Alpha(pixels, edge + 1, y), Is.EqualTo(0), "nothing past the contour");
+        });
+    }
+
+    // On a pixel boundary the edge is crisp: the last pixel inside is whole, the first outside untouched.
+    [TestCase(1.0, 50, TestName = "CurveFill_OnAPixelBoundary_IsCrisp_AtScale1")]
+    [TestCase(4.0, 200, TestName = "CurveFill_OnAPixelBoundary_IsCrisp_AtScale4")]
+    public void CurveFill_OnAPixelBoundary_IsCrisp(double scale, int edge)
+    {
+        var pixels = RenderSquare(scale);
+        var y = edge / 2;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, edge - 1, y), Is.EqualTo(255));
+            Assert.That(Alpha(pixels, edge, y), Is.EqualTo(0));
+        });
+    }
 
     // A geometry of lines has no area: filling it draws nothing, not an edge round an empty body.
     [Test]

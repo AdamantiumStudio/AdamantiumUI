@@ -13,11 +13,20 @@ internal sealed class FrozenMesh
 {
     private readonly PreparedFill _fill;
 
-    private FrozenMesh(PreparedFill fill)
+    private FrozenMesh(PreparedFill fill, CurveFill curves)
     {
         _fill = fill;
+        Curves = curves;
         Key = GeometryKey.ArbitraryMesh(fill.Fingerprint);
+        CurveKey = curves == null ? default : GeometryKey.CurveFill(curves.Fingerprint);
     }
+
+    /// <summary>The fill as curves for the curve fill shader - exact at any zoom - or null when the geometry encloses
+    /// nothing or curves are switched off.</summary>
+    public CurveFill Curves { get; }
+
+    /// <summary>What identical curve fills merge under.</summary>
+    public GeometryKey CurveKey { get; }
 
     public UIVertex[] Vertices => _fill.Vertices;
     public int[] Indices => _fill.Indices;
@@ -37,5 +46,7 @@ internal sealed class FrozenMesh
 
     /// <summary>The fill of a processed geometry as the geometry keeps it ready. Null if it has no drawable vertices.</summary>
     public static FrozenMesh From(Core.Media.Geometry geometry) =>
-        geometry.FillForDrawing is { } fill ? new FrozenMesh(fill) : null;
+        geometry.FillForDrawing is { } fill
+            ? new FrozenMesh(fill, InstancedFillCollector.CurvesEnabled ? CurveFill.From(geometry.CurvesForDrawing) : null)
+            : null;
 }

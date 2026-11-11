@@ -29,6 +29,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
     public static bool Enabled = true;
 
+    /// <summary>Whether a solid fill is drawn from its curves - exact at any zoom - rather than from its tessellated mesh
+    /// and fringe.</summary>
+    public static bool CurvesEnabled = true;
+
     private const MemoryPropertyFlags Mem = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private static readonly int InstanceStride = Marshal.SizeOf<GeometryInstance>();
     private static readonly int GradInstanceStride = Marshal.SizeOf<GradientGeometryInstance>();
@@ -49,6 +53,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // instance draws it with the SAME instance buffer as the body, so N elements cost one fringe draw instead of N.
         public Buffer RingBuffer;
         public uint RingVertexCount;
+
+        // A curve fill's packed curves (see CurveFill), in place of a mesh: drawn as one quad per instance.
+        public Buffer CurveBuffer;
 
         // When (Stopwatch ticks) this key was last asked for. A key is kept by being USED and by nothing else - see
         // Sweep for why the cache has to forget.
@@ -572,10 +579,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (seg.VtxBuffer != null) _device.AddToDeferDisposeQueue(seg.VtxBuffer);
         if (seg.IdxBuffer != null) _device.AddToDeferDisposeQueue(seg.IdxBuffer);
         if (seg.RingBuffer != null) _device.AddToDeferDisposeQueue(seg.RingBuffer);
+        if (seg.CurveBuffer != null) _device.AddToDeferDisposeQueue(seg.CurveBuffer);
 
         seg.VtxBuffer = null;
         seg.IdxBuffer = null;
         seg.RingBuffer = null;
+        seg.CurveBuffer = null;
         seg.MeshUploaded = false;
         _meshBytes -= seg.MeshBytes;
         seg.MeshBytes = 0;
@@ -1238,6 +1247,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // can tell what is under them from what is over them.
                 _device.StencilReference = rec.MarkFor(i);
                 _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 _effect.BatchFillPass.Apply();
@@ -1473,6 +1489,22 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// it. Set by the caller each frame (the table may have been reallocated), same as for the SDF batches.</summary>
     public ulong TransformsAddress { get; set; }
 
+    // A curve fill's instances, a quad each over the fill's box: no vertex buffer, the corners from the vertex index.
+    private void DrawCurves(KeySegment seg, uint count)
+    {
+        var viewports = _device.CurrentViewports;
+        if (viewports is { Length: > 0 })
+        {
+            _effect.ViewportSize.SetValue(new Vector2F(viewports[0].Width, viewports[0].Height));
+        }
+
+        _device.VertexType = null;
+        _device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        _effect.CurveData.SetValue(seg.CurveBuffer.GetDeviceAddress());
+        _effect.BatchCurveFillPass.Apply();
+        _device.Draw(4, count, 0, 0);
+    }
+
     private void SetupInstancedState(Matrix4x4F projection)
     {
         // Written every time - see SdfBatchCollector.DrawSegment for why a "same as last time" cache is not this
@@ -1549,6 +1581,22 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (_keys.TryGetValue(key, out var seg) && seg.MeshUploaded)
         {
             seg.LastUsed = now;
+            return seg;
+        }
+
+        // A curve fill holds its packed curves and nothing else: no mesh, no ring.
+        if (key.Kind == GeometryKind.Curves)
+        {
+            if (mesh.Curves is not { } curves) return null;
+
+            seg ??= new KeySegment();
+            seg.CurveBuffer = Upload(curves.Words, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                "shared curve fill");
+            seg.MeshUploaded = true;
+            seg.LastUsed = now;
+            seg.MeshBytes = (long)seg.CurveBuffer.DeviceMemoryBytes;
+            _meshBytes += seg.MeshBytes;
+            _keys[key] = seg;
             return seg;
         }
 

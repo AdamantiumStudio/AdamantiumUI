@@ -437,9 +437,14 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
     /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
     public bool HasInstancedFringe =>
-        InstancedFillCollector.Enabled && _frozenMesh is { Ring.Length: > 0 } &&
+        InstancedFillCollector.Enabled && (DrawsCurves || _frozenMesh is { Ring.Length: > 0 }) &&
         Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
         (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient));
+
+    /// <summary>Whether its solid fill is drawn from its curves, its edge exact with it: no mesh fringe of its own.
+    /// </summary>
+    public bool DrawsCurves =>
+        InstancedFillCollector.CurvesEnabled && Payload.Brush is SolidColorBrush && _frozenMesh?.Curves != null;
 
     public override bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color)
     {
@@ -449,7 +454,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         // fills tessellate to a NON-indexed list; the retained renderer picks DrawIndexed vs Draw off the topology.
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
-        key = fm.Key;
+        key = DrawsCurves ? fm.CurveKey : fm.Key;
         mesh = fm;
         var c = solid.Color.ToVector4();
         // same bake as the per-unit fill: color x brush opacity x element opacity
