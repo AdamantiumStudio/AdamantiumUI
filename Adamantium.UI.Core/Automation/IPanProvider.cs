@@ -1,7 +1,7 @@
 namespace Adamantium.UI.Core.Automation;
 
-/// <summary>A view of a plane with no edge - a canvas, a fractal - whose content is dragged across it. Automation's own
-/// capability: UI Automation's Scroll pattern needs edges to say how far along it is, and Transform moves the element,
+/// <summary>A view whose content is dragged across it - a canvas, a fractal, a zoom box. Automation's own capability:
+/// UI Automation's Scroll pattern speaks in percents of edges a plane may not have, and Transform moves the element,
 /// not what it shows.</summary>
 public interface IPanProvider
 {

@@ -3,8 +3,9 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of a <see cref="ZoomBox"/>: a pane zoomed as a whole and scrolled by its own scroll viewer.</summary>
-public class ZoomBoxAutomationPeer : ContentControlAutomationPeer, ITransformProvider
+/// <summary>The peer of a <see cref="ZoomBox"/>: a pane zoomed as a whole, scrolled by its own scroll viewer and panned
+/// as a drag pans it.</summary>
+public class ZoomBoxAutomationPeer : ContentControlAutomationPeer, ITransformProvider, IPanProvider
 {
     private readonly ZoomBox _box;
     private ScrollViewerAutomationPeer _scroll;
@@ -33,6 +34,8 @@ public class ZoomBoxAutomationPeer : ContentControlAutomationPeer, ITransformPro
     public void Resize(double width, double height) => throw new InvalidOperationException("A zoom box is not resized.");
 
     public void Zoom(double percent) => _box.ZoomTo(percent / 100);
+
+    public void Pan(double dx, double dy) => _box.PanBy(dx, dy);
 
     public override object GetPattern(PatternId pattern) => pattern == PatternId.Scroll ? Scroll() : base.GetPattern(pattern);
 

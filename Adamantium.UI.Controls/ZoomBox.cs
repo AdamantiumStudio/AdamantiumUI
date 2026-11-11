@@ -266,6 +266,31 @@ public class ZoomBox : ContentControl
         SetCurrentValue(ScaleYProperty, next);
     }
 
+    /// <summary>Moves what the box shows by <paramref name="dx"/>, <paramref name="dy"/> of its own units, as a drag that
+    /// far would: the content follows on the axes <see cref="PanningMode"/> lets a drag pan, stopping at its edges.
+    /// </summary>
+    public void PanBy(double dx, double dy)
+    {
+        if (_scroll == null)
+        {
+            return;
+        }
+
+        var by = new Vector2<double>(
+            PanningMode is PanningMode.Both or PanningMode.HorizontalOnly ? dx : 0,
+            PanningMode is PanningMode.Both or PanningMode.VerticalOnly ? dy : 0);
+        _zoom.Stop();
+        // A zoom still waiting for its extent takes the pan into its target, as a pinch does.
+        if (_pendingOffset is { } pending)
+        {
+            _pendingOffset = pending - by;
+            return;
+        }
+
+        // From where the content is shown, a rubber band's stretch included.
+        _scroll.SetScrollOffset(_scroll.ScrollOffset + _scroll.OverscrollOffset - by);
+    }
+
     internal ScrollViewer ScrollPart => _scroll;
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ZoomBoxAutomationPeer(this);
@@ -273,6 +298,8 @@ public class ZoomBox : ContentControl
     /// <summary>Resets zoom to 100% and scroll to the origin.</summary>
     public void Reset()
     {
+        _zoom.Stop();
+        _pendingOffset = null;
         SetCurrentValue(ScaleXProperty, 1.0);
         SetCurrentValue(ScaleYProperty, 1.0);
         _scroll?.SetScrollOffset(default);
