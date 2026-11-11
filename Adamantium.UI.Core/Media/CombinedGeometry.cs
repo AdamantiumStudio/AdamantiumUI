@@ -243,7 +243,8 @@ public class CombinedGeometry : Geometry
 
             if (onePointJointCase)
             {
-                allSegmentsDict = allSegments.ToDictionary(x => x);
+                // Distinct as above: a segment both outlines have would be a key twice, and throw.
+                allSegmentsDict = allSegments.Distinct().ToDictionary(x => x);
 
                 triangulatorSegments = FormTriangulatorContours(allSegmentsDict);
                 
@@ -339,6 +340,7 @@ public class CombinedGeometry : Geometry
         var strokeContours = new List<List<GeometrySegment>>();
         
         onePointJointCase = false;
+        var segmentCount = mergedSegments.Count;
 
         while (mergedSegments.Count > 0)
         {
@@ -387,10 +389,13 @@ public class CombinedGeometry : Geometry
                 }
 
                 mergedSegments.Remove(currentSegment);
-                
+
                 // switch to next segment
                 currentSegment = nextSegment;
-            } while (!Equals(currentSegment, startSegment) && currentSegment != null);
+                // A walk that falls into a loop its start is not on - outlines meeting along a shared edge the merge
+                // left in - would never end: no contour is longer than all the segments there are, so it stops there,
+                // the contour cut short rather than the thread lost.
+            } while (!Equals(currentSegment, startSegment) && currentSegment != null && strokeContour.Count < segmentCount);
 
             strokeContours.Add(strokeContour);
         }
