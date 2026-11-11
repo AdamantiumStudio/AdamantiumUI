@@ -81,6 +81,10 @@ public class ScrollViewer : ContentControl
         nameof(IsTouchScrollEnabled), typeof(bool), typeof(ScrollViewer),
         new PropertyMetadata(true, OnIsTouchScrollEnabledChanged));
 
+    public static readonly AdamantiumProperty IsMiddleButtonPanEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsMiddleButtonPanEnabled), typeof(bool), typeof(ScrollViewer),
+        new PropertyMetadata(true, OnIsMiddleButtonPanEnabledChanged));
+
     public static readonly AdamantiumProperty CanContentScrollProperty = AdamantiumProperty.Register(
         nameof(CanContentScroll), typeof(bool), typeof(ScrollViewer),
         new PropertyMetadata(false, OnCanContentScrollChanged));
@@ -97,6 +101,10 @@ public class ScrollViewer : ContentControl
     public static readonly AdamantiumProperty InertiaSmoothRateProperty = AdamantiumProperty.Register(
         nameof(InertiaSmoothRate), typeof(double), typeof(ScrollViewer),
         new PropertyMetadata(14.0, OnInertiaSettingChanged));
+
+    public static readonly AdamantiumProperty IsRubberBandEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsRubberBandEnabled), typeof(bool), typeof(ScrollViewer),
+        new PropertyMetadata(true, OnInertiaSettingChanged));
 
     // A scroll viewer is a passive container - not a keyboard-focus target (matches WPF). Comes for free from the
     // Focusable=false default (see InputUIComponent). A specific scrollable region that needs arrow-key scrolling can
@@ -185,6 +193,20 @@ public class ScrollViewer : ContentControl
         if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.IsTouchScrollEnabled = sv.IsTouchScrollEnabled;
     }
 
+    /// <summary>Whether the middle mouse button, held, drags the content along the axes that have somewhere to go -
+    /// wherever it is pressed, the left button keeping its clicks and selections. The nearest area that can scroll takes
+    /// it. On by default; <see cref="PanningMode"/> is the left button's.</summary>
+    public bool IsMiddleButtonPanEnabled
+    {
+        get => GetValue<bool>(IsMiddleButtonPanEnabledProperty);
+        set => SetValue(IsMiddleButtonPanEnabledProperty, value);
+    }
+
+    private static void OnIsMiddleButtonPanEnabledChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is ScrollViewer sv && sv._presenter != null) sv._presenter.IsMiddleButtonPanEnabled = sv.IsMiddleButtonPanEnabled;
+    }
+
     /// <summary>When true, scrolling is delegated to a virtualizing panel inside the content (item scrolling) rather
     /// than pixel-translating the whole content. Set by item controls whose panel virtualizes.</summary>
     public bool CanContentScroll
@@ -219,6 +241,15 @@ public class ScrollViewer : ContentControl
         set => SetValue(InertiaSmoothRateProperty, value);
     }
 
+    /// <summary>Whether a hand - a finger, or the mouse with <see cref="PanningMode"/> - pulls the content a little past
+    /// its end against a growing pull, and a flick runs out past it and turns back, springing back either way. Default
+    /// true; the wheel and the scroll bars stop at the end regardless.</summary>
+    public bool IsRubberBandEnabled
+    {
+        get => GetValue<bool>(IsRubberBandEnabledProperty);
+        set => SetValue(IsRubberBandEnabledProperty, value);
+    }
+
     private static void OnInertiaSettingChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is ScrollViewer sv) sv.PushInertiaSettings();
@@ -230,6 +261,7 @@ public class ScrollViewer : ContentControl
         _presenter.IsInertiaEnabled = IsInertiaEnabled;
         _presenter.InertiaFriction = InertiaFriction;
         _presenter.InertiaSmoothRate = InertiaSmoothRate;
+        _presenter.IsRubberBandEnabled = IsRubberBandEnabled;
     }
 
     /// <summary>When the horizontal bar appears (default <see cref="ScrollBarVisibility.Auto"/>).</summary>
@@ -261,6 +293,7 @@ public class ScrollViewer : ContentControl
             _presenter.CanScrollVertically = VerticalScrollBarVisibility != ScrollBarVisibility.Disabled;
             _presenter.PanningMode = PanningMode;
             _presenter.IsTouchScrollEnabled = IsTouchScrollEnabled;
+            _presenter.IsMiddleButtonPanEnabled = IsMiddleButtonPanEnabled;
             _presenter.CanContentScroll = CanContentScroll;
             PushInertiaSettings();
             _presenter.ScrollMetricsChanged += OnScrollMetricsChanged;
@@ -298,6 +331,7 @@ public class ScrollViewer : ContentControl
     private Size<double> _lastPushedExtent = new(-1, -1);
     private Size<double> _lastPushedViewport;
     private Vector2<double> _lastPushedOffset;
+    private Vector2<double> _lastPushedStretch;
 
     private void OnScrollMetricsChanged(object sender, EventArgs e)
     {
@@ -305,9 +339,11 @@ public class ScrollViewer : ContentControl
         var extent = _presenter.Extent;
         var viewport = _presenter.Viewport;
         var offset = _presenter.Offset;
+        var stretch = _presenter.Stretch;
 
         // Coalesce sub-pixel scroll: skip pushing to the bars until the thumb would visibly move or extent/viewport change.
-        if (extent == _lastPushedExtent && viewport == _lastPushedViewport)
+        // A stretch moving is never skipped: what follows the content sideways must follow it past the end too.
+        if (extent == _lastPushedExtent && viewport == _lastPushedViewport && stretch == _lastPushedStretch)
         {
             // "Visible" is 0.5 DEVICE pixels: the thumb travel is in logical px, so the imperceptibility floor scales
             // with the display's DPI (0.5 logical px is a coarser skip on a hi-DPI panel where it maps to more device px).
@@ -320,6 +356,7 @@ public class ScrollViewer : ContentControl
         _lastPushedExtent = extent;
         _lastPushedViewport = viewport;
         _lastPushedOffset = offset;
+        _lastPushedStretch = stretch;
 
         _syncingBars = true;
         if (_verticalBar != null)
@@ -356,6 +393,11 @@ public class ScrollViewer : ContentControl
 
     /// <summary>Current scroll offset of the content (top-left of the viewport within the extent). Zero before templating.</summary>
     public Vector2<double> ScrollOffset => _presenter?.Offset ?? default;
+
+    /// <summary>How far past its ends the content is shown on top of <see cref="ScrollOffset"/> - a hand's stretch or a
+    /// flick's run-out on the rubber band; zero at rest. What a strip that moves with the content, a grid's header, adds
+    /// to the offset. Its changes raise <see cref="ScrollChanged"/> too.</summary>
+    public Vector2<double> OverscrollOffset => _presenter?.Stretch ?? default;
 
     /// <summary>Size of the visible window onto the content. Zero before templating.</summary>
     public Size<double> ViewportSize => _presenter?.Viewport ?? default;
@@ -398,7 +440,8 @@ public class ScrollViewer : ContentControl
         var size = target.RenderSize;
         var p0 = Vector3F.TransformCoordinate(new Vector3F(0f, 0f, 0f), toContent);
         var p1 = Vector3F.TransformCoordinate(new Vector3F((float)size.Width, (float)size.Height, 0f), toContent);
-        var off = _presenter.Offset;
+        // ...a rubber band's stretch included: the content is shown shifted by that too.
+        var off = _presenter.Offset + _presenter.Stretch;
         BringIntoView(new Rect(
             Math.Min(p0.X, p1.X) + off.X, Math.Min(p0.Y, p1.Y) + off.Y,
             Math.Abs(p1.X - p0.X), Math.Abs(p1.Y - p0.Y)));

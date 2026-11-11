@@ -2359,8 +2359,11 @@ public partial class TreeDataGrid : Selector
 
     // The rows scroll sideways inside their scroller; the HEADER strip is outside it (it must not scroll away
     // vertically), so it is moved by hand - and the column window is taken from the same number, so what is realized is
-    // what can be seen.
-    private void OnScrolled(object sender, EventArgs e) => HorizontalOffset = _scroll?.ScrollOffset.X ?? 0;
+    // what can be seen. Where the rows are SHOWN, a rubber band's stretch past an end included, or the header stands
+    // still while the rows give way under it.
+    private void OnScrolled(object sender, EventArgs e) => HorizontalOffset = ShownScrollX();
+
+    private double ShownScrollX() => _scroll == null ? 0 : _scroll.ScrollOffset.X + _scroll.OverscrollOffset.X;
 
     /// <summary>Forgets what the Auto columns had settled on, so the next pass takes their widths from the rows visible
     /// NOW. Called on a source change, a column change, a sort, a filter, and a double-click on a separator.</summary>
@@ -3627,8 +3630,8 @@ public partial class TreeDataGrid : Selector
         // The scroller's offset is RECONCILED here as well as pushed by its event: an event can be raised while the
         // offset it announces is still settling, and a header strip standing one scroll behind its rows is exactly what
         // that looks like. Reading it once a pass costs nothing and cannot be missed.
-        if (_scroll != null && Math.Abs(_scroll.ScrollOffset.X - HorizontalOffset) > 0.01)
-            HorizontalOffset = _scroll.ScrollOffset.X;
+        if (_scroll != null && Math.Abs(ShownScrollX() - HorizontalOffset) > 0.01)
+            HorizontalOffset = ShownScrollX();
 
         // ONE width pass for the whole grid, before anything is measured against it: the header and every row read these
         // same numbers. Two calculations are how a table's header and body drift apart.

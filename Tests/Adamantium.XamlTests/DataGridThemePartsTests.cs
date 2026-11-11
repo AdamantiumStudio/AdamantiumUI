@@ -316,6 +316,84 @@ public class DataGridThemePartsTests
         });
     }
 
+    // Pulled sideways past its first column on the rubber band - the middle button drags any scroll area - the rows give
+    // way; the header strip, outside the scroller, has to give way with them, or it stands over the wrong cells.
+    [Test]
+    public void AHeaderFollowsItsRowsPastTheEnd()
+    {
+        Use(MacOs());
+
+        var grid = new TreeDataGrid();
+        for (var i = 0; i < 8; i++)
+            grid.Columns.Add(new DataGridTextColumn { Header = $"C{i}", Binding = new Binding("Name"), Width = new GridLength(150) });
+        grid.ItemsSource = new[] { new Item { Name = "one" }, new Item { Name = "two" } };
+        grid.Width = 600;
+        grid.Height = 300;
+
+        // In a window of its own: the pointer reads where it is through it.
+        var window = new Window { Width = 600, Height = 300, Content = grid };
+        grid.ApplyCurrentTheme();
+        for (var i = 0; i < 4; i++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            BindingUpdateQueue.Flush();
+        }
+
+        var scroll = (ScrollViewer)grid.GetTemplateChild("PART_ScrollHost");
+        var presenter = (ScrollContentPresenter)scroll.GetTemplateChild("PART_ScrollContentPresenter");
+        var held = Adamantium.UI.Core.Input.InputModifiers.MiddleMouseButton;
+        var mouse = Adamantium.UI.Core.Input.Mouse.Pointer;
+        try
+        {
+            mouse.ScreenPosition = new PixelPoint(100, 100);
+            presenter.RaiseEvent(new Adamantium.UI.Core.Input.PointerPressedEventArgs(mouse,
+                Adamantium.UI.Core.Input.MouseButtons.Middle, held, 1000)
+            {
+                RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerPressedEvent,
+                Properties = Adamantium.UI.Core.Input.PointerPointProperties.FromMouse(held)
+            });
+            for (var i = 1; i <= 5; i++)
+            {
+                mouse.ScreenPosition = new PixelPoint(100 + i * 30, 100);
+                presenter.RaiseEvent(new Adamantium.UI.Core.Input.PointerEventArgs(mouse, held, 1000 + (uint)i * 10)
+                {
+                    RoutedEvent = Adamantium.UI.Core.Input.PointerEvents.PointerMovedEvent,
+                    Properties = Adamantium.UI.Core.Input.PointerPointProperties.FromMouse(held)
+                });
+            }
+
+            var header = FirstHeader(grid);
+            for (IUIComponent node = header; node != null; node = node.VisualParent)
+                (node as IMeasurableComponent)?.InvalidateMeasure();
+            for (var i = 0; i < 3; i++) Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+            var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+            IUIComponent cell = null;
+            foreach (var child in row.VisualChildren)
+            {
+                if (child is DataGridCell c && c.ColumnIndex == header.ColumnIndex) cell = c;
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(scroll.ScrollOffset.X, Is.EqualTo(0), "the offset itself at the end");
+                Assert.That(scroll.OverscrollOffset.X, Is.LessThan(0), "the rows pulled past it");
+                Assert.That(grid.HorizontalOffset, Is.EqualTo(scroll.OverscrollOffset.X).Within(1e-9),
+                    "the grid follows where its rows are shown");
+                Assert.That(((IUIComponent)header).WorldTransform.TranslationVector.X,
+                    Is.EqualTo(cell.WorldTransform.TranslationVector.X).Within(1), "the header over its own cell");
+            });
+
+            scroll.IsMiddleButtonPanEnabled = false;
+            Assert.That(presenter.IsMiddleButtonPanEnabled, Is.False, "the viewer's switch reaches its presenter");
+        }
+        finally
+        {
+            mouse.Capture(null);
+            mouse.ScreenPosition = default;
+        }
+    }
+
     [Test]
     public void AReadOnlyCellLooksReadOnlyUnderMacOs() => ReadOnlyLooksIt(MacOs());
 

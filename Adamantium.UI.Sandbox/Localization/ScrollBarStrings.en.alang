@@ -2,4 +2,5 @@
     <Phrase Key="OneValue" Text="Horizontal + vertical bars bound to one value"/>
     <Phrase Key="Offset" Text="Offset:"/>
     <Phrase Key="DragToPan" Text="Drag to pan (touch-style, with inertia)"/>
+    <Phrase Key="RubberBand" Text="Rubber band at the ends"/>
 </Language>
