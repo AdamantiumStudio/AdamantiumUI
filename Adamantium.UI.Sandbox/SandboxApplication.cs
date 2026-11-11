@@ -107,4 +107,11 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.ExpandersStandView>(nameof(ViewModels.LayoutStand.Expanders));
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.TiledPanelStandView>(nameof(ViewModels.LayoutStand.TiledPanel));
     }
+
+    protected override void OnStartup()
+    {
+        base.OnStartup();
+        var engine = Container.Resolve<WebViewEngine>();
+        Core.LoopSignal.Post(engine.StartAhead);
+    }
 }
