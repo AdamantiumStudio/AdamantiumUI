@@ -344,8 +344,7 @@ public partial class InfiniteCanvas
         _coast.Stop();
         _zoomCoast.Stop();
         _glide.Stop();
-        _springBack.Stop();
-        StopPlaneCoast();
+        _edgeCoast.Stop();
         Reclamp();
     }
 
@@ -353,16 +352,14 @@ public partial class InfiniteCanvas
     {
         if (component is not InfiniteCanvas canvas || e.NewValue is true) return;
 
-        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive || canvas._springBack.IsActive ||
-                     canvas._planeCoasting;
+        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive || canvas._edgeCoast.IsActive;
         canvas.StopCoasting();
         if (moving) canvas.RememberLayout();
     }
 
     private void CatchCamera()
     {
-        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _springBack.IsActive ||
-                     _planeCoasting;
+        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _edgeCoast.IsActive;
 
         StopZoom();
         if (moving) RememberLayout();

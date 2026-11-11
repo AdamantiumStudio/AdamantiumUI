@@ -31,7 +31,19 @@ All packages share one version.
 - `InfiniteCanvas.WheelMode` (`CanvasWheelMode.Zoom`, `Scroll`, `None`): the wheel zooms, as before, or scrolls as
   through a document - down and up, across with Shift or a tilted wheel, Ctrl with the wheel zooming - or does nothing.
   The canvas's panel chooses it.
-- `PanInertia.Velocity`: how fast a flick is moving now.
+- A rubber band at a scroll area's ends (`ScrollViewer.IsRubberBandEnabled`, on by default): a finger - or the mouse
+  dragging - pulls the content a little past its end against a growing pull and it springs back; a flick runs out
+  past the end and turns back in one motion. The offset, and so the scroll bars, never leave the ends;
+  `OverscrollOffset` tells how far past it is shown, and a grid's header, totals and pinned columns follow it. The
+  wheel stops at the ends as before. The sandbox's ScrollBar tab switches it.
+- The middle mouse button, held, drags any scroll area along the axes with somewhere to go, wherever it is pressed -
+  a grid or a list as well, whose left button selects (`ScrollViewer.IsMiddleButtonPanEnabled`, on by default). The
+  nearest area that can scroll takes it; what takes the middle button itself - a 3D view, a canvas - keeps it.
+- `RubberBand`: how a view pulled past its edge gives way - `Stretch`, its inverse `Unstretch`, and `Slope`.
+- `PanInertia` knows edges: given `Edges` (the nearest position inside them) and `FarthestPast` (how far a flick may
+  run past one, per axis), a flick runs out past an edge and turns back on a critically damped spring (`EdgeSpring`)
+  in one motion, and `Fling(velocity)` from past an edge springs back to it - at no speed as well. `Velocity` tells
+  how fast a flick is moving now. `InfiniteCanvas` keeps its plane's edges with it.
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
   scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
   shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.

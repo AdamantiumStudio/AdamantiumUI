@@ -52,7 +52,8 @@ public sealed class TextPresenter : InputUIComponent
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (Owner != null && e.ChangedButton == MouseButtons.Middle && Clipboard.PrimarySelection != null)
+        // Only where the paste can happen: a read-only box leaves the middle button to whatever scrolls it.
+        if (Owner is { IsReadOnly: false } && e.ChangedButton == MouseButtons.Middle && Clipboard.PrimarySelection != null)
         {
             var at = e.GetPosition(this);
             Owner.SurfacePastePrimary(at.X, at.Y);

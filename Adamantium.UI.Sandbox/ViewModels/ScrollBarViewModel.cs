@@ -11,4 +11,6 @@ public partial class ScrollBarViewModel : TabPageViewModel
     public ScrollBarViewModel() : base("ScrollBar") { }
 
     [Bindable] private double _offset = 20;
+
+    [Bindable] private bool _rubberBand = true;
 }

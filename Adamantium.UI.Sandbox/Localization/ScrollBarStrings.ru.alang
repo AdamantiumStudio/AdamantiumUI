@@ -2,4 +2,5 @@
     <Phrase Key="OneValue" Text="Горизонтальная и вертикальная полосы на одном значении"/>
     <Phrase Key="Offset" Text="Смещение:"/>
     <Phrase Key="DragToPan" Text="Тяните, чтобы сдвинуть (как на сенсоре, с инерцией)"/>
+    <Phrase Key="RubberBand" Text="Резинка на краях"/>
 </Language>
