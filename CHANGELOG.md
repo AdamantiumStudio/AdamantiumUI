@@ -359,6 +359,12 @@ All packages share one version.
 
 ### Fixed
 
+- A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
+  setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
+  back what the derived style said. The base's setter of such a property is passed over now.
+- A canvas's docked pane takes from the view the strip between it and its edge as well as itself: the plane's end and
+  its scroll bar lay under a docked bar, which stands `PaneInset` off the edge.
+
 - A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
   again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
   process for good.
