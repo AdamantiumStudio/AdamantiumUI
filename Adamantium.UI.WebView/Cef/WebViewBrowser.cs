@@ -16,7 +16,8 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed unsafe class WebViewBrowser : IDisposable
 {
     private const double ZoomStep = 1.2;
-    private const string Blank = "about:blank";
+    /// <summary>The blank page's address.</summary>
+    internal const string Blank = "about:blank";
 
     private readonly WebViewEngine engine;
     private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];

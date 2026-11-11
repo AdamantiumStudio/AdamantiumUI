@@ -31,6 +31,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
+    private WebViewBrowser warmUp;
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
@@ -336,7 +337,37 @@ public sealed unsafe class WebViewEngine : IDisposable
         var browser = new WebViewBrowser(this, made, path, view);
         browsers.Add(browser);
         ArmPumpTimer(MaxPumpDelayMs);
+        warmUp?.Dispose();
+        warmUp = null;
         return browser;
+    }
+
+    /// <summary>Starts Chromium ahead of the first page: CEF, and its processes - the GPU's, the network's, a page's -
+    /// kept up by a blank page shown nowhere until the first browser is made. That page then shows without waiting for
+    /// them; until it does, they hold their memory. On the UI loop; nothing once a browser was made, or with no CEF beside
+    /// the application.</summary>
+    public void StartAhead()
+    {
+        if (!IsAvailable || warmUp != null || browsers.Count > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            EnsureInitialized();
+            warmUp = new WebViewBrowser(this, EnsureDevice(), WebViewFramePath.PixelBuffer, new WebViewWarmUpView());
+            browsers.Add(warmUp);
+            ArmPumpTimer(MaxPumpDelayMs);
+            warmUp.SetHidden(true);
+            warmUp.Create(WebViewBrowser.Blank, 1, 1, 1f, IntPtr.Zero);
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "Chromium could not be started ahead of the first page");
+            warmUp?.Dispose();
+            warmUp = null;
+        }
     }
 
     /// <summary>A browser for a page another one opens, its frames coming as its opener's do: CEF makes it, from the
