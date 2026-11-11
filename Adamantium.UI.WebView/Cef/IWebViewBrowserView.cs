@@ -128,4 +128,8 @@ internal interface IWebViewBrowserView
     /// <summary>A site asks to use something it was never answered for: the view model is asked, and answers
     /// <paramref name="request"/>; false leaves it to be refused.</summary>
     bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request);
+
+    /// <summary>The page downloads a file: the view model is asked where to save <paramref name="download"/>; false
+    /// leaves it to be refused.</summary>
+    bool DownloadRequested(WebViewBrowser browser, WebDownload download);
 }

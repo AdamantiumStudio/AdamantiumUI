@@ -86,6 +86,10 @@ public sealed class WebViewBridge
     /// </summary>
     public event EventHandler<WebPermissionRequestedEventArgs> PermissionRequested;
 
+    /// <summary>The page downloads a file: the view model says where to save it - asking the user, say - or it is
+    /// refused.</summary>
+    public event EventHandler<WebDownloadRequestedEventArgs> DownloadRequested;
+
     /// <summary>The page is about to make a request - its document, a frame's, a script, an image, a fetch: a handler
     /// may answer it, send it elsewhere or refuse it. Listened to, every request of the page waits a turn of the UI
     /// thread; not listened to, none is asked.</summary>
@@ -177,6 +181,8 @@ public sealed class WebViewBridge
     internal void OnFileDialogRequested(WebFileDialogRequestedEventArgs args) => FileDialogRequested?.Invoke(this, args);
 
     internal void OnPermissionRequested(WebPermissionRequestedEventArgs args) => PermissionRequested?.Invoke(this, args);
+
+    internal void OnDownloadRequested(WebDownloadRequestedEventArgs args) => DownloadRequested?.Invoke(this, args);
 
     internal bool OnNewWindowRequested(WebViewNewPage page, WebNewWindowKind kind)
     {
