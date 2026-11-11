@@ -1,4 +1,3 @@
-using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.Mathematics.Triangulation;
 using Adamantium.ProceduralGeometry;
@@ -7,13 +6,15 @@ using Polygon = Adamantium.Mathematics.Triangulation.Polygon;
 
 namespace Adamantium.UI.Core.Media;
 
+/// <summary>
+/// Two closed geometries combined: their union, intersection, the first less the second, or either but not both
+/// (<see cref="GeometryCombineMode"/>). Outlines that do not cross are combined by how they nest; outlines that cross,
+/// touch or run along one another are laid over each other (<see cref="GeometryOverlay"/>), the result's outline the
+/// edges with the area on one side only. Each operand's inside is by the even-odd rule; an open operand adds nothing.
+/// </summary>
 public class CombinedGeometry : Geometry
 {
     private Rect bounds;
-    private Mesh OutlineMesh1;
-    private Mesh OutlineMesh2;
-    private Rect bounds1;
-    private Rect bounds2;
 
     public CombinedGeometry()
     {
@@ -21,7 +22,7 @@ public class CombinedGeometry : Geometry
     }
 
     public override Rect Bounds => bounds;
-        
+
     public override Geometry Clone()
     {
         throw new System.NotImplementedException();
@@ -30,11 +31,11 @@ public class CombinedGeometry : Geometry
     public static readonly AdamantiumProperty Geometry1Property =
         AdamantiumProperty.Register(nameof(Geometry1), typeof(Geometry), typeof(CombinedGeometry),
             new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, Geometry1Changed));
-        
+
     public static readonly AdamantiumProperty Geometry2Property =
         AdamantiumProperty.Register(nameof(Geometry2), typeof(Geometry), typeof(CombinedGeometry),
             new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, Geometry2Changed));
-        
+
     public static readonly AdamantiumProperty GeometryCombineModeProperty =
         AdamantiumProperty.Register(nameof(GeometryCombineMode), typeof(GeometryCombineMode), typeof(CombinedGeometry),
             new PropertyMetadata(GeometryCombineMode.Union, PropertyMetadataOptions.AffectsRender, CombineModeChanged));
@@ -76,13 +77,13 @@ public class CombinedGeometry : Geometry
         get => GetValue<Geometry>(Geometry1Property);
         set => SetValue(Geometry1Property, value);
     }
-        
+
     public Geometry Geometry2
     {
         get => GetValue<Geometry>(Geometry2Property);
         set => SetValue(Geometry2Property, value);
     }
-        
+
     public GeometryCombineMode GeometryCombineMode
     {
         get => GetValue<GeometryCombineMode>(GeometryCombineModeProperty);
@@ -104,7 +105,7 @@ public class CombinedGeometry : Geometry
             Geometry2.RecalculateBounds();
             rect = rect.Merge(Geometry2.Bounds);
         }
-        
+
         if (Transform != null)
         {
             var matrix = Transform.Matrix;
@@ -121,295 +122,192 @@ public class CombinedGeometry : Geometry
 
         Mesh.Clear();
 
-        if (GeometryCombineMode == GeometryCombineMode.Xor)
-        {
-            if (Geometry1 != null) Mesh.Contours.AddRange(Geometry1.Mesh.Contours);
-            if (Geometry2 != null) Mesh.Contours.AddRange(Geometry2.Mesh.Contours);
-            
-            var xorPolygon = new Polygon
-            {
-                FillRule = FillRule.EvenOdd
-            };
-
-            foreach (var contour in Mesh.Contours)
-            {
-                xorPolygon.AddContour(contour.Copy());
-            }
-
-            var xorTriangulated = xorPolygon.FillIndirect(geometryType != GeometryType.Outlined);
-
-            // Triangulate only if geometry type is not Outlined
-            if (geometryType == GeometryType.Outlined) return;
-
-            Mesh.SetPoints(xorTriangulated);
-
-            return;
-        }
+        var first = AreaOf(Geometry1);
+        var second = AreaOf(Geometry2);
 
         // Fast path for non-crossing input (nested or disjoint): containment and mode decide the result, skipping the
-        // O(n^2) intersection pipeline.
-        if (TryFastCombine(geometryType)) return;
+        // overlay of every edge against every other.
+        if (TryFastCombine(first, second, geometryType)) return;
 
-        if (Geometry1 is {IsClosed: true})
+        var rings = GeometryOverlay.Combine(first, second, ModeFill);
+        foreach (var ring in rings)
         {
-            OutlineMesh1 = Geometry1.Mesh;
-            OutlineMesh1.SplitContoursOnSegments();
-            bounds1 = Geometry1.Bounds;
+            if (Strokeable(ring)) Mesh.AddContour(ring, true);
         }
-        else
-            OutlineMesh1 = new Mesh();
 
-        if (Geometry2 is {IsClosed: true})
-        {
-            OutlineMesh2 = Geometry2.Mesh;
-            OutlineMesh2.SplitContoursOnSegments();
-            bounds2 = Geometry2.Bounds;
-        }
-        else
-            OutlineMesh2 = new Mesh();
+        if (geometryType == GeometryType.Outlined) return;
 
-        if (CheckGeometryBoundingBoxesIntersection())
-        {
-            // find all intersections and break all intersected segments on 2 parts
-            ProcessOutlinesIntersections(OutlineMesh1, OutlineMesh2);
-
-            // mark all segments as inner, outer or arguable (border case) relatively to other mesh
-            var arguableSegments = MarkSegments(OutlineMesh1, OutlineMesh2);
-            arguableSegments.AddRange(MarkSegments(OutlineMesh2, OutlineMesh1));
-
-            if (arguableSegments.Count > 0)
-            {
-                // resolve arguable segments as inner or outer
-                var mergedSegments = OutlineMesh1.MergeContourSegments();
-                mergedSegments.AddRange(OutlineMesh2.MergeContourSegments());
-
-                ContourProcessingHelper.ResolveArguableSegments(arguableSegments, mergedSegments);
-            }
-
-            // remove only inner / outer segments (according to mode), arguable segments will be skipped
-            RemoveSegmentsByMode();
-
-            if (arguableSegments.Count > 0)
-            {
-                // additionally remove resolved segment if needed (according to mode)
-                foreach (var arguableSeg in arguableSegments)
-                {
-                    switch (GeometryCombineMode)
-                    {
-                        case GeometryCombineMode.Union:
-                            if (arguableSeg.IsInner)
-                            {
-                                arguableSeg.RemoveSelfFromConnectedSegments();
-                                arguableSeg.RemoveSelfFromParent();
-                            }
-
-                            break;
-                        // Intersect and Exclude both keep inner segments (RemoveSegmentsByRule(false)), so an
-                        // arguable border segment resolved as outer must be dropped. Intersect was missing here,
-                        // leaving spurious border edges in the result.
-                        case GeometryCombineMode.Exclude:
-                        case GeometryCombineMode.Intersect:
-                            if (!arguableSeg.IsInner)
-                            {
-                                arguableSeg.RemoveSelfFromConnectedSegments();
-                                arguableSeg.RemoveSelfFromParent();
-                            }
-
-                            break;
-                    }
-                }
-                
-                OutlineMesh1.UpdateContoursPoints();
-                OutlineMesh2.UpdateContoursPoints();
-            }
-
-            // 1. Merge all segments of all contours of all meshes.
-            var allSegments = OutlineMesh1.MergeContourSegments();
-            allSegments.AddRange(OutlineMesh2.MergeContourSegments());
-
-            var allSegmentsDict = allSegments.Distinct().ToDictionary(x=>x);
-
-            // 2. Form contours
-            var strokeContours = FormStrokeContours(allSegmentsDict, out var onePointJointCase);
-            List<GeometrySegment> triangulatorSegments = null;
-            List<GeometryIntersection> triangulatorPoints = null;
-            foreach (var strokeContour in strokeContours)
-            {
-                Mesh.AddContour(strokeContour);
-            }
-
-            // Triangulate only if geometry type is not Outlined
-            if (geometryType == GeometryType.Outlined) return;
-
-            if (onePointJointCase)
-            {
-                // Distinct as above: a segment both outlines have would be a key twice, and throw.
-                allSegmentsDict = allSegments.Distinct().ToDictionary(x => x);
-
-                triangulatorSegments = FormTriangulatorContours(allSegmentsDict);
-                
-                var pointsHashSet = new HashSet<GeometryIntersection>();
-                triangulatorPoints = new List<GeometryIntersection>();
-
-                foreach (var segment in triangulatorSegments)
-                {
-                    foreach (var end in segment.SegmentEnds)
-                    {
-                        if (!pointsHashSet.Contains(end))
-                        {
-                            pointsHashSet.Add(end);
-                            triangulatorPoints.Add(end);
-                        }
-                    }
-                }
-            }
-
-            var mergedContourPoints = onePointJointCase ? triangulatorPoints : Mesh.MergeGeometryContourPoints();
-            var mergedContourSegments = onePointJointCase ? triangulatorSegments : Mesh.MergeContourSegments();
-
-            var polygon = new Polygon(FillRule.NonZero);
-
-            var triangulated = polygon.FillDirect(mergedContourPoints, mergedContourSegments);
-            Mesh.SetPoints(triangulated);
-        }
-        else
-        {
-            // Disjoint shapes: Union keeps both, Exclude keeps Geometry1, Intersect is empty (Xor is handled above).
-            if (GeometryCombineMode is GeometryCombineMode.Union or GeometryCombineMode.Exclude)
-            {
-                foreach (var contour1 in OutlineMesh1.Contours)
-                    Mesh.AddContour(contour1);
-            }
-
-            if (GeometryCombineMode == GeometryCombineMode.Union)
-            {
-                foreach (var contour2 in OutlineMesh2.Contours)
-                    Mesh.AddContour(contour2);
-            }
-
-            // Triangulate only if geometry type is not Outlined
-            if (geometryType == GeometryType.Outlined) return;
-
-            if (Mesh.Contours.Count == 0)
-            {
-                Mesh.SetPoints(new List<Vector3<double>>());
-                return;
-            }
-
-            var mergedContourPoints = Mesh.MergeGeometryContourPoints();
-            var mergedContourSegments = Mesh.MergeContourSegments();
-
-            var polygon = new Polygon(FillRule.NonZero);
-
-            var triangulated = polygon.FillDirect(mergedContourPoints, mergedContourSegments);
-            Mesh.SetPoints(triangulated);
-        }
+        Mesh.SetPoints(Fill(rings));
     }
 
-    // Triangulator needs to maintain segment-intersection-segment connection, so we deal with one point join case as with single contour
-    private List<GeometrySegment> FormTriangulatorContours(Dictionary<GeometrySegment, GeometrySegment> mergedSegments)
+    private static bool Strokeable(Vector2<double>[] ring)
     {
-        var triangulatorSegments = new List<GeometrySegment>();
-        
-        while (mergedSegments.Count > 0)
-        {
-            var currentSegment = mergedSegments.First().Value;
-            var currentPoint = currentSegment.SegmentEnds[0];
-
-            do
-            {
-                triangulatorSegments.Add(currentSegment);
-                currentSegment.IsAlreadyInTriangulatorContour = true;
-
-                mergedSegments.Remove(currentSegment);
-
-                currentPoint = currentSegment.GetOtherEnd(currentPoint);
-                currentSegment = currentPoint.ConnectedSegments.Count > 2 ?
-                                 currentPoint.GetSegmentFromOtherParent(currentSegment) :
-                                 currentPoint.GetAnyOtherSegment(currentSegment);
-            } while (currentSegment != null);
-        }
-
-        return triangulatorSegments;
+        // A contour keeps five decimals: a sliver narrower than that on average would collapse into its own sides.
+        var rounded = new Vector2<double>[ring.Length];
+        for (var i = 0; i < ring.Length; i++) rounded[i] = Vector2<double>.Round(ring[i], MeshContour.CoordinatePrecision);
+        var perimeter = 0.0;
+        for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++) perimeter += (rounded[i] - rounded[j]).Length();
+        var precision = Math.Pow(10, -MeshContour.CoordinatePrecision);
+        return perimeter > 0 && 2 * Math.Abs(SignedArea(rounded)) / perimeter >= precision;
     }
 
-    // We cannot provide one point join case as single contour for stroke generating, so we split for two separate contours
-    // with one of the corners connected only visually, not logically
-    private List<List<GeometrySegment>> FormStrokeContours(Dictionary<GeometrySegment, GeometrySegment> mergedSegments, out bool onePointJointCase)
+    private const double FillSize = 1000;
+
+    private static List<Vector3<double>> Fill(List<Vector2<double>[]> rings)
     {
-        var strokeContours = new List<List<GeometrySegment>>();
-        
-        onePointJointCase = false;
-        var segmentCount = mergedSegments.Count;
-
-        while (mergedSegments.Count > 0)
+        // The rings are simple and cross nowhere, filled side on their left: each outer ring with the holes straight
+        // inside it is a face, its ears clipped exactly as the rings lie. A face the clipping does not cut as a polygon is
+        // cut into its regions instead, at a size the region cutter's fixed tolerances suit.
+        var triangles = new List<Vector3<double>>();
+        var outers = new List<(Vector2<double>[] Ring, double Area, List<Vector2<double>[]> Holes)>();
+        var holes = new List<Vector2<double>[]>();
+        foreach (var ring in rings)
         {
-            var strokeContour = new List<GeometrySegment>();
-
-            var startSegment = mergedSegments.First().Value;
-            var currentPoint = startSegment.SegmentEnds[0];
-            var currentSegment = startSegment;
-
-            var intersectionsList = new Dictionary<Vector2<double>, GeometryIntersection>();
-
-            do
-            {
-                // check and create (if needed) the new instance of GeometryIntersection for start of the new segment
-                var newStart = currentPoint.Coordinates;
-
-                if (!intersectionsList.ContainsKey(newStart))
-                {
-                    intersectionsList[newStart] = new GeometryIntersection(newStart);
-                }
-
-                // check and create (if needed) the new instance of GeometryIntersection for end of the new segment
-                currentPoint = currentSegment.GetOtherEnd(currentPoint);
-                var newEnd = currentPoint.Coordinates;
-
-                if (!intersectionsList.ContainsKey(newEnd))
-                {
-                    intersectionsList[newEnd] = new GeometryIntersection(newEnd);
-                }
-
-                // create and store new segment
-                var newSegment = new GeometrySegment(currentSegment.Parent, intersectionsList[newStart],
-                    intersectionsList[newEnd]);
-                strokeContour.Add(newSegment);
-
-                // get next segment
-                GeometrySegment nextSegment = null;
-                if (currentPoint.ConnectedSegments.Count > 2)
-                {
-                    onePointJointCase = true;
-                    nextSegment = currentPoint.GetSegmentFromSameParent(currentSegment);
-                }
-                else
-                {
-                    nextSegment = currentPoint.GetAnyOtherSegment(currentSegment);
-                }
-
-                mergedSegments.Remove(currentSegment);
-
-                // switch to next segment
-                currentSegment = nextSegment;
-                // A walk that falls into a loop its start is not on - outlines meeting along a shared edge the merge
-                // left in - would never end: no contour is longer than all the segments there are, so it stops there,
-                // the contour cut short rather than the thread lost.
-            } while (!Equals(currentSegment, startSegment) && currentSegment != null && strokeContour.Count < segmentCount);
-
-            strokeContours.Add(strokeContour);
+            var area = SignedArea(ring);
+            if (area > 0) outers.Add((ring, area, []));
+            else if (area < 0) holes.Add(ring);
         }
 
-        return strokeContours;
+        foreach (var hole in holes)
+        {
+            (Vector2<double>[] Ring, double Area, List<Vector2<double>[]> Holes) owner = default;
+            foreach (var outer in outers)
+            {
+                if ((owner.Ring == null || outer.Area < owner.Area) && Within(hole, outer.Ring)) owner = outer;
+            }
+
+            owner.Holes?.Add(hole);
+        }
+
+        foreach (var (outer, _, faceHoles) in outers)
+        {
+            if (!ClipEars(outer, faceHoles, triangles))
+            {
+                var face = new List<Vector2<double>[]>(faceHoles.Count + 1) { outer };
+                face.AddRange(faceHoles);
+                triangles.AddRange(CutIntoRegions(face));
+            }
+        }
+
+        return triangles;
     }
 
-    // Combine two operands whose outlines do NOT cross (clean nesting / disjoint). Returns false (caller uses the full
-    // boolean pipeline) for open operands, missing meshes, or any actual crossing/touch between rings.
-    private bool TryFastCombine(GeometryType geometryType)
+    private static bool ClipEars(Vector2<double>[] outer, List<Vector2<double>[]> holes, List<Vector3<double>> triangles)
+    {
+        // Ear clipping takes rings touching at a point as they are; the triangles turn as the renderer's others do.
+        var points = new List<Vector2<double>>(outer);
+        var starts = new List<int>(holes.Count);
+        foreach (var hole in holes)
+        {
+            starts.Add(points.Count);
+            points.AddRange(hole);
+        }
+
+        var indices = new List<int>();
+        if (!EarClipping.Triangulate(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(points),
+                System.Runtime.InteropServices.CollectionsMarshal.AsSpan(starts), indices))
+        {
+            return false;
+        }
+
+        // The triangles cover what the face does or they are not its fill: a ring next to no width can come out of the
+        // clipping as wide triangles.
+        var faceArea = Math.Abs(SignedArea(outer));
+        foreach (var hole in holes) faceArea -= Math.Abs(SignedArea(hole));
+        var cut = 0.0;
+        for (var t = 0; t + 2 < indices.Count; t += 3)
+        {
+            var (a, b, c) = (points[indices[t]], points[indices[t + 1]], points[indices[t + 2]]);
+            cut += Math.Abs((b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X)) / 2;
+        }
+
+        if (Math.Abs(cut - faceArea) > Math.Max(Math.Abs(faceArea), double.Epsilon) * AreaTolerance)
+        {
+            return false;
+        }
+
+        for (var t = 0; t + 2 < indices.Count; t += 3)
+        {
+            var (a, b, c) = (points[indices[t]], points[indices[t + 1]], points[indices[t + 2]]);
+            if (!MathHelper.Polyline.IsClockwise(a, b, c)) (b, c) = (c, b);
+            triangles.Add((Vector3<double>)a);
+            triangles.Add((Vector3<double>)b);
+            triangles.Add((Vector3<double>)c);
+        }
+
+        return true;
+    }
+
+    private const double AreaTolerance = 1e-6;
+
+    private static double SignedArea(Vector2<double>[] ring)
+    {
+        var area = 0.0;
+        for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++)
+            area += (ring[j].X - ring[i].X) * (ring[j].Y + ring[i].Y);
+        return area / 2;
+    }
+
+    private static bool Within(Vector2<double>[] hole, Vector2<double>[] outer)
+    {
+        // The rings cross nowhere: any corner of the hole the outer ring does not share tells.
+        var corners = new HashSet<Vector2<double>>(outer);
+        foreach (var p in hole)
+        {
+            if (!corners.Contains(p)) return PointInPolygon(p, outer);
+        }
+
+        return false;
+    }
+
+    private static List<Vector3<double>> CutIntoRegions(List<Vector2<double>[]> rings)
+    {
+        if (rings.Count == 0) return [];
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var ring in rings)
+        {
+            foreach (var p in ring)
+            {
+                (minX, minY, maxX, maxY) = (Math.Min(minX, p.X), Math.Min(minY, p.Y), Math.Max(maxX, p.X), Math.Max(maxY, p.Y));
+            }
+        }
+
+        var extent = Math.Max(maxX - minX, maxY - minY);
+        if (extent <= 0) return [];
+        var scale = FillSize / extent;
+        var placed = new List<Vector2<double>[]>(rings.Count);
+        foreach (var ring in rings)
+        {
+            var copy = new Vector2<double>[ring.Length];
+            for (var i = 0; i < ring.Length; i++) copy[i] = new Vector2<double>((ring[i].X - minX) * scale, (ring[i].Y - minY) * scale);
+            placed.Add(copy);
+        }
+
+        var triangles = PlanarFill.Fill(placed, FillRule.EvenOdd);
+        for (var i = 0; i < triangles.Count; i++)
+        {
+            var t = triangles[i];
+            triangles[i] = new Vector3<double>(t.X / scale + minX, t.Y / scale + minY, t.Z);
+        }
+
+        return triangles;
+    }
+
+    private static (IReadOnlyList<Vector2<double>[]> Rings, FillRule Rule) AreaOf(Geometry geometry)
+    {
+        if (geometry is not { IsClosed: true }) return ([], FillRule.EvenOdd);
+        var (rings, rule) = geometry.Area();
+        return (rings, rule);
+    }
+
+    // Combine two operands whose outlines do NOT cross (clean nesting / disjoint), each even-odd or of one ring.
+    // Returns false (caller uses the overlay) for any crossing or touch between rings, or a non-zero area of several.
+    private bool TryFastCombine((IReadOnlyList<Vector2<double>[]> Rings, FillRule Rule) first,
+        (IReadOnlyList<Vector2<double>[]> Rings, FillRule Rule) second, GeometryType geometryType)
     {
         var rings = new List<(Vector2<double>[] pts, int src)>();
-        if (!CollectRings(Geometry1, 1, rings)) return false;
-        if (!CollectRings(Geometry2, 2, rings)) return false;
+        if (!CollectRings(first, 1, rings)) return false;
+        if (!CollectRings(second, 2, rings)) return false;
         if (rings.Count == 0) return false;
 
         if (AnyRingsCross(rings)) return false;   // crossing/touching -> full pipeline
@@ -433,7 +331,10 @@ public class CombinedGeometry : Geometry
                 kept.Add(rings[i].pts);
         }
 
-        foreach (var ring in kept) Mesh.AddContour(ring, true);
+        foreach (var ring in kept)
+        {
+            if (Strokeable(ring)) Mesh.AddContour(ring, true);
+        }
 
         if (geometryType == GeometryType.Outlined) return true;
 
@@ -458,45 +359,89 @@ public class CombinedGeometry : Geometry
         _ => inG1 ^ inG2,
     };
 
-    // Closed, simple rings (>= 3 points) of an operand. False for a null/open operand or a degenerate contour, so the
-    // caller drops to the full pipeline. A null operand contributes nothing (returns true with no rings added).
-    private static bool CollectRings(Geometry g, int src, List<(Vector2<double>[] pts, int src)> rings)
+    // The rings of an operand for the fast path; false for a non-zero area of several rings, whose nesting alone does
+    // not tell what it fills.
+    private static bool CollectRings((IReadOnlyList<Vector2<double>[]> Rings, FillRule Rule) area, int src,
+        List<(Vector2<double>[] pts, int src)> rings)
     {
-        if (g == null) return true;
-        if (g is not { IsClosed: true } || g.Mesh == null) return false;
-        foreach (var c in g.Mesh.Contours)
-        {
-            if (!c.IsGeometryClosed || c.Points is not { Length: >= 3 }) return false;
-            rings.Add((c.Points, src));
-        }
+        if (area.Rule == FillRule.NonZero && area.Rings.Count > 1) return false;
+        foreach (var ring in area.Rings) rings.Add((ring, src));
         return true;
     }
 
-    // True if any two non-adjacent edges (within or across rings) cross or touch. X-sweep broad-phase (~O(n log n) for
-    // clean input). A shared vertex between adjacent edges of the same ring is fine; any other contact -> not clean.
+    // True if any two edges cross or touch, but for neighbours in one ring meeting at their shared vertex. X-sweep
+    // broad-phase (~O(n log n) for clean input). Rings of the two operands meeting at a vertex or along an edge are not
+    // clean: which side of such a ring is filled cannot be told from its vertices.
     private static bool AnyRingsCross(List<(Vector2<double>[] pts, int src)> rings)
     {
-        var edges = new List<(Vector2<double> a, Vector2<double> b)>();
-        foreach (var (pts, _) in rings)
+        var edges = new List<(Vector2<double> a, Vector2<double> b, int ring, int index, int count)>();
+        for (var r = 0; r < rings.Count; r++)
+        {
+            var pts = rings[r].pts;
             for (var i = 0; i < pts.Length; i++)
-                edges.Add((pts[i], pts[(i + 1) % pts.Length]));
+                edges.Add((pts[i], pts[(i + 1) % pts.Length], r, i, pts.Length));
+        }
+
         edges.Sort((e, f) => Math.Min(e.a.X, e.b.X).CompareTo(Math.Min(f.a.X, f.b.X)));
 
-        var active = new List<(Vector2<double> a, Vector2<double> b)>();
+        // Nearer than a millionth of the size counts as touching: rings that close are the overlay's to combine exactly.
+        double minX0 = double.MaxValue, minY0 = double.MaxValue, maxX0 = double.MinValue, maxY0 = double.MinValue;
+        foreach (var e in edges)
+        {
+            (minX0, minY0, maxX0, maxY0) = (Math.Min(minX0, e.a.X), Math.Min(minY0, e.a.Y), Math.Max(maxX0, e.a.X), Math.Max(maxY0, e.a.Y));
+        }
+
+        var near = Math.Max(maxX0 - minX0, maxY0 - minY0) * NearFraction;
+        var active = new List<(Vector2<double> a, Vector2<double> b, int ring, int index, int count)>();
         foreach (var e in edges)
         {
             var minX = Math.Min(e.a.X, e.b.X);
             for (var i = active.Count - 1; i >= 0; i--)
-                if (Math.Max(active[i].a.X, active[i].b.X) < minX) active.RemoveAt(i);
+                if (Math.Max(active[i].a.X, active[i].b.X) < minX - near) active.RemoveAt(i);
 
             foreach (var o in active)
             {
-                if (e.a == o.a || e.a == o.b || e.b == o.a || e.b == o.b) continue; // shared vertex (adjacent) - fine
-                if (SegmentsIntersect(e.a, e.b, o.a, o.b)) return true;
+                var neighbours = e.ring == o.ring &&
+                                 ((e.index + 1) % e.count == o.index || (o.index + 1) % o.count == e.index);
+                if (neighbours)
+                {
+                    // Neighbours meet at their shared corner; one folding back near the other is a spike.
+                    var shared = e.a == o.a || e.a == o.b ? e.a : e.b;
+                    var far1 = shared == e.a ? e.b : e.a;
+                    var far2 = shared == o.a ? o.b : o.a;
+                    if (Overlap(e.a, e.b, o.a, o.b) || Distance(far1, o.a, o.b) <= near || Distance(far2, e.a, e.b) <= near)
+                        return true;
+                    continue;
+                }
+
+                if (SegmentsIntersect(e.a, e.b, o.a, o.b) || Distance(e.a, o.a, o.b) <= near || Distance(e.b, o.a, o.b) <= near ||
+                    Distance(o.a, e.a, e.b) <= near || Distance(o.b, e.a, e.b) <= near)
+                    return true;
             }
             active.Add(e);
         }
         return false;
+    }
+
+    private const double NearFraction = 1e-6;
+
+    private static double Distance(Vector2<double> p, Vector2<double> a, Vector2<double> b)
+    {
+        var d = b - a;
+        var lengthSquared = d.X * d.X + d.Y * d.Y;
+        var t = lengthSquared > 0 ? Math.Clamp(((p.X - a.X) * d.X + (p.Y - a.Y) * d.Y) / lengthSquared, 0, 1) : 0;
+        return (a + d * t - p).Length();
+    }
+
+    // Whether two neighbouring edges fold back along each other rather than only meeting at their shared vertex.
+    private static bool Overlap(Vector2<double> a1, Vector2<double> b1, Vector2<double> a2, Vector2<double> b2)
+    {
+        var shared = a1 == a2 || a1 == b2 ? a1 : b1;
+        var far1 = shared == a1 ? b1 : a1;
+        var far2 = shared == a2 ? b2 : a2;
+        var d1 = far1 - shared;
+        var d2 = far2 - shared;
+        return Math.Abs(d1.X * d2.Y - d1.Y * d2.X) <= 1e-9 && d1.X * d2.X + d1.Y * d2.Y > 0;
     }
 
     private static bool SegmentsIntersect(Vector2<double> p1, Vector2<double> p2, Vector2<double> p3, Vector2<double> p4)
@@ -528,52 +473,5 @@ public class CombinedGeometry : Geometry
                 p.X < (poly[j].X - poly[i].X) * (p.Y - poly[i].Y) / (poly[j].Y - poly[i].Y) + poly[i].X)
                 inside = !inside;
         return inside;
-    }
-
-    private bool CheckGeometryBoundingBoxesIntersection()
-    {
-        if (Geometry1 is null || Geometry2 is null) return false;
-        
-        var intersects = bounds1.Intersects(bounds2);
-            
-        return intersects;
-    }
-
-    private void ProcessOutlinesIntersections(Mesh mesh1, Mesh mesh2)
-    {
-        var mergedSegments1 = mesh1.MergeContourSegments();
-        var mergedSegments2 = mesh2.MergeContourSegments();
-
-        ContourProcessingHelper.ProcessContoursIntersections(mergedSegments1, mergedSegments2);
-        
-        mesh1.UpdateContoursPoints();
-        mesh2.UpdateContoursPoints();
-    }
-
-    private List<GeometrySegment> MarkSegments(Mesh mesh1, Mesh mesh2)
-    {
-        var mesh1Segments = mesh1.MergeContourSegments();
-        var mesh2Segments = mesh2.MergeContourSegments();
-
-        return ContourProcessingHelper.MarkSegments(mesh1Segments, mesh2Segments);
-    }
-
-    private void RemoveSegmentsByMode()
-    {
-        switch (GeometryCombineMode)
-        {
-            case GeometryCombineMode.Union:
-                OutlineMesh1.RemoveSegmentsByRule(true);
-                OutlineMesh2.RemoveSegmentsByRule(true);
-                break;
-            case GeometryCombineMode.Intersect:
-                OutlineMesh1.RemoveSegmentsByRule(false);
-                OutlineMesh2.RemoveSegmentsByRule(false);
-                break;
-            case GeometryCombineMode.Exclude:
-                OutlineMesh1.RemoveSegmentsByRule(true);
-                OutlineMesh2.RemoveSegmentsByRule(false);
-                break;
-        }
     }
 }
