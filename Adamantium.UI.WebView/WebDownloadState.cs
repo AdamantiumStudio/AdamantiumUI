@@ -18,6 +18,8 @@ public enum WebDownloadState
     /// <summary>Cancelled, or refused when asked; nothing is kept.</summary>
     Cancelled,
 
-    /// <summary>Stopped by what went wrong - the connection, the server, the disk.</summary>
+    /// <summary>Stopped by what went wrong - the connection, the server, the disk (<see cref="WebDownload.InterruptReason"/>):
+    /// not finished, it may go on - by itself, or <see cref="WebDownload.Resume"/> - or be cancelled; until then the part
+    /// come in stays beside <see cref="WebDownload.FilePath"/>.</summary>
     Interrupted
 }

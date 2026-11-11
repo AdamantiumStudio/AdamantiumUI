@@ -33,23 +33,36 @@ internal sealed unsafe class WebViewDownloadHandler : CefObject
         CefStringUtf16* suggestedName, CefBeforeDownloadCallback* callback)
     {
         var taken = false;
+        WebViewBrowser owner = null;
+        WebDownload download = null;
         try
         {
-            var owner = From<WebViewDownloadHandler>(self).browser;
-            var download = owner.Download(item->get_id(item));
+            owner = From<WebViewDownloadHandler>(self).browser;
+            download = owner.Download(item->get_id(item));
             download.Origin = owner;
             download.Read(item);
-            download.Suggest(CefStrings.Read(suggestedName));
-            download.Ask(callback);
-            taken = owner.Is(cefBrowser) && owner.OnDownloadRequested(download);
-            if (!taken)
+            // Resuming one interrupted, Chromium asks again: it goes on where the application said, unasked.
+            if (download.GoOnWhereSaved(callback))
             {
-                download.Refuse();
+                taken = true;
+            }
+            else
+            {
+                download.Suggest(CefStrings.Read(suggestedName));
+                download.Ask(callback);
+                taken = owner.Is(cefBrowser) && owner.OnDownloadRequested(download);
             }
         }
         catch (Exception exception)
         {
             CefCallbacks.Report(exception);
+            taken = false;
+        }
+
+        if (!taken && download != null)
+        {
+            download.Refuse();
+            owner.DownloadHeard(download);
         }
 
         CefRefCounting.ReleaseCef(callback);

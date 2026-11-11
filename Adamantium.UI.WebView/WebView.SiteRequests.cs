@@ -72,7 +72,17 @@ public partial class WebView
             }
 
             var args = new WebDownloadRequestedEventArgs(download);
-            bridge.OnDownloadRequested(args);
+            try
+            {
+                bridge.OnDownloadRequested(args);
+            }
+            catch (Exception exception)
+            {
+                // A handler that threw answers nothing: refused, rather than held asked for good.
+                Serilog.Log.Logger.Error(exception, "A download's handler threw: the download is refused");
+                args.Handled = false;
+            }
+
             if (!args.Handled)
             {
                 args.Refuse();

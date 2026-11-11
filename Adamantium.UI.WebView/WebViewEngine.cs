@@ -116,6 +116,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         if (download.Ended)
         {
             downloadsById.Remove(download.Id);
+            download.Origin = null;
         }
 
         return true;
@@ -126,7 +127,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     {
         if (!downloadsById.TryGetValue(id, out var download))
         {
-            download = new WebDownload(id, downloads.Add);
+            download = new WebDownload(id, downloads.Add, DownloadHeard);
             downloadsById[id] = download;
         }
 
@@ -137,14 +138,52 @@ public sealed unsafe class WebViewEngine : IDisposable
     /// it came in goes once its last download is done.</summary>
     internal void DownloadHeard(WebDownload download)
     {
-        if (download.Ended && !downloads.Contains(download))
+        if (!download.IsFinished)
+        {
+            return;
+        }
+
+        if (!downloads.Contains(download))
         {
             downloadsById.Remove(download.Id);
         }
 
-        if (download.IsFinished && download.Origin is { IsKeptForDownloads: true } origin && !HasDownloadsComingIn(origin))
+        var origin = download.Origin;
+        if (download.Ended)
         {
-            origin.CloseKept();
+            // Done with: it holds the page it came from no longer.
+            download.Origin = null;
+        }
+
+        if (origin is { IsKeptForDownloads: true } && !HasDownloadsComingIn(origin))
+        {
+            // Out of Chromium's callback, which is telling of the download now.
+            LoopSignal.Post(origin.CloseKept);
+        }
+    }
+
+    /// <summary>Refuses the downloads <paramref name="browser"/> asked about and the application has not answered: the
+    /// page goes, and an answer coming later would start a download nobody hears of.</summary>
+    internal void RefuseAsked(WebViewBrowser browser)
+    {
+        List<WebDownload> refused = null;
+        foreach (var download in downloadsById.Values)
+        {
+            if (ReferenceEquals(download.Origin, browser) && download.IsAsked)
+            {
+                (refused ??= []).Add(download);
+            }
+        }
+
+        if (refused == null)
+        {
+            return;
+        }
+
+        foreach (var download in refused)
+        {
+            download.Refuse();
+            DownloadHeard(download);
         }
     }
 

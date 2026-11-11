@@ -1685,8 +1685,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             permissionsAsked[i].Answer(false);
         }
 
+        engine.RefuseAsked(this);
         view.ScriptDialogsReset(this);
         view.LetGo(this);
+        // What CEF still tells of the page reaches nobody: the view is let go of, not held by the closing page.
+        view = new WebViewUnseenView();
         producer?.Dispose();
         producer = null;
         popupProducer?.Dispose();
@@ -1695,15 +1698,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         {
             if (engine.HasDownloadsComingIn(this))
             {
-                // Its downloads are the profile's, not the page's: the page, shown nowhere now, goes once they are done.
-                keptForDownloads = true;
-                view = new WebViewUnseenView();
-                var host = Host();
-                if (host != null)
-                {
-                    host->was_hidden(host, 1);
-                    CefRefCounting.ReleaseCef(host);
-                }
+                KeepForDownloads();
             }
             else
             {
@@ -1744,6 +1739,38 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>Whether the page was closed while its downloads came in, and waits for them to be done.</summary>
     internal bool IsKeptForDownloads => keptForDownloads;
+
+    // Its downloads are the profile's, not the page's: Chromium cancels them with the browser, so the page, shown
+    // nowhere, silent and blank, goes once they are done.
+    private void KeepForDownloads()
+    {
+        keptForDownloads = true;
+        var host = Host();
+        if (host != null)
+        {
+            host->was_hidden(host, 1);
+            host->set_audio_muted(host, 1);
+            CefRefCounting.ReleaseCef(host);
+        }
+
+        var frame = browser->get_main_frame(browser);
+        if (frame == null)
+        {
+            return;
+        }
+
+        var blank = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&blank, Blank);
+            frame->load_url(frame, &blank);
+        }
+        finally
+        {
+            CefStrings.Clear(&blank);
+            CefRefCounting.ReleaseCef(frame);
+        }
+    }
 
     /// <summary>Closes a page kept for its downloads: the last is done, or CEF shuts down.</summary>
     internal void CloseKept()

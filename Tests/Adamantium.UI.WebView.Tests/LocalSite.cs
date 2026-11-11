@@ -19,13 +19,18 @@ internal sealed class LocalSite : IDisposable
     private readonly byte[] page;
     private readonly int fileBytes;
     private readonly int pieceDelayMs;
+    private readonly int cutAfterBytes;
     private readonly CancellationTokenSource stop = new();
 
-    public LocalSite(string html, int fileBytes = 64 * 1024, int pieceDelayMs = 0)
+    /// <summary>A site whose files are <paramref name="fileBytes"/> long, sent a piece every
+    /// <paramref name="pieceDelayMs"/>; with <paramref name="cutAfterBytes"/>, the connection is dropped after that
+    /// many, short of the length it said.</summary>
+    public LocalSite(string html, int fileBytes = 64 * 1024, int pieceDelayMs = 0, int cutAfterBytes = 0)
     {
         page = Encoding.UTF8.GetBytes(html);
         this.fileBytes = fileBytes;
         this.pieceDelayMs = pieceDelayMs;
+        this.cutAfterBytes = cutAfterBytes;
         listener.Start();
         Origin = "http://127.0.0.1:" + ((IPEndPoint)listener.LocalEndpoint).Port;
         _ = Serve();
@@ -107,6 +112,11 @@ internal sealed class LocalSite : IDisposable
             var piece = new byte[PieceBytes];
             for (var sent = 0; sent < fileBytes; sent += piece.Length)
             {
+                if (cutAfterBytes > 0 && sent >= cutAfterBytes)
+                {
+                    return;
+                }
+
                 var count = Math.Min(piece.Length, fileBytes - sent);
                 for (var i = 0; i < count; i++)
                 {

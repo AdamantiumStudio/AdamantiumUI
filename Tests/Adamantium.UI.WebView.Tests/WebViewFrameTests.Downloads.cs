@@ -154,7 +154,8 @@ public partial class WebViewFrameTests
                 Assert.That(resumed, Is.EqualTo(WebDownloadState.InProgress));
                 Assert.That(afterResume, Is.GreaterThan(afterPause), "it goes on");
                 Assert.That(cancelled, Is.EqualTo(WebDownloadState.Cancelled));
-                Assert.That(File.Exists(target), Is.False, "a cancelled download leaves no file");
+                Assert.That(Directory.Exists(folder) ? Directory.GetFiles(folder) : [], Is.Empty,
+                    "a cancelled download leaves no file, nor the part come in");
             });
         }
         finally
@@ -174,6 +175,7 @@ public partial class WebViewFrameTests
         WebDownload asked = null;
         var stateAfter = WebDownloadState.Asked;
         long receivedAtClose = 0;
+        var keptAfterClose = 0;
         try
         {
             loop.Run(() =>
@@ -193,6 +195,7 @@ public partial class WebViewFrameTests
                     receivedAtClose = asked.ReceivedBytes;
                 });
                 // ShowPage has closed the page; the download goes on, or not.
+                keptAfterClose = engine.BrowserCount;
                 Pump(() => asked == null || asked.IsFinished, TimeSpan.FromSeconds(30));
                 stateAfter = asked?.State ?? WebDownloadState.Asked;
             });
@@ -205,6 +208,7 @@ public partial class WebViewFrameTests
             Assert.Multiple(() =>
             {
                 Assert.That(receivedAtClose, Is.LessThan(1_000_000), "closed while it came in");
+                Assert.That(keptAfterClose, Is.EqualTo(1), "the page was kept for it");
                 Assert.That(stateAfter, Is.EqualTo(WebDownloadState.Completed));
                 Assert.That(File.Exists(target) ? new FileInfo(target).Length : 0, Is.EqualTo(1_000_000));
                 Assert.That(left, Is.Zero, "the page kept for the download closed once it was done");
@@ -261,6 +265,153 @@ public partial class WebViewFrameTests
         {
             loop.Run(() => engine.ForgetDownload(asked));
             DeleteFolder(folder);
+        }
+    }
+
+    // Closed while the application has not answered yet: an answer coming later would start a download nobody hears of.
+    [Test]
+    public void ADownloadAskedWhenItsPageCloses_IsRefused_AndThePageGoes()
+    {
+        using var site = new LocalSite("<title>files</title>");
+        WebDownload asked = null;
+        var listed = true;
+        var stateAfter = WebDownloadState.Asked;
+        loop.Run(() =>
+        {
+            ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+            {
+                browser.Navigate(site.Origin + "/download/unanswered.bin");
+                Pump(() => view.Downloads.Count > 0, TimeSpan.FromSeconds(10));
+                asked = view.Downloads.FirstOrDefault();
+            });
+            stateAfter = asked?.State ?? WebDownloadState.Asked;
+            // Answered too late: nothing comes of it.
+            if (asked != null)
+            {
+                new WebDownloadRequestedEventArgs(asked).Save(Path.Combine(Path.GetTempPath(), "never.bin"));
+                listed = engine.Downloads.Contains(asked);
+            }
+        });
+        var left = loop.Run(() =>
+        {
+            Pump(() => engine.BrowserCount == 0, TimeSpan.FromSeconds(10));
+            return engine.BrowserCount;
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.Not.Null, "the view was asked");
+            Assert.That(stateAfter, Is.EqualTo(WebDownloadState.Cancelled));
+            Assert.That(listed, Is.False, "a late answer saves nothing");
+            Assert.That(left, Is.Zero, "the page went");
+        });
+    }
+
+    [Test]
+    public void ADownload_IsSavedOnce_AtAFullPath_AndForgottenOnlyWhenFinished()
+    {
+        using var site = new LocalSite("<title>files</title>", fileBytes: 2_000_000, pieceDelayMs: 20);
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
+        WebDownload asked = null;
+        bool relativeThrew = false, forgottenUnfinished = true;
+        string savedAt = null;
+        try
+        {
+            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+            {
+                browser.Navigate(site.Origin + "/download/once.bin");
+                Pump(() => view.Downloads.Count > 0, TimeSpan.FromSeconds(10));
+                asked = view.Downloads.FirstOrDefault();
+                if (asked == null)
+                {
+                    return;
+                }
+
+                var args = new WebDownloadRequestedEventArgs(asked);
+                relativeThrew = Throws(() => args.Save("relative.bin"));
+                args.Save(Path.Combine(folder, "first.bin"));
+                args.Save(Path.Combine(folder, "second.bin"));
+                args.Refuse();
+                savedAt = asked.FilePath;
+                Pump(() => asked.ReceivedBytes > 0, TimeSpan.FromSeconds(10));
+                forgottenUnfinished = engine.ForgetDownload(asked);
+                asked.Cancel();
+                Pump(() => asked.IsFinished, TimeSpan.FromSeconds(10));
+            }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(relativeThrew, Is.True, "a relative path is refused");
+                Assert.That(savedAt, Is.EqualTo(Path.Combine(folder, "first.bin")), "the first answer holds");
+                Assert.That(forgottenUnfinished, Is.False, "one coming in is not forgotten");
+                Assert.That(asked?.State, Is.EqualTo(WebDownloadState.Cancelled));
+            });
+        }
+        finally
+        {
+            loop.Run(() => engine.ForgetDownload(asked));
+            DeleteFolder(folder);
+        }
+    }
+
+    // The server stops short of what it said: the download is interrupted - not finished, and saying why.
+    [Test]
+    public void ADownloadCutShort_IsInterrupted_NotFinished()
+    {
+        using var site = new LocalSite("<title>files</title>", fileBytes: 1_000_000, cutAfterBytes: 200_000);
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
+        WebDownload asked = null;
+        var state = WebDownloadState.Asked;
+        string reason = null;
+        var finished = true;
+        try
+        {
+            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+            {
+                browser.Navigate(site.Origin + "/download/cut.bin");
+                Pump(() => view.Downloads.Count > 0, TimeSpan.FromSeconds(10));
+                asked = view.Downloads.FirstOrDefault();
+                if (asked == null)
+                {
+                    return;
+                }
+
+                new WebDownloadRequestedEventArgs(asked).Save(Path.Combine(folder, "cut.bin"));
+                // Chromium resumes it by itself a few times first: the server sends it all again, and cuts it again.
+                Pump(() => asked.State == WebDownloadState.Interrupted, TimeSpan.FromSeconds(30));
+                state = asked.State;
+                reason = asked.InterruptReason;
+                finished = asked.IsFinished;
+                asked.Cancel();
+                Pump(() => false, TimeSpan.FromSeconds(1));
+            }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(state, Is.EqualTo(WebDownloadState.Interrupted));
+                Assert.That(reason, Is.Not.Empty);
+                Assert.That(finished, Is.False, "it may still go on");
+                Assert.That(asked?.State, Is.EqualTo(WebDownloadState.Cancelled), "and cancelled, it is done");
+                Assert.That(Directory.Exists(folder) ? Directory.GetFiles(folder) : [], Is.Empty, "its part with it");
+            });
+        }
+        finally
+        {
+            loop.Run(() => engine.ForgetDownload(asked));
+            DeleteFolder(folder);
+        }
+    }
+
+    private static bool Throws(Action action)
+    {
+        try
+        {
+            action();
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return true;
         }
     }
 
