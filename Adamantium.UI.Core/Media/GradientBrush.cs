@@ -10,6 +10,9 @@ namespace Adamantium.UI.Core.Media;
 /// RELATIVE to the filled bounds (0..1), so one brush paints any tile size.</summary>
 public abstract class GradientBrush : Brush
 {
+    /// <summary>How many stops the renderer draws: the first this many by offset; the rest are not drawn.</summary>
+    public const int MaxRenderedStops = 8;
+
     protected GradientBrush()
     {
         GradientStops = [];
@@ -50,7 +53,8 @@ public abstract class GradientBrush : Brush
     public static readonly AdamantiumProperty ColorInterpolationModeProperty = AdamantiumProperty.Register(nameof(ColorInterpolationMode),
         typeof(ColorInterpolationMode), typeof(GradientBrush), new PropertyMetadata(ColorInterpolationMode.Srgb, PropertyMetadataOptions.AffectsPaint));
 
-    /// <summary>The color stops, ordered by the author; the renderer reads them sorted by <see cref="GradientStop.Offset"/>.
+    /// <summary>The color stops, ordered by the author; the renderer reads them sorted by <see cref="GradientStop.Offset"/>,
+    /// no more than <see cref="MaxRenderedStops"/> of them.
     /// A collection (not an AdamantiumProperty) so it is never a shared mutable default across instances. [Content] so AUML
     /// populates it from the brush's child &lt;GradientStop/&gt; elements (like GeometryGroup.Children).</summary>
     [Content]

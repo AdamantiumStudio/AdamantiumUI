@@ -125,6 +125,10 @@ public interface IDrawingSession
     /// may be null.</summary>
     IDrawingSession DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform);
 
+    /// <summary>Draws triangles with a color at each corner where <paramref name="transform"/> puts them, each triangle's
+    /// color running smoothly between its corners - exact at any zoom, as a mesh gradient is.</summary>
+    IDrawingSession DrawColoredMesh(ColoredMesh mesh, Matrix4x4F transform);
+
     /// <summary>Starts a group: everything drawn until the matching <see cref="PopGroup"/> is drawn apart and laid down as
     /// <paramref name="options"/> say - cut, masked, blended, faded. Groups nest.</summary>
     IDrawingSession PushGroup(DrawingGroupOptions options);

@@ -893,6 +893,7 @@ public partial class RenderCache
             _opsHoldCommandGroups = false;
             _groupsCut.Clear();
             _groupsLeftOut.Clear();
+            _unitsLeftOutWithGroup.Clear();
             _openLayer = null;
             _opsReplayable = true; 
             _rectSlotByUnit.Clear();
@@ -911,6 +912,7 @@ public partial class RenderCache
             _walkVersion++;
             _nodeAllAware.Clear();
             _culledWhenRecorded.Clear();
+            _textDrawnItself.Clear();
             _clonedWhenRecorded.Clear();
             ForgetCopies();
             _nodeStragglers.Clear();   // recorded per walk, exactly like the answers above it
@@ -1781,6 +1783,7 @@ public partial class RenderCache
                 }
                 // else: rotated/sheared RELATIVE transform or overflow -> fall through to the per-block direct draw below
                 // (which re-marks the node not-aware, exactly like a rejected rect)
+                if (_recording) _textDrawnItself.Add(unit);
             }
             else if (device != null && InstancedFillCollector.Enabled && unit is GeometryRenderUnit gru && _instancedFill.CanBatch(gru))
             {
@@ -1983,6 +1986,25 @@ public partial class RenderCache
             {
                 eruNoDev.EnsureMachinery();
                 unit.Update(wt, _projectionMatrix, _renderScale);
+            }
+
+            // A shape built for a batch that no batch takes now - its brush became one no record carries, a radial
+            // between two circles - has no drawing of its own yet (or only the bare body a batch-rejected one gets);
+            // drawn without it, it would draw nothing, or no edge and no outline.
+            switch (unit)
+            {
+                case RectangleRenderUnit rect:
+                    rect.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case EllipseRenderUnit ellipse:
+                    ellipse.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case RegularPolygonRenderUnit polygon:
+                    polygon.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case GeometryRenderUnit geometry:
+                    geometry.TakeBackFill(wt, _projectionMatrix, _renderScale);
+                    break;
             }
 
             if (device != null)

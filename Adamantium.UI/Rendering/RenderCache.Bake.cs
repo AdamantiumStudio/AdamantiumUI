@@ -64,6 +64,9 @@ public partial class RenderCache
     // The units this op stream left OUT because they were entirely outside their clip. They have no op in it, so nothing
     // can re-point them into view: a frame that moves one back inside has to walk. Lives exactly as long as the stream.
     private readonly HashSet<Core.Graphics.IRenderUnit> _culledWhenRecorded = new();
+    // The text this op stream draws by itself though its kind is batched: a run the glyph batch cannot pack, turned or
+    // sheared against its node.
+    private readonly HashSet<Core.Graphics.IRenderUnit> _textDrawnItself = new();
     private readonly HashSet<ControlGroup> _clonedWhenRecorded = new();
     // ...and which units cannot follow, so they are re-baked beside the node's slot write instead of refusing the frame.
     private readonly Dictionary<Guid, HashSet<IUIComponent>> _nodeStragglers = new();

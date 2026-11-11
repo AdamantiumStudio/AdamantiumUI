@@ -158,6 +158,23 @@ public class PdfObjectDrawingTests
     }
 
     [Test]
+    public void AnImageIsEnlargedInSquaresUnlessItAsksToBeInterpolated()
+    {
+        var pdf = new TestPdf { Resources = "<< /XObject << /A 5 0 R /B 6 0 R >> >>" };
+        pdf.AddStream("/Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 8",
+            TestPdf.Latin1("\u0080"));
+        pdf.AddStream("/Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 8 " +
+                      "/Interpolate true", TestPdf.Latin1("\u0080"));
+        var (_, session) = Draw(pdf, "/A Do /B Do BI /W 1 /H 1 /CS /G /BPC 8 /I true ID \u0080 EI");
+        var images = session.All<DrawnImage>().Select(d => d.Image.Sampling).ToArray();
+        Assert.That(images, Is.EqualTo(new[]
+        {
+            Core.Media.Imaging.ImageSampling.Pixelated, Core.Media.Imaging.ImageSampling.Smooth,
+            Core.Media.Imaging.ImageSampling.Smooth,
+        }));
+    }
+
+    [Test]
     public void AnImageDrawnTwiceIsDecodedOnce()
     {
         var pdf = new TestPdf { Resources = "<< /XObject << /I 5 0 R >> >>" };

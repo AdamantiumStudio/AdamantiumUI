@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using Adamantium.Core.Collections;
+using Adamantium.Imaging;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -44,4 +46,29 @@ public partial class ImageViewModel : TabPageViewModel
     [Bindable] private double _brightness;
     [Bindable] private double _contrast;
     [Bindable] private double _saturation = 1;
+
+    /// <summary>An 8×8 picture enlarged smoothly - its pixels blend into each other.</summary>
+    public ImageSource SmoothPixels { get; } = Pixels(ImageSampling.Smooth);
+
+    /// <summary>The same picture enlarged in squares (<see cref="ImageSampling.Pixelated"/>).</summary>
+    public ImageSource PixelatedPixels { get; } = Pixels(ImageSampling.Pixelated);
+
+    // A little heart on a checkered ground, eight pixels a side.
+    private static ImageSource Pixels(ImageSampling sampling)
+    {
+        const string heart = "..XX.XX.,.XXXXXXX,.XXXXXXX,.XXXXXXX,..XXXXX.,...XXX..,....X...,........";
+        var rows = heart.Split(',');
+        var rgba = new byte[8 * 8 * 4];
+        for (var y = 0; y < 8; y++)
+        {
+            for (var x = 0; x < 8; x++)
+            {
+                var at = (y * 8 + x) * 4;
+                var (r, g, b) = rows[y][x] == 'X' ? (239, 68, 68) : (x + y) % 2 == 0 ? (226, 232, 240) : (148, 163, 184);
+                (rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3]) = ((byte)r, (byte)g, (byte)b, (byte)255);
+            }
+        }
+
+        return new BitmapImage(8, 8, 1, 1, SurfaceFormat.R8G8B8A8.UNorm, rgba) { Sampling = sampling };
+    }
 }

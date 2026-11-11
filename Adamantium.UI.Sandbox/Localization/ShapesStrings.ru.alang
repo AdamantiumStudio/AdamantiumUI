@@ -20,6 +20,7 @@
     <Phrase Key="StartCap" Text="Начало линии"/>
     <Phrase Key="EndCap" Text="Конец линии"/>
     <Phrase Key="Join" Text="Стык"/>
+    <Phrase Key="MiterLimit" Text="Предел угла"/>
     <Phrase Key="DashFit" Text="Подгонка штриха"/>
     <Phrase Key="Color" Text="Цвет"/>
     <Phrase Key="Brush" Text="Кисть"/>

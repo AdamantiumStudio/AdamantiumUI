@@ -39,6 +39,8 @@
     <Phrase Key="MiddleStop" Text="Middle stop"/>
     <Phrase Key="LinearTitle" Text="Linear gradients — rectangles"/>
     <Phrase Key="RadialTitle" Text="Radial gradients — rectangles"/>
+    <Phrase Key="OriginShift" Text="Origin's shift to the right"/>
+    <Phrase Key="OriginRadius" Text="Origin circle's radius"/>
     <Phrase Key="ConicTitle" Text="Conic gradients — angular sweep"/>
     <Phrase Key="EllipsesTitle" Text="Gradients — ellipses"/>
     <Phrase Key="ShapesTitle" Text="Gradients — arbitrary shapes (Polygon / Path)"/>

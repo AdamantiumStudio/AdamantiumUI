@@ -26,4 +26,11 @@ public enum DrawingGroupSampleKind
 
     /// <summary>Three discs laid over the picture by <see cref="DrawingGroupSample.BlendMode"/>.</summary>
     Blend,
+
+    /// <summary>A color wheel of triangles with a color at each corner - a mesh gradient.</summary>
+    ColoredMesh,
+
+    /// <summary>Discs multiplied with the picture under them inside a cut to a star: the cut is no group of its own, so
+    /// they mix with what lies under it.</summary>
+    BlendInClip,
 }

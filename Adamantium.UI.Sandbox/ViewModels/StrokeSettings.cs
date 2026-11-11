@@ -85,6 +85,10 @@ public sealed class StrokeSettings : AdamantiumViewModel
     private PenLineJoin _join = PenLineJoin.Round;
     public PenLineJoin Join { get => _join; set => SetProperty(ref _join, value); }
 
+    // How far a miter's point may reach, in half thicknesses: below the star's 3.2 its tips are beveled.
+    private double _miterLimit = 10;
+    public double MiterLimit { get => _miterLimit; set => SetProperty(ref _miterLimit, value); }
+
     // Stroke color, driven by a ColorPicker. StrokeBrush is ONE cached brush every shape binds its Stroke to - a color
     // change mutates its Color in place (AffectsPaint re-bakes the users), NOT a new brush per read. Creating a fresh
     // SolidColorBrush (an AdamantiumComponent) on every read churned the property system and deadlocked the render thread

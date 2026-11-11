@@ -97,6 +97,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         public int TexGpuCapacity;
         public bool TexRecreated;
         public ITexture PendingTexture;   // what the instances appended since the last run all sample
+        public SamplerState PendingSampler;   // and how - one picture's, as the texture is
 
         // Parallel MATERIAL instance state for this key's shared mesh. The record is the PATTERN one deliberately: both
         // feed PatternGeomData, so a second identical struct would only be a second thing to keep in step.
@@ -143,7 +144,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // changes (see RecordGroup). Without that a single draw would paint two different fields with one shader.
         public readonly List<(KeySegment Seg, uint First, uint Count, int Kind)> PatKeys = new();
         // Textured runs carry their TEXTURE: one is bound per draw, so a run ends where the texture changes.
-        public readonly List<(KeySegment Seg, uint First, uint Count, ITexture Texture)> TexKeys = new();
+        public readonly List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> TexKeys = new();
         // Material runs carry the whole description of their source: which image (a capture of the frame, or the
         // desktop), which pass reads it, and which region the capture is taken from.
         public readonly List<(KeySegment Seg, uint First, uint Count, bool Wallpaper, Core.Media.MaterialTreatment Treatment,
@@ -768,6 +769,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         seg.TexItems[seg.TexCount++] = BuildTexturedInstance(brush, local, localBounds, opacity, transformSlot, FadeSlotFor(unit), clipSlot);
         seg.PendingTexture = texture;
+        seg.PendingSampler = ImageSamplers.Of(brush);
 
         _scissor = scissor;
         if (!seg.InPending) { seg.InPending = true; _pendingKeys.Add(seg); }
@@ -1115,7 +1117,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (!SceneClean || seg.TexRecreated)
                     seg.TexGpu.SetData(seg.TexItems.AsSpan(seg.TexFlushed, tcount), (uint)(seg.TexFlushed * TexInstanceStride));
-                rec.TexKeys.Add((seg, (uint)seg.TexFlushed, (uint)tcount, seg.PendingTexture));
+                rec.TexKeys.Add((seg, (uint)seg.TexFlushed, (uint)tcount, seg.PendingTexture,
+                    seg.PendingSampler ?? SamplerStates.LinearClampToEdge));
                 seg.TexFlushed = seg.TexCount;
                 seg.PendingTexture = null;   // the run is closed; the next texture starts a fresh one
             }
@@ -1187,14 +1190,14 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         return false;
     }
 
-    private static bool AnyDrawableRing(List<(KeySegment Seg, uint First, uint Count, ITexture Texture)> keys)
+    private static bool AnyDrawableRing(List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> keys)
     {
         foreach (var k in keys)
             if (k.Seg.RingBuffer != null && k.Texture != null) return true;
         return false;
     }
 
-    private static bool AnyTexture(List<(KeySegment Seg, uint First, uint Count, ITexture Texture)> keys)
+    private static bool AnyTexture(List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> keys)
     {
         foreach (var k in keys)
             if (k.Texture != null) return true;
@@ -1334,7 +1337,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             SetupInstancedState(projection);
             var brush = Brush(projection);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, texture) in rec.TexKeys)
+            foreach (var (seg, first, count, texture, sampler) in rec.TexKeys)
             {
                 // NO texture, NO draw: the heap path passes a texture as an INDEX written into push data by whoever bound
                 // one last, so drawing without binding samples whatever descriptor sits there - in practice the glyph
@@ -1342,7 +1345,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 if (texture == null) continue;
                 brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
-                brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+                brush.SourceSampler.SetResource(sampler);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.TextureMeshPass.Apply();
@@ -1433,12 +1436,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             SetupFringeState(projection);
             var brush = Brush(projection);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, texture) in rec.TexKeys)
+            foreach (var (seg, first, count, texture, sampler) in rec.TexKeys)
             {
                 if (seg.RingBuffer == null || texture == null) continue;
                 brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
-                brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+                brush.SourceSampler.SetResource(sampler);
                 brush.RingEdges.SetValue(seg.RingBuffer.GetDeviceAddress());
                 brush.TextureFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
