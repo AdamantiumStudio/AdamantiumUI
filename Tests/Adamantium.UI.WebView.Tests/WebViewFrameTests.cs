@@ -100,13 +100,16 @@ public class WebViewFrameTests
     public void StartedAhead_TheFirstBrowserShowsItsPage_AndTheBlankPageGoes()
     {
         bool settled = false, startedAhead = false, aheadWhileShown = true;
+        var browsersAhead = -1;
         var (_, frames, _, center) = loop.Run(() =>
         {
             Pump(() => engine.BrowserCount == 0, TimeSpan.FromSeconds(10));
             settled = engine.BrowserCount == 0;
             engine.StartAhead();
+            engine.StartAhead();
+            Pump(() => engine.IsStartedAhead, TimeSpan.FromSeconds(30));
             startedAhead = engine.IsStartedAhead;
-            Pump(() => false, TimeSpan.FromSeconds(2));
+            browsersAhead = engine.BrowserCount;
             return ShowPage(WebViewFramePath.PixelBuffer, RedPage, _ => aheadWhileShown = engine.IsStartedAhead);
         });
         var left = loop.Run(() =>
@@ -118,7 +121,8 @@ public class WebViewFrameTests
         Assert.Multiple(() =>
         {
             Assert.That(settled, Is.True, "no browser left from before");
-            Assert.That(startedAhead, Is.True);
+            Assert.That(startedAhead, Is.True, "CEF made the blank page");
+            Assert.That(browsersAhead, Is.EqualTo(1), "one blank page, asked for twice");
             Assert.That(aheadWhileShown, Is.False, "the first browser ends the blank page");
             Assert.That(frames, Is.GreaterThan(0));
             Assert.That(center, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red, as BGRA");
@@ -1380,8 +1384,10 @@ public class WebViewFrameTests
                             "stay</body>";
         WebViewScriptDialogRequest asked = null;
         string title = null;
+        RecordingBrowserView shown = null;
         loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
         {
+            shown = view;
             // A page asks only after the user has done something on it.
             Click(browser, Width / 2, Height / 2);
             Pump(() => false, TimeSpan.FromMilliseconds(300));
@@ -1403,6 +1409,7 @@ public class WebViewFrameTests
             Assert.That(asked?.Kind, Is.EqualTo(WebViewScriptDialogKind.LeavePage));
             Assert.That(title, Is.Not.EqualTo("gone"), "the page stayed");
             Assert.That(left, Is.Zero, "the page closed");
+            Assert.That(shown?.Dialogs.Count, Is.EqualTo(1), "closing, it asked nobody");
         });
     }
 

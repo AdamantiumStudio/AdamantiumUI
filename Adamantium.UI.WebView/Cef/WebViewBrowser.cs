@@ -1709,6 +1709,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Whether the browser is closing, or closed.</summary>
     internal bool IsClosing => closing;
 
+    /// <summary>Whether CEF has made the browser, and it is not closed yet.</summary>
+    internal bool IsMade => browser != null;
+
     /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
     internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);
 

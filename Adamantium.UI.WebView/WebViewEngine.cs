@@ -344,8 +344,8 @@ public sealed unsafe class WebViewEngine : IDisposable
 
     /// <summary>Starts Chromium ahead of the first page: CEF, and its processes - the GPU's, the network's, a page's -
     /// kept up by a blank page shown nowhere until the first browser is made. That page then shows without waiting for
-    /// them; until it does, they hold their memory. On the UI loop; nothing once a browser was made, or with no CEF beside
-    /// the application.</summary>
+    /// them; until it does, they hold their memory - the blank page draws nothing and takes no device. On the UI loop;
+    /// nothing while a browser is open, or with no CEF beside the application.</summary>
     public void StartAhead()
     {
         if (!IsAvailable || warmUp != null || browsers.Count > 0)
@@ -356,7 +356,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         try
         {
             EnsureInitialized();
-            warmUp = new WebViewBrowser(this, EnsureDevice(), WebViewFramePath.PixelBuffer, new WebViewWarmUpView());
+            warmUp = new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewWarmUpView());
             browsers.Add(warmUp);
             ArmPumpTimer(MaxPumpDelayMs);
             warmUp.SetHidden(true);
@@ -370,8 +370,9 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
     }
 
-    /// <summary>Whether the blank page of <see cref="StartAhead"/> keeps Chromium up, no browser made since.</summary>
-    internal bool IsStartedAhead => warmUp != null;
+    /// <summary>Whether the blank page of <see cref="StartAhead"/> keeps Chromium up: made by CEF, no browser made since.
+    /// </summary>
+    internal bool IsStartedAhead => warmUp is { IsMade: true };
 
     /// <summary>The browsers made and not closed yet - the blank page of <see cref="StartAhead"/> among them.</summary>
     internal int BrowserCount => browsers.Count;
@@ -410,6 +411,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
 
         shutDown = true;
+        warmUp = null;
         devices.DeviceChangeBegin -= OnDeviceChanging;
         devices.DeviceChangeEnd -= OnDeviceChanged;
         if (application != null)
