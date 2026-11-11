@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using Adamantium.UI.WebView.Cef;
 using NUnit.Framework;
 
 namespace Adamantium.UI.WebView.Tests;
@@ -412,6 +415,321 @@ public partial class WebViewFrameTests
         finally
         {
             loop.Run(() => engine.ForgetDownload(asked));
+            DeleteFolder(folder);
+        }
+    }
+
+    [Test]
+    public void AFinishedDownload_IsListedByTheNextRun_WithItsPageAndTimes()
+    {
+        using var site = new LocalSite("<title>files</title>", fileBytes: 50_000);
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
+        var target = Path.Combine(folder, "kept.bin");
+        WebDownload asked = null;
+        WebDownload restored = null;
+        string page = null;
+        DateTimeOffset? started = null, ended = null;
+        string zone = null;
+        var before = DateTimeOffset.UtcNow.AddMinutes(-1);
+        try
+        {
+            loop.Run(() =>
+            {
+                ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+                {
+                    browser.Navigate(site.Origin + "/download/kept.bin");
+                    Pump(() => view.Downloads.Count > 0, TimeSpan.FromSeconds(10));
+                    asked = view.Downloads.FirstOrDefault();
+                    if (asked == null)
+                    {
+                        return;
+                    }
+
+                    new WebDownloadRequestedEventArgs(asked).Save(target);
+                    Pump(() => asked.IsFinished, TimeSpan.FromSeconds(10));
+                    page = asked.PageAddress;
+                    started = asked.StartTime;
+                    ended = asked.EndTime;
+                });
+
+                // Written off the loop: the next run comes once the file says it completed.
+                var written = Path.Combine(profile, "downloads.json");
+                SpinWait.SpinUntil(() => ReadsCompleted(written, "kept.bin"), TimeSpan.FromSeconds(5));
+                zone = OperatingSystem.IsWindows() && File.Exists(target + ":Zone.Identifier")
+                    ? File.ReadAllText(target + ":Zone.Identifier")
+                    : null;
+
+                // The next run, on the same profile: the list is read before CEF starts.
+                var next = new WebViewEngine(devices, null, new WebViewOptions { ProfileFolder = profile });
+                try
+                {
+                    restored = next.Downloads.FirstOrDefault(download => download.FilePath == target);
+                }
+                finally
+                {
+                    next.Dispose();
+                }
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(page, Is.EqualTo(site.Origin + "/"), "the page it was downloaded from");
+                Assert.That(started, Is.GreaterThan(before));
+                Assert.That(ended, Is.GreaterThanOrEqualTo(started));
+                Assert.That(restored, Is.Not.Null, "listed by the next run");
+                Assert.That(restored?.State, Is.EqualTo(WebDownloadState.Completed));
+                Assert.That(restored?.SuggestedName, Is.EqualTo("kept.bin"));
+                Assert.That(restored?.Address, Is.EqualTo(asked?.Address));
+                Assert.That(restored?.PageAddress, Is.EqualTo(page));
+                Assert.That(restored?.TotalBytes, Is.EqualTo(50_000));
+                Assert.That(restored?.Progress, Is.EqualTo(1));
+                Assert.That(restored?.StartTime, Is.EqualTo(started));
+                Assert.That(restored?.EndTime, Is.EqualTo(ended));
+                if (OperatingSystem.IsWindows())
+                {
+                    Assert.That(zone, Does.Contain("ZoneId=3").And.Contain("HostUrl=" + asked?.Address),
+                        "marked as from the internet");
+                }
+            });
+        }
+        finally
+        {
+            loop.Run(() => engine.ForgetDownload(asked));
+            DeleteFolder(folder);
+        }
+    }
+
+    [Test]
+    public void ADownloadKeptComingIn_IsListedInterrupted_CannotGoOn_AndIsForgottenOrGivenUp()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumWebViewTests", Guid.NewGuid().ToString("N"));
+        var part = Path.Combine(Directory.CreateDirectory(folder).FullName, "a.zip.crdownload");
+        File.WriteAllText(part, "part");
+        var started = new DateTimeOffset(2026, 11, 10, 14, 52, 0, TimeSpan.Zero);
+        File.WriteAllText(Path.Combine(folder, "downloads.json"),
+            "[" +
+            "{\"Address\":\"https://example.org/a.zip\",\"Name\":\"a.zip\",\"FilePath\":\"C:\\\\a.zip\",\"PartialPath\":" +
+            JsonEncoded(part) + ",\"TotalBytes\":200,\"ReceivedBytes\":50,\"State\":\"InProgress\"," +
+            "\"InterruptReason\":\"None\",\"StartTime\":\"2026-11-10T14:52:00+00:00\"}," +
+            "{\"Address\":\"https://example.org/b.zip\",\"Name\":\"b.zip\",\"ReceivedBytes\":9," +
+            "\"State\":\"Interrupted\",\"InterruptReason\":\"Network\",\"EndTime\":\"2026-11-10T15:00:00+00:00\"}," +
+            "{\"Address\":\"\",\"Name\":\"no address\",\"State\":\"Completed\"}," +
+            "{\"Address\":\"https://example.org/n.bin\",\"Name\":\"a number\",\"State\":42}," +
+            "{\"Address\":\"https://example.org/u.bin\",\"Name\":\"unknown\",\"State\":\"Exploded\"}," +
+            "{\"Address\":\"https://example.org/c.pdf\",\"Name\":\"c.pdf\",\"TotalBytes\":10,\"ReceivedBytes\":10," +
+            "\"State\":\"Completed\",\"InterruptReason\":\"None\"}" +
+            "]");
+        WebDownload comingIn = null, interrupted = null, completed = null;
+        bool resumable = true, forgotten = false, forgottenAgain = true;
+        var count = 0;
+        long unknownSize = 0;
+        WebDownloadState? comingInState = null;
+        WebDownloadInterruption? comingInReason = null;
+        DateTimeOffset? interruptedEnd = DateTimeOffset.MinValue;
+        IReadOnlyList<WebViewKeptDownload> written = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                var next = new WebViewEngine(devices, null, new WebViewOptions { ProfileFolder = folder });
+                try
+                {
+                    count = next.Downloads.Count;
+                    comingIn = next.Downloads.FirstOrDefault(download => download.SuggestedName == "a.zip");
+                    interrupted = next.Downloads.FirstOrDefault(download => download.SuggestedName == "b.zip");
+                    completed = next.Downloads.FirstOrDefault(download => download.SuggestedName == "c.pdf");
+                    unknownSize = interrupted?.TotalBytes ?? 0;
+                    interruptedEnd = interrupted?.EndTime;
+                    resumable = comingIn?.CanResume != false;
+                    comingInState = comingIn?.State;
+                    comingInReason = comingIn?.InterruptReason;
+                    comingIn?.Resume();
+                    interrupted?.Cancel();
+                    forgotten = next.ForgetDownload(comingIn);
+                    forgottenAgain = next.ForgetDownload(comingIn);
+                }
+                finally
+                {
+                    next.Dispose();
+                }
+            });
+
+            using (var kept = new WebViewDownloadHistory(folder))
+            {
+                written = kept.Load();
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(count, Is.EqualTo(3), "one without an address, or with a state not named, is left out");
+                Assert.That(unknownSize, Is.EqualTo(-1), "a size not kept is not known");
+                Assert.That(interruptedEnd, Is.Null, "only completing ends it");
+                Assert.That(File.Exists(part), Is.False, "the part an earlier run left goes with it");
+                Assert.That(comingInState, Is.EqualTo(WebDownloadState.Interrupted), "coming in when the run ended");
+                Assert.That(comingInReason, Is.EqualTo(WebDownloadInterruption.ApplicationClosed));
+                Assert.That(comingIn?.State, Is.EqualTo(WebDownloadState.Cancelled), "forgotten, it is given up");
+                Assert.That(comingIn?.Progress, Is.EqualTo(0.25));
+                Assert.That(comingIn?.StartTime, Is.EqualTo(started));
+                Assert.That(resumable, Is.False, "Chromium knows nothing of it");
+                Assert.That(interrupted?.State, Is.EqualTo(WebDownloadState.Cancelled), "given up");
+                Assert.That(completed?.State, Is.EqualTo(WebDownloadState.Completed));
+                Assert.That(completed?.Progress, Is.EqualTo(1));
+                Assert.That(forgotten, Is.True, "an interrupted one kept from before can be forgotten");
+                Assert.That(forgottenAgain, Is.False);
+                Assert.That(written?.Select(download => download.Name), Is.EqualTo(new[] { "b.zip", "c.pdf" }));
+                Assert.That(written?[0].State, Is.EqualTo(WebDownloadState.Cancelled));
+            });
+        }
+        finally
+        {
+            DeleteFolder(folder);
+        }
+    }
+
+    [Test]
+    public void ADamagedListInTheProfile_ListsNothing_AndIsSetAside()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumWebViewTests", Guid.NewGuid().ToString("N"));
+        var file = Path.Combine(Directory.CreateDirectory(folder).FullName, "downloads.json");
+        File.WriteAllText(file, "[{\"Address\":");
+        try
+        {
+            IReadOnlyList<WebViewKeptDownload> loaded;
+            using (var history = new WebViewDownloadHistory(folder))
+            {
+                loaded = history.Load();
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(loaded, Is.Empty);
+                Assert.That(File.Exists(file), Is.False);
+                Assert.That(File.ReadAllText(file + ".damaged"), Is.EqualTo("[{\"Address\":"), "kept, not written over");
+            });
+        }
+        finally
+        {
+            DeleteFolder(folder);
+        }
+    }
+
+    [Test]
+    public void ASecondRunOnTheProfile_ReadsTheList_AndLeavesItBe()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumWebViewTests", Guid.NewGuid().ToString("N"));
+        var file = Path.Combine(Directory.CreateDirectory(folder).FullName, "downloads.json");
+        const string list = "[{\"Address\":\"https://example.org/c.pdf\",\"Name\":\"c.pdf\",\"State\":\"Completed\"}]";
+        File.WriteAllText(file, list);
+        var listed = 0;
+        var forgotten = false;
+        try
+        {
+            using (var first = new WebViewDownloadHistory(folder))
+            {
+                loop.Run(() =>
+                {
+                    var second = new WebViewEngine(devices, null, new WebViewOptions { ProfileFolder = folder });
+                    try
+                    {
+                        listed = second.Downloads.Count;
+                        forgotten = second.ForgetDownload(second.Downloads.FirstOrDefault());
+                    }
+                    finally
+                    {
+                        second.Dispose();
+                    }
+                });
+                Assert.That(first.Writes, Is.True);
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(listed, Is.EqualTo(1));
+                Assert.That(forgotten, Is.True, "off its own list");
+                Assert.That(File.ReadAllText(file), Is.EqualTo(list), "the file is the first run's");
+            });
+        }
+        finally
+        {
+            DeleteFolder(folder);
+        }
+    }
+
+    private static string JsonEncoded(string text) => System.Text.Json.JsonSerializer.Serialize(text);
+
+    private static bool ReadsCompleted(string file, string name)
+    {
+        try
+        {
+            using var list = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
+            return list.RootElement.EnumerateArray().Any(download =>
+                download.GetProperty("Name").GetString() == name &&
+                download.GetProperty("State").GetString() == nameof(WebDownloadState.Completed));
+        }
+        catch (Exception exception) when (exception is IOException or System.Text.Json.JsonException
+                                              or InvalidOperationException or KeyNotFoundException)
+        {
+            return false;
+        }
+    }
+
+    [Test]
+    public void ADownloadStartedByAddress_IsAskedOfTheView_AndSavedInAFolderUnderAFreeName()
+    {
+        using var site = new LocalSite("<title>files</title>", fileBytes: 30_000);
+        var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "same.bin"), "there before");
+        var asked = new List<WebDownload>();
+        var started = false;
+        string pageAfter = null;
+        try
+        {
+            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+            {
+                started = browser.StartDownload(site.Origin + "/download/same.bin");
+                Pump(() => view.Downloads.Count > 0, TimeSpan.FromSeconds(10));
+                // Saved before the second is asked: its file is not there yet, but its name is taken.
+                foreach (var download in view.Downloads)
+                {
+                    new WebDownloadRequestedEventArgs(download).SaveInFolder(folder);
+                    asked.Add(download);
+                }
+
+                browser.StartDownload(site.Origin + "/download/same.bin");
+                Pump(() => view.Downloads.Count > 1, TimeSpan.FromSeconds(10));
+                foreach (var download in view.Downloads.Skip(1))
+                {
+                    new WebDownloadRequestedEventArgs(download).SaveInFolder(folder);
+                    asked.Add(download);
+                }
+
+                Pump(() => asked.All(download => download.IsFinished), TimeSpan.FromSeconds(10));
+                pageAfter = browser.Address;
+            }));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(started, Is.True);
+                Assert.That(asked.Select(download => Path.GetFileName(download.FilePath)),
+                    Is.EqualTo(new[] { "same (1).bin", "same (2).bin" }));
+                Assert.That(asked.Select(download => download.State),
+                    Is.All.EqualTo(WebDownloadState.Completed));
+                Assert.That(File.ReadAllText(Path.Combine(folder, "same.bin")), Is.EqualTo("there before"));
+                Assert.That(new FileInfo(Path.Combine(folder, "same (2).bin")).Length, Is.EqualTo(30_000));
+                Assert.That(pageAfter, Is.EqualTo(site.Origin + "/"), "the page stays");
+                Assert.That(Throws(() => new WebDownloadRequestedEventArgs(asked[0]).SaveInFolder("relative")), Is.True);
+            });
+        }
+        finally
+        {
+            loop.Run(() =>
+            {
+                foreach (var download in asked)
+                {
+                    engine.ForgetDownload(download);
+                }
+            });
             DeleteFolder(folder);
         }
     }

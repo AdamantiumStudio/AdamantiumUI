@@ -31,6 +31,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private readonly Dictionary<uint, WebDownload> downloadsById = [];
     private readonly HashSet<uint> downloadsGivenUp = [];
     private readonly Adamantium.Core.Collections.TrackingCollection<WebDownload> downloads = [];
+    private readonly WebViewDownloadHistory downloadHistory;
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
@@ -52,6 +53,12 @@ public sealed unsafe class WebViewEngine : IDisposable
         this.application = application;
         this.options = options ?? new WebViewOptions();
         sitePermissions = new WebViewSitePermissions(this.options.ProfileFolder ?? DefaultProfileFolder());
+        downloadHistory = new WebViewDownloadHistory(this.options.ProfileFolder ?? DefaultProfileFolder());
+        foreach (var kept in downloadHistory.Load())
+        {
+            downloads.Add(WebDownload.Restore(kept, _ => KeepDownloads()));
+        }
+
         pumpTimer = new Timer(_ => PostPumpWork());
         if (application != null)
         {
@@ -101,25 +108,40 @@ public sealed unsafe class WebViewEngine : IDisposable
     }
 
     /// <summary>The downloads the application said where to save, in the order it did - those coming in and those
-    /// finished, until forgotten (<see cref="ForgetDownload"/>). Changes are told as a collection's, on the UI thread.
-    /// </summary>
+    /// finished, until forgotten (<see cref="ForgetDownload"/>). Kept in the profile: the next run lists them again,
+    /// one that was coming in as interrupted (<see cref="WebDownloadInterruption.ApplicationClosed"/>). Changes are told
+    /// as a collection's, on the UI thread.</summary>
     public IReadOnlyList<WebDownload> Downloads => downloads;
 
-    /// <summary>Takes a finished download off <see cref="Downloads"/> - its file stays where it is; false for one not
-    /// there or not finished.</summary>
+    /// <summary>Takes a download done with off <see cref="Downloads"/> - finished, or kept from an earlier run; its file
+    /// stays where it is, the part of one an earlier run left unfinished is deleted. False for one not there, or still
+    /// coming in or able to go on.</summary>
     public bool ForgetDownload(WebDownload download)
     {
-        if (download is not { IsFinished: true } || !downloads.Remove(download))
+        if (download is not ({ IsFinished: true } or { Ended: true }) || !downloads.Contains(download))
         {
             return false;
         }
 
+        if (!download.IsFinished)
+        {
+            download.Cancel();
+        }
+
+        downloads.Remove(download);
+        download.KeptAs = null;
+
         if (download.Ended)
         {
-            downloadsById.Remove(download.Id);
+            if (downloadsById.TryGetValue(download.Id, out var known) && ReferenceEquals(known, download))
+            {
+                downloadsById.Remove(download.Id);
+            }
+
             download.Origin = null;
         }
 
+        KeepDownloads();
         return true;
     }
 
@@ -128,17 +150,63 @@ public sealed unsafe class WebViewEngine : IDisposable
     {
         if (!downloadsById.TryGetValue(id, out var download))
         {
-            download = new WebDownload(id, downloads.Add, DownloadHeard);
+            download = new WebDownload(id, Listed, DownloadHeard, IsSavedAt);
             downloadsById[id] = download;
         }
 
         return download;
     }
 
+    private void Listed(WebDownload download)
+    {
+        downloads.Add(download);
+        KeepDownloads();
+    }
+
+    private void KeepDownloads()
+    {
+        // Closing, what Chromium says - cancelled, every one - is not what the next run is to list.
+        if (!shutDown)
+        {
+            downloadHistory.Save(downloads);
+        }
+    }
+
+    private bool IsSavedAt(string path)
+    {
+        // Linux's names differ by case; Windows' and macOS's do not.
+        var comparison = OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var full = Path.GetFullPath(path);
+        foreach (var download in downloadsById.Values)
+        {
+            if (!download.IsFinished && download.FilePath.Length > 0 &&
+                string.Equals(Path.GetFullPath(download.FilePath), full, comparison))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>A download Chromium says no more of, not on <see cref="Downloads"/>, is not kept; the page closed while
-    /// it came in goes once its last download is done.</summary>
+    /// it came in goes once its last download is done. A listed one whose state or reason changed is written to the
+    /// profile - closing, only one that completed, the rest kept as they were before Chromium cancelled them.</summary>
     internal void DownloadHeard(WebDownload download)
     {
+        if (download.KeptDiffers && !shutDown)
+        {
+            KeepDownloads();
+        }
+        else if (download.KeptDiffers && download.State == WebDownloadState.Completed)
+        {
+            downloadHistory.Update(download);
+        }
+        else if (downloadHistory.LastWriteFailed && !shutDown)
+        {
+            KeepDownloads();
+        }
+
         if (!download.IsFinished)
         {
             return;
@@ -535,6 +603,8 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         if (initialized)
         {
+            // Kept as they are now: closing, Chromium cancels what comes in, which the next run lists as interrupted.
+            downloadHistory.Save(downloads);
             // Downloads end with the application: a page kept for them closes too.
             for (var i = browsers.Count - 1; i >= 0; i--)
             {
@@ -564,6 +634,7 @@ public sealed unsafe class WebViewEngine : IDisposable
             browsers.Clear();
         }
 
+        downloadHistory.Dispose();
         pumpTimer.Dispose();
         ReleaseHandlers();
         if (device != null)

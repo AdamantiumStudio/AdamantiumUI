@@ -22,5 +22,8 @@ public enum WebDownloadInterruption
     Crash,
 
     /// <summary>Anything else Chromium names.</summary>
-    Other
+    Other,
+
+    /// <summary>The application closed while it came in: it is listed so from the profile when it next runs.</summary>
+    ApplicationClosed
 }

@@ -52,6 +52,7 @@ internal sealed unsafe class WebViewDownloadHandler : CefObject
             {
                 download.Origin = owner;
                 download.Read(item);
+                download.SeenOn(owner.Address);
                 // Resuming one interrupted, Chromium asks again: it goes on where the application said, unasked.
                 if (download.GoOnWhereSaved(callback))
                 {

@@ -7,6 +7,21 @@ All packages share one version.
 
 ### Added
 
+- The downloads list outlives the run: `WebViewEngine.Downloads` is kept in the profile (`downloads.json`, written off
+  the UI loop, by one run of the profile at a time; a record that cannot be read is left out, a file that cannot be
+  read is set aside as `downloads.json.damaged`) and listed again by the next run - a download coming in when the
+  application closed as interrupted (`WebDownloadInterruption.ApplicationClosed`), which `ForgetDownload` takes off and
+  `Cancel` gives up, its part deleted. A `WebDownload` tells the page it came from (`PageAddress`), when it started and
+  completed (`StartTime`, `EndTime`), and whether `Resume` can be asked (`CanResume`: not of one kept from an earlier
+  run, which Chromium knows nothing of). `WebViewBridge.StartDownload(address)` downloads an http, https or `app`
+  address from the page's browser as a link to it would, asked like any download - one from the list fetched again.
+  `WebDownloadRequestedEventArgs.SaveInFolder(folder)` saves unasked, as a browser set to save straight to a folder
+  does, under the suggested name made fit for a file, numbered "name (1).ext" when a file or another download has it.
+  On Windows a completed download is marked as from the internet (its `Zone.Identifier`), as browsers mark it, so
+  Explorer, SmartScreen and Office ask before opening or running it.
+- `FileManager.OpenItem(path)`: opens a file or folder with the application the desktop opens it with, as a double
+  click in the file manager does - the shell on Windows, asking which application when none opens its kind; `open` on
+  macOS; `xdg-open` on Linux.
 - Downloads in `WebView`: a file a page downloads - a link to one, an attachment, a link to one opened as a new
   page - is asked of the view model (`WebViewBridge.DownloadRequested`), which saves it where it says (`Save`, or
   `SaveFromFileDialog` asking the user through the platform's dialog) or refuses it; unasked, it is refused, as before.
@@ -233,6 +248,7 @@ All packages share one version.
 
 ### Changed
 
+- `IFileManagerPlatform` has `OpenItem`: a platform of an application's own implements it too.
 - Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
   low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
   each time. `LoopSignal.PostBetweenFrames` runs work so: while the loop holds between frames, up to the frame's due
