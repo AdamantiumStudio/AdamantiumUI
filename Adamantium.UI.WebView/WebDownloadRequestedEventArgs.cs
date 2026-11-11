@@ -34,8 +34,8 @@ public sealed class WebDownloadRequestedEventArgs : EventArgs
 
     /// <summary>Asks the user where to save it through the platform's own dialog (<see cref="FileDialog"/>), its
     /// suggested name offered, and saves it there; refused when the platform has no dialog or the user cancels. Over
-    /// <paramref name="owner"/>, the window the page is in; unset, the foreground one.</summary>
-    public void SaveFromFileDialog(IntPtr owner = default)
+    /// <paramref name="owner"/>, the window the page is in; unset, the foreground one. True when it is saved.</summary>
+    public bool SaveFromFileDialog(IntPtr owner = default)
     {
         Handled = true;
         var name = Download.SuggestedName;
@@ -50,9 +50,9 @@ public sealed class WebDownloadRequestedEventArgs : EventArgs
         if (chosen == null)
         {
             Refuse();
-            return;
+            return false;
         }
 
-        Save(chosen);
+        return Save(chosen);
     }
 }
