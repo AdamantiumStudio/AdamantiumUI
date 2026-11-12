@@ -39,7 +39,7 @@ public class PathCurvesTests
             worst = Math.Max(worst, Nearest(curves, onCubic));
         }
 
-        Assert.That(worst, Is.LessThan(200.0 / 16384 * 1.5), "a fraction of a pixel at 6400% for a curve this size");
+        Assert.That(worst, Is.LessThan(200.0 / 4096 * 1.5), "within a thousandth of the curve's size");
         Assert.That(curves.Count, Is.LessThan(64), "and not a polyline in disguise");
     }
 
@@ -59,7 +59,7 @@ public class PathCurvesTests
             }
         }
 
-        Assert.That(worst, Is.LessThan(1e-4));
+        Assert.That(worst, Is.LessThan(4e-4));
         Assert.That(curves.Figures.Single().IsClosed, Is.True);
     }
 

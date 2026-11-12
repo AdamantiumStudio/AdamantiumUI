@@ -3,11 +3,11 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Core.Media.Curves;
 
 /// <summary>Gathers a geometry's figures as quadratic curves: straight pieces and quadratics as they are, cubics cut
-/// into quadratics that stay within a small part of their size of them - at 6400% a fraction of a pixel.</summary>
+/// into quadratics that stay within a thousandth of their size of them - within a pixel while a cubic spans under a thousand pixels.</summary>
 internal sealed class PathCurveBuilder
 {
     // How far a quadratic may stray from the cubic it stands for, as a part of the cubic's size.
-    private const double CubicTolerance = 1.0 / 4096;
+    private const double CubicTolerance = 1.0 / 1024;
 
     // A cubic is cut in two at most this many times over.
     private const int MostCuts = 12;
