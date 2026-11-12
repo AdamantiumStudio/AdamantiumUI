@@ -155,18 +155,25 @@ public partial class RenderCache
         }
 
         _movedPlacements.Clear();
+        RefreshPlacedClipSlots(_frameScissor);
         return true;
     }
 
     // A walk bakes every placed unit itself, from the newest matrices.
     private void ShowNewestPlacements()
     {
+        if (_movedPlacements.Count == 0)
+        {
+            return;
+        }
+
         foreach (var placement in _movedPlacements)
         {
             _placementShown[placement] = _placementLatest[placement].Matrix;
         }
 
         _movedPlacements.Clear();
+        RefreshPlacedClipSlots(_frameScissor);
     }
 
     // Elements moved by a node or the compositor carry their placed drawings' slots along: each slot holds its own
@@ -205,6 +212,7 @@ public partial class RenderCache
     // An element drew again: the slots of placements it no longer draws with go back to the table.
     private void ReconcilePlacements(IUIComponent component, IReadOnlyList<IDrawCommand> commands)
     {
+        TrimPlacedClips(component, commands);
         if (!_placementsByOwner.TryGetValue(component, out var held))
         {
             return;
@@ -216,6 +224,11 @@ public partial class RenderCache
             if (command.Payload is IPlacedPayload { Placement: { } placement })
             {
                 _placementsKept.Add(placement);
+            }
+
+            for (var clip = command.RenderData?.PlacedClip; clip != null; clip = clip.Outer)
+            {
+                _placementsKept.Add(clip.Placement);
             }
         }
 

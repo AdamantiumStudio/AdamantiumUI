@@ -342,7 +342,7 @@ public class ThemeManager : IThemeManager
     private void AddStyleSet(Type styleSetType, IReadOnlyDictionary<Type, Type> byTheme)
     {
         var choice = new PerThemeChoice(styleSetType, byTheme);
-        choice.Check(typeof(StyleSet), "style set", nameof(byTheme));
+        choice.Check(typeof(StyleSet), "style set", nameof(styleSetType), nameof(byTheme));
         lock (_styleSetsOfEveryTheme)
         {
             if (!TryAddChoice(_styleSetsOfEveryTheme, choice, "style sets"))
@@ -367,7 +367,7 @@ public class ThemeManager : IThemeManager
     private void AddResources(Type dictionaryType, IReadOnlyDictionary<Type, Type> byTheme)
     {
         var choice = new PerThemeChoice(dictionaryType, byTheme);
-        choice.Check(typeof(ResourceDictionary), "resource dictionary", nameof(byTheme));
+        choice.Check(typeof(ResourceDictionary), "resource dictionary", nameof(dictionaryType), nameof(byTheme));
         lock (_resourcesOfEveryTheme)
         {
             if (!TryAddChoice(_resourcesOfEveryTheme, choice, "resources"))
@@ -376,11 +376,32 @@ public class ThemeManager : IThemeManager
             }
         }
 
-        if (CurrentTheme is AdamantiumComponent current)
+        PutUnderCurrentTheme(choice);
+    }
+
+    private void PutUnderCurrentTheme(PerThemeChoice choice)
+    {
+        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread)
         {
-            _resourceManager.RemoveSources(current);
-            ActivateThemeSources(CurrentTheme);
-            _resourceManager.NotifyResourcesChanged();
+            LoopSignal.Post(() => PutUnderCurrentTheme(choice));
+            return;
+        }
+
+        if (_pendingOld != null || CurrentTheme is not AdamantiumComponent current)
+        {
+            return;
+        }
+
+        _resourceManager.AddSourceBeneath(current, choice.For(CurrentTheme), ResourceScope.Theme);
+        _resourceManager.NotifyResourcesChanged();
+        if (CurrentTheme is Theme theme && theme.TakeRegisteredStyles())
+        {
+            foreach (var window in UIAppContext.Current.Windows)
+            {
+                window.InvalidateStyles();
+            }
+
+            RenderDirty.ForceStructuralUntilSettled();
         }
     }
 

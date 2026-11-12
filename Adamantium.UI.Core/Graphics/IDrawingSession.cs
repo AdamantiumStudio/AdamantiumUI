@@ -137,5 +137,15 @@ public interface IDrawingSession
     /// drawing.</summary>
     IDrawingSession PopGroup();
 
+    /// <summary>Cuts what is drawn until <see cref="PopClip"/> to <paramref name="clip"/>, its corners rounded by
+    /// <paramref name="corners"/>, both in the units of <paramref name="placement"/>: rewriting the placement's matrix
+    /// moves the cut without drawing anything again. A clip pushed inside another cuts by both. The cut follows the
+    /// axes of the screen, so a placement may move, scale and turn by quarter turns.</summary>
+    IDrawingSession PushClip(Rect clip, CornerRadius corners, Placement placement);
+
+    /// <summary>Ends the clip the last <see cref="PushClip"/> started; one left open ends with the element's drawing.
+    /// </summary>
+    IDrawingSession PopClip();
+
     IDrawingSession PushImage(ImageSource image);
 }

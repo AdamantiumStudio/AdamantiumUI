@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `IDrawingSession.PushClip(rect, corners, placement)` and `PopClip()`: what is drawn between them is cut to a
+  rectangle, its corners maybe rounded, that moves with a `Placement` - rewriting the placement's matrix moves the cut
+  without drawing anything again, as it moves the drawings. A clip inside another cuts by both, and by the element's
+  rounded clip. The cut follows the screen's axes: a placement may move, scale and turn by quarter turns. A shape no
+  batch takes, drawn by its own unit, is cut by the scissor round the clip, its corners square.
+- `IThemeManager.AddResources<T>()`: a library's resource dictionary - its icons, its sizes - in every theme, the ones
+  added later included, as `AddStyleSet` adds its style sets. It is in force while its theme is current, before the
+  theme's own dictionaries, so a theme declaring the same keys has its own way; a dictionary per theme may be given by
+  theme type.
 - The sandbox's Shapes tab shows fills with touching rings: holes touching the outer ring or each other at a point,
   holes with a common side, an island in a hole, a ring passing one point twice, identical rings. Below them,
   `CombinedGeometry` in each mode: squares sharing a side or touching at a corner, a square less one in its corner,
@@ -387,6 +396,8 @@ All packages share one version.
 
 ### Fixed
 
+- A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
+  a lookup from an element always did: a key both declare had one value from an element and another without one.
 - A component with a `ComponentUpdated` subscriber and no `PropertyChanged` one was not told its properties changed, so
   a `GeometryGroup` or `CombinedGeometry` kept drawing a child as it was before the child changed; a group now watches
   its children as a combined geometry does its operands.

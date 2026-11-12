@@ -25,6 +25,10 @@ public interface IResourceManager
 
     void AddSource(IAdamantiumComponent component, Type source, ResourceScope scope = ResourceScope.Local);
 
+    /// <summary>Registers the dictionary of <paramref name="source"/> under <paramref name="component"/> beneath every
+    /// dictionary already registered in the scope: the keys they declare keep their values.</summary>
+    void AddSourceBeneath(IAdamantiumComponent component, Type source, ResourceScope scope = ResourceScope.Local);
+
     // Register an inline (per-element) dictionary INSTANCE - ResourceContext.Resources authored on an element.
     void AddSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
 

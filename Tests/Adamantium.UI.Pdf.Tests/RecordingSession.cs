@@ -97,6 +97,10 @@ internal sealed class RecordingSession : IDrawingSession
         return this;
     }
 
+    public IDrawingSession PushClip(Rect clip, CornerRadius corners, Placement placement) => this;
+
+    public IDrawingSession PopClip() => this;
+
     public IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen = null) =>
         DrawGeometry(brush, geometry, pen, Matrix4x4<float>.Identity);
 

@@ -59,13 +59,15 @@ internal sealed class PerThemeChoice
         return true;
     }
 
-    /// <summary>Throws when a type given is not a <paramref name="baseType"/> made without arguments.</summary>
+    /// <summary>Throws when a type given is not a <paramref name="baseType"/> made without arguments, naming
+    /// <paramref name="defaultParameter"/> or <paramref name="byThemeParameter"/>, whichever it came in.</summary>
     /// <exception cref="ArgumentException">A type given is not one.</exception>
-    public void Check(Type baseType, string what, string parameter)
+    public void Check(Type baseType, string what, string defaultParameter, string byThemeParameter)
     {
         if (!IsMadeWithoutArguments(Default, baseType))
         {
-            throw new ArgumentException($"{Default?.Name} must be a {what} made without arguments.", parameter);
+            throw new ArgumentException($"{Default?.Name ?? "Nothing"} is not a {what} made without arguments.",
+                defaultParameter);
         }
 
         if (ByTheme == null)
@@ -78,8 +80,8 @@ internal sealed class PerThemeChoice
             if (!IsMadeWithoutArguments(pair.Value, baseType))
             {
                 throw new ArgumentException(
-                    $"The {what} for {pair.Key.Name}, {pair.Value?.Name}, must be a {what} made without arguments.",
-                    parameter);
+                    $"The {what} for {pair.Key.Name}, {pair.Value?.Name ?? "nothing"}, is not a {what} made without arguments.",
+                    byThemeParameter);
             }
         }
     }

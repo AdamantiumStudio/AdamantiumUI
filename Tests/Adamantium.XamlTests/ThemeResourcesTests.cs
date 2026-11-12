@@ -111,6 +111,28 @@ public class ThemeResourcesTests
         Assert.That(Found(), Is.EqualTo("theme"));
     }
 
+    // Put under the theme in force rather than the theme taken down and made again: a value set live stays.
+    [Test]
+    public void AddedWhileAThemeIsCurrent_KeepsAValueSetLive()
+    {
+        var theme = new Theme("plain");
+        ResourceContext.SetScope(theme, ResourceScope.Theme);
+        var own = new ResourceDictionary();
+        own.Add("Other", "as declared");
+        ResourceContext.SetResources(theme, own);
+        var manager = Manager(theme);
+        manager.SetTheme(theme);
+        _app.ResourceManager.SetResourceInScope("Other", "set live", ResourceScope.Theme);
+
+        manager.AddResources<LibraryIcons>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_app.ResourceManager.FindResourceInScope("Other", ResourceScope.Theme), Is.EqualTo("set live"));
+            Assert.That(Found(), Is.EqualTo("library"));
+        });
+    }
+
     // Each theme made current by a manager of its own: a second SetTheme swaps on a later frame, after the busy overlay
     // is drawn, and these tests draw no frames.
     [TestCase(false, "library")]

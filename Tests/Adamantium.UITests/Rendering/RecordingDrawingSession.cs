@@ -167,5 +167,9 @@ internal sealed class RecordingDrawingSession : IDrawingSession
         return this;
     }
 
+    public IDrawingSession PushClip(Rect clip, CornerRadius corners, Placement placement) => this;
+
+    public IDrawingSession PopClip() => this;
+
     public IDrawingSession PushImage(ImageSource image) => this;
 }

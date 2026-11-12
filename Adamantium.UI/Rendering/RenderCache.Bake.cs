@@ -217,6 +217,7 @@ public partial class RenderCache
     private void ReleaseSlotsOfUndrawn()
     {
         ReleaseSlotsOf(_clipOwners, NotDrawn, ReleaseClipSlot);
+        ReleasePlacedClips(NotDrawn);
         ReleaseSlotsOf(_fadeOwners, NotDrawn, ReleaseFadeSlot);
         ReleaseSlotsOf(_nodeRefreshed, NotDrawn, ReleaseNodeSlot);
         _drawnChains.Clear();
@@ -435,6 +436,7 @@ public partial class RenderCache
         // of the scene these units drew.
         _built = false;
         _clipOwners.Clear();
+        _placedClipOwners.Clear();
         _fadeOwners.Clear();
         _copyFades.Clear();
         _copyFadeSlots.Clear();
@@ -550,6 +552,7 @@ public partial class RenderCache
         _releasedSnaps.Clear();
 
         ReleaseSlotsOf(_clipOwners, ReleasedBeforeApplied, ReleaseClipSlot);
+        ReleasePlacedClips(ReleasedBeforeApplied);
         ReleaseSlotsOf(_fadeOwners, ReleasedBeforeApplied, ReleaseFadeSlot);
         ReleaseSlotsOf(_nodeRefreshed, ReleasedBeforeApplied, ReleaseNodeSlot);
     }
@@ -1111,7 +1114,7 @@ public partial class RenderCache
 
     // The same clip as a SHAPE, for the draws that cannot read the table by slot - filled by the walk below, in the one
     // place that already computes it, so the two can never disagree. See RenderData.RoundedClipBox.
-    private readonly Dictionary<IUIComponent, (Vector4F Box, Vector4F Radii)> _clipShapeCache = new();
+    private readonly Dictionary<IUIComponent, ClipShape> _clipShapeCache = new();
 
     // The clip OWNERS whose slots exist - kept across frames, unlike the cache above. A clip that changes shape (a radius
     // animating, the container resizing) must reach the screen on a REPLAYED frame too, and a replay re-records nothing:
@@ -1122,7 +1125,7 @@ public partial class RenderCache
     /// makes a rounded clip follow a resize or an animated radius without the frame being re-recorded.</summary>
     private void RefreshClipSlots(Vulkan.Core.Rect2D fullScissor)
     {
-        if (_clipOwners.Count == 0 || _transformTable == null) return;
+        if (_transformTable == null) return;
 
         foreach (var (owner, slot) in _clipOwners)
         {
@@ -1131,6 +1134,8 @@ public partial class RenderCache
 
             _transformTable.SetClip(null, slot, ClipBox(owner, s, fullScissor), s.ClipRadii * (float)_renderScale);
         }
+
+        RefreshPlacedClipSlots(fullScissor);
     }
 
     // A rounded clip's box in device pixels, cut to the window - but whole inside a layer drawn whole, which draws past
@@ -1183,7 +1188,7 @@ public partial class RenderCache
             var radiiVec = s.ClipRadii * (float)_renderScale;
             slot = _transformTable.AcquireClipSlot(owner.RenderId);
             _transformTable.SetClip(null, slot, boxVec, radiiVec);
-            _clipShapeCache[c] = (boxVec, radiiVec);
+            _clipShapeCache[c] = new ClipShape(boxVec, radiiVec);
             _clipOwners[owner] = slot;   // so a replayed frame can refresh it - see RefreshClipSlots
             break;
         }
@@ -1200,7 +1205,7 @@ public partial class RenderCache
     /// <summary>The rounded clip as a SHAPE (device px), for a per-unit draw that takes it as a uniform instead of
     /// reading the table by slot. Zero size = no clip. Asks the slot walk above so both answers come from one place.
     /// A slot the shader could not reach also answers "no clip" here, exactly as it does there.</summary>
-    private (Vector4F Box, Vector4F Radii) RoundedClipShape(IUIComponent c, Vulkan.Core.Rect2D fullScissor)
+    private ClipShape RoundedClipShape(IUIComponent c, Vulkan.Core.Rect2D fullScissor)
     {
         var slot = RoundedClipSlot(c, fullScissor);
         return slot >= 0 && _clipShapeCache.TryGetValue(c, out var shape) ? shape : default;

@@ -74,19 +74,18 @@ public class ResourceManager : IResourceManager
             return type;
         }
 
-        var resource = FindResourceInScope(name, ResourceScope.Theme);
-        if (resource != null)
-            return resource;
-
         // The APPLICATION theme's palette - the right answer when there is no requester, since with nobody to scope
-        // from the application's theme is the only theme in force. Without this, a theme that keeps its palette in
-        // variants rather than in a resource dictionary would answer every requester-aware lookup and none of the
-        // eager ones, which is a difference no theme author could see coming.
+        // from the application's theme is the only theme in force. Before the Theme scope, as the requester-aware lookup
+        // asks them: otherwise a dictionary added to every theme that names a palette key would win here and lose there.
         if (UIAppContext.Current?.ThemeManager?.CurrentTheme is Theme current
             && current.PaletteValue(name) is { } fromPalette)
         {
             return fromPalette;
         }
+
+        var resource = FindResourceInScope(name, ResourceScope.Theme);
+        if (resource != null)
+            return resource;
 
         return FindResourceInScope(name, ResourceScope.Global);
     }
@@ -159,6 +158,23 @@ public class ResourceManager : IResourceManager
     public void AddSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
         ProviderOf(scope).AddSource(owner, source, linked => AddIncludes(owner, linked, scope));
+        _resourcesDirty = true;
+    }
+
+    /// <summary>Registers the dictionary of <paramref name="source"/> under <paramref name="owner"/> beneath every
+    /// dictionary already registered in the scope, what it links beneath it: the keys they declare keep their values.
+    /// </summary>
+    public void AddSourceBeneath(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
+    {
+        var dictionary = ProviderOf(scope).AddSourceBeneath(owner, source);
+        foreach (var include in dictionary.Includes)
+        {
+            if (include?.Source != null)
+            {
+                AddSourceBeneath(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+
         _resourcesDirty = true;
     }
 
