@@ -365,6 +365,9 @@ All packages share one version.
 
 ### Fixed
 
+- `PathGeometry` and `StreamGeometry` stroke their figures as given. A ring passing one point twice was stroked
+  without its second pass, closed by a side it never had. A filled `PathGeometry` figure was stroked twice, and in an
+  even-odd `GeometryGroup` it was laid in twice and cancelled out.
 - A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
   setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
   back what the derived style said. The base's setter of such a property is passed over now.
