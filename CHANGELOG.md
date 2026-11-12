@@ -379,6 +379,8 @@ All packages share one version.
 
 ### Fixed
 
+- A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
+  origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.
 - A regular polygon with a ring thickness (`RegularPolygonGeometry.Build`) fills its band. It came out empty: its
   outline had no contour for the combination to read.
 - `PathGeometry` and `StreamGeometry` stroke their figures as given. A ring passing one point twice was stroked
