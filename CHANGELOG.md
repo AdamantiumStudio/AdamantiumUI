@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- The sandbox's Shapes tab shows fills with touching rings: holes touching the outer ring or each other at a point,
+  holes with a common side, an island in a hole, a ring passing one point twice, identical rings.
 - `ZoomBox.PanBy(dx, dy)` moves what the box shows as a drag that far would, stopping at its edges; automation pans a
   zoom box as it pans a canvas (`adam-auto pan`, `<Pan>` in a scenario).
 - The downloads list outlives the run: `WebViewEngine.Downloads` is kept in the profile (`downloads.json`, written off
@@ -365,6 +367,9 @@ All packages share one version.
 
 ### Fixed
 
+- `PathGeometry` and `StreamGeometry` stroke their figures as given. A ring passing one point twice was stroked
+  without its second pass, closed by a side it never had. A filled `PathGeometry` figure was stroked twice, and in an
+  even-odd `GeometryGroup` it was laid in twice and cancelled out.
 - `ZoomBox.Reset()` holds: a wheel zoom still easing, or one waiting for its extent, no longer undoes it.
 - A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
   setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
