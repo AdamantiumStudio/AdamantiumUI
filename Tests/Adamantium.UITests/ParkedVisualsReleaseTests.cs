@@ -63,6 +63,26 @@ public class ParkedVisualsReleaseTests
         Assert.That(ParkedVisuals.TryTake(otherOwner, key, null, out _, out _, out _, out _), Is.True);
     }
 
+    // A second view parked for the same content - a page built late for a tab already left - takes the place of the
+    // first, which nobody can ask for any more: it goes, not left parked for ever.
+    [Test]
+    public void Keep_LetsGoOfTheViewItReplaces()
+    {
+        var key = new object();
+        var first = new ParkedView();
+        var second = new ParkedView();
+        ParkedVisuals.Keep(Owner, key, first);
+
+        ParkedVisuals.Keep(Owner, key, second);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.IsDiscarded, Is.True, "the replaced view goes");
+            Assert.That(ParkedVisuals.TryTake(Owner, key, null, out var taken, out _, out _, out _), Is.True);
+            Assert.That(taken, Is.SameAs(second));
+        });
+    }
+
     [Test]
     public void Clear_DiscardsWhatWasKept()
     {
