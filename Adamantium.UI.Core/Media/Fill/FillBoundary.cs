@@ -34,82 +34,148 @@ internal static class FillBoundary
     /// path contours). Each loop is a closed point list (point[n-1] -> point[0] implied), in mesh-LOCAL coordinates.</summary>
     public static List<(Vector2<double>[] Points, bool IsClosed)> ExtractLoops(Mesh mesh)
     {
-        var pts = mesh?.Points;
-        if (pts == null || pts.Length < 3) return null;
-        var idx = mesh.HasIndices ? mesh.Indices : null;
-        var triCount = idx != null ? idx.Length / 3 : pts.Length / 3;
-        if (triCount == 0) return null;
+        var points = mesh?.Points;
+        if (points == null || points.Length < 3)
+        {
+            return null;
+        }
 
-        // Count each side by its rounded corners; keep a real position per rounded corner.
+        var indices = mesh.HasIndices ? mesh.Indices : null;
+        var triangleCount = indices != null ? indices.Length / 3 : points.Length / 3;
+        if (triangleCount == 0)
+        {
+            return null;
+        }
+
         var sideCount = new Dictionary<TriangleSide, int>();
         var real = new Dictionary<Vector2<double>, Vector2<double>>();
-
-        void AddSide(Vector3<double> a, Vector3<double> b)
+        for (var t = 0; t < triangleCount; t++)
         {
-            var pa = new Vector2<double>(a.X, a.Y);
-            var pb = new Vector2<double>(b.X, b.Y);
-            var ra = MathHelper.Coordinates.Round(pa);
-            var rb = MathHelper.Coordinates.Round(pb);
-            if (ra == rb) return;
-            real[ra] = pa;
-            real[rb] = pb;
-            var side = new TriangleSide(ra, rb);
-            sideCount.TryGetValue(side, out var c);
-            sideCount[side] = c + 1;
+            var first = indices != null ? indices[t * 3] : t * 3;
+            var second = indices != null ? indices[t * 3 + 1] : t * 3 + 1;
+            var third = indices != null ? indices[t * 3 + 2] : t * 3 + 2;
+            CountSide(points[first], points[second], sideCount, real);
+            CountSide(points[second], points[third], sideCount, real);
+            CountSide(points[third], points[first], sideCount, real);
         }
 
-        for (var t = 0; t < triCount; t++)
+        var adjacent = BoundaryAdjacency(sideCount);
+        if (adjacent.Count == 0)
         {
-            Vector3<double> a, b, c;
-            if (idx != null) { a = pts[idx[t * 3]]; b = pts[idx[t * 3 + 1]]; c = pts[idx[t * 3 + 2]]; }
-            else { a = pts[t * 3]; b = pts[t * 3 + 1]; c = pts[t * 3 + 2]; }
-            AddSide(a, b); AddSide(b, c); AddSide(c, a);
+            return null;
         }
 
-        // Boundary sides belong to exactly one triangle -> adjacency of the boundary graph.
-        var adj = new Dictionary<Vector2<double>, List<Vector2<double>>>();
-        foreach (var kv in sideCount)
-        {
-            if (kv.Value != 1) continue;
-            var p = kv.Key.Low;
-            var q = kv.Key.High;
-            (adj.TryGetValue(p, out var lp) ? lp : adj[p] = new List<Vector2<double>>()).Add(q);
-            (adj.TryGetValue(q, out var lq) ? lq : adj[q] = new List<Vector2<double>>()).Add(p);
-        }
-        if (adj.Count == 0) return null;
+        var loops = WalkLoops(adjacent, real);
+        return loops.Count > 0 ? loops : null;
+    }
 
-        // Walk closed loops, greedily consuming boundary sides (a >2-degree corner at a self-intersection just picks any
-        // unused side - fine for feathering). Each loop = outer outline or one hole.
-        var loops = new List<(Vector2<double>[], bool)>();
-        var visited = new HashSet<TriangleSide>();
-        foreach (var startNode in adj.Keys)
+    private static void CountSide(Vector3<double> a, Vector3<double> b, Dictionary<TriangleSide, int> sideCount,
+        Dictionary<Vector2<double>, Vector2<double>> real)
+    {
+        var pa = new Vector2<double>(a.X, a.Y);
+        var pb = new Vector2<double>(b.X, b.Y);
+        var ra = MathHelper.Coordinates.Round(pa);
+        var rb = MathHelper.Coordinates.Round(pb);
+        if (ra == rb)
         {
-            foreach (var first in adj[startNode])
+            return;
+        }
+
+        real[ra] = pa;
+        real[rb] = pb;
+        var side = new TriangleSide(ra, rb);
+        sideCount.TryGetValue(side, out var count);
+        sideCount[side] = count + 1;
+    }
+
+    private static Dictionary<Vector2<double>, List<Vector2<double>>> BoundaryAdjacency(Dictionary<TriangleSide, int> sideCount)
+    {
+        var adjacent = new Dictionary<Vector2<double>, List<Vector2<double>>>();
+        foreach (var (side, count) in sideCount)
+        {
+            if (count != 1)
             {
-                if (visited.Contains(new TriangleSide(startNode, first))) continue;
+                continue;
+            }
 
-                var loop = new List<Vector2<double>> { real[startNode] };
-                var cur = startNode;
-                var next = first;
-                while (true)
+            Neighbours(adjacent, side.Low).Add(side.High);
+            Neighbours(adjacent, side.High).Add(side.Low);
+        }
+
+        return adjacent;
+    }
+
+    private static List<Vector2<double>> Neighbours(Dictionary<Vector2<double>, List<Vector2<double>>> adjacent,
+        Vector2<double> corner)
+    {
+        if (!adjacent.TryGetValue(corner, out var neighbours))
+        {
+            neighbours = new List<Vector2<double>>();
+            adjacent[corner] = neighbours;
+        }
+
+        return neighbours;
+    }
+
+    private static List<(Vector2<double>[] Points, bool IsClosed)> WalkLoops(
+        Dictionary<Vector2<double>, List<Vector2<double>>> adjacent, Dictionary<Vector2<double>, Vector2<double>> real)
+    {
+        var loops = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        var visited = new HashSet<TriangleSide>();
+        foreach (var start in adjacent.Keys)
+        {
+            foreach (var first in adjacent[start])
+            {
+                if (visited.Contains(new TriangleSide(start, first)))
                 {
-                    if (!visited.Add(new TriangleSide(cur, next))) break;
-                    if (next == startNode) break;   // closed - don't re-add the start point
-                    loop.Add(real[next]);
-                    var prev = cur;
-                    cur = next;
-                    var found = false;
-                    foreach (var nb in adj[cur])
-                    {
-                        if (nb == prev) continue;
-                        if (visited.Contains(new TriangleSide(cur, nb))) continue;
-                        next = nb; found = true; break;
-                    }
-                    if (!found) break;
+                    continue;
                 }
-                if (loop.Count >= 3) loops.Add((loop.ToArray(), true));
+
+                var loop = WalkLoop(start, first, adjacent, real, visited);
+                if (loop.Count >= 3)
+                {
+                    loops.Add((loop.ToArray(), true));
+                }
             }
         }
-        return loops.Count > 0 ? loops : null;
+
+        return loops;
+    }
+
+    private static List<Vector2<double>> WalkLoop(Vector2<double> start, Vector2<double> first,
+        Dictionary<Vector2<double>, List<Vector2<double>>> adjacent, Dictionary<Vector2<double>, Vector2<double>> real,
+        HashSet<TriangleSide> visited)
+    {
+        var loop = new List<Vector2<double>> { real[start] };
+        var current = start;
+        var next = first;
+        while (visited.Add(new TriangleSide(current, next)) && next != start)
+        {
+            loop.Add(real[next]);
+            var previous = current;
+            current = next;
+            if (!TryNextSide(current, previous, adjacent, visited, out next))
+            {
+                break;
+            }
+        }
+
+        return loop;
+    }
+
+    private static bool TryNextSide(Vector2<double> current, Vector2<double> previous,
+        Dictionary<Vector2<double>, List<Vector2<double>>> adjacent, HashSet<TriangleSide> visited, out Vector2<double> next)
+    {
+        foreach (var neighbour in adjacent[current])
+        {
+            if (neighbour != previous && !visited.Contains(new TriangleSide(current, neighbour)))
+            {
+                next = neighbour;
+                return true;
+            }
+        }
+
+        next = default;
+        return false;
     }
 }

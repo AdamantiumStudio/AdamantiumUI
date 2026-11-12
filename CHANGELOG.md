@@ -379,8 +379,8 @@ All packages share one version.
 
 ### Fixed
 
-- A page kept between visits (`x:KeepAlive`) stays the same page when its control takes another template - a tab strip
-  moved to another side. It was let go and made again: a browser tab loaded its page from scratch, its history and what
+- A tab's page kept between visits (`x:KeepAlive`) stays the same page when the `TabControl` takes another template -
+  its strip moved to another side. It was let go and made again: a browser tab loaded its page from scratch, its history and what
   was typed in it gone, and showed its address in place of its title until the page came back.
 - A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
   origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.

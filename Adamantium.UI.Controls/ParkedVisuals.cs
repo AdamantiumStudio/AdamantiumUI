@@ -61,9 +61,9 @@ public static class ParkedVisuals
         ParkedSubtree.Park(root);
         _kept[slot] = new Entry(root, built, template, ModeOf(root), hostSize, world);
 
+        _evictable.Remove(slot);
         if (ModeOf(root) != NavigationCacheMode.Required)
         {
-            _evictable.Remove(slot);
             _evictable.Add(slot);
             Evict();
         }

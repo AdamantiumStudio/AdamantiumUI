@@ -1201,6 +1201,14 @@ public class TabControl : Selector
         WireTabStripAffordances();
     }
 
+    /// <summary>Parks the selected tab's page before the template goes, as a page is parked whenever its tab is away: the
+    /// next template - the strip moved to another side - shows the same page, not one made again.</summary>
+    protected override void OnTemplateRemoving()
+    {
+        base.OnTemplateRemoving();
+        (_contentHost as ContentPresenter)?.ParkShown();
+    }
+
     /// <summary>Lets go of the strip's parts. The realized containers are cleared by the base, on removal, not on apply: a
     /// template is applied more than once, and clearing then threw away containers the strip's hosts had just built.
     /// </summary>
@@ -1214,6 +1222,7 @@ public class TabControl : Selector
         _overflowList = null;
         _tabsHost = null;
         _pinnedHost = null;
+        _contentHost = null;
         _rowIndicator = null;
         _pinnedRowIndicator = null;
         _indicator = null;

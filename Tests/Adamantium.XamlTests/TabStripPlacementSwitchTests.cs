@@ -1,4 +1,7 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -32,6 +35,7 @@ public class TabStripPlacementSwitchTests
     [SetUp]
     public void Fresh()
     {
+        ParkedVisuals.Clear();
         _app.ResourceManager = new ResourceManager();
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
@@ -188,25 +192,66 @@ public class TabStripPlacementSwitchTests
         });
     }
 
-    // No template after it: the kept content element is shown by the control itself, live - not left marked parked.
+    // The strip moved while the page was still being built in the background: the page landing late waits with the tab
+    // control, for whoever comes back to that tab - not with the presenter that went with the old template, where
+    // nothing would ever let it go.
     [Test]
-    public void AKeptElement_WithNoTemplateAfter_IsShownLive()
+    public void APageBuiltLate_AfterTheStripMoved_WaitsWithTheTabControl()
     {
-        var page = new KeptPage();
-        var control = new ContentControl { Content = page };
-        control.ApplyCurrentTheme();
-        Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
-        control.Measure(new Size<double>(300, 300), force: true);
-        Assume.That(control.Template, Is.Not.Null, "a theme template first");
+        using var building = new ManualResetEventSlim(false);
+        using var gate = new ManualResetEventSlim(false);
+        var builds = 0;
+        var control = new TabControl
+        {
+            DeferContent = true,
+            ItemsSource = new[] { "One", "Two" },
+            ContentTemplate = new DataTemplate(() =>
+            {
+                if (Interlocked.Increment(ref builds) == 1)
+                {
+                    building.Set();
+                    gate.Wait(TimeSpan.FromSeconds(10));
+                }
 
-        control.Template = null;
-        control.Measure(new Size<double>(300, 300), force: true);
+                return new TemplateResult { RootComponent = new KeptPage() };
+            }),
+        };
+        control.SelectedIndex = 1;
+        Lay(control);
+        Assume.That(building.Wait(TimeSpan.FromSeconds(5)), Is.True, "the page is being built in the background");
 
+        control.TabStripPlacement = TabStripPlacement.Left;
+        Lay(control);
+        gate.Set();
+        var shown = PumpUntil(control, () => ShownPage(control) != null);
+        PumpUntil(control, () => false, seconds: 0.3);
+
+        var waited = ParkedVisuals.TryTake(control, "Two", null, out var late, out _, out _, out _);
         Assert.Multiple(() =>
         {
-            Assert.That(page.IsParked, Is.False, "live");
-            Assert.That(page.IsDiscarded, Is.False, "never let go");
+            Assert.That(shown, Is.True, "the moved strip shows a page");
+            Assert.That(waited, Is.True, "the page built late waits with the tab control");
+            Assert.That(late, Is.Not.SameAs(ShownPage(control)), "it is the late one, not the one shown");
+            Assert.That((late as KeptPage)?.IsDiscarded, Is.False, "and is whole");
         });
+    }
+
+    private static bool PumpUntil(TabControl control, Func<bool> done, double seconds = 5)
+    {
+        var watch = Stopwatch.StartNew();
+        while (watch.Elapsed.TotalSeconds < seconds)
+        {
+            LoopSignal.Drain();
+            Lay(control);
+            if (done())
+            {
+                return true;
+            }
+
+            Thread.Sleep(1);
+        }
+
+        return false;
     }
 
     private static KeptPage ShownPage(TabControl control) =>
