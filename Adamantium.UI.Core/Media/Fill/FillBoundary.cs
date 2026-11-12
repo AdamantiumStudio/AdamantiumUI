@@ -9,9 +9,8 @@ namespace Adamantium.UI.Core.Media.Fill;
 // fringe also feathers holes and self-intersections.
 internal static class FillBoundary
 {
-    // Positions are quantized (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -
-    // otherwise a shared edge would look like two single-use edges and every interior edge would be mis-flagged boundary.
-    private static (long, long) Q(Vector3<double> p) => ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
+    private static (long, long) Q(Vector3<double> p) =>
+        ((long)Math.Round(p.X / MathHelper.Coordinates.Step), (long)Math.Round(p.Y / MathHelper.Coordinates.Step));
 
     private static (long, long, long, long) EdgeKey((long, long) a, (long, long) b)
         => Comparer<(long, long)>.Default.Compare(a, b) <= 0 ? (a.Item1, a.Item2, b.Item1, b.Item2) : (b.Item1, b.Item2, a.Item1, a.Item2);
