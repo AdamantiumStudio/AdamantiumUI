@@ -16,6 +16,39 @@ internal readonly record struct QuadraticCurve(Vector2<double> Start, Vector2<do
         return Start * (rest * rest) + Control * (2 * rest * t) + End * (t * t);
     }
 
+    /// <summary>Whether the control lies on the line through the ends, within <paramref name="tolerance"/> of the chord's
+    /// length: the curve is a straight piece.</summary>
+    public bool IsStraight(double tolerance = 1e-9)
+    {
+        var chord = End - Start;
+        var off = Control - Start;
+        var cross = chord.X * off.Y - chord.Y * off.X;
+        return Math.Abs(cross) <= tolerance * Math.Max(chord.X * chord.X + chord.Y * chord.Y, 1e-300);
+    }
+
+    /// <summary>How long the curve is from its start to <paramref name="t"/>: five-point Gauss-Legendre over its speed,
+    /// the rule the stroke shader measures by, so the two agree.</summary>
+    public double LengthTo(double t)
+    {
+        var a = Start - Control * 2 + End;
+        var b = Control - Start;
+        var length = 0.0;
+        for (var i = 0; i < 5; i++)
+        {
+            var u = t * 0.5 * (1 + GaussNodes[i]);
+            var speed = (a * u + b) * 2;
+            length += GaussWeights[i] * Math.Sqrt(speed.X * speed.X + speed.Y * speed.Y);
+        }
+
+        return length * t * 0.5;
+    }
+
+    private static readonly double[] GaussNodes =
+        [-0.9061798459386640, -0.5384693101056831, 0, 0.5384693101056831, 0.9061798459386640];
+
+    private static readonly double[] GaussWeights =
+        [0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891];
+
     /// <summary>The two halves of the curve either side of <paramref name="t"/>.</summary>
     public (QuadraticCurve First, QuadraticCurve Second) Split(double t)
     {

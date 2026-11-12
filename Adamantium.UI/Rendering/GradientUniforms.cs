@@ -84,4 +84,42 @@ internal sealed class GradientUniforms
         if (minX > maxX) return new Vector4F(0, 0, 1, 1);
         return new Vector4F(minX, minY, Math.Max(maxX - minX, 1e-4f), Math.Max(maxY - minY, 1e-4f));
     }
+
+    /// <summary>The bounding box of every contour as (minX, minY, width, height): its points, and where a bending piece
+    /// turns back between them.</summary>
+    internal static Vector4F BoundsOf(IReadOnlyList<StrokeContour> contours)
+    {
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var contour in contours)
+        {
+            foreach (var p in contour.Points) Grow(p);
+            if (contour.Controls == null) continue;
+
+            for (var i = 0; i < contour.PieceCount; i++)
+            {
+                var piece = contour.Piece(i);
+                Grow(piece.At(Turn(piece.Start.X, piece.Control.X, piece.End.X)));
+                Grow(piece.At(Turn(piece.Start.Y, piece.Control.Y, piece.End.Y)));
+            }
+        }
+
+        if (minX > maxX) return new Vector4F(0, 0, 1, 1);
+        return new Vector4F((float)minX, (float)minY, Math.Max((float)(maxX - minX), 1e-4f),
+            Math.Max((float)(maxY - minY), 1e-4f));
+
+        void Grow(Vector2<double> p)
+        {
+            minX = Math.Min(minX, p.X);
+            minY = Math.Min(minY, p.Y);
+            maxX = Math.Max(maxX, p.X);
+            maxY = Math.Max(maxY, p.Y);
+        }
+
+        // Where a quadratic coordinate turns back, inside the piece; its start where it runs one way.
+        static double Turn(double a, double b, double c)
+        {
+            var bend = a - 2 * b + c;
+            return Math.Abs(bend) < 1e-300 ? 0 : Math.Clamp((a - b) / bend, 0, 1);
+        }
+    }
 }

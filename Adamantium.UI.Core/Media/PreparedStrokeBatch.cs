@@ -1,25 +1,26 @@
 using System.Collections.Generic;
-using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media;
 
 /// <summary>
 /// A run of a stroke's contours as the renderer strokes them in one continuous batch - their points as floats one after
-/// another, where each contour starts and how long it is, the contour of every point, and how far along its contour
-/// every point lies - made with the contours, so a stroke processed on a worker (a map's lines) reaches the drawing
-/// thread with nothing left to lay out. Shared and never written: whoever changes the points makes its own copy.
+/// another, the pieces' controls likewise, where each contour starts and how long it is, the contour of every point, and
+/// how far along its contour every point lies - made with the contours, so a stroke processed on a worker (a map's
+/// lines) reaches the drawing thread with nothing left to lay out. Shared and never written: whoever changes the points
+/// makes its own copy.
 /// </summary>
 internal sealed class PreparedStrokeBatch
 {
     /// <summary>The most points a batch holds: its pieces are numbered two per point, in 16 bits.</summary>
     public const int MostPoints = 32768;
 
-    private PreparedStrokeBatch(int start, int count, float[] points, uint[] contours, uint[] pointContours,
-        float[] arcs)
+    private PreparedStrokeBatch(int start, int count, float[] points, float[] controls, uint[] contours,
+        uint[] pointContours, float[] arcs)
     {
         Start = start;
         Count = count;
         Points = points;
+        Controls = controls;
         Contours = contours;
         PointContours = pointContours;
         Arcs = arcs;
@@ -33,6 +34,9 @@ internal sealed class PreparedStrokeBatch
     /// <summary>x, y of every point.</summary>
     public float[] Points { get; }
 
+    /// <summary>x, y of every point's piece's control; null when every piece of the run is straight.</summary>
+    public float[] Controls { get; }
+
     /// <summary>Three to a contour: its first point, its point count, 1 when it closes.</summary>
     public uint[] Contours { get; }
 
@@ -40,15 +44,20 @@ internal sealed class PreparedStrokeBatch
 
     public float[] Arcs { get; }
 
-    /// <summary>Contours of two points or more, a closed one of fewer than three taken as open: what a stroke draws.
-    /// The list itself when every contour already is.</summary>
-    public static IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> Valid(
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
+    /// <summary>Whether a stroke can draw <paramref name="contour"/> as it is: a piece at least, and a closed one
+    /// enclosing something - three straight pieces, or two of which one may bend.</summary>
+    public static bool IsDrawable(StrokeContour contour) =>
+        contour.Points is { Length: >= 2 } &&
+        (!contour.IsClosed || contour.Points.Length >= 3 || contour.Controls != null);
+
+    /// <summary>Contours of a piece or more, a closed one that encloses nothing taken as open: what a stroke draws. The
+    /// list itself when every contour already is.</summary>
+    public static IReadOnlyList<StrokeContour> Valid(IReadOnlyList<StrokeContour> contours)
     {
         var asIs = true;
-        foreach (var (points, isClosed) in contours)
+        foreach (var contour in contours)
         {
-            if (points is not { Length: >= 2 } || isClosed && points.Length < 3)
+            if (!IsDrawable(contour))
             {
                 asIs = false;
                 break;
@@ -60,13 +69,15 @@ internal sealed class PreparedStrokeBatch
             return contours;
         }
 
-        var valid = new List<(Vector2<double>[] Points, bool IsClosed)>(contours.Count);
-        foreach (var (points, isClosed) in contours)
+        var valid = new List<StrokeContour>(contours.Count);
+        foreach (var contour in contours)
         {
-            if (points is { Length: >= 2 })
+            if (contour.Points is not { Length: >= 2 })
             {
-                valid.Add((points, isClosed && points.Length >= 3));
+                continue;
             }
+
+            valid.Add(IsDrawable(contour) ? contour : new StrokeContour(contour.Points, contour.Controls, false));
         }
 
         return valid;
@@ -74,7 +85,7 @@ internal sealed class PreparedStrokeBatch
 
     /// <summary>Contours grouped into runs of at most <see cref="MostPoints"/> points; a contour is never split, and one
     /// bigger than a batch is a batch of its own.</summary>
-    public static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
+    public static List<(int Start, int Count)> Batches(IReadOnlyList<StrokeContour> contours)
     {
         var batches = new List<(int Start, int Count)>();
         var start = 0;
@@ -102,7 +113,7 @@ internal sealed class PreparedStrokeBatch
     /// <summary>The continuous batches of <paramref name="contours"/> laid out, one for each run of
     /// <see cref="Batches"/> - null for a run of one contour, which is stroked on its own; empty for fewer than two
     /// contours.</summary>
-    public static PreparedStrokeBatch[] Of(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
+    public static PreparedStrokeBatch[] Of(IReadOnlyList<StrokeContour> contours)
     {
         var valid = Valid(contours);
         if (valid.Count < 2)
@@ -124,8 +135,44 @@ internal sealed class PreparedStrokeBatch
         return batches;
     }
 
-    private static PreparedStrokeBatch Lay(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start,
-        int count)
+    /// <summary>Writes <paramref name="contour"/>'s points as floats into <paramref name="points"/> from point
+    /// <paramref name="at"/> on, its pieces' controls into <paramref name="controls"/> when given - a straight piece's
+    /// halfway along - and how far along it each point lies into <paramref name="arcs"/>. Returns its length.</summary>
+    public static double Write(StrokeContour contour, float[] points, float[] controls, float[] arcs, int at)
+    {
+        var along = contour.Arcs(out var length);
+        for (var i = 0; i < contour.Points.Length; i++)
+        {
+            var point = contour.Points[i];
+            points[(at + i) * 2] = (float)point.X;
+            points[(at + i) * 2 + 1] = (float)point.Y;
+            arcs[at + i] = (float)along[i];
+            if (controls != null)
+            {
+                var control = i < contour.PieceCount ? contour.Piece(i).Control : point;
+                controls[(at + i) * 2] = (float)control.X;
+                controls[(at + i) * 2 + 1] = (float)control.Y;
+            }
+        }
+
+        return length;
+    }
+
+    /// <summary>Whether any of the <paramref name="count"/> contours from <paramref name="start"/> bends.</summary>
+    public static bool AnyBends(IReadOnlyList<StrokeContour> contours, int start, int count)
+    {
+        for (var k = start; k < start + count; k++)
+        {
+            if (contours[k].Controls != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static PreparedStrokeBatch Lay(IReadOnlyList<StrokeContour> contours, int start, int count)
     {
         var total = 0;
         for (var k = start; k < start + count; k++)
@@ -134,35 +181,26 @@ internal sealed class PreparedStrokeBatch
         }
 
         var points = new float[total * 2];
+        var controls = AnyBends(contours, start, count) ? new float[total * 2] : null;
         var table = new uint[count * 3];
         var owners = new uint[total];
         var arcs = new float[total];
         var at = 0;
         for (var k = 0; k < count; k++)
         {
-            var (contour, isClosed) = contours[start + k];
+            var contour = contours[start + k];
             table[k * 3] = (uint)at;
-            table[k * 3 + 1] = (uint)contour.Length;
-            table[k * 3 + 2] = isClosed ? 1u : 0u;
-            var first = at;
-            var along = 0.0;
-            foreach (var point in contour)
+            table[k * 3 + 1] = (uint)contour.Points.Length;
+            table[k * 3 + 2] = contour.IsClosed ? 1u : 0u;
+            Write(contour, points, controls, arcs, at);
+            for (var i = 0; i < contour.Points.Length; i++)
             {
-                points[at * 2] = (float)point.X;
-                points[at * 2 + 1] = (float)point.Y;
-                owners[at] = (uint)k;
-                if (at > first)
-                {
-                    var dx = points[at * 2] - points[at * 2 - 2];
-                    var dy = points[at * 2 + 1] - points[at * 2 - 1];
-                    along += System.Math.Sqrt((double)dx * dx + (double)dy * dy);
-                }
-
-                arcs[at] = (float)along;
-                at++;
+                owners[at + i] = (uint)k;
             }
+
+            at += contour.Points.Length;
         }
 
-        return new PreparedStrokeBatch(start, count, points, table, owners, arcs);
+        return new PreparedStrokeBatch(start, count, points, controls, table, owners, arcs);
     }
 }

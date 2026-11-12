@@ -118,9 +118,11 @@ public abstract class Geometry : AdamantiumComponent
             Mesh.ApplyTransform(matrix);
          }
          RecalculateBounds();
+         // Processed from here: the stroke is made from the geometry's curves, which a geometry with none of its own
+         // reads off this mesh - through this method.
+         IsProcessed = true;
          _readyFill = ContoursAreFillBoundary ? PreparedFill.Of(this, Version) : null;
          _readyStroke = ContoursAreStrokePaths ? PreparedStroke.Of(this, Version, layOut: true) : null;
-         IsProcessed = true;
       }
    }
 
