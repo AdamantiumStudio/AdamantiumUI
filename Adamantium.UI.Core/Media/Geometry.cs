@@ -200,6 +200,10 @@ public abstract class Geometry : AdamantiumComponent
    /// along are made when the geometry is processed, on whatever thread processes it.</summary>
    protected internal virtual bool ContoursAreStrokePaths => false;
 
+   /// <summary>Whether the mesh's triangles are given with the geometry rather than worked out from its outline: such a
+   /// geometry keeps them even where its fill is drawn from its curves.</summary>
+   protected internal virtual bool TrianglesAreGiven => false;
+
    /// <summary>The fill as the renderer draws it: the one <see cref="ProcessGeometry"/> made, while the geometry is as
    /// it was then; otherwise made now, from the mesh as it is, and not kept. Null when it has no triangles.</summary>
    internal PreparedFill FillForDrawing =>
@@ -233,7 +237,7 @@ public abstract class Geometry : AdamantiumComponent
                continue;
             }
 
-            builder.BeginFigure(points[0], true);
+            builder.BeginFigure(points[0], EnclosesArea);
             for (var i = 1; i < points.Length; i++)
             {
                builder.LineTo(points[i]);
@@ -245,6 +249,9 @@ public abstract class Geometry : AdamantiumComponent
          return _curves = builder.Build(version, null, CurveFillRule);
       }
    }
+
+   /// <summary>Whether its figures enclose an area a fill paints; false for lines made only to be stroked.</summary>
+   protected internal virtual bool EnclosesArea => true;
 
    /// <summary>Which points the curves enclose: the geometry's own rule where it has one, else non-zero.</summary>
    protected internal virtual FillRule CurveFillRule => FillRule.NonZero;

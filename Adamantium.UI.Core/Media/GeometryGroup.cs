@@ -159,6 +159,8 @@ public class GeometryGroup : Geometry, IContainer
             }
         }
 
+        if (geometryType == GeometryType.Outlined) return;
+
         var points = polygon.FillIndirect();
         Mesh.SetPoints(points);
     }

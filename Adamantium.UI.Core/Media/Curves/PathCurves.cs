@@ -102,6 +102,45 @@ internal sealed class PathCurves
         return fill;
     }
 
+    // A bent curve stands as this many straight pieces in a loop: a loop only measures distances, as a halo does.
+    private const int LoopSteps = 4;
+
+    /// <summary>The filled figures as closed loops of points - each bent curve as a few straight pieces - or null when
+    /// there are none. New arrays each call.</summary>
+    public List<(Vector2<double>[] Points, bool IsClosed)> FillLoops()
+    {
+        List<(Vector2<double>[] Points, bool IsClosed)> loops = null;
+        var points = new List<Vector2<double>>();
+        foreach (var figure in Figures)
+        {
+            if (!figure.IsFilled || figure.Count == 0)
+            {
+                continue;
+            }
+
+            points.Clear();
+            for (var i = figure.First; i < figure.First + figure.Count; i++)
+            {
+                var curve = Curves[i];
+                points.Add(curve.Start);
+                if (!curve.IsStraight())
+                {
+                    for (var step = 1; step < LoopSteps; step++)
+                    {
+                        points.Add(curve.At((double)step / LoopSteps));
+                    }
+                }
+            }
+
+            if (points.Count >= 3)
+            {
+                (loops ??= []).Add((points.ToArray(), true));
+            }
+        }
+
+        return loops;
+    }
+
     private static Rect BoundsOf(IReadOnlyList<QuadraticCurve> curves)
     {
         if (curves.Count == 0)

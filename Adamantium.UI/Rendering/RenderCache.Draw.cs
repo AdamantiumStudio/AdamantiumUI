@@ -2002,9 +2002,6 @@ public partial class RenderCache
                 case RegularPolygonRenderUnit polygon:
                     polygon.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
                     break;
-                case GeometryRenderUnit geometry:
-                    geometry.TakeBackFill(wt, _projectionMatrix, _renderScale);
-                    break;
             }
 
             if (device != null)

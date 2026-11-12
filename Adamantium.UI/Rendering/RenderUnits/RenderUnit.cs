@@ -409,24 +409,8 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     // boundary, or a fill kind with no instanced pass at all.
     protected override bool FringeInstanced => DrawsCurves || HasInstancedFringe;
 
-    // The geometry a fringe of its own was last tried for: one with no closed contour gets none, and is not tried again.
-    private Geometry _fringeTriedFor;
-
-    /// <summary>Takes the fill back from the instanced path once its brush became a gradient no instanced record carries
-    /// (a radial between two circles): the body is drawn by the unit again and the edge gets its own fringe, placed and
-    /// filled at once - this runs in the walk, after the frame's PreRender.</summary>
-    public void TakeBackFill(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
-    {
-        if (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient)) return;
-        FillInstanced = false;
-        if (FillFringeRenderer != null || ReferenceEquals(_fringeTriedFor, Payload.Geometry)) return;
-        _fringeTriedFor = Payload.Geometry;
-        ProcessFillFringe(Payload.Geometry, Payload.Brush);
-        if (FillFringeRenderer != null) PrepareBuiltLate(transform, projection, renderScale);
-    }
-
-    // A fringe of its own built while its gradient was one no instanced record carries is not drawn while the instanced
-    // path draws the edge again: both would darken it.
+    // A fringe of its own built for a brush the instanced path did not take is not drawn while that path draws the edge
+    // again: both would darken it.
     public override void Render()
     {
         if (!FillInstanced) GeometryRenderer?.Render();
@@ -438,18 +422,12 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
     public bool HasInstancedFringe =>
         InstancedFillCollector.Enabled && !DrawsCurves && _frozenMesh is { Ring.Length: > 0 } &&
-        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
-        (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient));
+        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush;
 
     /// <summary>Whether its instanced fill is drawn from its curves, its edge exact with it: no fringe at all.</summary>
     public bool DrawsCurves =>
         InstancedFillCollector.Enabled && InstancedFillCollector.CurvesEnabled && _frozenMesh?.Curves != null &&
-        Payload.Brush switch
-        {
-            SolidColorBrush or PatternBrush or NoiseBrush or TileBrush or MaterialBrush => true,
-            GradientBrush gradient => GradientBake.FitsBatch(gradient),
-            _ => false
-        };
+        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush or TileBrush or MaterialBrush;
 
     public override bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color)
     {
@@ -475,7 +453,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         out Rect localBounds, out double opacity)
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0;
-        if (Payload.Brush is not GradientBrush g || !GradientBake.FitsBatch(g)) return false;
+        if (Payload.Brush is not GradientBrush g) return false;
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
         key = DrawsCurves ? fm.CurveKey : fm.Key;

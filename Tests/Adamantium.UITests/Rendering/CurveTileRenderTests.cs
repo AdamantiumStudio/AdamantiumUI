@@ -29,13 +29,19 @@ public class CurveTileRenderTests
 
     // A brush per geometry, by its place: the scenes draw every brush family in one flush, so the tiles of one run
     // cannot be read by another's draws.
-    private static Brush BrushFor(int index) => (index % 3) switch
+    private static Brush BrushFor(int index) => (index % 4) switch
     {
         1 => new LinearGradientBrush
         {
             GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
         },
         2 => new PatternBrush { Pattern = PatternType.Checkerboard, Color1 = Colors.Red, Color2 = Colors.Blue, CellSize = 6 },
+        // Between two circles: the record the shape batches cannot carry, which a curve fill's record does.
+        3 => new RadialGradientBrush
+        {
+            GradientOrigin = new Vector2<double>(0.3, 0.3), GradientOriginRadius = 0.1,
+            GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
+        },
         _ => Brushes.Red
     };
 

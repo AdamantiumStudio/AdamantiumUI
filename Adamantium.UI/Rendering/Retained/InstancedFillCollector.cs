@@ -741,8 +741,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         inst.Offsets1 = new Vector4F(offs[4], offs[5], offs[6], offs[7]);
         var type = GradientBake.PackGeometry(g, out var geom0, out var geom1);
         inst.Geom0 = geom0;
-        geom1.W = transformSlot;   // .xy is the radial focal; .w carries the slot, as in the SDF gradient record
-        inst.Geom1 = geom1;        // .z stays the SHAPE FLAG the pixel shader branches on - not a spare
+        geom1.W = transformSlot;   // .xy is the radial focal, .z a two-circle radial's origin radius; .w the slot
+        inst.Geom1 = geom1;
         inst.LocalBounds = new Vector4F((float)localBounds.X, (float)localBounds.Y, (float)localBounds.Width, (float)localBounds.Height);
         // .w packs the interp mode (0 sRGB / 1 OKLab) with the OPACITY slot above it - this record has no spare
         // component, and the one that looked spare (Geom1.z) is the shape flag. Unpacked in GradGeomFadeSlot/Interp.

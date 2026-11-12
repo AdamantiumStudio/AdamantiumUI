@@ -334,7 +334,7 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     // MESH (type 4) here too: a mesh brush has NO axis geometry, so without this branch the maths above runs on zeros and
     // walks the stop table with a meaningless parameter. Same branch-free select as the rect pass.
     float4 mesh = lerp(lerp(meshCols[0], meshCols[1], uv.x), lerp(meshCols[2], meshCols[3], uv.x), uv.y);
-    return lerp(grad, mesh, step(3.5, gd.Params.y));
+    return lerp(grad, mesh, step(3.5, gd.Params.y) * step(gd.Params.y, 4.5));
 }
 
 [shader("fragment")]

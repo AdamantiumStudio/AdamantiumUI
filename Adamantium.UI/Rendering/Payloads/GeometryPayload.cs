@@ -42,12 +42,18 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
     public int GeometryVersion { get; } = geometry?.Version ?? 0;
 
-    // Tessellates on the record thread, and makes the curves, their pieces and tiles there too; the render thread must only read
-    // what was made.
+    // Processes on the record thread and makes the curves, their pieces and tiles there too; the render thread must only
+    // read what was made. A fill drawn from its curves needs no triangles, so only its outline is made.
     private static Geometry Tessellate(Geometry g)
     {
-        g?.ProcessGeometry(GeometryType.Both);
-        if (g != null && Retained.InstancedFillCollector.CurvesEnabled)
+        if (g == null)
+        {
+            return null;
+        }
+
+        var curves = Retained.InstancedFillCollector.Enabled && Retained.InstancedFillCollector.CurvesEnabled;
+        g.ProcessGeometry(curves && !g.TrianglesAreGiven ? GeometryType.Outlined : GeometryType.Both);
+        if (curves)
         {
             _ = g.CurvesForDrawing.FillTiles;
         }
