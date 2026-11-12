@@ -270,49 +270,59 @@ float2 SegmentNormal(float2 a, float2 b)
     return float2(-d.y, d.x);
 }
 
-float2 Perp(float2 d)
+// The direction turned a quarter to the left.
+float2 Perp(float2 direction)
 {
-    return float2(-d.y, d.x);
+    return float2(-direction.y, direction.x);
 }
 
-// Piece i of the contour of `count` points from point `first` of Points: from point i to the next, through its
-// control - halfway along when the stroke bends nowhere.
-void StrokePiece(uint first, uint count, uint i, out float2 s, out float2 c, out float2 e)
+// The way from start to end, or +x when they meet.
+float2 ChordDirection(float2 start, float2 end)
+{
+    float2 chord = end - start;
+    float chordLength = length(chord);
+    return chordLength > 1e-12 ? chord / chordLength : float2(1.0, 0.0);
+}
+
+// Piece number piece of the contour of count points from point first of Points: from that point to the next, through
+// its control - halfway along when the stroke bends nowhere.
+void StrokePiece(uint first, uint count, uint piece, out float2 start, out float2 control, out float2 end)
 {
     float2* points = Points + first;
-    s = points[i];
-    e = points[(i + 1u) % count];
+    start = points[piece];
+    end = points[(piece + 1u) % count];
     if (Bends != 0u)
     {
         float2* controls = Controls + first;
-        c = controls[i];
+        control = controls[piece];
     }
     else
     {
-        c = (s + e) * 0.5;
+        control = (start + end) * 0.5;
     }
 }
 
-// Which way the contour leaves point i, and which way it reaches it: its pieces' tangents there.
-float2 LeavingAt(uint first, uint count, uint i)
+// Which way the contour leaves point number point: the tangent of the piece starting there.
+float2 LeavingAt(uint first, uint count, uint point)
 {
-    float2 s, c, e;
-    StrokePiece(first, count, i, s, c, e);
-    return QuadDirection(s, c, e, 0.0);
+    float2 start, control, end;
+    StrokePiece(first, count, point, start, control, end);
+    return QuadDirection(start, control, end, 0.0);
 }
 
-float2 ReachingAt(uint first, uint count, uint i)
+// Which way the contour reaches point number point: the tangent of the piece ending there.
+float2 ReachingAt(uint first, uint count, uint point)
 {
-    float2 s, c, e;
-    StrokePiece(first, count, (i + count - 1u) % count, s, c, e);
-    return QuadDirection(s, c, e, 1.0);
+    float2 start, control, end;
+    StrokePiece(first, count, (point + count - 1u) % count, start, control, end);
+    return QuadDirection(start, control, end, 1.0);
 }
 
-float PieceLength(uint first, uint count, uint i)
+float PieceLength(uint first, uint count, uint piece)
 {
-    float2 s, c, e;
-    StrokePiece(first, count, i, s, c, e);
-    return QuadLength(s, c, e, 1.0);
+    float2 start, control, end;
+    StrokePiece(first, count, piece, start, control, end);
+    return QuadLength(start, control, end, 1.0);
 }
 
 // Whether a join is needed: a missing join leaves a slit of width hw * t at the edge (first order in the turn angle t).
@@ -491,15 +501,13 @@ void EndFrame(float arc, out float2 at, out float2 dir)
         return;
     }
 
-    // On a piece that may bend: the point that far along it, and its tangent; past the piece's ends, the line its end
-    // runs along.
-    float2 s, c, e;
-    StrokePiece(RunFirst, RunCount, lo, s, c, e);
+    float2 start, control, end;
+    StrokePiece(RunFirst, RunCount, lo, start, control, end);
     float into = arc - arcs[RunFirst + lo];
-    float total = QuadLength(s, c, e, 1.0);
-    float t = QuadParameterAt(s, c, e, into, total);
-    dir = QuadDirection(s, c, e, t);
-    at = QuadAt(s, c, e, t) + dir * (into - QuadLength(s, c, e, t));
+    float total = QuadLength(start, control, end, 1.0);
+    float parameter = QuadParameterAt(start, control, end, into, total);
+    dir = QuadDirection(start, control, end, parameter);
+    at = QuadAt(start, control, end, parameter) + dir * (into - QuadLength(start, control, end, parameter));
 }
 
 // One run of the stroke, from s to e along the contour, its ends wearing capS and capE: the signed distance to its
@@ -715,22 +723,22 @@ PSInput PullCorner(uint vertexId)
             // A piece that may bend: the box of its hull - its ends and control - in the axes of its chord, as wide as
             // the line reaches past it, and further at a real end for its cap. The fragment finds where on the piece
             // it is (StrokeCoverage), so the corners carry nothing but where they are.
-            float2 s, c, e;
-            StrokePiece(first, ContourPointCount, i, s, c, e);
-            float2 dir = QuadDirection(s, e, e, 0.0);
-            float2 nrm = Perp(dir);
-            float lengthAlong = dot(e - s, dir);
-            float controlAlong = dot(c - s, dir);
-            float controlAcross = dot(c - s, nrm);
+            float2 start, control, end;
+            StrokePiece(first, ContourPointCount, i, start, control, end);
+            float2 chordDirection = ChordDirection(start, end);
+            float2 chordNormal = Perp(chordDirection);
+            float endAlong = dot(end - start, chordDirection);
+            float controlAlong = dot(control - start, chordDirection);
+            float controlAcross = dot(control - start, chordNormal);
             float reach = hw + max(EndExtend(i), EndExtend(ni));
-            float lo = min(0.0, controlAlong) - reach;
-            float hi = max(lengthAlong, controlAlong) + reach;
+            float behind = min(0.0, controlAlong) - reach;
+            float ahead = max(endAlong, controlAlong) + reach;
             float left = max(0.0, controlAcross) + reach;
             float right = min(0.0, controlAcross) - reach;
-            aP = s + dir * lo + nrm * left;
-            aM = s + dir * lo + nrm * right;
-            bP = s + dir * hi + nrm * left;
-            bM = s + dir * hi + nrm * right;
+            aP = start + chordDirection * behind + chordNormal * left;
+            aM = start + chordDirection * behind + chordNormal * right;
+            bP = start + chordDirection * ahead + chordNormal * left;
+            bM = start + chordDirection * ahead + chordNormal * right;
         }
         else if (JoinType == 0u)
         {
@@ -761,7 +769,7 @@ PSInput PullCorner(uint vertexId)
         bool atB = corner == 2u || corner == 3u || corner == 5u;
         bool plus = corner == 0u || corner == 2u || corner == 3u;
         float2 q = atB ? (plus ? bP : bM) : (plus ? aP : aM);
-        float2 segDir = QuadDirection(p, points[ni], points[ni], 0.0);
+        float2 segDir = ChordDirection(p, points[ni]);
         bool realStart = ContourIsClosed == 0u && i == 0u;
         bool realEnd = ContourIsClosed == 0u && ni + 1u == ContourPointCount;
         CornerSpan = float2(realStart ? -1e30 : along, realEnd ? 1e30 : along + segLen);
@@ -814,14 +822,16 @@ PSInput PullCorner(uint vertexId)
     // line, so `perp` running from 0 at the point to hw there is the distance across, exact.
     if (Bends != 0u && JoinType == 0u && hasSegment && !isStart && tri < 2u && JoinIsVisible(dIn, dOut))
     {
-        float outer = dIn.x * dOut.y - dIn.y * dOut.x > 0.0 ? -1.0 : 1.0;
-        float2 nIn = Perp(dIn) * outer;
-        float2 nOut = Perp(dOut) * outer;
-        float2 miter = normalize(nIn + nOut + float2(1e-12, 0.0));
-        float2 tip = miter * (hw / max(dot(miter, nIn), 1e-6));
-        float2 r = v == 0u ? (tri == 0u ? nIn * hw : tip) : v == 1u ? (tri == 0u ? tip : nOut * hw) : float2(0.0, 0.0);
-        float perp = v == 2u ? 0.0 : hw * outer;
-        return Corner(p + r, perp, back, fwd, frame, fanId, along + dot(r, bisector));
+        float outerSide = dIn.x * dOut.y - dIn.y * dOut.x > 0.0 ? -1.0 : 1.0;
+        float2 normalIn = Perp(dIn) * outerSide;
+        float2 normalOut = Perp(dOut) * outerSide;
+        float2 miter = normalize(normalIn + normalOut + float2(1e-12, 0.0));
+        float2 tip = miter * (hw / max(dot(miter, normalIn), 1e-6));
+        float2 offset = v == 0u ? (tri == 0u ? normalIn * hw : tip)
+                      : v == 1u ? (tri == 0u ? tip : normalOut * hw)
+                      : float2(0.0, 0.0);
+        float across = v == 2u ? 0.0 : hw * outerSide;
+        return Corner(p + offset, across, back, fwd, frame, fanId, along + dot(offset, bisector));
     }
 
     return NoCorner(p);
@@ -837,10 +847,10 @@ float2 RibbonPlace(PSInput input)
         return float2(input.Cap0.x, input.Arc);
     }
 
-    float2 s, c, e;
-    StrokePiece(input.Segment.x, input.Segment.y, input.Segment.z, s, c, e);
+    float2 start, control, end;
+    StrokePiece(input.Segment.x, input.Segment.y, input.Segment.z, start, control, end);
     float* arcs = Arcs;
-    return QuadAcrossAlong(input.Local, s, c, e, arcs[input.Segment.x + input.Segment.z]);
+    return QuadAcrossAlong(input.Local, start, control, end, arcs[input.Segment.x + input.Segment.z]);
 }
 
 // Analytic AA coverage from the nearest boundary (edges and caps), feathered over one pixel as wide as it is here;

@@ -55,27 +55,27 @@ internal sealed class CurvePieces
         return winding;
     }
 
-    /// <summary>Where along a piece running one way its coordinate - given by its start <paramref name="a"/>, control
-    /// <paramref name="b"/> and end <paramref name="c"/> - reaches <paramref name="value"/>.</summary>
-    internal static double Crossing(double a, double b, double c, double value)
+    /// <summary>Where along a piece running one way its coordinate - given by its <paramref name="start"/>,
+    /// <paramref name="control"/> and <paramref name="end"/> - reaches <paramref name="value"/>.</summary>
+    internal static double Crossing(double start, double control, double end, double value)
     {
-        var qa = a - 2 * b + c;
-        var qb = 2 * (b - a);
-        var qc = a - value;
-        double t;
-        if (Math.Abs(qa) < 1e-12 * (Math.Abs(a) + Math.Abs(b) + Math.Abs(c) + 1))
+        var squared = start - 2 * control + end;
+        var linear = 2 * (control - start);
+        var constant = start - value;
+        double along;
+        if (Math.Abs(squared) < 1e-12 * (Math.Abs(start) + Math.Abs(control) + Math.Abs(end) + 1))
         {
-            t = Math.Abs(qb) < 1e-300 ? 0 : -qc / qb;
+            along = Math.Abs(linear) < 1e-300 ? 0 : -constant / linear;
         }
         else
         {
-            var root = Math.Sqrt(Math.Max(0, qb * qb - 4 * qa * qc));
-            var t1 = (-qb + root) / (2 * qa);
-            var t2 = (-qb - root) / (2 * qa);
-            t = t1 is >= -1e-9 and <= 1 + 1e-9 ? t1 : t2;
+            var root = Math.Sqrt(Math.Max(0, linear * linear - 4 * squared * constant));
+            var first = (-linear + root) / (2 * squared);
+            var second = (-linear - root) / (2 * squared);
+            along = first is >= -1e-9 and <= 1 + 1e-9 ? first : second;
         }
 
-        return Math.Clamp(t, 0, 1);
+        return Math.Clamp(along, 0, 1);
     }
 
     private static void AddMonotonic(QuadraticCurve curve, List<QuadraticCurve> pieces)
@@ -93,26 +93,28 @@ internal sealed class CurvePieces
 
         if (count == 2 && cuts[1] < cuts[0])
         {
-            (cuts[0], cuts[1]) = (cuts[1], cuts[0]);
+            var later = cuts[0];
+            cuts[0] = cuts[1];
+            cuts[1] = later;
         }
 
         var rest = curve;
         var done = 0.0;
         for (var i = 0; i < count; i++)
         {
-            var (first, second) = rest.Split((cuts[i] - done) / (1 - done));
-            pieces.Add(Flattened(first));
-            rest = second;
+            var halves = rest.Split((cuts[i] - done) / (1 - done));
+            pieces.Add(Flattened(halves.First));
+            rest = halves.Second;
             done = cuts[i];
         }
 
         pieces.Add(Flattened(rest));
     }
 
-    private static double Turn(double a, double b, double c)
+    private static double Turn(double start, double control, double end)
     {
-        var bend = a - 2 * b + c;
-        return Math.Abs(bend) < 1e-300 ? double.NaN : (a - b) / bend;
+        var bend = start - 2 * control + end;
+        return Math.Abs(bend) < 1e-300 ? double.NaN : (start - control) / bend;
     }
 
     private static QuadraticCurve Flattened(QuadraticCurve piece)

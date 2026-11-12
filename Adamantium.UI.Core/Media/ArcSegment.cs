@@ -118,12 +118,12 @@ public class ArcSegment : PathSegment
         for (var i = 0; i < pieces; i++)
         {
             var next = angle + step;
-            var (sin0, cos0) = Math.SinCos(angle);
-            var (sin1, cos1) = Math.SinCos(next);
-            var from = frame.Center + new Vector2<double>(cos0, sin0) * frame.Radius;
-            var to = frame.Center + new Vector2<double>(cos1, sin1) * frame.Radius;
-            var control1 = from + new Vector2<double>(-sin0, cos0) * reach;
-            var control2 = to - new Vector2<double>(-sin1, cos1) * reach;
+            var fromDirection = new Vector2<double>(Math.Cos(angle), Math.Sin(angle));
+            var toDirection = new Vector2<double>(Math.Cos(next), Math.Sin(next));
+            var from = frame.Center + fromDirection * frame.Radius;
+            var to = frame.Center + toDirection * frame.Radius;
+            var control1 = from + new Vector2<double>(-fromDirection.Y, fromDirection.X) * reach;
+            var control2 = to - new Vector2<double>(-toDirection.Y, toDirection.X) * reach;
             builder.CubicTo(Vector2<double>.Transform(control1, frame.Back), Vector2<double>.Transform(control2, frame.Back),
                 i == pieces - 1 ? Point : Vector2<double>.Transform(to, frame.Back));
             angle = next;
@@ -167,10 +167,7 @@ public class ArcSegment : PathSegment
         return points.ToArray();
     }
 
-    // The frame where the arc is a circle: its center and radius there, where it starts and how far it turns, in
-    // degrees, which way, and the map back to the figure's own units.
-    private static (Matrix3x2<double> Back, Vector2<double> Center, double Radius, double RadiusX, double StartAngle,
-        double Range, double Sign) Frame(Vector2<double> pt1, Vector2<double> pt2, double radiusX, double radiusY,
+    private static ArcFrame Frame(Vector2<double> pt1, Vector2<double> pt2, double radiusX, double radiusY,
         double rotationAngle, bool isLargeArc, bool isCounterclockwise)
     {
         // Adjust for different radii and rotation angle
@@ -233,6 +230,6 @@ public class ArcSegment : PathSegment
             sign = -1;
         }
 
-        return (transform, center, radiusY, radiusX, startAngle, range, sign);
+        return new ArcFrame(transform, center, radiusY, radiusX, startAngle, range, sign);
     }
 }

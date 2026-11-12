@@ -127,13 +127,13 @@ internal sealed class PreparedStroke
 
         if (halvings < MostHalvings && !piece.IsStraight())
         {
-            var (first, second) = piece.Split(0.5);
+            var halves = piece.Split(0.5);
             var whole = piece.LengthTo(1);
-            var halves = first.LengthTo(1) + second.LengthTo(1);
-            if (System.Math.Abs(whole - halves) > LengthTolerance * System.Math.Max(halves, 1e-12))
+            var halvesLength = halves.First.LengthTo(1) + halves.Second.LengthTo(1);
+            if (System.Math.Abs(whole - halvesLength) > LengthTolerance * System.Math.Max(halvesLength, 1e-12))
             {
-                AddPiece(first, pieces, halvings + 1);
-                AddPiece(second, pieces, halvings + 1);
+                AddPiece(halves.First, pieces, halvings + 1);
+                AddPiece(halves.Second, pieces, halvings + 1);
                 return;
             }
         }

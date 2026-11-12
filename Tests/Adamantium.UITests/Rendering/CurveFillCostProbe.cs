@@ -53,7 +53,7 @@ public class CurveFillCostProbe
         {
             foreach (var scene in Scenes)
             {
-                var (meshPrep, curvePrep, pieces, words) = Prep(scene);
+                var prep = Prep(scene);
                 InstancedFillCollector.CurvesEnabled = false;
                 var meshFrame = Frame(scene);
                 var meshMoving = Frame(scene, moving: true);
@@ -61,8 +61,9 @@ public class CurveFillCostProbe
                 InstancedFillCollector.CurveTilesEnabled = true;
                 var tileFrame = Frame(scene);
                 var tileMoving = Frame(scene, moving: true);
-                report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFrame:F2} | {tileFrame:F2} | " +
-                                  $"{meshMoving:F2} | {tileMoving:F2} | {pieces} | {words * 4 / 1024}");
+                report.AppendLine($"{scene.Name} | {prep.MeshMilliseconds:F1} | {prep.CurvesMilliseconds:F1} | " +
+                                  $"{meshFrame:F2} | {tileFrame:F2} | {meshMoving:F2} | {tileMoving:F2} | " +
+                                  $"{prep.Pieces} | {prep.Words * 4 / 1024}");
             }
         }
         finally
@@ -80,7 +81,7 @@ public class CurveFillCostProbe
 
     // The CPU side, each on geometries of its own so neither finds the other's work cached: triangulating for the mesh,
     // against cutting the curves and packing them for the shader.
-    private static (double Mesh, double Curves, int Pieces, long Words) Prep(Scene scene)
+    private static CurvePrepCost Prep(Scene scene)
     {
         var forMesh = scene.Build();
         var watch = Stopwatch.StartNew();
@@ -99,7 +100,7 @@ public class CurveFillCostProbe
             words += fill.Words.Length;
         }
 
-        return (mesh, watch.Elapsed.TotalMilliseconds, pieces, words);
+        return new CurvePrepCost(mesh, watch.Elapsed.TotalMilliseconds, pieces, words);
     }
 
     // A frame of the scene, clean - replayed - or, moving, with its transform turned, scaled and moved a little each

@@ -11,103 +11,110 @@ static const uint CurveTileWords = 6u;
 // the tiles are checked against.
 uint CurveTiled;
 
-// Where a piece crossing the line of y = v reaches it - the piece running one way in y.
-float CurveXAt(float2 s, float2 c, float2 e, float v)
+// Where a piece running one way in y reaches the line y = value.
+float CurveXAt(float2 start, float2 control, float2 end, float value)
 {
-    return CurveAt(s.x, c.x, e.x, CurveCrossing(s.y, c.y, e.y, v));
+    return CurveAt(start.x, control.x, end.x, CurveCrossing(start.y, control.y, end.y, value));
 }
 
-float CurveYAt(float2 s, float2 c, float2 e, float v)
+// Where a piece running one way in x reaches the line x = value.
+float CurveYAt(float2 start, float2 control, float2 end, float value)
 {
-    return CurveAt(s.y, c.y, e.y, CurveCrossing(s.x, c.x, e.x, v));
+    return CurveAt(start.y, control.y, end.y, CurveCrossing(start.x, control.x, end.x, value));
+}
+
+// How a crossing distance pixels from the pixel's centre along a ray softens the winding there: by how much of the
+// pixel lies before it, less the whole crossing when the hard count has it - one past the centre.
+float CurveSoftening(float distance)
+{
+    return saturate(distance + 0.5) - (distance > 0.0 ? 1.0 : 0.0);
 }
 
 // How much of the pixel at local - the fill's local space - the fill covers, 0..1. Takes derivatives, so it is called
 // where every fragment of the quad still runs.
+//
+// Down from the root to the tile holding the pixel, while the next is no smaller than the pixel: a tile's half-side
+// margin then holds every piece within half a pixel. From the tile's point the winding is carried along its row to under
+// the pixel, then up or down its column to it: toward +x a piece passed going right is lost and one passed going left
+// gained, and the same toward +y. Near the pixel each piece crossed is softened over the pixel it falls in; each ray
+// softens only the edges it crosses, and the one with a crossing nearer the pixel speaks for it.
 float CurveTileCoverage(float2 local)
 {
     uint* words = CurveData;
-    float2 p = local - CurvePoint(0u);
-    float2 dx = ddx(p);
-    float2 dy = ddy(p);
-    // The fill's units a pixel spans along each of its axes, however it is turned, scaled or seen.
-    float unitsX = length(float2(dx.x, dy.x));
-    float unitsY = length(float2(dx.y, dy.y));
-    float perX = 1.0 / max(unitsX, 1e-20);
-    float perY = 1.0 / max(unitsY, 1e-20);
-    float pixel = max(unitsX, unitsY);
+    float2 position = local - CurvePoint(0u);
+    float2 acrossScreenX = ddx(position);
+    float2 acrossScreenY = ddy(position);
+    float unitsPerPixelX = length(float2(acrossScreenX.x, acrossScreenY.x));
+    float unitsPerPixelY = length(float2(acrossScreenX.y, acrossScreenY.y));
+    float pixelsPerUnitX = 1.0 / max(unitsPerPixelX, 1e-20);
+    float pixelsPerUnitY = 1.0 / max(unitsPerPixelY, 1e-20);
+    float pixelSide = max(unitsPerPixelX, unitsPerPixelY);
 
-    // Down from the root to the tile holding the pixel, while the next is no smaller than the pixel: a tile's half-side
-    // margin then holds every piece within half a pixel.
     uint tile = words[7];
-    float side = asfloat(words[6]);
-    float2 corner = float2(0.0, 0.0);
+    float tileSide = asfloat(words[6]);
+    float2 tileCorner = float2(0.0, 0.0);
     [loop]
     for (uint depth = 0u; depth < 24u; depth++)
     {
-        uint child = words[tile + 5u];
-        if (child == 0u || side * 0.5 < pixel)
+        uint firstChild = words[tile + 5u];
+        if (firstChild == 0u || tileSide * 0.5 < pixelSide)
         {
             break;
         }
 
-        side *= 0.5;
-        uint2 quarter = uint2(p.x >= corner.x + side ? 1u : 0u, p.y >= corner.y + side ? 1u : 0u);
-        corner += float2(quarter) * side;
-        tile = child + (quarter.y * 2u + quarter.x) * CurveTileWords;
+        tileSide *= 0.5;
+        uint2 quarter = uint2(position.x >= tileCorner.x + tileSide ? 1u : 0u,
+                              position.y >= tileCorner.y + tileSide ? 1u : 0u);
+        tileCorner += float2(quarter) * tileSide;
+        tile = firstChild + (quarter.y * 2u + quarter.x) * CurveTileWords;
     }
 
-    float2 q = float2(asfloat(words[tile]), asfloat(words[tile + 1u]));
-    float hard = float(asint(words[tile + 2u]));
-    uint first = words[tile + 3u];
-    uint count = words[tile + 4u];
+    float2 tilePoint = float2(asfloat(words[tile]), asfloat(words[tile + 1u]));
+    float hardWinding = float(asint(words[tile + 2u]));
+    uint listStart = words[tile + 3u];
+    uint listCount = words[tile + 4u];
 
     float softX = 0.0;
     float softY = 0.0;
     float nearestX = 1e20;
     float nearestY = 1e20;
-    for (uint i = 0u; i < count; i++)
+    for (uint entry = 0u; entry < listCount; entry++)
     {
-        uint at = CurveHeaderWords + words[first + i] * 6u;
-        float2 s = CurvePoint(at);
-        float2 c = CurvePoint(at + 2u);
-        float2 e = CurvePoint(at + 4u);
-        float turnX = e.y > s.y ? 1.0 : -1.0;
-        float turnY = e.x < s.x ? 1.0 : -1.0;
+        uint at = CurveHeaderWords + words[listStart + entry] * CurvePieceWords;
+        float2 start = CurvePoint(at);
+        float2 control = CurvePoint(at + 2u);
+        float2 end = CurvePoint(at + 4u);
+        float turnX = end.y > start.y ? 1.0 : -1.0;
+        float turnY = end.x < start.x ? 1.0 : -1.0;
 
-        // From the tile's point along its row to under the pixel: the winding toward +x loses a piece passed going
-        // right and gains one passed going left.
-        if (q.y >= min(s.y, e.y) && q.y < max(s.y, e.y))
+        if (tilePoint.y >= min(start.y, end.y) && tilePoint.y < max(start.y, end.y))
         {
-            float hit = CurveXAt(s, c, e, q.y);
-            if (p.x > q.x && hit > q.x && hit <= p.x) hard -= turnX;
-            if (p.x < q.x && hit > p.x && hit <= q.x) hard += turnX;
+            float hitX = CurveXAt(start, control, end, tilePoint.y);
+            if (position.x > tilePoint.x && hitX > tilePoint.x && hitX <= position.x) hardWinding -= turnX;
+            if (position.x < tilePoint.x && hitX > position.x && hitX <= tilePoint.x) hardWinding += turnX;
         }
 
-        // Then up or down its column to the pixel, the same way toward +y; and, near the pixel, each piece crossed is
-        // softened over the pixel it falls in.
-        if (p.x >= min(s.x, e.x) && p.x < max(s.x, e.x))
+        if (position.x >= min(start.x, end.x) && position.x < max(start.x, end.x))
         {
-            float hit = CurveYAt(s, c, e, p.x);
-            if (p.y > q.y && hit > q.y && hit <= p.y) hard -= turnY;
-            if (p.y < q.y && hit > p.y && hit <= q.y) hard += turnY;
-            float d = (hit - p.y) * perY;
-            softY += turnY * (saturate(d + 0.5) - (d > 0.0 ? 1.0 : 0.0));
-            nearestY = min(nearestY, abs(d));
+            float hitY = CurveYAt(start, control, end, position.x);
+            if (position.y > tilePoint.y && hitY > tilePoint.y && hitY <= position.y) hardWinding -= turnY;
+            if (position.y < tilePoint.y && hitY > position.y && hitY <= tilePoint.y) hardWinding += turnY;
+            float distance = (hitY - position.y) * pixelsPerUnitY;
+            softY += turnY * CurveSoftening(distance);
+            nearestY = min(nearestY, abs(distance));
         }
 
-        if (p.y >= min(s.y, e.y) && p.y < max(s.y, e.y))
+        if (position.y >= min(start.y, end.y) && position.y < max(start.y, end.y))
         {
-            float d = (CurveXAt(s, c, e, p.y) - p.x) * perX;
-            softX += turnX * (saturate(d + 0.5) - (d > 0.0 ? 1.0 : 0.0));
-            nearestX = min(nearestX, abs(d));
+            float distance = (CurveXAt(start, control, end, position.y) - position.x) * pixelsPerUnitX;
+            softX += turnX * CurveSoftening(distance);
+            nearestX = min(nearestX, abs(distance));
         }
     }
 
     uint evenOdd = words[5];
-    float coverX = CurveWindingCoverage(hard + softX, evenOdd);
-    float coverY = CurveWindingCoverage(hard + softY, evenOdd);
-    // Each ray softens only the edges it crosses; the one with a crossing nearer the pixel speaks for it.
+    float coverX = CurveWindingCoverage(hardWinding + softX, evenOdd);
+    float coverY = CurveWindingCoverage(hardWinding + softY, evenOdd);
     float weightX = saturate(1.0 - nearestX);
     float weightY = saturate(1.0 - nearestY);
     float weights = weightX + weightY;

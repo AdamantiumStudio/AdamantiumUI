@@ -64,12 +64,12 @@ internal readonly record struct QuadraticCurve(Vector2<double> Start, Vector2<do
         [0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891];
 
     /// <summary>The two halves of the curve either side of <paramref name="t"/>.</summary>
-    public (QuadraticCurve First, QuadraticCurve Second) Split(double t)
+    public QuadraticHalves Split(double t)
     {
-        var a = Vector2<double>.Lerp(Start, Control, t);
-        var b = Vector2<double>.Lerp(Control, End, t);
-        var middle = Vector2<double>.Lerp(a, b, t);
-        return (new QuadraticCurve(Start, a, middle), new QuadraticCurve(middle, b, End));
+        var towardControl = Vector2<double>.Lerp(Start, Control, t);
+        var towardEnd = Vector2<double>.Lerp(Control, End, t);
+        var cut = Vector2<double>.Lerp(towardControl, towardEnd, t);
+        return new QuadraticHalves(new QuadraticCurve(Start, towardControl, cut), new QuadraticCurve(cut, towardEnd, End));
     }
 
     /// <summary>The curve with every point put through <paramref name="matrix"/>: an affine map moves a Bezier curve

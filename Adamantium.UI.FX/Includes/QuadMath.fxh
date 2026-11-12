@@ -1,119 +1,122 @@
-// QUADRATIC BEZIER MATHS - a piece from s through control c to e: where it is, which way it runs, how long it is and
-// which of its points is nearest a given one. B(t) = s + 2t(c - s) + t^2(s - 2c + e).
+// QUADRATIC BEZIER MATHS - a piece from start through control to end: where it is, which way it runs, how long it is
+// and which of its points is nearest a given one. A point on it at parameter t, 0 at the start and 1 at the end, is
+// start + 2t (control - start) + t^2 (start - 2 control + end).
 
-float2 QuadAt(float2 s, float2 c, float2 e, float t)
+float2 QuadAt(float2 start, float2 control, float2 end, float parameter)
 {
-    float rest = 1.0 - t;
-    return s * (rest * rest) + c * (2.0 * rest * t) + e * (t * t);
+    float rest = 1.0 - parameter;
+    return start * (rest * rest) + control * (2.0 * rest * parameter) + end * (parameter * parameter);
 }
 
-// Its velocity at t, halved: (s - 2c + e) t + (c - s).
-float2 QuadHalfVelocity(float2 s, float2 c, float2 e, float t)
+// Its velocity at parameter, halved: (start - 2 control + end) t + (control - start).
+float2 QuadHalfVelocity(float2 start, float2 control, float2 end, float parameter)
 {
-    return (s - 2.0 * c + e) * t + (c - s);
+    return (start - 2.0 * control + end) * parameter + (control - start);
 }
 
-// Which way it runs at t; where it stands still - a control on an end - the way from the start to the end.
-float2 QuadDirection(float2 s, float2 c, float2 e, float t)
+// Which way it runs at parameter; where it stands still - a control on an end - the way from the start to the end.
+float2 QuadDirection(float2 start, float2 control, float2 end, float parameter)
 {
-    float2 v = QuadHalfVelocity(s, c, e, t);
-    float l = length(v);
-    if (l > 1e-12)
+    float2 velocity = QuadHalfVelocity(start, control, end, parameter);
+    float speed = length(velocity);
+    if (speed > 1e-12)
     {
-        return v / l;
+        return velocity / speed;
     }
 
-    float2 chord = e - s;
-    float lc = length(chord);
-    return lc > 1e-12 ? chord / lc : float2(1.0, 0.0);
+    float2 chord = end - start;
+    float chordLength = length(chord);
+    return chordLength > 1e-12 ? chord / chordLength : float2(1.0, 0.0);
 }
 
-// Its length from the start to t: five-point Gauss-Legendre over its speed - the rule the CPU measures the stroke's
-// arcs by (QuadraticCurve.LengthTo), so the two agree where a piece ends.
-float QuadLength(float2 s, float2 c, float2 e, float t)
+// Its length from the start to parameter: five-point Gauss-Legendre over its speed - the rule the CPU measures the
+// stroke's arcs by (QuadraticCurve.LengthTo), so the two agree where a piece ends.
+float QuadLength(float2 start, float2 control, float2 end, float parameter)
 {
     const float nodes[5] = { -0.9061798459386640, -0.5384693101056831, 0.0, 0.5384693101056831, 0.9061798459386640 };
     const float weights[5] = { 0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665,
                                0.2369268850561891 };
     float sum = 0.0;
     [unroll]
-    for (int i = 0; i < 5; i++)
+    for (int node = 0; node < 5; node++)
     {
-        float u = t * 0.5 * (1.0 + nodes[i]);
-        sum += weights[i] * 2.0 * length(QuadHalfVelocity(s, c, e, u));
+        float atNode = parameter * 0.5 * (1.0 + nodes[node]);
+        sum += weights[node] * 2.0 * length(QuadHalfVelocity(start, control, end, atNode));
     }
 
-    return sum * t * 0.5;
+    return sum * parameter * 0.5;
 }
 
-// Where along it its length from the start reaches `along` - its whole length known as `total` - by Newton's steps from
+// Where along it its length from the start reaches distance - its whole length known as total - by Newton's steps from
 // the even guess. Inside 0..1; the caller extends past the ends.
-float QuadParameterAt(float2 s, float2 c, float2 e, float along, float total)
+float QuadParameterAt(float2 start, float2 control, float2 end, float distance, float total)
 {
-    float t = total > 1e-12 ? saturate(along / total) : 0.0;
+    float parameter = total > 1e-12 ? saturate(distance / total) : 0.0;
     [unroll]
-    for (int i = 0; i < 4; i++)
+    for (int iteration = 0; iteration < 4; iteration++)
     {
-        float speed = 2.0 * length(QuadHalfVelocity(s, c, e, t));
+        float speed = 2.0 * length(QuadHalfVelocity(start, control, end, parameter));
         if (!(speed > 1e-12))
         {
             break;
         }
 
-        t = saturate(t - (QuadLength(s, c, e, t) - along) / speed);
+        parameter = saturate(parameter - (QuadLength(start, control, end, parameter) - distance) / speed);
     }
 
-    return t;
+    return parameter;
 }
 
-// The real roots of t^3 + a t^2 + b t + d in 0..1 - one or three - in roots, how many in the count returned. Cardano for
-// one real root, the trigonometric form for three.
-uint CubicRootsInUnit(float a, float b, float d, out float roots[3])
+// The real roots of t^3 + squared t^2 + linear t + constant in 0..1 - one or three - in roots, how many in the count
+// returned: Cardano's formula for one real root, the trigonometric form for three, on the cubic shifted to lose its
+// square term.
+uint CubicRootsInUnit(float squaredTerm, float linearTerm, float constantTerm, out float roots[3])
 {
     roots[0] = 0.0;
     roots[1] = 0.0;
     roots[2] = 0.0;
-    float shift = a / 3.0;
-    float p = b - a * shift;
-    float q = 2.0 * shift * shift * shift - shift * b + d;
-    float h = q * q * 0.25 + p * p * p / 27.0;
-    uint count = 0u;
-    if (h >= 0.0)
+    float shift = squaredTerm / 3.0;
+    float shiftedLinear = linearTerm - squaredTerm * shift;
+    float shiftedConstant = 2.0 * shift * shift * shift - shift * linearTerm + constantTerm;
+    float discriminant = shiftedConstant * shiftedConstant * 0.25 + shiftedLinear * shiftedLinear * shiftedLinear / 27.0;
+    if (discriminant >= 0.0)
     {
-        float root = sqrt(h);
-        float u = -q * 0.5 + root;
-        float v = -q * 0.5 - root;
-        float x = sign(u) * pow(abs(u), 1.0 / 3.0) + sign(v) * pow(abs(v), 1.0 / 3.0);
-        roots[0] = saturate(x - shift);
+        float root = sqrt(discriminant);
+        float upper = -shiftedConstant * 0.5 + root;
+        float lower = -shiftedConstant * 0.5 - root;
+        float shiftedRoot = sign(upper) * pow(abs(upper), 1.0 / 3.0) + sign(lower) * pow(abs(lower), 1.0 / 3.0);
+        roots[0] = saturate(shiftedRoot - shift);
         return 1u;
     }
 
-    float m = 2.0 * sqrt(-p / 3.0);
-    float angle = acos(clamp(3.0 * q / (p * m), -1.0, 1.0)) / 3.0;
+    float amplitude = 2.0 * sqrt(-shiftedLinear / 3.0);
+    float angle = acos(clamp(3.0 * shiftedConstant / (shiftedLinear * amplitude), -1.0, 1.0)) / 3.0;
     [unroll]
-    for (int k = 0; k < 3; k++)
+    for (int root = 0; root < 3; root++)
     {
-        roots[k] = saturate(m * cos(angle - 2.0943951023931957 * float(k)) - shift);
+        roots[root] = saturate(amplitude * cos(angle - 2.0943951023931957 * float(root)) - shift);
     }
 
     return 3u;
 }
 
-// The piece's parameter nearest p: where (B(t) - p) is square to the piece's velocity, or an end.
-float QuadNearest(float2 s, float2 c, float2 e, float2 p)
+// The piece's parameter nearest target: where the way from target to the piece is square to the piece's velocity, or
+// an end. That is (bend t^2 + 2 lean t + offset) . (bend t + lean) = 0, a cubic in t; near enough straight for the cubic
+// to lose its digits, the straight piece's answer. Each root is refined by two Newton steps on
+// (B(t) - target) . B'(t) / 2, whose derivative is 2 |B'/2|^2 + (B(t) - target) . bend.
+float QuadNearest(float2 start, float2 control, float2 end, float2 target)
 {
-    float2 bend = s - 2.0 * c + e;
-    float2 lean = c - s;
-    float2 off = s - p;
-    // (bend t^2 + 2 lean t + off) . (bend t + lean) = 0
-    float k3 = dot(bend, bend);
-    float k2 = 3.0 * dot(bend, lean);
-    float k1 = 2.0 * dot(lean, lean) + dot(bend, off);
-    float k0 = dot(lean, off);
+    float2 bend = start - 2.0 * control + end;
+    float2 lean = control - start;
+    float2 offset = start - target;
+    float cubicTerm = dot(bend, bend);
+    float squaredTerm = 3.0 * dot(bend, lean);
+    float linearTerm = 2.0 * dot(lean, lean) + dot(bend, offset);
+    float constantTerm = dot(lean, offset);
 
     float best = 0.0;
-    float bestDistance = dot(off, off);
-    float2 toEnd = e - p;
+    float bestDistance = dot(offset, offset);
+    float2 toEnd = end - target;
     if (dot(toEnd, toEnd) < bestDistance)
     {
         best = 1.0;
@@ -122,40 +125,38 @@ float QuadNearest(float2 s, float2 c, float2 e, float2 p)
 
     float roots[3];
     uint count;
-    if (k3 > 1e-6 * max(dot(lean, lean), 1e-30))
+    if (cubicTerm > 1e-6 * max(dot(lean, lean), 1e-30))
     {
-        count = CubicRootsInUnit(k2 / k3, k1 / k3, k0 / k3, roots);
+        count = CubicRootsInUnit(squaredTerm / cubicTerm, linearTerm / cubicTerm, constantTerm / cubicTerm, roots);
     }
     else
     {
-        // Near enough straight for the cubic to lose its digits: the straight piece's answer, refined below.
-        roots[0] = abs(k1) > 1e-30 ? saturate(-k0 / k1) : 0.0;
+        roots[0] = abs(linearTerm) > 1e-30 ? saturate(-constantTerm / linearTerm) : 0.0;
         roots[1] = 0.0;
         roots[2] = 0.0;
         count = 1u;
     }
 
-    for (uint i = 0u; i < count; i++)
+    for (uint candidate = 0u; candidate < count; candidate++)
     {
-        // Two Newton steps on (B(t) - p) . B'(t) / 2, whose derivative is 2|B'/2|^2 + (B(t) - p) . bend.
-        float t = roots[i];
+        float parameter = roots[candidate];
         [unroll]
-        for (int n = 0; n < 2; n++)
+        for (int iteration = 0; iteration < 2; iteration++)
         {
-            float2 v = bend * t + lean;
-            float2 r = QuadAt(s, c, e, t) - p;
-            float slope = 2.0 * dot(v, v) + dot(r, bend);
+            float2 velocity = bend * parameter + lean;
+            float2 away = QuadAt(start, control, end, parameter) - target;
+            float slope = 2.0 * dot(velocity, velocity) + dot(away, bend);
             if (abs(slope) > 1e-30)
             {
-                t = saturate(t - dot(r, v) / slope);
+                parameter = saturate(parameter - dot(away, velocity) / slope);
             }
         }
 
-        float2 r = QuadAt(s, c, e, t) - p;
-        float distance = dot(r, r);
+        float2 away = QuadAt(start, control, end, parameter) - target;
+        float distance = dot(away, away);
         if (distance < bestDistance)
         {
-            best = t;
+            best = parameter;
             bestDistance = distance;
         }
     }
@@ -163,20 +164,20 @@ float QuadNearest(float2 s, float2 c, float2 e, float2 p)
     return best;
 }
 
-// How far across the piece p is - signed, positive on the left of its way, (-dir.y, dir.x) - and how far along it from
-// its start, `start` added; past an end both are read off the line its end runs along, as a straight piece's are.
-float2 QuadAcrossAlong(float2 p, float2 s, float2 c, float2 e, float start)
+// How far across the piece target is - signed, positive on the left of its way, (-direction.y, direction.x) - and how
+// far along it from its start, startDistance added. At an end the target may lie beyond it: both are then read off the
+// line its end runs along, as a straight piece's are.
+float2 QuadAcrossAlong(float2 target, float2 start, float2 control, float2 end, float startDistance)
 {
-    float t = QuadNearest(s, c, e, p);
-    float2 at = QuadAt(s, c, e, t);
-    float2 dir = QuadDirection(s, c, e, t);
-    float2 r = p - at;
-    float across = dot(r, float2(-dir.y, dir.x));
-    float along = start + QuadLength(s, c, e, t);
-    // At an end the point may lie beyond it: count how far, along the end's way.
-    if (t <= 0.0 || t >= 1.0)
+    float parameter = QuadNearest(start, control, end, target);
+    float2 nearest = QuadAt(start, control, end, parameter);
+    float2 direction = QuadDirection(start, control, end, parameter);
+    float2 away = target - nearest;
+    float across = dot(away, float2(-direction.y, direction.x));
+    float along = startDistance + QuadLength(start, control, end, parameter);
+    if (parameter <= 0.0 || parameter >= 1.0)
     {
-        along += dot(r, dir);
+        along += dot(away, direction);
     }
 
     return float2(across, along);

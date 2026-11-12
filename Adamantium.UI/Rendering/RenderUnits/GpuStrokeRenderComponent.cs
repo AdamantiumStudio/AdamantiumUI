@@ -188,14 +188,18 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         for (var i = 0; i < count; i++)
         {
             if (!closed && (i == 0 || i == count - 1)) continue;
-            var (prev, here, next) = (first + (i + count - 1) % count, first + i, first + (i + 1) % count);
+            var previous = first + (i + count - 1) % count;
+            var here = first + i;
+            var next = first + (i + 1) % count;
             var bends = controls ?? points;
             var outAt = controls != null ? here : next;
-            var (ax, ay) = (points[2 * here] - bends[2 * prev], points[2 * here + 1] - bends[2 * prev + 1]);
-            var (bx, by) = (bends[2 * outAt] - points[2 * here], bends[2 * outAt + 1] - points[2 * here + 1]);
-            var lengths = MathF.Sqrt(ax * ax + ay * ay) * MathF.Sqrt(bx * bx + by * by);
+            var inX = points[2 * here] - bends[2 * previous];
+            var inY = points[2 * here + 1] - bends[2 * previous + 1];
+            var outX = bends[2 * outAt] - points[2 * here];
+            var outY = bends[2 * outAt + 1] - points[2 * here + 1];
+            var lengths = MathF.Sqrt(inX * inX + inY * inY) * MathF.Sqrt(outX * outX + outY * outY);
             if (lengths <= 0) return true;
-            var halfTurnCos = MathF.Sqrt(MathF.Max(0f, (1f + (ax * bx + ay * by) / lengths) / 2f));
+            var halfTurnCos = MathF.Sqrt(MathF.Max(0f, (1f + (inX * outX + inY * outY) / lengths) / 2f));
             if (halfTurnCos * limit < 1.001f) return true;
         }
 

@@ -20,6 +20,7 @@ internal sealed class CurveTileTree
     private const int EntriesPerPiece = 64;
     private const int DeepestLevel = 20;
     private const double Clearance = 1e-6;
+    private const int WordsPerPiece = 6;
 
     private static readonly double[] Offsets = [0.5, 0.37, 0.63, 0.29, 0.71, 0.43, 0.57, 0.33, 0.67];
 
@@ -60,55 +61,50 @@ internal sealed class CurveTileTree
     /// budget goes to the coarse tiles every zoom reads.</summary>
     public static CurveTileTree Of(QuadraticCurve[] pieces, Vector2<double> corner, Vector2<double> size)
     {
-        var p = new double[pieces.Length * 6];
-        var all = new List<int>(pieces.Length);
-        for (var i = 0; i < pieces.Length; i++)
+        var coordinates = CoordinatesOf(pieces, corner);
+        var allPieces = new List<int>(pieces.Length);
+        for (var piece = 0; piece < pieces.Length; piece++)
         {
-            p[i * 6] = (float)(pieces[i].Start.X - corner.X);
-            p[i * 6 + 1] = (float)(pieces[i].Start.Y - corner.Y);
-            p[i * 6 + 2] = (float)(pieces[i].Control.X - corner.X);
-            p[i * 6 + 3] = (float)(pieces[i].Control.Y - corner.Y);
-            p[i * 6 + 4] = (float)(pieces[i].End.X - corner.X);
-            p[i * 6 + 5] = (float)(pieces[i].End.Y - corner.Y);
-            all.Add(i);
+            allPieces.Add(piece);
         }
 
-        var side = Math.Max(Math.Max(size.X, size.Y), 1e-30);
+        var rootSide = Math.Max(Math.Max(size.X, size.Y), 1e-30);
         var lefts = new List<double> { 0 };
         var tops = new List<double> { 0 };
         var levels = new List<int> { 0 };
-        var lists = new List<List<int>> { all };
-        var xs = new List<double>();
-        var ys = new List<double>();
+        var lists = new List<List<int>> { allPieces };
+        var pointsX = new List<double>();
+        var pointsY = new List<double>();
         var windings = new List<int>();
-        var children = new List<int> { 0 };
+        var firstChildren = new List<int> { 0 };
 
-        var clearance = Clearance * side;
-        var (rootX, rootY) = PointOf(p, all, 0, 0, side, double.NaN, clearance);
-        xs.Add(rootX);
-        ys.Add(rootY);
-        windings.Add(WindingAlongX(p, all, rootX, rootY));
+        var clearance = Clearance * rootSide;
+        var rootPoint = PointOf(coordinates, allPieces, 0, 0, rootSide, double.NaN, clearance);
+        pointsX.Add(rootPoint.X);
+        pointsY.Add(rootPoint.Y);
+        windings.Add(WindingAlongX(coordinates, allPieces, rootPoint.X, rootPoint.Y));
 
         var budget = (long)EntriesPerPiece * Math.Max(1, pieces.Length);
-        long spent = all.Count;
-        var kids = new List<int>[4];
-        var large = side / LargeTileDivisions;
-        for (var t = 0; t < lists.Count; t++)
+        long spent = allPieces.Count;
+        var quarterLists = new List<int>[4];
+        var largeSide = rootSide / LargeTileDivisions;
+        for (var tile = 0; tile < lists.Count; tile++)
         {
-            var list = lists[t];
-            var tileSide = side / (1L << levels[t]);
-            var crowded = list.Count > MostPieces || (list.Count > 1 && tileSide > large);
-            if (!crowded || levels[t] >= DeepestLevel)
+            var list = lists[tile];
+            var tileSide = rootSide / (1L << levels[tile]);
+            var crowded = list.Count > MostPieces || (list.Count > 1 && tileSide > largeSide);
+            if (!crowded || levels[tile] >= DeepestLevel)
             {
                 continue;
             }
 
             var half = tileSide * 0.5;
             long cost = 0;
-            for (var k = 0; k < 4; k++)
+            for (var quarter = 0; quarter < 4; quarter++)
             {
-                kids[k] = Near(p, list, lefts[t] + (k & 1) * half, tops[t] + (k >> 1) * half, half);
-                cost += kids[k].Count;
+                quarterLists[quarter] = Near(coordinates, list, lefts[tile] + (quarter & 1) * half,
+                    tops[tile] + (quarter >> 1) * half, half);
+                cost += quarterLists[quarter].Count;
             }
 
             if (spent + cost > budget)
@@ -117,95 +113,116 @@ internal sealed class CurveTileTree
             }
 
             spent += cost;
-            children[t] = lists.Count;
-            for (var k = 0; k < 4; k++)
+            firstChildren[tile] = lists.Count;
+            for (var quarter = 0; quarter < 4; quarter++)
             {
-                var left = lefts[t] + (k & 1) * half;
-                var top = tops[t] + (k >> 1) * half;
-                var (x, y) = PointOf(p, list, left, top, half, ys[t], clearance);
+                var left = lefts[tile] + (quarter & 1) * half;
+                var top = tops[tile] + (quarter >> 1) * half;
+                var point = PointOf(coordinates, list, left, top, half, pointsY[tile], clearance);
                 lefts.Add(left);
                 tops.Add(top);
-                levels.Add(levels[t] + 1);
-                lists.Add(kids[k]);
-                xs.Add(x);
-                ys.Add(y);
-                windings.Add(windings[t] + Across(p, list, xs[t], ys[t], x, y));
-                children.Add(0);
+                levels.Add(levels[tile] + 1);
+                lists.Add(quarterLists[quarter]);
+                pointsX.Add(point.X);
+                pointsY.Add(point.Y);
+                windings.Add(windings[tile] + Across(coordinates, list, pointsX[tile], pointsY[tile], point.X, point.Y));
+                firstChildren.Add(0);
             }
         }
 
-        var count = lists.Count;
-        var points = new float[count * 2];
-        var starts = new int[count + 1];
+        var tileCount = lists.Count;
+        var points = new float[tileCount * 2];
+        var listStarts = new int[tileCount + 1];
         var entries = new int[spent];
-        var at = 0;
-        for (var t = 0; t < count; t++)
+        var written = 0;
+        for (var tile = 0; tile < tileCount; tile++)
         {
-            points[t * 2] = (float)xs[t];
-            points[t * 2 + 1] = (float)ys[t];
-            starts[t] = at;
-            lists[t].CopyTo(entries, at);
-            at += lists[t].Count;
+            points[tile * 2] = (float)pointsX[tile];
+            points[tile * 2 + 1] = (float)pointsY[tile];
+            listStarts[tile] = written;
+            lists[tile].CopyTo(entries, written);
+            written += lists[tile].Count;
         }
 
-        starts[count] = at;
-        return new CurveTileTree(side, points, windings.ToArray(), children.ToArray(), starts, entries);
+        listStarts[tileCount] = written;
+        return new CurveTileTree(rootSide, points, windings.ToArray(), firstChildren.ToArray(), listStarts, entries);
     }
 
-    private static List<int> Near(double[] p, List<int> list, double left, double top, double side)
+    private static double[] CoordinatesOf(QuadraticCurve[] pieces, Vector2<double> corner)
+    {
+        var coordinates = new double[pieces.Length * WordsPerPiece];
+        for (var piece = 0; piece < pieces.Length; piece++)
+        {
+            var at = piece * WordsPerPiece;
+            coordinates[at] = (float)(pieces[piece].Start.X - corner.X);
+            coordinates[at + 1] = (float)(pieces[piece].Start.Y - corner.Y);
+            coordinates[at + 2] = (float)(pieces[piece].Control.X - corner.X);
+            coordinates[at + 3] = (float)(pieces[piece].Control.Y - corner.Y);
+            coordinates[at + 4] = (float)(pieces[piece].End.X - corner.X);
+            coordinates[at + 5] = (float)(pieces[piece].End.Y - corner.Y);
+        }
+
+        return coordinates;
+    }
+
+    private static List<int> Near(double[] coordinates, List<int> list, double left, double top, double side)
     {
         var margin = side * 0.5;
-        double x0 = left - margin, x1 = left + side + margin, y0 = top - margin, y1 = top + side + margin;
+        var boxLeft = left - margin;
+        var boxRight = left + side + margin;
+        var boxTop = top - margin;
+        var boxBottom = top + side + margin;
         var near = new List<int>();
-        foreach (var i in list)
+        foreach (var piece in list)
         {
-            var o = i * 6;
-            double sx = p[o], sy = p[o + 1], ex = p[o + 4], ey = p[o + 5];
-            var low = Math.Min(sy, ey);
-            var high = Math.Max(sy, ey);
-            if (high < y0 || low > y1 || Math.Max(sx, ex) < x0 || Math.Min(sx, ex) > x1)
+            var at = piece * WordsPerPiece;
+            double startX = coordinates[at], startY = coordinates[at + 1];
+            double endX = coordinates[at + 4], endY = coordinates[at + 5];
+            var lowY = Math.Min(startY, endY);
+            var highY = Math.Max(startY, endY);
+            if (highY < boxTop || lowY > boxBottom || Math.Max(startX, endX) < boxLeft || Math.Min(startX, endX) > boxRight)
             {
                 continue;
             }
 
-            if (low >= y0 && high <= y1)
+            if (lowY >= boxTop && highY <= boxBottom)
             {
-                near.Add(i);
+                near.Add(piece);
                 continue;
             }
 
-            var xa = XAt(p, o, Math.Clamp(y0, low, high));
-            var xb = XAt(p, o, Math.Clamp(y1, low, high));
-            if (Math.Max(xa, xb) >= x0 && Math.Min(xa, xb) <= x1)
+            var xAtTop = XAt(coordinates, at, Math.Clamp(boxTop, lowY, highY));
+            var xAtBottom = XAt(coordinates, at, Math.Clamp(boxBottom, lowY, highY));
+            if (Math.Max(xAtTop, xAtBottom) >= boxLeft && Math.Min(xAtTop, xAtBottom) <= boxRight)
             {
-                near.Add(i);
+                near.Add(piece);
             }
         }
 
         return near;
     }
 
-    private static (double X, double Y) PointOf(double[] p, List<int> list, double left, double top, double side,
+    private static Vector2<double> PointOf(double[] coordinates, List<int> list, double left, double top, double side,
         double parentY, double clearance)
     {
-        var best = ((double)(float)(left + side * 0.5), (double)(float)(top + side * 0.5));
+        var best = new Vector2<double>((float)(left + side * 0.5), (float)(top + side * 0.5));
         var bestGap = double.MinValue;
-        foreach (var oy in Offsets)
+        foreach (var offsetY in Offsets)
         {
-            var y = (double)(float)(top + side * oy);
-            foreach (var ox in Offsets)
+            var y = (double)(float)(top + side * offsetY);
+            foreach (var offsetX in Offsets)
             {
-                var x = (double)(float)(left + side * ox);
-                var gap = Gap(p, list, x, y, parentY, left - side * 0.5, left + side * 1.5);
+                var x = (double)(float)(left + side * offsetX);
+                var gap = Gap(coordinates, list, x, y, parentY, left - side * 0.5, left + side * 1.5);
                 if (gap >= clearance)
                 {
-                    return (x, y);
+                    return new Vector2<double>(x, y);
                 }
 
                 if (gap > bestGap)
                 {
                     bestGap = gap;
-                    best = (x, y);
+                    best = new Vector2<double>(x, y);
                 }
             }
         }
@@ -213,104 +230,110 @@ internal sealed class CurveTileTree
         return best;
     }
 
-    private static double Gap(double[] p, List<int> list, double x, double y, double parentY, double tileLeft,
+    private static double Gap(double[] coordinates, List<int> list, double x, double y, double parentY, double tileLeft,
         double tileRight)
     {
         var fromParent = !double.IsNaN(parentY);
         var legLow = fromParent ? Math.Min(parentY, y) : y;
         var legHigh = fromParent ? Math.Max(parentY, y) : y;
         var gap = double.MaxValue;
-        foreach (var i in list)
+        foreach (var piece in list)
         {
-            var o = i * 6;
-            double sx = p[o], sy = p[o + 1], ex = p[o + 4], ey = p[o + 5];
-            if (Math.Max(sx, ex) >= tileLeft && Math.Min(sx, ex) <= tileRight)
+            var at = piece * WordsPerPiece;
+            double startX = coordinates[at], startY = coordinates[at + 1];
+            double endX = coordinates[at + 4], endY = coordinates[at + 5];
+            if (Math.Max(startX, endX) >= tileLeft && Math.Min(startX, endX) <= tileRight)
             {
-                gap = Math.Min(gap, Math.Min(Math.Abs(sy - y), Math.Abs(ey - y)));
+                gap = Math.Min(gap, Math.Min(Math.Abs(startY - y), Math.Abs(endY - y)));
             }
 
-            if (fromParent && Math.Max(sy, ey) >= legLow && Math.Min(sy, ey) <= legHigh)
+            if (fromParent && Math.Max(startY, endY) >= legLow && Math.Min(startY, endY) <= legHigh)
             {
-                gap = Math.Min(gap, Math.Min(Math.Abs(sx - x), Math.Abs(ex - x)));
+                gap = Math.Min(gap, Math.Min(Math.Abs(startX - x), Math.Abs(endX - x)));
             }
 
-            if (Crosses(sy, ey, y))
+            if (Crosses(startY, endY, y))
             {
-                gap = Math.Min(gap, Math.Abs(XAt(p, o, y) - x));
+                gap = Math.Min(gap, Math.Abs(XAt(coordinates, at, y) - x));
             }
 
-            if (Crosses(sx, ex, x))
+            if (Crosses(startX, endX, x))
             {
-                var hit = YAt(p, o, x);
-                gap = Math.Min(gap, Math.Abs(hit - y));
+                var hitY = YAt(coordinates, at, x);
+                gap = Math.Min(gap, Math.Abs(hitY - y));
                 if (fromParent)
                 {
-                    gap = Math.Min(gap, Math.Abs(hit - parentY));
+                    gap = Math.Min(gap, Math.Abs(hitY - parentY));
                 }
             }
 
-            if (fromParent && Crosses(sy, ey, parentY))
+            if (fromParent && Crosses(startY, endY, parentY))
             {
-                gap = Math.Min(gap, Math.Abs(XAt(p, o, parentY) - x));
+                gap = Math.Min(gap, Math.Abs(XAt(coordinates, at, parentY) - x));
             }
         }
 
         return gap;
     }
 
-    private static int WindingAlongX(double[] p, List<int> list, double x, double y)
+    private static int WindingAlongX(double[] coordinates, List<int> list, double x, double y)
     {
         var winding = 0;
-        foreach (var i in list)
+        foreach (var piece in list)
         {
-            var o = i * 6;
-            if (Crosses(p[o + 1], p[o + 5], y) && XAt(p, o, y) > x)
+            var at = piece * WordsPerPiece;
+            double startY = coordinates[at + 1], endY = coordinates[at + 5];
+            if (Crosses(startY, endY, y) && XAt(coordinates, at, y) > x)
             {
-                winding += p[o + 5] > p[o + 1] ? 1 : -1;
+                winding += endY > startY ? 1 : -1;
             }
         }
 
         return winding;
     }
 
-    private static int Across(double[] p, List<int> list, double fromX, double fromY, double toX, double toY)
+    private static int Across(double[] coordinates, List<int> list, double fromX, double fromY, double toX, double toY)
     {
         var change = 0;
-        foreach (var i in list)
+        foreach (var piece in list)
         {
-            var o = i * 6;
-            double sx = p[o], sy = p[o + 1], ex = p[o + 4], ey = p[o + 5];
-            if (Crosses(sy, ey, fromY))
+            var at = piece * WordsPerPiece;
+            double startX = coordinates[at], startY = coordinates[at + 1];
+            double endX = coordinates[at + 4], endY = coordinates[at + 5];
+            if (Crosses(startY, endY, fromY))
             {
-                var hit = XAt(p, o, fromY);
-                var turnX = ey > sy ? 1 : -1;
-                if (toX > fromX && hit > fromX && hit <= toX) change -= turnX;
-                if (toX < fromX && hit > toX && hit <= fromX) change += turnX;
+                var hitX = XAt(coordinates, at, fromY);
+                var turnX = endY > startY ? 1 : -1;
+                if (toX > fromX && hitX > fromX && hitX <= toX) change -= turnX;
+                if (toX < fromX && hitX > toX && hitX <= fromX) change += turnX;
             }
 
-            if (Crosses(sx, ex, toX))
+            if (Crosses(startX, endX, toX))
             {
-                var hit = YAt(p, o, toX);
-                var turnY = ex < sx ? 1 : -1;
-                if (toY > fromY && hit > fromY && hit <= toY) change -= turnY;
-                if (toY < fromY && hit > toY && hit <= fromY) change += turnY;
+                var hitY = YAt(coordinates, at, toX);
+                var turnY = endX < startX ? 1 : -1;
+                if (toY > fromY && hitY > fromY && hitY <= toY) change -= turnY;
+                if (toY < fromY && hitY > toY && hitY <= fromY) change += turnY;
             }
         }
 
         return change;
     }
 
-    private static bool Crosses(double a, double b, double v) => v >= Math.Min(a, b) && v < Math.Max(a, b);
+    private static bool Crosses(double from, double to, double value) =>
+        value >= Math.Min(from, to) && value < Math.Max(from, to);
 
-    private static double XAt(double[] p, int o, double y) =>
-        At(p[o], p[o + 2], p[o + 4], CurvePieces.Crossing(p[o + 1], p[o + 3], p[o + 5], y));
+    private static double XAt(double[] coordinates, int at, double y) =>
+        PointAlong(coordinates[at], coordinates[at + 2], coordinates[at + 4],
+            CurvePieces.Crossing(coordinates[at + 1], coordinates[at + 3], coordinates[at + 5], y));
 
-    private static double YAt(double[] p, int o, double x) =>
-        At(p[o + 1], p[o + 3], p[o + 5], CurvePieces.Crossing(p[o], p[o + 2], p[o + 4], x));
+    private static double YAt(double[] coordinates, int at, double x) =>
+        PointAlong(coordinates[at + 1], coordinates[at + 3], coordinates[at + 5],
+            CurvePieces.Crossing(coordinates[at], coordinates[at + 2], coordinates[at + 4], x));
 
-    private static double At(double a, double b, double c, double t)
+    private static double PointAlong(double start, double control, double end, double t)
     {
         var rest = 1 - t;
-        return a * rest * rest + b * 2 * rest * t + c * t * t;
+        return start * rest * rest + control * 2 * rest * t + end * t * t;
     }
 }

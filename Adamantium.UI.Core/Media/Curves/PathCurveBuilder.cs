@@ -105,30 +105,33 @@ internal sealed class PathCurveBuilder
         return new PathCurves(_curves.ToArray(), _figures.ToArray(), fillRule, version);
     }
 
-    private void AddCubic(Vector2<double> p0, Vector2<double> p1, Vector2<double> p2, Vector2<double> p3,
-        double tolerance, int cuts)
+    private void AddCubic(Vector2<double> start, Vector2<double> control1, Vector2<double> control2,
+        Vector2<double> end, double tolerance, int cuts)
     {
-        var third = p3 - p2 * 3 + p1 * 3 - p0;
-        if (cuts >= MostCuts || third.Length() * (Math.Sqrt(3) / 36) <= tolerance)
+        var thirdDifference = end - control2 * 3 + control1 * 3 - start;
+        if (cuts >= MostCuts || thirdDifference.Length() * (Math.Sqrt(3) / 36) <= tolerance)
         {
-            _curves.Add(new QuadraticCurve(p0, ((p1 + p2) * 3 - p0 - p3) * 0.25, p3));
+            _curves.Add(new QuadraticCurve(start, ((control1 + control2) * 3 - start - end) * 0.25, end));
             return;
         }
 
-        var a = (p0 + p1) * 0.5;
-        var b = (p1 + p2) * 0.5;
-        var c = (p2 + p3) * 0.5;
-        var ab = (a + b) * 0.5;
-        var bc = (b + c) * 0.5;
-        var middle = (ab + bc) * 0.5;
-        AddCubic(p0, a, ab, middle, tolerance, cuts + 1);
-        AddCubic(middle, bc, c, p3, tolerance, cuts + 1);
+        var startSide = (start + control1) * 0.5;
+        var between = (control1 + control2) * 0.5;
+        var endSide = (control2 + end) * 0.5;
+        var firstHalfControl = (startSide + between) * 0.5;
+        var secondHalfControl = (between + endSide) * 0.5;
+        var middle = (firstHalfControl + secondHalfControl) * 0.5;
+        AddCubic(start, startSide, firstHalfControl, middle, tolerance, cuts + 1);
+        AddCubic(middle, secondHalfControl, endSide, end, tolerance, cuts + 1);
     }
 
-    private static double Size(Vector2<double> p0, Vector2<double> p1, Vector2<double> p2, Vector2<double> p3)
+    private static double Size(Vector2<double> start, Vector2<double> control1, Vector2<double> control2,
+        Vector2<double> end)
     {
-        var width = Math.Max(Math.Max(p0.X, p1.X), Math.Max(p2.X, p3.X)) - Math.Min(Math.Min(p0.X, p1.X), Math.Min(p2.X, p3.X));
-        var height = Math.Max(Math.Max(p0.Y, p1.Y), Math.Max(p2.Y, p3.Y)) - Math.Min(Math.Min(p0.Y, p1.Y), Math.Min(p2.Y, p3.Y));
-        return Math.Max(width, height);
+        var right = Math.Max(Math.Max(start.X, control1.X), Math.Max(control2.X, end.X));
+        var left = Math.Min(Math.Min(start.X, control1.X), Math.Min(control2.X, end.X));
+        var bottom = Math.Max(Math.Max(start.Y, control1.Y), Math.Max(control2.Y, end.Y));
+        var top = Math.Min(Math.Min(start.Y, control1.Y), Math.Min(control2.Y, end.Y));
+        return Math.Max(right - left, bottom - top);
     }
 }
