@@ -2096,7 +2096,7 @@ public partial class WebViewFrameTests
 
     private static bool IsRed(byte[] bgra) => bgra != null && bgra.AsSpan().SequenceEqual(new byte[] { 0, 0, 255, 255 });
 
-    private static void Pump(Func<bool> done, TimeSpan timeout, RecordingBrowserView view = null,
+    private static bool Pump(Func<bool> done, TimeSpan timeout, RecordingBrowserView view = null,
         FrameConsumer consumer = null)
     {
         var until = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
@@ -2110,5 +2110,7 @@ public partial class WebViewFrameTests
 
             Thread.Sleep(5);
         }
+
+        return done();
     }
 }

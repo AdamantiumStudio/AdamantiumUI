@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Controls;
+using Adamantium.UI.Core.Extensions;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -56,7 +57,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         }
         else
         {
-            if (appliedTemplate != null) RemoveTemplate();
+            if (appliedTemplate != null) RemoveTemplate(keepPages: effective != null && !IsDiscarded);
             appliedTemplate = effective;
         }
 
@@ -142,13 +143,14 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         }
     }
 
-    private void RemoveTemplate()
+    private void RemoveTemplate(bool keepPages)
     {
         // A prior ApplyTemplate whose Build returned null leaves templateResult null while appliedTemplate is set;
         // nothing to tear down then.
         if (templateResult == null) return;
 
         OnTemplateRemoving();
+        if (keepPages) KeepPagesForNextTemplate(templateResult);
         GiveBackShownElements(templateResult.RootComponent);
         TemplateRootChanged(templateResult.RootComponent, joined: false);
         TraverseVisualTreeAndUnload(templateResult.RootComponent);
@@ -190,6 +192,25 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
     {
     }
     
+    private static void KeepPagesForNextTemplate(TemplateResult template)
+    {
+        List<ContentPresenter> presenters = null;
+        template.RootComponent?.TraverseVisualTree(component =>
+        {
+            if (component is ContentPresenter presenter && presenter.OwningTemplateId == template.Id)
+            {
+                (presenters ??= []).Add(presenter);
+            }
+        });
+
+        if (presenters == null) return;
+
+        foreach (var presenter in presenters)
+        {
+            presenter.KeepShownForNextTemplate();
+        }
+    }
+
     private static void GiveBackShownElements(IUIComponent oldRoot)
     {
         if (oldRoot is not AdamantiumComponent root) return;
@@ -242,7 +263,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
             part.MarkDiscarded();
 
             // A templated part tears down its own template too, so its inner tree is marked and its bindings close.
-            if (part is TemplatedUIComponent nested) nested.RemoveTemplate();
+            if (part is TemplatedUIComponent nested) nested.RemoveTemplate(keepPages: false);
         }
     }
 

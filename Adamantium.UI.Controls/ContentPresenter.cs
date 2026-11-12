@@ -484,6 +484,30 @@ public class ContentPresenter : InputUIComponent
         return false;
     }
 
+    /// <summary>Parks what it shows that is kept between visits (<c>x:KeepAlive</c>), under its templated parent, as the
+    /// template it is part of is taken down while that parent lives on: the presenter of the next template takes it up.
+    /// </summary>
+    internal void KeepShownForNextTemplate()
+    {
+        RemoveOutgoing();
+        _deferToken++;
+        _deferInFlight = false;
+        var waiting = _afterTransition;
+        _afterTransition = null;
+        waiting?.Invoke();
+        if (_currentRoot == null || !ParkedVisuals.ShouldKeep(_currentRoot) || !CanComeBack(_builtFor))
+        {
+            return;
+        }
+
+        ParkCurrent(_builtFor, _currentRoot, _currentTemplateResult, _currentTemplate);
+        _currentRoot = null;
+        _currentTemplateResult = null;
+        _currentTemplate = null;
+        _builtFor = null;
+        _label = null;
+    }
+
     private void ParkCurrent(object key, IUIComponent root, TemplateResult built, DataTemplate template)
     {
         ParkedVisuals.Keep(ParkOwner, key, root, built, template, _lastArrangeSize);

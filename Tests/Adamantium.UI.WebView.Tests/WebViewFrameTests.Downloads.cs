@@ -318,7 +318,7 @@ public partial class WebViewFrameTests
         using var site = new LocalSite("<title>files</title>", fileBytes: 2_000_000, pieceDelayMs: 20);
         var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
         WebDownload asked = null;
-        bool relativeThrew = false, forgottenUnfinished = true;
+        bool relativeThrew = false, forgottenUnfinished = true, receiving = false, finished = false;
         string savedAt = null;
         try
         {
@@ -338,14 +338,17 @@ public partial class WebViewFrameTests
                 args.Save(Path.Combine(folder, "second.bin"));
                 args.Refuse();
                 savedAt = asked.FilePath;
-                Pump(() => asked.ReceivedBytes > 0, TimeSpan.FromSeconds(10));
+                receiving = Pump(() => asked.ReceivedBytes > 0, TimeSpan.FromSeconds(10));
                 forgottenUnfinished = engine.ForgetDownload(asked);
                 asked.Cancel();
-                Pump(() => asked.IsFinished, TimeSpan.FromSeconds(10));
+                finished = Pump(() => asked.IsFinished, TimeSpan.FromSeconds(10));
             }));
 
+            Assert.That(asked, Is.Not.Null, "the download was asked about within 10 s");
             Assert.Multiple(() =>
             {
+                Assert.That(receiving, Is.True, $"bytes came within 10 s of saving ({asked.State})");
+                Assert.That(finished, Is.True, $"finished within 10 s of cancelling ({asked.State})");
                 Assert.That(relativeThrew, Is.True, "a relative path is refused");
                 Assert.That(savedAt, Is.EqualTo(Path.Combine(folder, "first.bin")), "the first answer holds");
                 Assert.That(forgottenUnfinished, Is.False, "one coming in is not forgotten");

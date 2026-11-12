@@ -2,6 +2,7 @@ using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -157,6 +158,63 @@ public class TabStripPlacementSwitchTests
             var part = first.GetTemplateChild("InnerBorder") as Adamantium.UI.Controls.Base.UIComponent;
             Assert.That(part?.TemplatedParent, Is.SameAs(first), "the item's parts are still its own");
         });
+    }
+
+    // A page kept while its tab is away is kept while the strip moves too: the next template shows the same page, never
+    // let go - a browser's page would be made again, loading from scratch with its history gone.
+    [TestCase(TabStripPlacement.Top, TabStripPlacement.Left)]
+    [TestCase(TabStripPlacement.Left, TabStripPlacement.Bottom)]
+    public void AKeptPage_MovesWithTheStrip(TabStripPlacement from, TabStripPlacement to)
+    {
+        var control = new TabControl
+        {
+            TabStripPlacement = from,
+            ItemsSource = new[] { "One", "Two" },
+            ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new KeptPage() }),
+        };
+        control.SelectedIndex = 1;
+        Lay(control);
+        var page = ShownPage(control);
+        Assume.That(page, Is.Not.Null, "the page shown before the move");
+
+        control.TabStripPlacement = to;
+        Lay(control);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ShownPage(control), Is.SameAs(page), "the same page in the moved strip");
+            Assert.That(page.IsDiscarded, Is.False, "never let go");
+            Assert.That(page.IsParked, Is.False, "shown again, not left parked");
+        });
+    }
+
+    // No template after it: the kept content element is shown by the control itself, live - not left marked parked.
+    [Test]
+    public void AKeptElement_WithNoTemplateAfter_IsShownLive()
+    {
+        var page = new KeptPage();
+        var control = new ContentControl { Content = page };
+        control.ApplyCurrentTheme();
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
+        control.Measure(new Size<double>(300, 300), force: true);
+        Assume.That(control.Template, Is.Not.Null, "a theme template first");
+
+        control.Template = null;
+        control.Measure(new Size<double>(300, 300), force: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.IsParked, Is.False, "live");
+            Assert.That(page.IsDiscarded, Is.False, "never let go");
+        });
+    }
+
+    private static KeptPage ShownPage(TabControl control) =>
+        (control.GetTemplateChild("PART_SelectedContentHost") as IUIComponent)?.VisualChildren.OfType<KeptPage>().FirstOrDefault();
+
+    private sealed class KeptPage : Border
+    {
+        public override NavigationCacheMode KeepAlive => NavigationCacheMode.Required;
     }
 
     private sealed class DerivedStrip : TabControl
