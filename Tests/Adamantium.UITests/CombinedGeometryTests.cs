@@ -471,8 +471,8 @@ public class CombinedGeometryTests
             var (a, b) = (Jittered(LatticeShape(random)), Jittered(LatticeShape(random)));
             foreach (var mode in Modes)
             {
-                // A lattice shape's repeated corner, jittered by more than a contour's five decimals, is a hairline spike
-                // in the shape itself: its outline is held to the shape only where the jitter is below them.
+                // A lattice shape's repeated corner, jittered by more than the step contours round to, is a hairline spike
+                // in the shape itself: its outline is held to the shape only where the jitter is below it.
                 var (misses, outline) = Check(mode, Path(false, a), Path(false, b), 0.3);
                 if (jitter >= 1e-9) outline = null;
                 if (misses > 0 || outline != null)
@@ -678,8 +678,9 @@ public class CombinedGeometryTests
         return false;
     }
 
-    // A combined operand comes in through its contours, rounded to five decimals, so its cuts lie a little off the edges
-    // of the other operand they came from: they are welded back onto them, and the outline runs no spike into the shape.
+    // A combined operand comes in through its contours, rounded to MathHelper.Coordinates, so its cuts lie a little off
+    // the edges of the other operand they came from: they are welded back onto them, and the outline runs no spike into
+    // the shape.
     [Test]
     public void ACombinedOperand_SharingEdgesWithTheOther_GivesAnOutlineWithoutSpikes()
     {

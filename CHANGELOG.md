@@ -273,10 +273,13 @@ All packages share one version.
 - `CombinedGeometry` combines its operands through the engine's `GeometryOverlay` and fills the result with
   `RingFill`, the same code `Path` fills with; its properties and markup stay as they were. Its own copy of the overlay
   and its own fill are gone, so the engine's fixes reach it: rings touching at a point, a ring passing one point twice,
-  huge coordinates. Points nearer than the step meshes round to (`Mesh.RoundPrecision`, 1e-4) are welded: operands
-  rounded differently - a rectangle and an exact path beside it, a combined operand and the shape it was cut by - meet
-  without a seam or a spike in the outline. The result's rings now turn with the filled side on their left and may come
-  in another order, so text along a combined geometry, or a dash, may start elsewhere on it.
+  huge coordinates. Points nearer than twice the step coordinates are rounded to (`MathHelper.Coordinates.Step`,
+  1e-4) are welded, so operands - a rectangle and an exact path beside it, a combined operand and the shape it was cut
+  by - meet without a seam or a spike in the outline. A result ring narrower on average than that step is filled but
+  not outlined. The result's rings now turn with the filled side on their left and may come in another order, so text
+  along a combined geometry, or a dash, may start elsewhere on it.
+- Arc segments and the edge a fill's soft fringe is found along round to `MathHelper.Coordinates`, the step every other
+  geometry coordinate rounds to; the fringe compared positions to 1e-3.
 - `IFileManagerPlatform` has `OpenItem` and `DownloadsFolder`: a platform of an application's own implements them too.
 - Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
   low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
@@ -376,6 +379,8 @@ All packages share one version.
 
 ### Fixed
 
+- A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
+  origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.
 - A regular polygon with a ring thickness (`RegularPolygonGeometry.Build`) fills its band. It came out empty: its
   outline had no contour for the combination to read.
 - `PathGeometry` and `StreamGeometry` stroke their figures as given. A ring passing one point twice was stroked

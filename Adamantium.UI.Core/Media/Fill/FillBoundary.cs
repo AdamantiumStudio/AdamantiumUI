@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
@@ -9,13 +8,6 @@ namespace Adamantium.UI.Core.Media.Fill;
 // fringe also feathers holes and self-intersections.
 internal static class FillBoundary
 {
-    // Positions are quantized (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -
-    // otherwise a shared edge would look like two single-use edges and every interior edge would be mis-flagged boundary.
-    private static (long, long) Q(Vector3<double> p) => ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
-
-    private static (long, long, long, long) EdgeKey((long, long) a, (long, long) b)
-        => Comparer<(long, long)>.Default.Compare(a, b) <= 0 ? (a.Item1, a.Item2, b.Item1, b.Item2) : (b.Item1, b.Item2, a.Item1, a.Item2);
-
     /// <summary>The edge of <paramref name="geometry"/>'s fill: its contours' own points when the geometry says they are
     /// exactly that edge - a mesh never changes a contour's points once made, it makes new contours - else, or when
     /// none of them is a ring after all, worked out of its triangles by <see cref="ExtractLoops"/>.</summary>
@@ -48,20 +40,22 @@ internal static class FillBoundary
         var triCount = idx != null ? idx.Length / 3 : pts.Length / 3;
         if (triCount == 0) return null;
 
-        // Count each undirected edge; keep a representative real position per quantized vertex.
-        var edgeCount = new Dictionary<(long, long, long, long), int>();
-        var rep = new Dictionary<(long, long), Vector2<double>>();
+        // Count each side by its rounded corners; keep a real position per rounded corner.
+        var sideCount = new Dictionary<TriangleSide, int>();
+        var real = new Dictionary<Vector2<double>, Vector2<double>>();
 
-        void AddEdge(Vector3<double> a, Vector3<double> b)
+        void AddSide(Vector3<double> a, Vector3<double> b)
         {
-            var qa = Q(a);
-            var qb = Q(b);
-            if (qa == qb) return;
-            rep[qa] = new Vector2<double>((float)a.X, (float)a.Y);
-            rep[qb] = new Vector2<double>((float)b.X, (float)b.Y);
-            var key = EdgeKey(qa, qb);
-            edgeCount.TryGetValue(key, out var c);
-            edgeCount[key] = c + 1;
+            var pa = new Vector2<double>(a.X, a.Y);
+            var pb = new Vector2<double>(b.X, b.Y);
+            var ra = MathHelper.Coordinates.Round(pa);
+            var rb = MathHelper.Coordinates.Round(pb);
+            if (ra == rb) return;
+            real[ra] = pa;
+            real[rb] = pb;
+            var side = new TriangleSide(ra, rb);
+            sideCount.TryGetValue(side, out var c);
+            sideCount[side] = c + 1;
         }
 
         for (var t = 0; t < triCount; t++)
@@ -69,48 +63,46 @@ internal static class FillBoundary
             Vector3<double> a, b, c;
             if (idx != null) { a = pts[idx[t * 3]]; b = pts[idx[t * 3 + 1]]; c = pts[idx[t * 3 + 2]]; }
             else { a = pts[t * 3]; b = pts[t * 3 + 1]; c = pts[t * 3 + 2]; }
-            AddEdge(a, b); AddEdge(b, c); AddEdge(c, a);
+            AddSide(a, b); AddSide(b, c); AddSide(c, a);
         }
 
-        // Boundary edges are used by exactly one triangle -> adjacency of the boundary graph.
-        var adj = new Dictionary<(long, long), List<(long, long)>>();
-        foreach (var kv in edgeCount)
+        // Boundary sides belong to exactly one triangle -> adjacency of the boundary graph.
+        var adj = new Dictionary<Vector2<double>, List<Vector2<double>>>();
+        foreach (var kv in sideCount)
         {
             if (kv.Value != 1) continue;
-            var p = (kv.Key.Item1, kv.Key.Item2);
-            var q = (kv.Key.Item3, kv.Key.Item4);
-            (adj.TryGetValue(p, out var lp) ? lp : adj[p] = new List<(long, long)>()).Add(q);
-            (adj.TryGetValue(q, out var lq) ? lq : adj[q] = new List<(long, long)>()).Add(p);
+            var p = kv.Key.Low;
+            var q = kv.Key.High;
+            (adj.TryGetValue(p, out var lp) ? lp : adj[p] = new List<Vector2<double>>()).Add(q);
+            (adj.TryGetValue(q, out var lq) ? lq : adj[q] = new List<Vector2<double>>()).Add(p);
         }
         if (adj.Count == 0) return null;
 
-        // Walk closed loops, greedily consuming boundary edges (a >2-degree vertex at a self-intersection just picks any
-        // unused edge - fine for feathering). Each loop = outer outline or one hole.
+        // Walk closed loops, greedily consuming boundary sides (a >2-degree corner at a self-intersection just picks any
+        // unused side - fine for feathering). Each loop = outer outline or one hole.
         var loops = new List<(Vector2<double>[], bool)>();
-        var visited = new HashSet<(long, long, long, long)>();
+        var visited = new HashSet<TriangleSide>();
         foreach (var startNode in adj.Keys)
         {
             foreach (var first in adj[startNode])
             {
-                if (visited.Contains(EdgeKey(startNode, first))) continue;
+                if (visited.Contains(new TriangleSide(startNode, first))) continue;
 
-                var loop = new List<Vector2<double>> { rep[startNode] };
+                var loop = new List<Vector2<double>> { real[startNode] };
                 var cur = startNode;
                 var next = first;
                 while (true)
                 {
-                    var e = EdgeKey(cur, next);
-                    if (visited.Contains(e)) break;
-                    visited.Add(e);
+                    if (!visited.Add(new TriangleSide(cur, next))) break;
                     if (next == startNode) break;   // closed - don't re-add the start point
-                    loop.Add(rep[next]);
+                    loop.Add(real[next]);
                     var prev = cur;
                     cur = next;
                     var found = false;
                     foreach (var nb in adj[cur])
                     {
                         if (nb == prev) continue;
-                        if (visited.Contains(EdgeKey(cur, nb))) continue;
+                        if (visited.Contains(new TriangleSide(cur, nb))) continue;
                         next = nb; found = true; break;
                     }
                     if (!found) break;
