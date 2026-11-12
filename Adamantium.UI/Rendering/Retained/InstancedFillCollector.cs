@@ -1249,7 +1249,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
                 if (seg.CurveBuffer != null)
                 {
-                    DrawCurves(seg, count);
+                    DrawCurves(seg, count, _effect.BatchCurveFillPass, _effect.CurveData, _effect.ViewportSize);
                     continue;
                 }
 
@@ -1313,6 +1313,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             foreach (var (seg, first, count) in rec.GradKeys)
             {
                 brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, brush.GradientCurvePass, brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.GradientMeshPass.Apply();
@@ -1335,6 +1342,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (!DrewMoving) DrewMoving = Flows(seg.PatItems.AsSpan((int)first, (int)count));
                 brush.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, CurvePassFor(brush, kind), brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 MeshPassFor(brush, kind).Apply();
@@ -1362,6 +1376,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
                 brush.SourceSampler.SetResource(sampler);
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, brush.TextureCurvePass, brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.TextureMeshPass.Apply();
@@ -1392,6 +1413,20 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                     && !Backdrop.BindSource(_device, wallpaper, region, source, anchor,
                         material.SourceTexture, material.SourceSampler, material.SourceUv)) continue;
                 material.MaterialGeometries.SetValue(seg.MatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, treatment switch
+                    {
+                        Core.Media.MaterialTreatment.Glass => material.MaterialGlassCurvePass,
+                        Core.Media.MaterialTreatment.Sheen => material.MaterialSheenCurvePass,
+                        Core.Media.MaterialTreatment.Metal => material.MaterialMetalCurvePass,
+                        Core.Media.MaterialTreatment.Wood => material.MaterialWoodCurvePass,
+                        _ => material.MaterialFrostedCurvePass
+                    }, material.CurveData, material.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 (treatment switch
@@ -1489,19 +1524,21 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// it. Set by the caller each frame (the table may have been reallocated), same as for the SDF batches.</summary>
     public ulong TransformsAddress { get; set; }
 
-    // A curve fill's instances, a quad each over the fill's box: no vertex buffer, the corners from the vertex index.
-    private void DrawCurves(KeySegment seg, uint count)
+    // A curve fill's instances, a quad each over the fill's box: no vertex buffer, the corners from the vertex index. The
+    // pass and its effect's parameters are the brush's; the instance buffer is already set.
+    private void DrawCurves(KeySegment seg, uint count, IEffectPass pass, EffectParameter curveData,
+        EffectParameter viewportSize)
     {
         var viewports = _device.CurrentViewports;
         if (viewports is { Length: > 0 })
         {
-            _effect.ViewportSize.SetValue(new Vector2F(viewports[0].Width, viewports[0].Height));
+            viewportSize.SetValue(new Vector2F(viewports[0].Width, viewports[0].Height));
         }
 
         _device.VertexType = null;
         _device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
-        _effect.CurveData.SetValue(seg.CurveBuffer.GetDeviceAddress());
-        _effect.BatchCurveFillPass.Apply();
+        curveData.SetValue(seg.CurveBuffer.GetDeviceAddress());
+        pass.Apply();
         _device.Draw(4, count, 0, 0);
     }
 
@@ -1551,6 +1588,28 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         107 => brush.NoiseCombustibleMeshPass,
         108 => brush.NoiseCircuitMeshPass,
         _ => brush.PatternCheckerboardMeshPass
+    };
+
+    // The curve pass for one procedural kind, numbered as MeshPassFor.
+    private static IEffectPass CurvePassFor(BrushEffect brush, int kind) => kind switch
+    {
+        1 => brush.PatternStripesCurvePass,
+        2 => brush.PatternDotsCurvePass,
+        3 => brush.PatternGridCurvePass,
+        4 => brush.PatternHexagonCurvePass,
+        5 => brush.PatternHatchCurvePass,
+        6 => brush.PatternWeaveCurvePass,
+
+        100 => brush.NoiseSimplexCurvePass,
+        101 => brush.NoisePerlinCurvePass,
+        102 => brush.NoiseValueCurvePass,
+        103 => brush.NoiseWorleyCurvePass,
+        104 => brush.NoiseRidgedCurvePass,
+        105 => brush.NoiseTurbulenceCurvePass,
+        106 => brush.NoiseVoronoiCurvePass,
+        107 => brush.NoiseCombustibleCurvePass,
+        108 => brush.NoiseCircuitCurvePass,
+        _ => brush.PatternCheckerboardCurvePass
     };
 
     // Fringe device state: as the fill, but no vertex buffer (the ring is read by address) and the pixel basis its VS

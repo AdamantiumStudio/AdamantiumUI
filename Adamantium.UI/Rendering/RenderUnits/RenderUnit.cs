@@ -404,10 +404,10 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     // snapshot (captured at record after ProcessGeometry), never the live Geometry.Mesh - so it is render-thread safe.
     private FrozenMesh _frozenMesh;
 
-    // A fill the instanced path draws BODY AND FRINGE for builds no per-unit fringe at all: every brush that has an
-    // instanced fringe pass, on a mesh that has a ring. What is left per-unit is a mesh with no closed boundary, or a
-    // fill kind with no instanced pass at all (an image fill).
-    protected override bool FringeInstanced => HasInstancedFringe;
+    // A fill the instanced path draws BODY AND EDGE for builds no per-unit fringe at all: one drawn from its curves, or
+    // a brush that has an instanced fringe pass on a mesh that has a ring. What is left per-unit is a mesh with no closed
+    // boundary, or a fill kind with no instanced pass at all.
+    protected override bool FringeInstanced => DrawsCurves || HasInstancedFringe;
 
     // The geometry a fringe of its own was last tried for: one with no closed contour gets none, and is not tried again.
     private Geometry _fringeTriedFor;
@@ -430,21 +430,26 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     public override void Render()
     {
         if (!FillInstanced) GeometryRenderer?.Render();
-        if (!(FillInstanced && HasInstancedFringe)) FillFringeRenderer?.Render();
+        if (!(FillInstanced && FringeInstanced)) FillFringeRenderer?.Render();
         StrokeRenderer?.Render();
     }
 
     /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
     /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
     public bool HasInstancedFringe =>
-        InstancedFillCollector.Enabled && (DrawsCurves || _frozenMesh is { Ring.Length: > 0 }) &&
+        InstancedFillCollector.Enabled && !DrawsCurves && _frozenMesh is { Ring.Length: > 0 } &&
         Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
         (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient));
 
-    /// <summary>Whether its solid fill is drawn from its curves, its edge exact with it: no mesh fringe of its own.
-    /// </summary>
+    /// <summary>Whether its instanced fill is drawn from its curves, its edge exact with it: no fringe at all.</summary>
     public bool DrawsCurves =>
-        InstancedFillCollector.CurvesEnabled && Payload.Brush is SolidColorBrush && _frozenMesh?.Curves != null;
+        InstancedFillCollector.Enabled && InstancedFillCollector.CurvesEnabled && _frozenMesh?.Curves != null &&
+        Payload.Brush switch
+        {
+            SolidColorBrush or PatternBrush or NoiseBrush or TileBrush or MaterialBrush => true,
+            GradientBrush gradient => GradientBake.FitsBatch(gradient),
+            _ => false
+        };
 
     public override bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color)
     {
@@ -473,7 +478,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         if (Payload.Brush is not GradientBrush g || !GradientBake.FitsBatch(g)) return false;
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
-        key = fm.Key;
+        key = DrawsCurves ? fm.CurveKey : fm.Key;
         mesh = fm;
         brush = g;
         localBounds = fm.Bounds;
@@ -510,7 +515,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         texture = TextureBatchCollector.BrushTexture(image, ResourceFactory, fm.Bounds.Size, DrawCommand.Component);
         if (texture == null) return false;
 
-        key = fm.Key;
+        key = DrawsCurves ? fm.CurveKey : fm.Key;
         mesh = fm;
         brush = image;
         localBounds = fm.Bounds;
@@ -532,7 +537,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         if (Payload.Brush is not MaterialBrush material) return false;
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
-        key = fm.Key;
+        key = DrawsCurves ? fm.CurveKey : fm.Key;
         mesh = fm;
         brush = material;
         localBounds = fm.Bounds;
@@ -547,7 +552,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         if (Payload.Brush is not (PatternBrush or NoiseBrush)) return false;
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
-        key = fm.Key;
+        key = DrawsCurves ? fm.CurveKey : fm.Key;
         mesh = fm;
         brush = Payload.Brush;
         localBounds = fm.Bounds;
