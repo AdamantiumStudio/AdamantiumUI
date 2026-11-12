@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `ZoomBox.PanBy(dx, dy)` moves what the box shows as a drag that far would, stopping at its edges; automation pans a
+  zoom box as it pans a canvas (`adam-auto pan`, `<Pan>` in a scenario).
 - The downloads list outlives the run: `WebViewEngine.Downloads` is kept in the profile (`downloads.json`, written off
   the UI loop, by one run of the profile at a time; a record that cannot be read is left out, a file that cannot be
   read is set aside as `downloads.json.damaged`) and listed again by the next run - a download coming in when the
@@ -363,6 +365,7 @@ All packages share one version.
 
 ### Fixed
 
+- `ZoomBox.Reset()` holds: a wheel zoom still easing, or one waiting for its extent, no longer undoes it.
 - A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
   setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
   back what the derived style said. The base's setter of such a property is passed over now.

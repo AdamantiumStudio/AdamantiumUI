@@ -200,6 +200,53 @@ public class AutomationCoverageTests
     }
 
     [Test]
+    public async Task AZoomBox_IsPannedAsADragPansIt_StoppingAtItsEdges()
+    {
+        var box = new ZoomBox { Width = 300, Height = 200, Content = new Border { Width = 600, Height = 400 } };
+        AutomationProperties.SetAutomationId(box, "Zoom");
+        var session = await Driving(new StackPanel { Children = { box } });
+        await using var _ = session;
+
+        // Dragged up and left by that much, the content shows what lay that far right and down of it.
+        await session.Find(By.Id("Zoom")).PanAsync(-100, -40);
+        await session.WaitForIdleAsync();
+        var dragged = (box.OffsetX, box.OffsetY);
+        await session.Find(By.Id("Zoom")).PanAsync(-1000, 1000);
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dragged.OffsetX, Is.EqualTo(100).Within(1e-6), "the content follows the drag");
+            Assert.That(dragged.OffsetY, Is.EqualTo(40).Within(1e-6));
+            Assert.That(box.OffsetX, Is.EqualTo(300).Within(1e-6), "no farther than its right edge");
+            Assert.That(box.OffsetY, Is.EqualTo(0).Within(1e-6), "no farther than its top");
+        });
+    }
+
+    [TestCase(PanningMode.VerticalOnly, 0, 40)]
+    [TestCase(PanningMode.HorizontalOnly, 100, 0)]
+    [TestCase(PanningMode.None, 0, 0)]
+    public async Task AZoomBox_IsPannedOnlyOnTheAxesADragPans(PanningMode mode, double x, double y)
+    {
+        var box = new ZoomBox
+        {
+            Width = 300, Height = 200, PanningMode = mode, Content = new Border { Width = 600, Height = 400 }
+        };
+        AutomationProperties.SetAutomationId(box, "Zoom");
+        var session = await Driving(new StackPanel { Children = { box } });
+        await using var _ = session;
+
+        await session.Find(By.Id("Zoom")).PanAsync(-100, -40);
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.OffsetX, Is.EqualTo(x).Within(1e-6));
+            Assert.That(box.OffsetY, Is.EqualTo(y).Within(1e-6));
+        });
+    }
+
+    [Test]
     public async Task ACanvasNode_IsMovedAndResizedAsOneUndoableStepEach_AndTheCanvasIsZoomed()
     {
         var node = new CanvasNode { Title = "Blur" };
