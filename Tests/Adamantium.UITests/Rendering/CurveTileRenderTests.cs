@@ -46,7 +46,7 @@ public class CurveTileRenderTests
     };
 
     private static byte[] Render(Func<List<Geometry>> build, bool tiles, Transform transform = null, bool mixed = false,
-        Geometry clip = null)
+        Geometry clip = null, bool firstFrame = false, Func<int, Brush> brushOf = null)
     {
         var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         InstancedFillCollector.CurveTilesEnabled = tiles;
@@ -57,7 +57,7 @@ public class CurveTileRenderTests
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Transparent };
             var geometries = build();
             var brushes = new Brush[geometries.Count];
-            for (var i = 0; i < brushes.Length; i++) brushes[i] = mixed ? BrushFor(i) : Brushes.Red;
+            for (var i = 0; i < brushes.Length; i++) brushes[i] = brushOf?.Invoke(i) ?? (mixed ? BrushFor(i) : Brushes.Red);
             var content = new TestControl
             {
                 RenderAction = s =>
@@ -73,8 +73,10 @@ public class CurveTileRenderTests
 
             var root = new VisualRoot(content, Dim, Dim);
             Assert.That(renderer.RenderFrame(root), Is.True);
-            // Twice: the lists are sized from what the frame before them placed.
-            Assert.That(renderer.RenderAgain(root), Is.True);
+            if (!firstFrame)
+            {
+                Assert.That(renderer.RenderAgain(root), Is.True);
+            }
             if (Environment.GetEnvironmentVariable("ADAM_TILE_DUMP") is { } dump)
             {
                 renderer.Save(System.IO.Path.Combine(dump,
@@ -254,6 +256,55 @@ public class CurveTileRenderTests
             new Transform { RotationAngle = 17, RotationCenterX = 160, RotationCenterY = 160 },
             mixed: true,
             clip: Star(160, 160, 140, 9, FillRule.EvenOdd));
+
+    // An edge through pixel centres: the tiles soften it to half, as the walk does, on both sides.
+    [Test]
+    public void AnEdgeThroughPixelCentres_CoversAsItsWalkDoes() =>
+        AssertSameCoverage(() =>
+        {
+            var g = new StreamGeometry();
+            g.Open().BeginFigure(new Vector2<double>(10.5, 10.5), true, true)
+                .PolylineLineTo([new(200.5, 10.5), new(200.5, 150.5), new(10.5, 150.5)], true);
+            return [g];
+        });
+
+    // More identical shapes in the first frame than a batch's first buffer holds: the ones it turns away are drawn by
+    // their own units, cut from their curves.
+    [TestCase("Solid")]
+    [TestCase("Gradient")]
+    public void MoreShapesThanTheFirstBuffer_AreAllDrawn(string brush)
+    {
+        const int across = 10;
+        var gradient = new LinearGradientBrush
+        {
+            GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
+        };
+        var pixels = Render(() =>
+            {
+                var shapes = new List<Geometry>();
+                for (var row = 0; row < across; row++)
+                for (var column = 0; column < across; column++)
+                {
+                    var g = new StreamGeometry();
+                    var x = column * 32.0;
+                    var y = row * 32.0;
+                    g.Open().BeginFigure(new Vector2<double>(x + 4, y + 4), true, true)
+                        .PolylineLineTo([new(x + 28, y + 4), new(x + 28, y + 28), new(x + 4, y + 28)], true);
+                    shapes.Add(g);
+                }
+
+                return shapes;
+            }, tiles: true, firstFrame: true, brushOf: _ => brush == "Solid" ? Brushes.Red : gradient);
+
+        var missing = 0;
+        for (var row = 0; row < across; row++)
+        for (var column = 0; column < across; column++)
+        {
+            if (Alpha(pixels, column * 32 + 16, row * 32 + 16) < 250) missing++;
+        }
+
+        Assert.That(missing, Is.Zero, $"of {across * across} shapes");
+    }
 
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory

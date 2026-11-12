@@ -15,19 +15,10 @@ namespace Adamantium.UI.Core.Media.Curves;
 /// of where the path from its parent's point turns, so the two never disagree on which side of a piece it lies.</remarks>
 internal sealed class CurveTileTree
 {
-    // A tile listing more pieces than this is cut, while the budget lasts; one listing fewer, but two or more, is cut while
-    // its side is more than the root's over LargeTileDivisions - its pixels would each walk its pieces.
     private const int MostPieces = 8;
     private const double LargeTileDivisions = 16;
-
-    // The list entries all the tiles may make, for a piece.
     private const int EntriesPerPiece = 64;
-
-    // The deepest a tile is cut: its side is the root's halved this many times.
     private const int DeepestLevel = 20;
-
-    // How near, in the root's side, a piece may come to a tile's point or its path before the point is moved: far past
-    // what float arithmetic on coordinates of that size can get wrong, far below how near pieces lie.
     private const double Clearance = 1e-6;
 
     private static readonly double[] Offsets = [0.5, 0.37, 0.63, 0.29, 0.71, 0.43, 0.57, 0.33, 0.67];
@@ -64,10 +55,11 @@ internal sealed class CurveTileTree
     public int TileCount => Windings.Length;
 
     /// <summary>The tree of <paramref name="pieces"/>, each running one way in x and in y, inside the box from
-    /// <paramref name="corner"/> of <paramref name="size"/>.</summary>
+    /// <paramref name="corner"/> of <paramref name="size"/>. A tile is cut while it lists more than a few pieces, or
+    /// two or more while it is large, and the lists stay within a budget per piece; it is cut breadth first, so the
+    /// budget goes to the coarse tiles every zoom reads.</summary>
     public static CurveTileTree Of(QuadraticCurve[] pieces, Vector2<double> corner, Vector2<double> size)
     {
-        // Six to a piece - start, control, end - relative to the corner and rounded to float.
         var p = new double[pieces.Length * 6];
         var all = new List<int>(pieces.Length);
         for (var i = 0; i < pieces.Length; i++)
@@ -81,7 +73,6 @@ internal sealed class CurveTileTree
             all.Add(i);
         }
 
-        // The tiles while they are cut, one entry each in these.
         var side = Math.Max(Math.Max(size.X, size.Y), 1e-30);
         var lefts = new List<double> { 0 };
         var tops = new List<double> { 0 };
@@ -98,7 +89,6 @@ internal sealed class CurveTileTree
         ys.Add(rootY);
         windings.Add(WindingAlongX(p, all, rootX, rootY));
 
-        // Cut breadth first, so the budget goes to the coarse tiles every zoom reads before the fine ones.
         var budget = (long)EntriesPerPiece * Math.Max(1, pieces.Length);
         long spent = all.Count;
         var kids = new List<int>[4];
@@ -162,7 +152,6 @@ internal sealed class CurveTileTree
         return new CurveTileTree(side, points, windings.ToArray(), children.ToArray(), starts, entries);
     }
 
-    // The pieces of a parent's list that pass within half a side of the square from (left, top) of that side.
     private static List<int> Near(double[] p, List<int> list, double left, double top, double side)
     {
         var margin = side * 0.5;
@@ -170,7 +159,6 @@ internal sealed class CurveTileTree
         var near = new List<int>();
         foreach (var i in list)
         {
-            // A piece running one way lies in the box of its ends; only one reaching past the band is narrowed to it.
             var o = i * 6;
             double sx = p[o], sy = p[o + 1], ex = p[o + 4], ey = p[o + 5];
             var low = Math.Min(sy, ey);
@@ -197,8 +185,6 @@ internal sealed class CurveTileTree
         return near;
     }
 
-    // A tile's point: its middle, or a little off it, where no piece of the list checked comes near deciding a crossing
-    // wrongly - along its row or column, or, from the parent's point on the row parentY, where the path turns.
     private static (double X, double Y) PointOf(double[] p, List<int> list, double left, double top, double side,
         double parentY, double clearance)
     {
@@ -227,9 +213,6 @@ internal sealed class CurveTileTree
         return best;
     }
 
-    // How near any piece comes to deciding a crossing wrongly at (x, y): its ends to the point's row, where the tile's
-    // pixels count from the point between tileLeft and tileRight; its ends to the column the path from the parent's row
-    // parentY comes down; its crossings of the row and column to the point, and - from a parent - to the path's corner.
     private static double Gap(double[] p, List<int> list, double x, double y, double parentY, double tileLeft,
         double tileRight)
     {
@@ -275,7 +258,6 @@ internal sealed class CurveTileTree
         return gap;
     }
 
-    // The winding at (x, y) along a ray toward +x: a piece crossed going down counts one, going up minus one.
     private static int WindingAlongX(double[] p, List<int> list, double x, double y)
     {
         var winding = 0;
@@ -291,8 +273,6 @@ internal sealed class CurveTileTree
         return winding;
     }
 
-    // How the winding changes from (fromX, fromY) to (toX, toY) along its row, then its column - the path and the rules
-    // CurveTileCoverage in CurveTiles.fxh counts by.
     private static int Across(double[] p, List<int> list, double fromX, double fromY, double toX, double toY)
     {
         var change = 0;
@@ -320,10 +300,8 @@ internal sealed class CurveTileTree
         return change;
     }
 
-    // Whether a piece from a to b in one coordinate crosses v there: v in [low, high).
     private static bool Crosses(double a, double b, double v) => v >= Math.Min(a, b) && v < Math.Max(a, b);
 
-    // Where the piece at o, running one way in y, reaches y - and the same along x.
     private static double XAt(double[] p, int o, double y) =>
         At(p[o], p[o + 2], p[o + 4], CurvePieces.Crossing(p[o + 1], p[o + 3], p[o + 5], y));
 

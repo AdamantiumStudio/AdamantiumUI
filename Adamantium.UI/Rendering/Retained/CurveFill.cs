@@ -96,7 +96,6 @@ internal sealed class CurveFill
         words[at + 1] = Word(point.Y);
     }
 
-    // FNV-1a over the words, with a mark of its own so it never meets a mesh's fingerprint.
     private static long Hash(uint[] words)
     {
         var hash = 0x5A3C_9E1B_7D24_6F81UL;

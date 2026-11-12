@@ -23,8 +23,14 @@ internal sealed class FrozenMesh
         Curves = curves;
         Bounds = bounds;
         CurveKey = curves == null ? default : GeometryKey.CurveFill(curves.Fingerprint);
-        Key = fill != null ? GeometryKey.ArbitraryMesh(fill.Fingerprint) : CurveKey;
+        Key = fill != null ? GeometryKey.ArbitraryMesh(fill.Fingerprint) : default;
     }
+
+    /// <summary>Which points the curves enclose.</summary>
+    public FillRule FillRule => _outline?.FillRule ?? FillRule.NonZero;
+
+    /// <summary>What identical shapes share whichever way they are drawn: the triangles' key, else the curves'.</summary>
+    public GeometryKey ShapeKey => _fill != null ? Key : CurveKey;
 
     /// <summary>The fill as curves for the curve fill shader - exact at any zoom - or null when the geometry encloses
     /// nothing or curves are switched off.</summary>
@@ -43,7 +49,7 @@ internal sealed class FrozenMesh
     /// <summary>The geometry's local bounds: the gradient shader maps a fragment to a 0..1 uv across them.</summary>
     public Rect Bounds { get; }
 
-    /// <summary>What identical triangle fills merge under; for a fill of curves alone, <see cref="CurveKey"/>.</summary>
+    /// <summary>What identical triangle fills merge under; default for a fill of curves alone.</summary>
     public GeometryKey Key { get; }
 
     /// <summary>Whether there is anything to draw: triangles or curves.</summary>
@@ -58,11 +64,14 @@ internal sealed class FrozenMesh
     /// curves - for the distance field a halo bakes; made on first use.</summary>
     public List<(Vector2<double>[] Points, bool IsClosed)> Loops => _loops ??= _fill?.Loops ?? _outline?.FillLoops();
 
-    /// <summary>The fill of a processed geometry as the geometry keeps it ready. Null if it has nothing to draw.</summary>
-    public static FrozenMesh From(Core.Media.Geometry geometry)
+    /// <summary>The fill of a processed geometry as the geometry keeps it ready, its curves those
+    /// <paramref name="recorded"/> where they were made on the record thread - made even while curves are switched off
+    /// when it has no triangles, as they are all it can be drawn from. Null if it has nothing to draw.</summary>
+    public static FrozenMesh From(Core.Media.Geometry geometry, PathCurves recorded = null)
     {
         var fill = geometry.FillForDrawing;
-        var outline = InstancedFillCollector.CurvesEnabled ? geometry.CurvesForDrawing : null;
+        var outline = recorded ??
+                      (InstancedFillCollector.CurvesEnabled || fill == null ? geometry.CurvesForDrawing : null);
         var curves = outline != null ? CurveFill.From(outline) : null;
         if (fill == null && curves == null)
         {

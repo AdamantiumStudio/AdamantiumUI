@@ -201,6 +201,60 @@ public class PathCurvesTests
         }
     }
 
+    // As SVG reads an arc: one ending where it starts is left out, one with no radius is a line - neither takes the
+    // fill with it.
+    [Test]
+    public void DegenerateArcs_LeaveTheFillWhole()
+    {
+        var figure = Square(0, 0, 100, true);
+        figure.Segments.Insert(1, new ArcSegment { Point = new Vector2<double>(100, 0), Size = new Size<double>(30, 30) });
+        figure.Segments.Insert(2, new ArcSegment { Point = new Vector2<double>(100, 50), Size = new Size<double>(0, 20) });
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(figure);
+
+        var pieces = geometry.CurvesForDrawing.FillPieces;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pieces.Pieces.All(p => p.IsFinite), Is.True);
+            Assert.That(pieces.Winding(new Vector2<double>(50, 50)), Is.Not.Zero);
+            Assert.That(geometry.CurvesForDrawing.FillTiles, Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public void APieceRunningPastItsEndAndBack_IsNotStraight()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(new QuadraticCurve(new(0, 0), new(20, 0), new(10, 0)).IsStraight(), Is.False);
+            Assert.That(new QuadraticCurve(new(10, 10), new(50, 10), new(10, 10)).IsStraight(), Is.False);
+            Assert.That(new QuadraticCurve(new(0, 0), new(3, 0), new(10, 0)).IsStraight(), Is.True);
+            Assert.That(QuadraticCurve.Line(new(5, 5), new(5, 5)).IsStraight(), Is.True);
+        });
+    }
+
+    [Test]
+    public void LinesForAPen_EncloseNoArea()
+    {
+        var lines = new PolylineGeometry([], [[new Vector2<double>(10, 10), new(50, 10), new(50, 50)]]);
+
+        Assert.That(lines.CurvesForDrawing.FillCurves(), Is.Empty);
+    }
+
+    [Test]
+    public void AChildChanged_IsTheGroupChanged()
+    {
+        var child = new RectangleGeometry(new Rect(0, 0, 10, 10));
+        var group = new GeometryGroup();
+        group.Children.Add(child);
+        var before = group.CurvesForDrawing;
+
+        child.Rect = new Rect(0, 0, 40, 40);
+
+        Assert.That(group.CurvesForDrawing.Bounds.Width, Is.EqualTo(40).Within(1e-9), $"was {before.Bounds.Width}");
+    }
+
     private static PathCurves Path(Action<PathFigureBuilder> draw, Vector2<double> start)
     {
         var figure = new PathFigure { StartPoint = start, IsClosed = false };

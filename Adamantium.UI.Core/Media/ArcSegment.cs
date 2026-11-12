@@ -91,10 +91,24 @@ public class ArcSegment : PathSegment
     }
 
     // In the frame where the arc is a circle: whole turns of at most 45 degrees, each one cubic, carried back by the frame's
-    // inverse - an affine map moves a Bezier curve exactly.
+    // inverse - an affine map moves a Bezier curve exactly. As SVG reads an arc: one ending where it starts is left out,
+    // one with no radius is a straight line.
     internal override void AppendCurves(Curves.PathCurveBuilder builder)
     {
-        var frame = Frame(builder.Current, Point, Size.Width, Size.Height, RotationAngle, IsLargeArc,
+        if (builder.Current == Point)
+        {
+            return;
+        }
+
+        var radiusX = Math.Abs(Size.Width);
+        var radiusY = Math.Abs(Size.Height);
+        if (!(radiusX > 0) || !(radiusY > 0) || double.IsInfinity(radiusX) || double.IsInfinity(radiusY))
+        {
+            builder.LineTo(Point);
+            return;
+        }
+
+        var frame = Frame(builder.Current, Point, radiusX, radiusY, RotationAngle, IsLargeArc,
             SweepDirection == SweepDirection.CounterClockwise);
         var sweep = double.DegreesToRadians(frame.Range) * frame.Sign;
         var pieces = Math.Max(1, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 4)));

@@ -132,6 +132,26 @@ public class StrokeContourTests
         });
     }
 
+    // A piece along one line that runs past its end and comes back is stroked out to where it turns, not to its end.
+    [TestCase(30.0, 20.0, 40.0 / 3)]
+    [TestCase(50.0, 10.0, 20.0)]
+    public void APieceRunningPastItsEnd_IsStrokedToWhereItTurns(double control, double end, double reach)
+    {
+        var figure = new PathFigure { StartPoint = new Vector2<double>(10, 10), IsClosed = false };
+        figure.Segments.Add(new QuadraticBezierSegment
+        {
+            ControlPoint = new Vector2<double>(control, 10), Point = new Vector2<double>(end, 10)
+        });
+        var geometry = new PathGeometry();
+        geometry.Figures.Add(figure);
+
+        var contour = geometry.StrokeForDrawing.Contours.Single();
+        var farthest = Enumerable.Range(0, contour.PieceCount)
+            .SelectMany(i => Enumerable.Range(0, 33).Select(k => contour.Piece(i).At(k / 32.0).X)).Max();
+
+        Assert.That(farthest, Is.EqualTo(10 + reach).Within(0.01));
+    }
+
     [Test]
     public void LengthTo_OfAStraightPiece_IsItsDistance()
     {

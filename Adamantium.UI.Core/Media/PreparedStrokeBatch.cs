@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Adamantium.Mathematics;
+using Adamantium.UI.Core.Media.Curves;
 
 namespace Adamantium.UI.Core.Media;
 
@@ -137,16 +139,16 @@ internal sealed class PreparedStrokeBatch
 
     /// <summary>Writes <paramref name="contour"/>'s points as floats into <paramref name="points"/> from point
     /// <paramref name="at"/> on, its pieces' controls into <paramref name="controls"/> when given - a straight piece's
-    /// halfway along - and how far along it each point lies into <paramref name="arcs"/>. Returns its length.</summary>
+    /// halfway along - and how far along it each point lies into <paramref name="arcs"/>, measured between the floats the
+    /// shader measures between. Returns its length.</summary>
     public static double Write(StrokeContour contour, float[] points, float[] controls, float[] arcs, int at)
     {
-        var along = contour.Arcs(out var length);
-        for (var i = 0; i < contour.Points.Length; i++)
+        var count = contour.Points.Length;
+        for (var i = 0; i < count; i++)
         {
             var point = contour.Points[i];
             points[(at + i) * 2] = (float)point.X;
             points[(at + i) * 2 + 1] = (float)point.Y;
-            arcs[at + i] = (float)along[i];
             if (controls != null)
             {
                 var control = i < contour.PieceCount ? contour.Piece(i).Control : point;
@@ -155,7 +157,25 @@ internal sealed class PreparedStrokeBatch
             }
         }
 
-        return length;
+        var along = 0.0;
+        for (var i = 0; i < count; i++)
+        {
+            arcs[at + i] = (float)along;
+            if (i >= contour.PieceCount)
+            {
+                continue;
+            }
+
+            var from = at + i;
+            var to = at + (i + 1) % count;
+            var start = new Vector2<double>(points[from * 2], points[from * 2 + 1]);
+            var end = new Vector2<double>(points[to * 2], points[to * 2 + 1]);
+            along += contour.Controls == null || controls == null
+                ? (end - start).Length()
+                : new QuadraticCurve(start, new Vector2<double>(controls[from * 2], controls[from * 2 + 1]), end).LengthTo(1);
+        }
+
+        return along;
     }
 
     /// <summary>Whether any of the <paramref name="count"/> contours from <paramref name="start"/> bends.</summary>

@@ -92,14 +92,14 @@ float CurveTileCoverage(float2 local)
             if (p.y > q.y && hit > q.y && hit <= p.y) hard -= turnY;
             if (p.y < q.y && hit > p.y && hit <= q.y) hard += turnY;
             float d = (hit - p.y) * perY;
-            softY += turnY * (saturate(d + 0.5) - (d >= 0.0 ? 1.0 : 0.0));
+            softY += turnY * (saturate(d + 0.5) - (d > 0.0 ? 1.0 : 0.0));
             nearestY = min(nearestY, abs(d));
         }
 
         if (p.y >= min(s.y, e.y) && p.y < max(s.y, e.y))
         {
             float d = (CurveXAt(s, c, e, p.y) - p.x) * perX;
-            softX += turnX * (saturate(d + 0.5) - (d >= 0.0 ? 1.0 : 0.0));
+            softX += turnX * (saturate(d + 0.5) - (d > 0.0 ? 1.0 : 0.0));
             nearestX = min(nearestX, abs(d));
         }
     }

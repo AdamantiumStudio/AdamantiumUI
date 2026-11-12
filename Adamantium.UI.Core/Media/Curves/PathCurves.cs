@@ -75,13 +75,14 @@ internal sealed class PathCurves
     public Rect Bounds { get; }
 
     /// <summary>The curves a fill is made of: those of the filled figures, each closed by a straight piece back to its
-    /// start where it does not end there.</summary>
+    /// start where it does not end there. A figure with a coordinate not a finite number is left out, not the fill.
+    /// </summary>
     public List<QuadraticCurve> FillCurves()
     {
         var fill = new List<QuadraticCurve>(Curves.Count + Figures.Count);
         foreach (var figure in Figures)
         {
-            if (!figure.IsFilled || figure.Count == 0)
+            if (!figure.IsFilled || figure.Count == 0 || !IsFinite(figure))
             {
                 continue;
             }
@@ -102,7 +103,19 @@ internal sealed class PathCurves
         return fill;
     }
 
-    // A bent curve stands as this many straight pieces in a loop: a loop only measures distances, as a halo does.
+    private bool IsFinite(CurveFigure figure)
+    {
+        for (var i = figure.First; i < figure.First + figure.Count; i++)
+        {
+            if (!Curves[i].IsFinite)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private const int LoopSteps = 4;
 
     /// <summary>The filled figures as closed loops of points - each bent curve as a few straight pieces - or null when
@@ -113,7 +126,7 @@ internal sealed class PathCurves
         var points = new List<Vector2<double>>();
         foreach (var figure in Figures)
         {
-            if (!figure.IsFilled || figure.Count == 0)
+            if (!figure.IsFilled || figure.Count == 0 || !IsFinite(figure))
             {
                 continue;
             }

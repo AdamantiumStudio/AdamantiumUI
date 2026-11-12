@@ -80,7 +80,6 @@ internal sealed class CurvePieces
 
     private static void AddMonotonic(QuadraticCurve curve, List<QuadraticCurve> pieces)
     {
-        // Cut where the curve turns in x and where it turns in y, in order along it.
         Span<double> cuts = stackalloc double[2];
         var count = 0;
         foreach (var turn in (ReadOnlySpan<double>)[Turn(curve.Start.X, curve.Control.X, curve.End.X),
@@ -110,15 +109,12 @@ internal sealed class CurvePieces
         pieces.Add(Flattened(rest));
     }
 
-    // Where a quadratic coordinate turns back, or NaN for one that runs one way.
     private static double Turn(double a, double b, double c)
     {
         var bend = a - 2 * b + c;
         return Math.Abs(bend) < 1e-300 ? double.NaN : (a - b) / bend;
     }
 
-    // A cut lands its control on the turn's tangent, a hair outside the ends' range: put it back inside, so the piece
-    // runs one way exactly.
     private static QuadraticCurve Flattened(QuadraticCurve piece)
     {
         var control = new Vector2<double>(

@@ -36,15 +36,17 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// changed nothing on screen until something else forced a re-record.</summary>
     internal Brush LiveBrush => _brush;
 
-    public Geometry Geometry { get; } = Tessellate(geometry);
+    public Geometry Geometry { get; } = Tessellate(geometry, brush != null);
+
+    /// <summary>The outline as curves, made on the record thread with their tiles for a fill drawn from them; null when
+    /// the fill is not drawn from curves.</summary>
+    internal Core.Media.Curves.PathCurves Outline { get; } = OutlineOf(geometry, brush != null);
 
     /// <summary>What the geometry held WHEN THIS PAYLOAD WAS RECORDED. The instance is not enough: a Polygon reopens its
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
     public int GeometryVersion { get; } = geometry?.Version ?? 0;
 
-    // Processes on the record thread and makes the curves, their pieces and tiles there too; the render thread must only
-    // read what was made. A fill drawn from its curves needs no triangles, so only its outline is made.
-    private static Geometry Tessellate(Geometry g)
+    private static Geometry Tessellate(Geometry g, bool filled)
     {
         if (g == null)
         {
@@ -52,13 +54,21 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
         }
 
         var curves = Retained.InstancedFillCollector.Enabled && Retained.InstancedFillCollector.CurvesEnabled;
-        g.ProcessGeometry(curves && !g.TrianglesAreGiven ? GeometryType.Outlined : GeometryType.Both);
-        if (curves)
+        g.ProcessGeometry((curves || !filled) && !g.TrianglesAreGiven ? GeometryType.Outlined : GeometryType.Both);
+        return g;
+    }
+
+    private static Core.Media.Curves.PathCurves OutlineOf(Geometry g, bool filled)
+    {
+        if (g == null || !filled || !Retained.InstancedFillCollector.Enabled ||
+            !Retained.InstancedFillCollector.CurvesEnabled)
         {
-            _ = g.CurvesForDrawing.FillTiles;
+            return null;
         }
 
-        return g;
+        var outline = g.CurvesForDrawing;
+        _ = outline.FillTiles;
+        return outline;
     }
 
     // A copy, since the caller's pen stays editable on the loop thread; its brush stays live and is read via its snapshot.

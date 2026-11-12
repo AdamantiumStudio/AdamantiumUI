@@ -137,7 +137,7 @@ public abstract class Geometry : AdamantiumComponent
       var given = FiguresCore();
       if (given == null)
       {
-         ProcessGeometry(GeometryType.Both);
+         ProcessGeometry(TrianglesAreGiven ? GeometryType.Both : GeometryType.Outlined);
          var fromMesh = new List<(Vector2<double>[] Points, bool IsClosed)>();
          var mirrored = Transform is { } mirror &&
                         mirror.Matrix.M11 * mirror.Matrix.M22 - mirror.Matrix.M12 * mirror.Matrix.M21 < 0;

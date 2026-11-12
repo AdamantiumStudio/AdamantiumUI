@@ -29,11 +29,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
     public static bool Enabled = true;
 
-    /// <summary>Whether a solid fill is drawn from its curves - exact at any zoom - rather than from its tessellated mesh
-    /// and fringe.</summary>
+    /// <summary>Whether a path's fill is drawn from its curves - exact at any zoom - rather than from its triangles and
+    /// fringe.</summary>
     public static bool CurvesEnabled = true;
 
-    /// <summary>Whether a curve fill's coverage comes from its own tiles (CurveTilePyramid), rather than from a walk over
+    /// <summary>Whether a curve fill's coverage comes from its own tiles (CurveTileTree), rather than from a walk over
     /// its every piece - what the tiles are checked against.</summary>
     public static bool CurveTilesEnabled = true;
 
@@ -60,9 +60,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         // A curve fill's packed curves (see CurveFill), in place of a mesh: drawn as one quad per instance.
         public Buffer CurveBuffer;
-
-        // The same curves as the CPU keeps them: their box and counts, read when a flush bins them into tiles.
-        public uint[] CurveWords;
 
         // When (Stopwatch ticks) this key was last asked for. A key is kept by being USED and by nothing else - see
         // Sweep for why the cache has to forget.
@@ -592,7 +589,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         seg.IdxBuffer = null;
         seg.RingBuffer = null;
         seg.CurveBuffer = null;
-        seg.CurveWords = null;
         seg.MeshUploaded = false;
         _meshBytes -= seg.MeshBytes;
         seg.MeshBytes = 0;
@@ -1668,7 +1664,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             if (mesh.Curves is not { } curves) return null;
 
             seg ??= new KeySegment();
-            seg.CurveWords = curves.Words;
             seg.CurveBuffer = Upload(curves.Words, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
                 "shared curve fill");
             seg.MeshUploaded = true;

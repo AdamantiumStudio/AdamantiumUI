@@ -64,7 +64,13 @@ public class CombinedGeometry : Geometry
 
     private void GeometryOnComponentUpdated(object sender, ComponentUpdatedEventArgs e)
     {
+        if (RefusesChange)
+        {
+            return;
+        }
+
         InvalidateGeometry();
+        RaiseComponentUpdated();
     }
 
     private static void CombineModeChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

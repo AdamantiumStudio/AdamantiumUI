@@ -9,6 +9,11 @@ internal readonly record struct QuadraticCurve(Vector2<double> Start, Vector2<do
     public static QuadraticCurve Line(Vector2<double> start, Vector2<double> end) =>
         new(start, (start + end) * 0.5, end);
 
+    /// <summary>Whether every coordinate is a finite number.</summary>
+    public bool IsFinite =>
+        double.IsFinite(Start.X) && double.IsFinite(Start.Y) && double.IsFinite(Control.X) &&
+        double.IsFinite(Control.Y) && double.IsFinite(End.X) && double.IsFinite(End.Y);
+
     /// <summary>The point at <paramref name="t"/>, from 0 at the start to 1 at the end.</summary>
     public Vector2<double> At(double t)
     {
@@ -16,14 +21,23 @@ internal readonly record struct QuadraticCurve(Vector2<double> Start, Vector2<do
         return Start * (rest * rest) + Control * (2 * rest * t) + End * (t * t);
     }
 
-    /// <summary>Whether the control lies on the line through the ends, within <paramref name="tolerance"/> of the chord's
-    /// length: the curve is a straight piece.</summary>
+    /// <summary>Whether the control lies on the chord between the ends, within <paramref name="tolerance"/> of the chord's
+    /// length: the curve is a straight piece. One that runs past an end and back, or out and back to where it began,
+    /// is not.</summary>
     public bool IsStraight(double tolerance = 1e-9)
     {
         var chord = End - Start;
         var off = Control - Start;
+        var lengthSquared = chord.X * chord.X + chord.Y * chord.Y;
+        if (lengthSquared <= 1e-300)
+        {
+            return off.X * off.X + off.Y * off.Y <= 1e-300;
+        }
+
         var cross = chord.X * off.Y - chord.Y * off.X;
-        return Math.Abs(cross) <= tolerance * Math.Max(chord.X * chord.X + chord.Y * chord.Y, 1e-300);
+        var along = chord.X * off.X + chord.Y * off.Y;
+        return Math.Abs(cross) <= tolerance * lengthSquared && along >= -tolerance * lengthSquared &&
+               along <= (1 + tolerance) * lengthSquared;
     }
 
     /// <summary>How long the curve is from its start to <paramref name="t"/>: five-point Gauss-Legendre over its speed,

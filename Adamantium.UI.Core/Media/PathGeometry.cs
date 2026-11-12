@@ -136,8 +136,8 @@ public class PathGeometry : Geometry
     {
         figureToPolygon.Clear();
         outlines.Clear();   // was leaked: stale outlines of removed figures lingered and got re-added below
-        Mesh.ClearContours();
-        
+        Mesh.Clear();
+
         foreach (var figure in Figures)
         {
             figure.ProcessSegments();
@@ -147,18 +147,20 @@ public class PathGeometry : Geometry
             outlines[figure] = outlinePoints;
         }
         
-        var polygon = new Polygon();
-        foreach (var polygonItem in figureToPolygon)
+        if (geometryType != GeometryType.Outlined)
         {
-            if (!polygonItem.Key.IsFilled) continue;
+            var polygon = new Polygon();
+            foreach (var polygonItem in figureToPolygon)
+            {
+                if (!polygonItem.Key.IsFilled) continue;
 
-            polygon.AddContour(polygonItem.Value);
+                polygon.AddContour(polygonItem.Value);
+            }
+
+            polygon.FillRule = FillRule;
+            Mesh.SetPoints(polygon.FillIndirect());
         }
 
-        polygon.FillRule = FillRule;
-        var points = polygon.FillIndirect(geometryType != GeometryType.Outlined);
-        if (geometryType != GeometryType.Outlined) Mesh.SetPoints(points);
-        
         foreach (var outline in outlines)
         {
             Mesh.AddContour(outline.Value, outline.Key.IsClosed);
