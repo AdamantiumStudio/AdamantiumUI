@@ -39,7 +39,8 @@ public class CurveTileRenderTests
         _ => Brushes.Red
     };
 
-    private static byte[] Render(Func<List<Geometry>> build, bool tiles, Transform transform = null, bool mixed = false)
+    private static byte[] Render(Func<List<Geometry>> build, bool tiles, Transform transform = null, bool mixed = false,
+        Geometry clip = null)
     {
         var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         InstancedFillCollector.CurveTilesEnabled = tiles;
@@ -55,7 +56,9 @@ public class CurveTileRenderTests
             {
                 RenderAction = s =>
                 {
+                    if (clip != null) s.PushGroup(new DrawingGroupOptions { Clip = clip });
                     for (var i = 0; i < geometries.Count; i++) s.DrawGeometry(brushes[i], geometries[i]);
+                    if (clip != null) s.PopGroup();
                 }
             };
             content.Bounds = new Rect(0, 0, Dim, Dim);
@@ -104,10 +107,11 @@ public class CurveTileRenderTests
         return seen0 && seen255;
     }
 
-    private static void AssertSameCoverage(Func<List<Geometry>> build, Transform transform = null, bool mixed = false)
+    private static void AssertSameCoverage(Func<List<Geometry>> build, Transform transform = null, bool mixed = false,
+        Geometry clip = null)
     {
-        var walked = Render(build, tiles: false, transform, mixed);
-        var tiled = Render(build, tiles: true, transform, mixed);
+        var walked = Render(build, tiles: false, transform, mixed, clip);
+        var tiled = Render(build, tiles: true, transform, mixed, clip);
         var worst = 0;
         var inside = 0;
         var covered = 0;
@@ -235,6 +239,15 @@ public class CurveTileRenderTests
         AssertSameCoverage(
             () => [Star(5, 5, 4.5, 7, FillRule.NonZero), new EllipseGeometry(new Vector2<double>(5, 5), 1.5, 2.5)],
             new Transform { ScaleX = 32, ScaleY = 32, TranslateX = 0, TranslateY = 0 });
+
+    // A path clip is a mask drawn as a fill: it is covered from its tiles like any other.
+    [Test]
+    public void ClippedByAPath_CoversAsItsWalkDoes() =>
+        AssertSameCoverage(
+            () => [new RectangleGeometry(new Rect(10, 10, 300, 300)), new EllipseGeometry(new Vector2<double>(160, 160), 60, 90)],
+            new Transform { RotationAngle = 17, RotationCenterX = 160, RotationCenterY = 160 },
+            mixed: true,
+            clip: Star(160, 160, 140, 9, FillRule.EvenOdd));
 
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory
