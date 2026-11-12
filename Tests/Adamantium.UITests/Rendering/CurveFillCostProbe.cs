@@ -46,21 +46,23 @@ public class CurveFillCostProbe
     {
         var report = new StringBuilder();
         report.AppendLine($"target {Dim}x{Dim}, {Frames} clean frames each; ms");
-        report.AppendLine("scene | prep mesh | prep curves | frame mesh | frame tiles | pieces");
+        report.AppendLine("scene | prep mesh | prep curves | frame mesh | frame tiles | moving mesh | moving tiles | pieces | packed KB");
         var curvesWere = InstancedFillCollector.CurvesEnabled;
         var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         try
         {
             foreach (var scene in Scenes)
             {
-                var (meshPrep, curvePrep, pieces) = Prep(scene);
+                var (meshPrep, curvePrep, pieces, words) = Prep(scene);
                 InstancedFillCollector.CurvesEnabled = false;
                 var meshFrame = Frame(scene);
+                var meshMoving = Frame(scene, moving: true);
                 InstancedFillCollector.CurvesEnabled = true;
                 InstancedFillCollector.CurveTilesEnabled = true;
                 var tileFrame = Frame(scene);
+                var tileMoving = Frame(scene, moving: true);
                 report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFrame:F2} | {tileFrame:F2} | " +
-                                  $"{pieces}");
+                                  $"{meshMoving:F2} | {tileMoving:F2} | {pieces} | {words * 4 / 1024}");
             }
         }
         finally
@@ -78,7 +80,7 @@ public class CurveFillCostProbe
 
     // The CPU side, each on geometries of its own so neither finds the other's work cached: triangulating for the mesh,
     // against cutting the curves and packing them for the shader.
-    private static (double Mesh, double Curves, int Pieces) Prep(Scene scene)
+    private static (double Mesh, double Curves, int Pieces, long Words) Prep(Scene scene)
     {
         var forMesh = scene.Build();
         var watch = Stopwatch.StartNew();
@@ -87,18 +89,22 @@ public class CurveFillCostProbe
 
         var forCurves = scene.Build();
         var pieces = 0;
+        var words = 0L;
         watch.Restart();
         foreach (var g in forCurves)
         {
             var fill = CurveFill.From(g.CurvesForDrawing);
             if (fill == null) continue;
             pieces += (int)fill.Words[4];
+            words += fill.Words.Length;
         }
 
-        return (mesh, watch.Elapsed.TotalMilliseconds, pieces);
+        return (mesh, watch.Elapsed.TotalMilliseconds, pieces, words);
     }
 
-    private static double Frame(Scene scene)
+    // A frame of the scene, clean - replayed - or, moving, with its transform turned, scaled and moved a little each
+    // frame, as a scroll, a zoom or an animation does.
+    private static double Frame(Scene scene, bool moving = false)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -134,8 +140,20 @@ public class CurveFillCostProbe
         var times = new double[Frames];
         for (var i = 0; i < Frames; i++)
         {
+            if (moving)
+            {
+                var zoom = scene.Zoom * (1 + 0.01 * (i % 3));
+                content.RenderTransform = new Transform
+                {
+                    ScaleX = zoom, ScaleY = zoom, RotationAngle = i % 4,
+                    RotationCenterX = Dim / 2.0, RotationCenterY = Dim / 2.0,
+                    TranslateX = -Dim * (zoom - 1) / 2 + i % 5, TranslateY = -Dim * (zoom - 1) / 2 + i % 7
+                };
+            }
+
             watch.Restart();
-            renderer.RenderAgain(root);
+            if (moving) renderer.RenderFrame(root);
+            else renderer.RenderAgain(root);
             times[i] = watch.Elapsed.TotalMilliseconds;
         }
 

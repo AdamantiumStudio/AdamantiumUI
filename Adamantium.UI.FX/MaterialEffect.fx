@@ -913,7 +913,7 @@ MaterialMeshPSInput MaterialCurveVS(uint vertexId : SV_VertexID, uint instanceId
 
 float4 MaterialCurveCovered(float4 color, MaterialMeshPSInput input)
 {
-    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
+    float coverage = CurveCoverage(input.Local);
     if (coverage <= 0.0)
     {
         discard;

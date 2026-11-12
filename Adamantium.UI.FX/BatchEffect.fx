@@ -790,7 +790,6 @@ struct CurvePSInput
     float4 Color    : COLOR0;
     nointerpolation float4 ClipBox   : TEXCOORD1;
     nointerpolation float4 ClipRadii : TEXCOORD2;
-    nointerpolation uint InstId      : TEXCOORD3;   // its instance within the draw, for the flush's tiles
 };
 
 [shader("vertex")]
@@ -812,14 +811,13 @@ CurvePSInput InstancedCurveFillVS(uint vertexId : SV_VertexID, uint instanceId :
     o.Color = float4(instColor.rgb, instColor.a * fillFade);
     o.ClipBox   = ClipShapeBox(inst.Params.z);
     o.ClipRadii = ClipShapeRadii(inst.Params.z);
-    o.InstId = instanceId;
     return o;
 }
 
 [shader("fragment")]
 float4 InstancedCurveFillPS(CurvePSInput input) : SV_Target
 {
-    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
+    float coverage = CurveCoverage(input.Local);
     if (coverage <= 0.0)
     {
         discard;

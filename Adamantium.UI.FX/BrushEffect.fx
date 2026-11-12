@@ -376,7 +376,7 @@ float4 GradientCurvePS(GradFillPSInput input) : SV_Target
 {
     GradGeomData* items = GradientGeometries;
     float4 c = GradGeomColor(items[input.InstId], input.Local);
-    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
+    float coverage = CurveCoverage(input.Local);
     if (coverage <= 0.0)
     {
         discard;
@@ -640,7 +640,7 @@ PatFillPSInput PatternCurveVS(uint vertexId : SV_VertexID, uint instanceId : SV_
 float4 PatternCurveShade(PatFillPSInput input, int kind)
 {
     float4 c = PatternMeshShade(input, kind);
-    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
+    float coverage = CurveCoverage(input.Local);
     if (coverage <= 0.0)
     {
         discard;
@@ -928,7 +928,7 @@ float4 TexCurvePS(TexFillPSInput input) : SV_Target
 
     float4 tint = float4(it.Tint.x, it.Tint.y, it.Tint.z, it.Tint.w) * (1.0 / 255.0);
     float4 color = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * tint;
-    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
+    float coverage = CurveCoverage(input.Local);
     if (coverage <= 0.0)
     {
         discard;

@@ -1,11 +1,11 @@
 // CURVE FILL MATHS - a fill drawn from its curves rather than from a mesh. One quad per instance over the fill's box;
 // each fragment counts how its curves wind round it, along a ray to +x and a ray to +y, each crossing softened over the
 // pixel it falls in - exact at any zoom, with no mesh and no fringe. The curves are quadratic pieces running one way in
-// x and in y. A flush's fills mostly take their coverage from its screen tiles (CurveTiles.fxh); the walk over every
-// piece here is for a fill the tiles cannot place - one seen in perspective. Every brush that fills a shape this way
-// takes its coverage from these and its color from its own maths. Include after ShapeMath.fxh.
+// x and in y. A fill takes its coverage from its own tiles (CurveTiles.fxh); the walk over every piece here is what the
+// tiles are checked against. Every brush that fills a shape this way takes its coverage from these and its color from
+// its own maths. Include after ShapeMath.fxh.
 
-static const uint CurveHeaderWords = 6u;
+static const uint CurveHeaderWords = 8u;
 
 // The packed curves of the fill the draw is of - see Retained/CurveFill.cs for the layout.
 uint* CurveData;

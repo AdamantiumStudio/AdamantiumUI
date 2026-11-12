@@ -106,7 +106,7 @@ public partial class RenderCache
         {
             if (op.Kind is RenderOpKind.LayerBegin or RenderOpKind.Group
                 || (op.Kind == RenderOpKind.Segment && op.Batch == 13)
-                || (op.Kind == RenderOpKind.InstancedFlush && _instancedFill.FlushLeavesRenderPass(op.SegId)))
+                || (op.Kind == RenderOpKind.InstancedFlush && _instancedFill.FlushDrawsMaterials(op.SegId)))
             {
                 return false;
             }

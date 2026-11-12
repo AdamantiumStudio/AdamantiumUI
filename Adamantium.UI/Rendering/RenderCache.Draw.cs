@@ -978,8 +978,6 @@ public partial class RenderCache
             {
                 _instancedFill ??= new InstancedFillCollector(device, AskForFrame) { PrepareOverlay = PrepareOverlayForDraw };
                 _instancedFill.TransformsAddress = _transformTable.DeviceAddress;   // instance VS fetches its slot matrix
-                // The cache's own lookup, not the table's: the table is made anew now and then.
-                _instancedFill.SlotMatrix ??= SlotMatrix;
                 _instancedFill.Backdrop = _materialBatch;   // may be null: the material batch is made on first sight of one
                 _instancedFill.BeginFrame();
                 _instancedFill.SceneClean = sceneClean;

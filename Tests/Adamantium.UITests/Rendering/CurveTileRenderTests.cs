@@ -16,9 +16,10 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// A curve fill covered from the flush's screen tiles must cover what the same fill covered by walking its every piece:
-/// the tiles only change which pieces a pixel walks, and the winding they hand over for the rest is exact. Compared pixel
-/// by pixel over fills that cross many tiles - holes, both fill rules, lines, curves, turned and scaled.
+/// A curve fill covered from its own tiles must cover what the same fill covered by walking its every piece: the tiles
+/// only change which pieces a pixel walks, and the winding they hand over for the rest is exact. Compared pixel by pixel
+/// over fills that cross many tiles - holes, both fill rules, lines, curves, turned, scaled far up and down, and seen in
+/// perspective.
 /// </summary>
 [TestFixture]
 [Category("Gpu")]
@@ -214,25 +215,26 @@ public class CurveTileRenderTests
             () => [Star(100, 100, 70, 7, FillRule.NonZero), new EllipseGeometry(new Vector2<double>(110, 90), 30, 50)],
             new Transform { RotationAngle = 23, ScaleX = 1.4, ScaleY = 1.4, TranslateX = 20, TranslateY = 10 });
 
-    // Seen in perspective a quadratic is no longer one, so the tiles leave the fill out and it walks its pieces - drawn
-    // exactly as with the tiles off, and drawn at all.
+    // The tiles are the fill's own, so a perspective changes nothing about them.
     [Test]
-    public void InPerspective_AFillWalksItsPieces()
-    {
-        List<Geometry> Build() => [Star(160, 160, 120, 7, FillRule.EvenOdd), new EllipseGeometry(new Vector2<double>(160, 160), 40, 60)];
-        var transform = new Transform { RotationY = 35, Perspective = 600, RotationCenterX = 160, RotationCenterY = 160 };
+    public void InPerspective_CoverAsTheirWalkDoes() =>
+        AssertSameCoverage(
+            () => [Star(160, 160, 120, 7, FillRule.EvenOdd), new EllipseGeometry(new Vector2<double>(160, 160), 40, 60)],
+            new Transform { RotationY = 35, Perspective = 600, RotationCenterX = 160, RotationCenterY = 160 });
 
-        var walked = Render(Build, tiles: false, transform);
-        var tiled = Render(Build, tiles: true, transform);
+    // Far down, a pixel spans many of the finest tiles: it reads a coarser level.
+    [Test]
+    public void ScaledFarDown_CoverAsTheirWalkDoes() =>
+        AssertSameCoverage(
+            () => [Star(600, 600, 560, 9, FillRule.EvenOdd), new EllipseGeometry(new Vector2<double>(600, 600), 200, 300)],
+            new Transform { ScaleX = 0.25, ScaleY = 0.25, TranslateX = 10, TranslateY = 10 });
 
-        var covered = 0;
-        for (var i = 3; i < walked.Length; i += 4) if (walked[i] > 0) covered++;
-        Assert.Multiple(() =>
-        {
-            Assert.That(covered, Is.GreaterThan(100), "the scene draws something");
-            Assert.That(tiled, Is.EqualTo(walked), "the fill walks its pieces either way");
-        });
-    }
+    // Far up, a tile spans many pixels: its point and its pieces carry them all.
+    [Test]
+    public void ScaledFarUp_CoverAsTheirWalkDoes() =>
+        AssertSameCoverage(
+            () => [Star(5, 5, 4.5, 7, FillRule.NonZero), new EllipseGeometry(new Vector2<double>(5, 5), 1.5, 2.5)],
+            new Transform { ScaleX = 32, ScaleY = 32, TranslateX = 0, TranslateY = 0 });
 
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory
