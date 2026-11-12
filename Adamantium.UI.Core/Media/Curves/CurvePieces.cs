@@ -3,44 +3,23 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Core.Media.Curves;
 
 /// <summary>A fill's curves as a shader walks them: cut into pieces that run one way in x and in y, so a ray along
-/// either axis meets a piece at most once, and listed by bands - horizontal bands for rays along x, vertical for rays
-/// along y - each holding the pieces that reach into it, the farthest along the ray first.</summary>
-internal sealed class CurveBands
+/// either axis meets a piece at most once.</summary>
+internal sealed class CurvePieces
 {
-    private CurveBands(QuadraticCurve[] pieces, Rect bounds, int[] rows, int[] rowStarts, int[] columns,
-        int[] columnStarts)
+    private CurvePieces(QuadraticCurve[] pieces, Rect bounds)
     {
         Pieces = pieces;
         Bounds = bounds;
-        Rows = rows;
-        RowStarts = rowStarts;
-        Columns = columns;
-        ColumnStarts = columnStarts;
     }
 
     /// <summary>The pieces, each running one way in x and one way in y.</summary>
     public QuadraticCurve[] Pieces { get; }
 
-    /// <summary>What the bands divide.</summary>
+    /// <summary>What the pieces' ends cover - and so the pieces, each running one way.</summary>
     public Rect Bounds { get; }
 
-    /// <summary>The pieces of each horizontal band, by index into <see cref="Pieces"/>, the band's from
-    /// <see cref="RowStarts"/>[band] to <see cref="RowStarts"/>[band + 1], the one reaching farthest in x first.</summary>
-    public int[] Rows { get; }
-
-    public int[] RowStarts { get; }
-
-    /// <summary>The pieces of each vertical band, as <see cref="Rows"/>, the one reaching farthest in y first.</summary>
-    public int[] Columns { get; }
-
-    public int[] ColumnStarts { get; }
-
-    /// <summary>How many bands each way.</summary>
-    public int BandCount => RowStarts.Length - 1;
-
-    /// <summary>Cuts <paramref name="curves"/> into pieces and bands them: as many bands each way as keep a band to a
-    /// handful of pieces, no more than <paramref name="mostBands"/>.</summary>
-    public static CurveBands Of(IReadOnlyList<QuadraticCurve> curves, int mostBands)
+    /// <summary>Cuts <paramref name="curves"/> into pieces.</summary>
+    public static CurvePieces Of(IReadOnlyList<QuadraticCurve> curves)
     {
         var pieces = new List<QuadraticCurve>(curves.Count * 2);
         foreach (var curve in curves)
@@ -48,11 +27,7 @@ internal sealed class CurveBands
             AddMonotonic(curve, pieces);
         }
 
-        var bounds = BoundsOf(pieces);
-        var bands = Math.Clamp((int)Math.Ceiling(Math.Sqrt(pieces.Count)), 1, Math.Max(1, mostBands));
-        var (rows, rowStarts) = Band(pieces, bounds.Y, bounds.Height, bands, vertical: false);
-        var (columns, columnStarts) = Band(pieces, bounds.X, bounds.Width, bands, vertical: true);
-        return new CurveBands(pieces.ToArray(), bounds, rows, rowStarts, columns, columnStarts);
+        return new CurvePieces(pieces.ToArray(), BoundsOf(pieces));
     }
 
     /// <summary>How many times the curves wind round <paramref name="point"/>, counted along a ray toward +x: a piece
@@ -60,16 +35,9 @@ internal sealed class CurveBands
     /// </summary>
     public int Winding(Vector2<double> point)
     {
-        if (Pieces.Length == 0)
-        {
-            return 0;
-        }
-
-        var band = BandOf(point.Y, Bounds.Y, Bounds.Height);
         var winding = 0;
-        for (var i = RowStarts[band]; i < RowStarts[band + 1]; i++)
+        foreach (var piece in Pieces)
         {
-            var piece = Pieces[Rows[i]];
             var low = Math.Min(piece.Start.Y, piece.End.Y);
             var high = Math.Max(piece.Start.Y, piece.End.Y);
             if (point.Y < low || point.Y >= high)
@@ -109,58 +77,6 @@ internal sealed class CurveBands
 
         return Math.Clamp(t, 0, 1);
     }
-
-    private static int BandOf(double value, double start, double length, int bands)
-    {
-        if (!(length > 0))
-        {
-            return 0;
-        }
-
-        return Math.Clamp((int)((value - start) / length * bands), 0, bands - 1);
-    }
-
-    private int BandOf(double value, double start, double length) => BandOf(value, start, length, BandCount);
-
-    private static (int[] Members, int[] Starts) Band(List<QuadraticCurve> pieces, double start, double length,
-        int bands, bool vertical)
-    {
-        var lists = new List<int>[bands];
-        for (var band = 0; band < bands; band++)
-        {
-            lists[band] = [];
-        }
-
-        for (var i = 0; i < pieces.Count; i++)
-        {
-            var piece = pieces[i];
-            var a = vertical ? piece.Start.X : piece.Start.Y;
-            var c = vertical ? piece.End.X : piece.End.Y;
-            var first = BandOf(Math.Min(a, c), start, length, bands);
-            var last = BandOf(Math.Max(a, c), start, length, bands);
-            for (var band = first; band <= last; band++)
-            {
-                lists[band].Add(i);
-            }
-        }
-
-        var members = new List<int>();
-        var starts = new int[bands + 1];
-        for (var band = 0; band < bands; band++)
-        {
-            starts[band] = members.Count;
-            lists[band].Sort((x, y) => Reach(pieces[y], vertical).CompareTo(Reach(pieces[x], vertical)));
-            members.AddRange(lists[band]);
-        }
-
-        starts[bands] = members.Count;
-        return (members.ToArray(), starts);
-    }
-
-    // How far along the ray a piece reaches: its largest x for rows, y for columns.
-    private static double Reach(QuadraticCurve piece, bool vertical) => vertical
-        ? Math.Max(piece.Start.Y, piece.End.Y)
-        : Math.Max(piece.Start.X, piece.End.X);
 
     private static void AddMonotonic(QuadraticCurve curve, List<QuadraticCurve> pieces)
     {

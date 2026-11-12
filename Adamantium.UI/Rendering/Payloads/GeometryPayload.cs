@@ -42,14 +42,14 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
     public int GeometryVersion { get; } = geometry?.Version ?? 0;
 
-    // Tessellates on the record thread, and makes the curves and their bands there too; the render thread must only read
+    // Tessellates on the record thread, and makes the curves and their pieces there too; the render thread must only read
     // what was made.
     private static Geometry Tessellate(Geometry g)
     {
         g?.ProcessGeometry(GeometryType.Both);
         if (g != null && Retained.InstancedFillCollector.CurvesEnabled)
         {
-            _ = g.CurvesForDrawing.FillBands;
+            _ = g.CurvesForDrawing.FillPieces;
         }
 
         return g;

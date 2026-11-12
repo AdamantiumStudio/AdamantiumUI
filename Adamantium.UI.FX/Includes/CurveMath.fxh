@@ -1,8 +1,11 @@
 // CURVE FILL MATHS - a fill drawn from its curves rather than from a mesh. One quad per instance over the fill's box;
 // each fragment counts how its curves wind round it, along a ray to +x and a ray to +y, each crossing softened over the
 // pixel it falls in - exact at any zoom, with no mesh and no fringe. The curves are quadratic pieces running one way in
-// x and in y, banded both ways, the farthest along each ray first. Every brush that fills a shape this way takes its
-// coverage from here and its color from its own maths. Include after ShapeMath.fxh.
+// x and in y. A flush's fills mostly take their coverage from its screen tiles (CurveTiles.fxh); the walk over every
+// piece here is for a fill the tiles cannot place - one seen in perspective. Every brush that fills a shape this way
+// takes its coverage from these and its color from its own maths. Include after ShapeMath.fxh.
+
+static const uint CurveHeaderWords = 6u;
 
 // The packed curves of the fill the draw is of - see Retained/CurveFill.cs for the layout.
 uint* CurveData;
@@ -18,8 +21,8 @@ float2 CurvePoint(uint i)
     return float2(CurveWord(i), CurveWord(i + 1u));
 }
 
-// One corner of the quad an instance draws, in the fill's local space - the space its mesh's vertices are in: the banded
-// box, a pixel past it on every side so its edge's soft half lands inside. toSlot takes that space to the slot's.
+// One corner of the quad an instance draws, in the fill's local space - the space its mesh's vertices are in: the
+// pieces' box, a pixel past it on every side so its edge's soft half lands inside. toSlot takes that space to the slot's.
 float2 CurveQuadCorner(uint vertexId, float4x4 toSlot)
 {
     float2 px = SlotPixelScale(toSlot);
@@ -54,37 +57,29 @@ float CurveAt(float a, float b, float c, float t)
     return a * rest * rest + b * 2.0 * rest * t + c * t * t;
 }
 
-// The winding along one ray from p - relative to the banded box's corner - each crossing counted by how much of the
-// pixel lies before it, and how near the nearest crossing is in pixels. axis 0: the ray runs to +x through rows; axis 1:
-// to +y through columns.
+// The winding along one ray from p - relative to the pieces' box corner - each crossing counted by how much of the
+// pixel lies before it, and how near the nearest crossing is in pixels. axis 0: the ray runs to +x; axis 1: to +y.
 float2 CurveRay(float2 p, float pixelsPerUnit, uint axis)
 {
     uint* words = CurveData;
-    float2 size = CurvePoint(2u);
-    uint bands = words[4];
-    uint startsAt = words[7u + axis * 2u];
-    uint listAt = words[8u + axis * 2u];
+    uint pieces = words[4];
     float along = axis == 0u ? p.x : p.y;
     float across = axis == 0u ? p.y : p.x;
-    float span = axis == 0u ? size.y : size.x;
-    uint band = (uint)clamp(floor(across / max(span, 1e-20) * float(bands)), 0.0, float(bands - 1u));
 
     float winding = 0.0;
     float nearest = 1e20;
-    uint first = words[startsAt + band];
-    uint last = words[startsAt + band + 1u];
-    for (uint i = first; i < last; i++)
+    for (uint i = 0u; i < pieces; i++)
     {
-        uint at = 12u + words[listAt + i] * 6u;
+        uint at = CurveHeaderWords + i * 6u;
         float2 s = CurvePoint(at);
         float2 c = CurvePoint(at + 2u);
         float2 e = CurvePoint(at + 4u);
         float sa = axis == 0u ? s.x : s.y;
         float ea = axis == 0u ? e.x : e.y;
-        // Farthest along the ray first: once a piece ends half a pixel short of this one, none after it counts.
+        // A piece ending half a pixel short of the ray's start does not count.
         if ((max(sa, ea) - along) * pixelsPerUnit < -0.5)
         {
-            break;
+            continue;
         }
 
         float sc = axis == 0u ? s.y : s.x;
@@ -127,7 +122,7 @@ float CurveFillCoverage(float2 local)
 
     float2 rayX = CurveRay(p, perX, 0u);
     float2 rayY = CurveRay(p, perY, 1u);
-    uint evenOdd = words[6];
+    uint evenOdd = words[5];
     float coverX = CurveWindingCoverage(rayX.x, evenOdd);
     float coverY = CurveWindingCoverage(rayY.x, evenOdd);
     // Each ray softens only the edges it crosses; the one with a crossing nearer the pixel speaks for it. Far from

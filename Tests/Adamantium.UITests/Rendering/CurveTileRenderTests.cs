@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// A solid curve fill covered from the flush's screen tiles must cover what the same fill covered from its own bands:
+/// A curve fill covered from the flush's screen tiles must cover what the same fill covered by walking its every piece:
 /// the tiles only change which pieces a pixel walks, and the winding they hand over for the rest is exact. Compared pixel
 /// by pixel over fills that cross many tiles - holes, both fill rules, lines, curves, turned and scaled.
 /// </summary>
@@ -26,7 +26,19 @@ public class CurveTileRenderTests
 {
     private const int Dim = 320;
 
-    private static byte[] Render(Func<List<Geometry>> build, bool tiles, Transform transform = null)
+    // A brush per geometry, by its place: the scenes draw every brush family in one flush, so the tiles of one run
+    // cannot be read by another's draws.
+    private static Brush BrushFor(int index) => (index % 3) switch
+    {
+        1 => new LinearGradientBrush
+        {
+            GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
+        },
+        2 => new PatternBrush { Pattern = PatternType.Checkerboard, Color1 = Colors.Red, Color2 = Colors.Blue, CellSize = 6 },
+        _ => Brushes.Red
+    };
+
+    private static byte[] Render(Func<List<Geometry>> build, bool tiles, Transform transform = null, bool mixed = false)
     {
         var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         InstancedFillCollector.CurveTilesEnabled = tiles;
@@ -36,11 +48,13 @@ public class CurveTileRenderTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Transparent };
             var geometries = build();
+            var brushes = new Brush[geometries.Count];
+            for (var i = 0; i < brushes.Length; i++) brushes[i] = mixed ? BrushFor(i) : Brushes.Red;
             var content = new TestControl
             {
                 RenderAction = s =>
                 {
-                    foreach (var g in geometries) s.DrawGeometry(Brushes.Red, g);
+                    for (var i = 0; i < geometries.Count; i++) s.DrawGeometry(brushes[i], geometries[i]);
                 }
             };
             content.Bounds = new Rect(0, 0, Dim, Dim);
@@ -54,7 +68,7 @@ public class CurveTileRenderTests
             if (Environment.GetEnvironmentVariable("ADAM_TILE_DUMP") is { } dump)
             {
                 renderer.Save(System.IO.Path.Combine(dump,
-                    $"{TestContext.CurrentContext.Test.Name}-{(tiles ? "tiles" : "bands")}.png"), ImageFileType.Png);
+                    $"{TestContext.CurrentContext.Test.Name}-{(tiles ? "tiles" : "walk")}.png"), ImageFileType.Png);
             }
 
             using var img = renderer.RenderTarget.ResolveTexture.ToImage();
@@ -70,8 +84,8 @@ public class CurveTileRenderTests
 
     private static int Alpha(byte[] pixels, int x, int y) => pixels[(y * Dim + x) * 4 + 3];
 
-    // Whether a pixel lies on an edge of the banded picture: it or a neighbour is partly covered, or its neighbours
-    // disagree. The two ways soften an edge alike but not to the step - along a turned edge the bands' rays run the
+    // Whether a pixel lies on an edge of the walked picture: it or a neighbour is partly covered, or its neighbours
+    // disagree. The two ways soften an edge alike but not to the step - along a turned edge the walk's rays run the
     // fill's own axes and the tiles' the screen's - while a winding the tiles got wrong would flip a pixel inside.
     private static bool OnEdge(byte[] pixels, int x, int y)
     {
@@ -89,20 +103,20 @@ public class CurveTileRenderTests
         return seen0 && seen255;
     }
 
-    private static void AssertSameCoverage(Func<List<Geometry>> build, Transform transform = null)
+    private static void AssertSameCoverage(Func<List<Geometry>> build, Transform transform = null, bool mixed = false)
     {
-        var banded = Render(build, tiles: false, transform);
-        var tiled = Render(build, tiles: true, transform);
+        var walked = Render(build, tiles: false, transform, mixed);
+        var tiled = Render(build, tiles: true, transform, mixed);
         var worst = 0;
         var inside = 0;
         var covered = 0;
         for (var y = 0; y < Dim; y++)
         for (var x = 0; x < Dim; x++)
         {
-            var d = Math.Abs(Alpha(banded, x, y) - Alpha(tiled, x, y));
+            var d = Math.Abs(Alpha(walked, x, y) - Alpha(tiled, x, y));
             worst = Math.Max(worst, d);
-            if (d > 2 && !OnEdge(banded, x, y)) inside++;
-            if (Alpha(banded, x, y) > 0) covered++;
+            if (d > 2 && !OnEdge(walked, x, y)) inside++;
+            if (Alpha(walked, x, y) > 0) covered++;
         }
 
         Assert.Multiple(() =>
@@ -129,7 +143,7 @@ public class CurveTileRenderTests
     }
 
     [Test]
-    public void StarsUnderBothRules_CoverAsTheirBandsDo() =>
+    public void StarsUnderBothRules_CoverAsTheirWalkDoes() =>
         AssertSameCoverage(() =>
         [
             Star(90, 90, 80, 7, FillRule.EvenOdd),
@@ -138,7 +152,7 @@ public class CurveTileRenderTests
         ]);
 
     [Test]
-    public void ARingWithAHole_AndCurvedLobes_CoverAsTheirBandsDo() =>
+    public void ARingWithAHole_AndCurvedLobes_CoverAsTheirWalkDoes() =>
         AssertSameCoverage(() =>
         {
             var ring = new StreamGeometry { FillRule = FillRule.EvenOdd };
@@ -153,7 +167,7 @@ public class CurveTileRenderTests
         });
 
     [Test]
-    public void ADensePolygonAndThinBars_CoverAsTheirBandsDo() =>
+    public void ADensePolygonAndThinBars_CoverAsTheirWalkDoes() =>
         AssertSameCoverage(() =>
         {
             var random = new Random(5);
@@ -181,11 +195,44 @@ public class CurveTileRenderTests
             return [coast, bars];
         });
 
+    // Solid, gradient and pattern fills in one flush, each run reading its own items from the flush's tiles.
     [Test]
-    public void TurnedAndScaled_CoverAsTheirBandsDo() =>
+    public void EveryBrushInOneFlush_CoversAsItsWalkDoes() =>
+        AssertSameCoverage(() =>
+        [
+            Star(70, 70, 60, 7, FillRule.EvenOdd),
+            Star(200, 80, 70, 5, FillRule.NonZero),
+            new EllipseGeometry(new Vector2<double>(260, 230), 50, 70),
+            Star(100, 220, 80, 9, FillRule.NonZero),
+            Star(170, 170, 40, 5, FillRule.EvenOdd),
+            new EllipseGeometry(new Vector2<double>(60, 160), 40, 25)
+        ], mixed: true);
+
+    [Test]
+    public void TurnedAndScaled_CoverAsTheirWalkDoes() =>
         AssertSameCoverage(
             () => [Star(100, 100, 70, 7, FillRule.NonZero), new EllipseGeometry(new Vector2<double>(110, 90), 30, 50)],
             new Transform { RotationAngle = 23, ScaleX = 1.4, ScaleY = 1.4, TranslateX = 20, TranslateY = 10 });
+
+    // Seen in perspective a quadratic is no longer one, so the tiles leave the fill out and it walks its pieces - drawn
+    // exactly as with the tiles off, and drawn at all.
+    [Test]
+    public void InPerspective_AFillWalksItsPieces()
+    {
+        List<Geometry> Build() => [Star(160, 160, 120, 7, FillRule.EvenOdd), new EllipseGeometry(new Vector2<double>(160, 160), 40, 60)];
+        var transform = new Transform { RotationY = 35, Perspective = 600, RotationCenterX = 160, RotationCenterY = 160 };
+
+        var walked = Render(Build, tiles: false, transform);
+        var tiled = Render(Build, tiles: true, transform);
+
+        var covered = 0;
+        for (var i = 3; i < walked.Length; i += 4) if (walked[i] > 0) covered++;
+        Assert.Multiple(() =>
+        {
+            Assert.That(covered, Is.GreaterThan(100), "the scene draws something");
+            Assert.That(tiled, Is.EqualTo(walked), "the fill walks its pieces either way");
+        });
+    }
 
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory

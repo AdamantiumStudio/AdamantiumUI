@@ -8,6 +8,7 @@
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
 #include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 // The draw's instances, by the kind it draws.
 MaterialRectData* MaterialRects;
@@ -910,9 +911,9 @@ MaterialMeshPSInput MaterialCurveVS(uint vertexId : SV_VertexID, uint instanceId
     return o;
 }
 
-float4 MaterialCurveCovered(float4 color, float2 local)
+float4 MaterialCurveCovered(float4 color, MaterialMeshPSInput input)
 {
-    float coverage = CurveFillCoverage(local);
+    float coverage = CurveCoverage(input.Local, input.Position.xy, input.InstId);
     if (coverage <= 0.0)
     {
         discard;
@@ -921,11 +922,11 @@ float4 MaterialCurveCovered(float4 color, float2 local)
     return float4(color.rgb, color.a * coverage);
 }
 
-[shader("fragment")] float4 MaterialFrostedCurvePS(MaterialMeshPSInput i) : SV_Target { return MaterialCurveCovered(MaterialFrostedMeshColor(i), i.Local); }
-[shader("fragment")] float4 MaterialGlassCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialGlassMeshColor(i), i.Local); }
-[shader("fragment")] float4 MaterialSheenCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialSheenMeshColor(i), i.Local); }
-[shader("fragment")] float4 MaterialMetalCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialMetalMeshColor(i), i.Local); }
-[shader("fragment")] float4 MaterialWoodCurvePS(MaterialMeshPSInput i) : SV_Target    { return MaterialCurveCovered(MaterialWoodMeshColor(i), i.Local); }
+[shader("fragment")] float4 MaterialFrostedCurvePS(MaterialMeshPSInput i) : SV_Target { return MaterialCurveCovered(MaterialFrostedMeshColor(i), i); }
+[shader("fragment")] float4 MaterialGlassCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialGlassMeshColor(i), i); }
+[shader("fragment")] float4 MaterialSheenCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialSheenMeshColor(i), i); }
+[shader("fragment")] float4 MaterialMetalCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialMetalMeshColor(i), i); }
+[shader("fragment")] float4 MaterialWoodCurvePS(MaterialMeshPSInput i) : SV_Target    { return MaterialCurveCovered(MaterialWoodMeshColor(i), i); }
 
 
 // =====================================================================================================================

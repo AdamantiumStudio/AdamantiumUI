@@ -46,23 +46,21 @@ public class CurveFillCostProbe
     {
         var report = new StringBuilder();
         report.AppendLine($"target {Dim}x{Dim}, {Frames} clean frames each; ms");
-        report.AppendLine("scene | prep mesh | prep curves | frame mesh | frame bands | frame tiles | pieces | pieces/band max");
+        report.AppendLine("scene | prep mesh | prep curves | frame mesh | frame tiles | pieces");
         var curvesWere = InstancedFillCollector.CurvesEnabled;
         var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         try
         {
             foreach (var scene in Scenes)
             {
-                var (meshPrep, curvePrep, pieces, densest) = Prep(scene);
+                var (meshPrep, curvePrep, pieces) = Prep(scene);
                 InstancedFillCollector.CurvesEnabled = false;
                 var meshFrame = Frame(scene);
                 InstancedFillCollector.CurvesEnabled = true;
-                InstancedFillCollector.CurveTilesEnabled = false;
-                var bandFrame = Frame(scene);
                 InstancedFillCollector.CurveTilesEnabled = true;
                 var tileFrame = Frame(scene);
-                report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFrame:F2} | {bandFrame:F2} | " +
-                                  $"{tileFrame:F2} | {pieces} | {densest}");
+                report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFrame:F2} | {tileFrame:F2} | " +
+                                  $"{pieces}");
             }
         }
         finally
@@ -79,8 +77,8 @@ public class CurveFillCostProbe
     }
 
     // The CPU side, each on geometries of its own so neither finds the other's work cached: triangulating for the mesh,
-    // against cutting the curves, banding them and packing them for the shader.
-    private static (double Mesh, double Curves, int Pieces, int Densest) Prep(Scene scene)
+    // against cutting the curves and packing them for the shader.
+    private static (double Mesh, double Curves, int Pieces) Prep(Scene scene)
     {
         var forMesh = scene.Build();
         var watch = Stopwatch.StartNew();
@@ -89,31 +87,15 @@ public class CurveFillCostProbe
 
         var forCurves = scene.Build();
         var pieces = 0;
-        var densest = 0;
         watch.Restart();
         foreach (var g in forCurves)
         {
             var fill = CurveFill.From(g.CurvesForDrawing);
             if (fill == null) continue;
-            pieces += (int)fill.Words[5];
-            densest = Math.Max(densest, DensestBand(fill.Words));
+            pieces += (int)fill.Words[4];
         }
 
-        return (mesh, watch.Elapsed.TotalMilliseconds, pieces, densest);
-    }
-
-    // The most pieces any one band, either way, holds - what a pixel there walks at most.
-    private static int DensestBand(uint[] words)
-    {
-        var bands = (int)words[4];
-        var most = 0;
-        for (var axis = 0; axis < 2; axis++)
-        {
-            var starts = (int)words[7 + axis * 2];
-            for (var b = 0; b < bands; b++) most = Math.Max(most, (int)(words[starts + b + 1] - words[starts + b]));
-        }
-
-        return most;
+        return (mesh, watch.Elapsed.TotalMilliseconds, pieces);
     }
 
     private static double Frame(Scene scene)

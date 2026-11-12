@@ -33,9 +33,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// and fringe.</summary>
     public static bool CurvesEnabled = true;
 
-    /// <summary>Whether a solid curve fill's coverage comes from the flush's screen tiles, binned on the GPU (see
-    /// <see cref="CurveTiler"/>), rather than from its own bands.</summary>
-    public static bool CurveTilesEnabled = false;
+    /// <summary>Whether a curve fill's coverage comes from the flush's screen tiles, binned on the GPU (see
+    /// <see cref="CurveTiler"/>), rather than from a walk over its every piece - what a flush the tiles cannot place
+    /// takes anyway.</summary>
+    public static bool CurveTilesEnabled = true;
 
     private const MemoryPropertyFlags Mem = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private static readonly int InstanceStride = Marshal.SizeOf<GeometryInstance>();
@@ -173,6 +174,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         /// <summary>The mark key <paramref name="index"/> stamps - its place in the group's paint order, clamped to the
         /// field so a long group cannot wrap back onto an earlier key's mark.</summary>
         public uint MarkFor(int index) => Math.Min(StencilRef + (uint)index, CoverageMarkBits);
+
+        // Its solid curve fills binned into screen tiles, kept with it so a replay draws from them without binning.
+        public CurveTiler Tiles;
 
         public void Reset() { Keys.Clear(); GradKeys.Clear(); PatKeys.Clear(); TexKeys.Clear(); MatKeys.Clear(); Units.Clear(); }
     }
@@ -606,6 +610,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             _wake.Dispose();
             foreach (var seg in _keys.Values) Release(seg);
             _keys.Clear();
+            foreach (var rec in _flushRecords) rec.Tiles?.Dispose();
             _arenas.Clear();
         }
 
@@ -1186,11 +1191,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (rec.MatKeys.Count > 0) return true;
         if (!CurveTilesEnabled) return false;
 
-        foreach (var (seg, _, _) in rec.Keys)
-        {
-            if (seg.CurveBuffer != null) return true;
-        }
-
+        foreach (var key in rec.Keys) if (key.Seg.CurveBuffer != null) return true;
+        foreach (var key in rec.GradKeys) if (key.Seg.CurveBuffer != null) return true;
+        foreach (var key in rec.PatKeys) if (key.Seg.CurveBuffer != null) return true;
+        foreach (var key in rec.TexKeys) if (key.Seg.CurveBuffer != null) return true;
+        foreach (var key in rec.MatKeys) if (key.Seg.CurveBuffer != null) return true;
         return false;
     }
 
@@ -1249,9 +1254,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
     private void DrawFlushRecord(FlushRecord rec, Rect2D fullScissor, Matrix4x4F projection)
     {
+        // Every run's curve fills binned at once, before any of them draws: the tiles are the flush's.
+        var tiles = CurveTilesEnabled && BinCurveTiles(rec, projection) ? rec.Tiles : null;
         if (rec.Keys.Count > 0)
         {
-            var tiled = CurveTilesEnabled && BinCurveTiles(rec, projection);
+            UseTiles(tiles, _effect, _effect.CurveTiled);
             SetupInstancedState(projection);
 
             // Stamp this group's coverage mark wherever a fill lands, so the fringes below can tell "my group's fill"
@@ -1272,8 +1279,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
                 if (seg.CurveBuffer != null)
                 {
-                    if (tiled) DrawCurveTiles(seg, count, _tileItemBase[i]);
-                    else DrawCurves(seg, count, _effect.BatchCurveFillPass, _effect.CurveData, _effect.ViewportSize);
+                    TileKey(tiles, _effect.CurveTiled, _effect.CurveTileItemBase, _solidTileBase[i]);
+                    DrawCurves(seg, count, _effect.BatchCurveFillPass, _effect.CurveData, _effect.ViewportSize);
                     continue;
                 }
 
@@ -1333,12 +1340,15 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         {
             SetupInstancedState(projection);
             var brush = Brush(projection);
+            UseTiles(tiles, brush, brush.CurveTiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count) in rec.GradKeys)
+            for (var k = 0; k < rec.GradKeys.Count; k++)
             {
+                var (seg, first, count) = rec.GradKeys[k];
                 brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
                 if (seg.CurveBuffer != null)
                 {
+                    TileKey(tiles, brush.CurveTiled, brush.CurveTileItemBase, _gradTileBase[k]);
                     DrawCurves(seg, count, brush.GradientCurvePass, brush.CurveData, brush.ViewportSize);
                     continue;
                 }
@@ -1361,13 +1371,16 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             SetupInstancedState(projection);
             var brush = Brush(projection);
             brush.Time.SetValue((float)NoiseClock.Time);   // animated noise reads the shared flow clock
+            UseTiles(tiles, brush, brush.CurveTiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, kind) in rec.PatKeys)
+            for (var k = 0; k < rec.PatKeys.Count; k++)
             {
+                var (seg, first, count, kind) = rec.PatKeys[k];
                 if (!DrewMoving) DrewMoving = Flows(seg.PatItems.AsSpan((int)first, (int)count));
                 brush.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 if (seg.CurveBuffer != null)
                 {
+                    TileKey(tiles, brush.CurveTiled, brush.CurveTileItemBase, _patTileBase[k]);
                     DrawCurves(seg, count, CurvePassFor(brush, kind), brush.CurveData, brush.ViewportSize);
                     continue;
                 }
@@ -1390,9 +1403,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         {
             SetupInstancedState(projection);
             var brush = Brush(projection);
+            UseTiles(tiles, brush, brush.CurveTiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, texture, sampler) in rec.TexKeys)
+            for (var k = 0; k < rec.TexKeys.Count; k++)
             {
+                var (seg, first, count, texture, sampler) = rec.TexKeys[k];
                 // NO texture, NO draw: the heap path passes a texture as an INDEX written into push data by whoever bound
                 // one last, so drawing without binding samples whatever descriptor sits there - in practice the glyph
                 // atlas, smeared across the frame. See TextureBatchCollector.DrawSegment.
@@ -1402,6 +1417,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 brush.SourceSampler.SetResource(sampler);
                 if (seg.CurveBuffer != null)
                 {
+                    TileKey(tiles, brush.CurveTiled, brush.CurveTileItemBase, _texTileBase[k]);
                     DrawCurves(seg, count, brush.TextureCurvePass, brush.CurveData, brush.ViewportSize);
                     continue;
                 }
@@ -1427,9 +1443,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             var material = Material(projection);
             material.Projection.SetValue(projection);
             material.Transforms.SetValue(TransformsAddress);
+            UseTiles(tiles, material, material.CurveTiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, wallpaper, treatment, region, source, anchor) in rec.MatKeys)
+            for (var k = 0; k < rec.MatKeys.Count; k++)
             {
+                var (seg, first, count, wallpaper, treatment, region, source, anchor) = rec.MatKeys[k];
                 // NO backdrop, NO draw - the same refusal the textured runs make, and for the same reason: a pass that
                 // samples an unbound descriptor paints whatever was left there. The SURFACES read no backdrop at all,
                 // so the refusal does not apply to them: asking would refuse every velvet surface there is.
@@ -1439,6 +1457,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 material.MaterialGeometries.SetValue(seg.MatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 if (seg.CurveBuffer != null)
                 {
+                    TileKey(tiles, material.CurveTiled, material.CurveTileItemBase, _matTileBase[k]);
                     DrawCurves(seg, count, treatment switch
                     {
                         Core.Media.MaterialTreatment.Glass => material.MaterialGlassCurvePass,
@@ -1552,122 +1571,227 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// caller, which owns the table.</summary>
     public Func<int, Matrix4x4F> SlotMatrix { get; set; }
 
-    private CurveTiler _tiler;
+    // The binning passes, one set for every flush's tiles - made on the first flush that bins.
+    private CurveTileEffect _tileEffect;
 
-    // The flush's curve fill instances as the tiler reads them, and per key of the flush its first among them (-1: none).
+    // The flush being binned: its curve fill instances as the tiler reads them, their totals, and the map from a fill's
+    // local space to framebuffer pixels before its own matrix.
     private CurveTileItem[] _tileItems = new CurveTileItem[64];
-    private int[] _tileItemBase = new int[16];
+    private int _tileCount;
+    private uint _tilePieces;
+    private uint _tileTotal;
+    private uint _tileRows;
+    private Matrix4x4F _tileProjection;
+    private Viewport _tileViewport;
 
-    // The flush's solid curve fills binned into screen tiles, out of the render pass. False when it has none, or when one
-    // is under a perspective - a quadratic seen in perspective is no longer one.
+    // The totals before the key being binned, to drop it again.
+    private int _keyTileCount;
+    private uint _keyTilePieces;
+    private uint _keyTileTotal;
+    private uint _keyTileRows;
+
+    // Per key of each of the flush's runs, its first item among the flush's (-1: not a curve fill).
+    private int[] _solidTileBase = new int[16];
+    private int[] _gradTileBase = new int[16];
+    private int[] _patTileBase = new int[16];
+    private int[] _texTileBase = new int[16];
+    private int[] _matTileBase = new int[16];
+
+    // The flush's curve fills, every brush's, binned into screen tiles out of the render pass. False when it has none to
+    // bin. A key with an instance under a perspective is left out - a quadratic seen in perspective is no longer one - and
+    // walks its pieces instead.
     private bool BinCurveTiles(FlushRecord rec, Matrix4x4F projection)
     {
         var viewports = _device.CurrentViewports;
         if (SlotMatrix == null || viewports is not { Length: > 0 }) return false;
 
-        var vp = viewports[0];
-        var sx = vp.Width * 0.5f;
-        var sy = vp.Height * 0.5f;
-        var ox = vp.X + sx;
-        var oy = vp.Y + sy;
-        var left = vp.X;
-        var right = vp.X + vp.Width;
-        var top = Math.Min(vp.Y, vp.Y + vp.Height);
-        var bottom = Math.Max(vp.Y, vp.Y + vp.Height);
-        if (_tileItemBase.Length < rec.Keys.Count) Array.Resize(ref _tileItemBase, rec.Keys.Count * 2);
+        _tileViewport = viewports[0];
+        _tileProjection = projection;
+        _tileCount = 0;
+        _tilePieces = 0;
+        _tileTotal = 0;
+        _tileRows = 0;
 
-        var count = 0;
-        uint pieces = 0;
-        uint tiles = 0;
-        uint rows = 0;
+        Fit(ref _solidTileBase, rec.Keys.Count);
         for (var i = 0; i < rec.Keys.Count; i++)
         {
             var (seg, first, n) = rec.Keys[i];
-            if (seg.CurveBuffer == null || seg.CurveWords == null)
+            _solidTileBase[i] = BeginTileKey(seg);
+            for (var j = 0; j < n && _solidTileBase[i] >= 0; j++)
             {
-                _tileItemBase[i] = -1;
-                continue;
-            }
-
-            _tileItemBase[i] = count;
-            var words = seg.CurveWords;
-            var x0 = BitConverter.UInt32BitsToSingle(words[0]);
-            var y0 = BitConverter.UInt32BitsToSingle(words[1]);
-            var x1 = x0 + BitConverter.UInt32BitsToSingle(words[2]);
-            var y1 = y0 + BitConverter.UInt32BitsToSingle(words[3]);
-            for (var j = 0; j < n; j++)
-            {
-                ref var instance = ref seg.Items[first + j];
-                var m = instance.Local * SlotMatrix((int)instance.Params.X) * projection;
-                if (Math.Abs(m.M14) > 1e-6f || Math.Abs(m.M24) > 1e-6f || Math.Abs(m.M44 - 1f) > 1e-6f) return false;
-
-                var item = new CurveTileItem
-                {
-                    ToPixelX = new Vector4F(m.M11 * sx, m.M21 * sx, m.M41 * sx + ox, 0f),
-                    ToPixelY = new Vector4F(m.M12 * sy, m.M22 * sy, m.M42 * sy + oy, 0f),
-                    Curves = seg.CurveBuffer.GetDeviceAddress(),
-                    PieceFirst = pieces,
-                    PieceCount = words[5],
-                    EvenOdd = words[6]
-                };
-
-                // The fill's box in pixels, a margin wider, inside the viewport: its tile grid.
-                var minX = float.MaxValue;
-                var minY = float.MaxValue;
-                var maxX = float.MinValue;
-                var maxY = float.MinValue;
-                for (var corner = 0; corner < 4; corner++)
-                {
-                    var x = (corner & 1) == 0 ? x0 : x1;
-                    var y = (corner & 2) == 0 ? y0 : y1;
-                    var px = item.ToPixelX.X * x + item.ToPixelX.Y * y + item.ToPixelX.Z;
-                    var py = item.ToPixelY.X * x + item.ToPixelY.Y * y + item.ToPixelY.Z;
-                    minX = Math.Min(minX, px);
-                    minY = Math.Min(minY, py);
-                    maxX = Math.Max(maxX, px);
-                    maxY = Math.Max(maxY, py);
-                }
-
-                minX = Math.Max(minX - 1f, left);
-                minY = Math.Max(minY - 1f, top);
-                maxX = Math.Min(maxX + 1f, right - 0.001f);
-                maxY = Math.Min(maxY + 1f, bottom - 0.001f);
-                if (minX <= maxX && minY <= maxY)
-                {
-                    item.TileX = (int)MathF.Floor(minX / 16f);
-                    item.TileY = (int)MathF.Floor(minY / 16f);
-                    item.Columns = (uint)((int)MathF.Floor(maxX / 16f) - item.TileX + 1);
-                    item.Rows = (uint)((int)MathF.Floor(maxY / 16f) - item.TileY + 1);
-                }
-
-                item.TileBase = tiles;
-                item.RowBase = rows;
-                tiles += item.Columns * item.Rows;
-                rows += item.Rows;
-                pieces += item.PieceCount;
-                if (count == _tileItems.Length) Array.Resize(ref _tileItems, count * 2);
-                _tileItems[count++] = item;
+                ref var it = ref seg.Items[first + j];
+                if (!AddTileItem(seg, it.Local, (int)it.Params.X)) _solidTileBase[i] = DropTileKey();
             }
         }
 
-        if (count == 0) return false;
+        Fit(ref _gradTileBase, rec.GradKeys.Count);
+        for (var i = 0; i < rec.GradKeys.Count; i++)
+        {
+            var (seg, first, n) = rec.GradKeys[i];
+            _gradTileBase[i] = BeginTileKey(seg);
+            for (var j = 0; j < n && _gradTileBase[i] >= 0; j++)
+            {
+                ref var it = ref seg.GradItems[first + j];
+                if (!AddTileItem(seg, it.Local, (int)it.Geom1.W)) _gradTileBase[i] = DropTileKey();
+            }
+        }
 
-        _tiler ??= ToDispose(new CurveTiler(_device));
-        var held = _tileItems.AsSpan(0, count);
-        if (_tiler.Holds(held, pieces, tiles, rows)) return true;
+        Fit(ref _patTileBase, rec.PatKeys.Count);
+        for (var i = 0; i < rec.PatKeys.Count; i++)
+        {
+            var (seg, first, n, _) = rec.PatKeys[i];
+            _patTileBase[i] = BeginTileKey(seg);
+            for (var j = 0; j < n && _patTileBase[i] >= 0; j++)
+            {
+                ref var it = ref seg.PatItems[first + j];
+                if (!AddTileItem(seg, it.Local, (int)it.Params.W)) _patTileBase[i] = DropTileKey();
+            }
+        }
+
+        Fit(ref _texTileBase, rec.TexKeys.Count);
+        for (var i = 0; i < rec.TexKeys.Count; i++)
+        {
+            var (seg, first, n, _, _) = rec.TexKeys[i];
+            _texTileBase[i] = BeginTileKey(seg);
+            for (var j = 0; j < n && _texTileBase[i] >= 0; j++)
+            {
+                ref var it = ref seg.TexItems[first + j];
+                if (!AddTileItem(seg, it.Local, (int)it.Params.W)) _texTileBase[i] = DropTileKey();
+            }
+        }
+
+        Fit(ref _matTileBase, rec.MatKeys.Count);
+        for (var i = 0; i < rec.MatKeys.Count; i++)
+        {
+            var seg = rec.MatKeys[i].Seg;
+            var first = rec.MatKeys[i].First;
+            var n = rec.MatKeys[i].Count;
+            _matTileBase[i] = BeginTileKey(seg);
+            for (var j = 0; j < n && _matTileBase[i] >= 0; j++)
+            {
+                ref var it = ref seg.MatItems[first + j];
+                if (!AddTileItem(seg, it.Local, (int)it.Params.W)) _matTileBase[i] = DropTileKey();
+            }
+        }
+
+        if (_tileCount == 0) return false;
+
+        _tileEffect ??= ToDispose(new CurveTileEffect(_device));
+        rec.Tiles ??= new CurveTiler(_device, _tileEffect);
+        var items = _tileItems.AsSpan(0, _tileCount);
+        if (rec.Tiles.Holds(items, _tilePieces, _tileTotal, _tileRows)) return true;
 
         _device.SuspendRendering();
-        _tiler.Run(_tileItems.AsSpan(0, count), pieces, tiles, rows);
+        rec.Tiles.Run(items, _tilePieces, _tileTotal, _tileRows);
         _device.ResumeRendering();
         return true;
     }
 
-    // A curve fill's instances drawn with their coverage from the flush's tiles: the same quads as DrawCurves.
-    private void DrawCurveTiles(KeySegment seg, uint count, int itemBase)
+    // A key's first item among the flush's, or -1 for a key that draws no curves; the totals so far are kept so the key
+    // can be dropped again.
+    private int BeginTileKey(KeySegment seg)
     {
-        _tiler.ApplyTo(_effect);
-        _effect.CurveTileItemBase.SetValue((uint)itemBase);
-        DrawCurves(seg, count, _effect.BatchCurveTileFillPass, _effect.CurveData, _effect.ViewportSize);
+        if (seg.CurveWords == null) return -1;
+
+        _keyTileCount = _tileCount;
+        _keyTilePieces = _tilePieces;
+        _keyTileTotal = _tileTotal;
+        _keyTileRows = _tileRows;
+        return _tileCount;
+    }
+
+    // Takes back the items of the key begun last; it walks its pieces instead.
+    private int DropTileKey()
+    {
+        _tileCount = _keyTileCount;
+        _tilePieces = _keyTilePieces;
+        _tileTotal = _keyTileTotal;
+        _tileRows = _keyTileRows;
+        return -1;
+    }
+
+    private static void Fit(ref int[] bases, int count)
+    {
+        if (bases.Length < count) Array.Resize(ref bases, Math.Max(count, bases.Length * 2));
+    }
+
+    // One instance of a curve fill as the tiler reads it: its local space mapped to framebuffer pixels, and the tile grid
+    // its box covers inside the viewport. False under a perspective.
+    private bool AddTileItem(KeySegment seg, Matrix4x4F local, int slot)
+    {
+        var m = local * SlotMatrix(slot) * _tileProjection;
+        if (Math.Abs(m.M14) > 1e-6f || Math.Abs(m.M24) > 1e-6f || Math.Abs(m.M44 - 1f) > 1e-6f) return false;
+
+        var vp = _tileViewport;
+        var sx = vp.Width * 0.5f;
+        var sy = vp.Height * 0.5f;
+        var words = seg.CurveWords;
+        var item = new CurveTileItem
+        {
+            ToPixelX = new Vector4F(m.M11 * sx, m.M21 * sx, m.M41 * sx + vp.X + sx, 0f),
+            ToPixelY = new Vector4F(m.M12 * sy, m.M22 * sy, m.M42 * sy + vp.Y + sy, 0f),
+            Curves = seg.CurveBuffer.GetDeviceAddress(),
+            PieceFirst = _tilePieces,
+            PieceCount = words[4],
+            EvenOdd = words[5],
+            TileBase = _tileTotal,
+            RowBase = _tileRows
+        };
+
+        // The fill's box in pixels, a margin wider, inside the viewport.
+        var x0 = BitConverter.UInt32BitsToSingle(words[0]);
+        var y0 = BitConverter.UInt32BitsToSingle(words[1]);
+        var x1 = x0 + BitConverter.UInt32BitsToSingle(words[2]);
+        var y1 = y0 + BitConverter.UInt32BitsToSingle(words[3]);
+        var minX = float.MaxValue;
+        var minY = float.MaxValue;
+        var maxX = float.MinValue;
+        var maxY = float.MinValue;
+        for (var corner = 0; corner < 4; corner++)
+        {
+            var x = (corner & 1) == 0 ? x0 : x1;
+            var y = (corner & 2) == 0 ? y0 : y1;
+            var px = item.ToPixelX.X * x + item.ToPixelX.Y * y + item.ToPixelX.Z;
+            var py = item.ToPixelY.X * x + item.ToPixelY.Y * y + item.ToPixelY.Z;
+            minX = Math.Min(minX, px);
+            minY = Math.Min(minY, py);
+            maxX = Math.Max(maxX, px);
+            maxY = Math.Max(maxY, py);
+        }
+
+        minX = Math.Max(minX - 1f, vp.X);
+        maxX = Math.Min(maxX + 1f, vp.X + vp.Width - 0.001f);
+        minY = Math.Max(minY - 1f, Math.Min(vp.Y, vp.Y + vp.Height));
+        maxY = Math.Min(maxY + 1f, Math.Max(vp.Y, vp.Y + vp.Height) - 0.001f);
+        if (minX <= maxX && minY <= maxY)
+        {
+            item.TileX = (int)MathF.Floor(minX / 16f);
+            item.TileY = (int)MathF.Floor(minY / 16f);
+            item.Columns = (uint)((int)MathF.Floor(maxX / 16f) - item.TileX + 1);
+            item.Rows = (uint)((int)MathF.Floor(maxY / 16f) - item.TileY + 1);
+        }
+
+        _tileTotal += item.Columns * item.Rows;
+        _tileRows += item.Rows;
+        _tilePieces += item.PieceCount;
+        if (_tileCount == _tileItems.Length) Array.Resize(ref _tileItems, _tileCount * 2);
+        _tileItems[_tileCount++] = item;
+        return true;
+    }
+
+    // Hands an effect's curve passes the flush's tiles, or tells them to walk each fill's pieces.
+    private static void UseTiles(CurveTiler tiles, Effect effect, EffectParameter tiled)
+    {
+        tiled.SetValue(tiles != null ? 1u : 0u);
+        tiles?.ApplyTo(effect);
+    }
+
+    // Whether a curve key reads the flush's tiles, from its first item on, or walks its pieces - a key the tiles left out.
+    private static void TileKey(CurveTiler tiles, EffectParameter tiled, EffectParameter itemBase, int first)
+    {
+        var fromTiles = tiles != null && first >= 0;
+        tiled.SetValue(fromTiles ? 1u : 0u);
+        if (fromTiles) itemBase.SetValue((uint)first);
     }
 
     // A curve fill's instances, a quad each over the fill's box: no vertex buffer, the corners from the vertex index. The

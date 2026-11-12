@@ -8,17 +8,18 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.Retained;
 
-/// <summary>Bins a flush's curve fills into 16x16 pixel screen tiles on the GPU (CurveTileEffect.fx), so a fill's
-/// fragment walks only the pieces near it, however large or dense the fill. The tiles are rebuilt every flush, before its
-/// draws and outside the render pass.</summary>
+/// <summary>Bins one flush's curve fills into 16x16 pixel screen tiles on the GPU (CurveTileEffect.fx), so a fill's
+/// fragment walks only the pieces near it, however large or dense the fill. Each flush keeps its own: binned before its
+/// draws and outside the render pass when its fills change, drawn from as they are when they do not.</summary>
 internal sealed class CurveTiler : DeferredDisposableObject
 {
     private const uint GroupSize = 64;
     private const BufferUsageFlags Usage = BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress;
     private const MemoryPropertyFlags Readback = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.HostCoherent;
 
-    // The fewest list entries kept; more as a flush is seen to need them.
-    private const uint LeastCapacity = 1u << 16;
+    // The fewest list entries and tiles kept; more as the flush is seen to need them.
+    private const uint LeastCapacity = 1024;
+    private const uint LeastTiles = 64;
 
     private readonly IGraphicsDevice _device;
     private readonly CurveTileEffect _effect;
@@ -52,10 +53,12 @@ internal sealed class CurveTiler : DeferredDisposableObject
     private uint _heldFrame;
     private int _heldCounter = -1;
 
-    public CurveTiler(IGraphicsDevice device) : base(device)
+    /// <summary>A flush's tiles, binned with <paramref name="effect"/> - shared by every flush, and not this one's to
+    /// dispose.</summary>
+    public CurveTiler(IGraphicsDevice device, CurveTileEffect effect) : base(device)
     {
         _device = device;
-        _effect = ToDispose(new CurveTileEffect(device));
+        _effect = effect;
     }
 
     /// <summary>Whether the tiles already hold exactly <paramref name="items"/> - a clean frame of an unchanged scene -
@@ -68,9 +71,13 @@ internal sealed class CurveTiler : DeferredDisposableObject
             return false;
         }
 
-        // Its count is read once its frame has surely finished; until then, or if it found the lists too small, bin again.
-        if (_device.CurrentFrame - _heldFrame < Math.Max(1u, _device.MaxFramesInFlight)) return false;
-        if (_counters[_heldCounter].GetData<uint>()[0] > _capacity) return false;
+        // Its count can be read once its frame has surely finished: a run that found the lists too small bins again, with
+        // them grown.
+        if (_device.CurrentFrame - _heldFrame >= Math.Max(1u, _device.MaxFramesInFlight) &&
+            _counters[_heldCounter].GetData<uint>()[0] > _capacity)
+        {
+            return false;
+        }
 
         return System.Runtime.InteropServices.MemoryMarshal.AsBytes(items)
             .SequenceEqual(System.Runtime.InteropServices.MemoryMarshal.AsBytes(_held.AsSpan(0, _heldCount)));
@@ -112,15 +119,16 @@ internal sealed class CurveTiler : DeferredDisposableObject
         BarrierAll(counter, PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.FragmentShaderBit);
     }
 
-    /// <summary>Hands the last run's tiles to the fill pass that reads them.</summary>
-    public void ApplyTo(BatchEffect effect)
+    /// <summary>Hands the last run's tiles to an effect whose fill passes read them (see CurveTiles.fxh).</summary>
+    public void ApplyTo(Effect effect)
     {
-        effect.CurveTileItems.SetValue(_items);
-        effect.CurveTileCounts.SetValue(_counts.GetDeviceAddress());
-        effect.CurveTileOffsets.SetValue(_offsets.GetDeviceAddress());
-        effect.CurveTileBackdrops.SetValue(_backdrops.GetDeviceAddress());
-        effect.CurveTileEntries.SetValue(_entries.GetDeviceAddress());
-        effect.CurveTileCapacity.SetValue(_capacity);
+        var parameters = effect.Parameters;
+        parameters["CurveTileItems"].SetValue(_items);
+        parameters["CurveTileCounts"].SetValue(_counts.GetDeviceAddress());
+        parameters["CurveTileOffsets"].SetValue(_offsets.GetDeviceAddress());
+        parameters["CurveTileBackdrops"].SetValue(_backdrops.GetDeviceAddress());
+        parameters["CurveTileEntries"].SetValue(_entries.GetDeviceAddress());
+        parameters["CurveTileCapacity"].SetValue(_capacity);
     }
 
     private ulong WriteItems(ReadOnlySpan<CurveTileItem> items)
@@ -218,7 +226,7 @@ internal sealed class CurveTiler : DeferredDisposableObject
     {
         if (_counts != null && tiles <= _tileCapacity) return;
 
-        var capacity = Math.Max(1024u, NextPowerOfTwo(tiles));
+        var capacity = Math.Max(LeastTiles, NextPowerOfTwo(tiles));
         Replace(ref _counts, capacity);
         Replace(ref _cursors, capacity);
         Replace(ref _offsets, capacity);

@@ -131,9 +131,9 @@ public class PathCurvesTests
     {
         var circle = new EllipseGeometry(new Vector2<double>(0, 0), 50, 50);
 
-        var bands = CurveBands.Of(circle.CurvesForDrawing.FillCurves(), 16);
+        var pieces = CurvePieces.Of(circle.CurvesForDrawing.FillCurves());
 
-        foreach (var piece in bands.Pieces)
+        foreach (var piece in pieces.Pieces)
         {
             Assert.That(Between(piece.Control.X, piece.Start.X, piece.End.X) &&
                         Between(piece.Control.Y, piece.Start.Y, piece.End.Y), Is.True, piece.ToString());
@@ -149,15 +149,15 @@ public class PathCurvesTests
         geometry.Figures.Add(Square(50, 50, 100, clockwise: true));
         geometry.Figures.Add(Square(60, 60, 20, clockwise: false));
 
-        var bands = CurveBands.Of(geometry.CurvesForDrawing.FillCurves(), 16);
+        var pieces = CurvePieces.Of(geometry.CurvesForDrawing.FillCurves());
 
         Assert.Multiple(() =>
         {
-            Assert.That(Math.Abs(bands.Winding(new(25, 25))), Is.EqualTo(1));
-            Assert.That(Math.Abs(bands.Winding(new(90, 90))), Is.EqualTo(2));
-            Assert.That(Math.Abs(bands.Winding(new(70, 70))), Is.EqualTo(1), "the hole the other way round");
-            Assert.That(bands.Winding(new(200, 10)), Is.Zero);
-            Assert.That(bands.Winding(new(-5, 50)), Is.Zero);
+            Assert.That(Math.Abs(pieces.Winding(new(25, 25))), Is.EqualTo(1));
+            Assert.That(Math.Abs(pieces.Winding(new(90, 90))), Is.EqualTo(2));
+            Assert.That(Math.Abs(pieces.Winding(new(70, 70))), Is.EqualTo(1), "the hole the other way round");
+            Assert.That(pieces.Winding(new(200, 10)), Is.Zero);
+            Assert.That(pieces.Winding(new(-5, 50)), Is.Zero);
         });
     }
 
@@ -172,12 +172,12 @@ public class PathCurvesTests
 
         var geometry = new PathGeometry();
         geometry.Figures.Add(figure);
-        var bands = CurveBands.Of(geometry.CurvesForDrawing.FillCurves(), 16);
+        var pieces = CurvePieces.Of(geometry.CurvesForDrawing.FillCurves());
 
         Assert.Multiple(() =>
         {
-            Assert.That(Math.Abs(bands.Winding(new(50, 50))), Is.EqualTo(2), "the middle: even-odd leaves it empty");
-            Assert.That(Math.Abs(bands.Winding(new(50, 15))), Is.EqualTo(1), "a point of the star");
+            Assert.That(Math.Abs(pieces.Winding(new(50, 50))), Is.EqualTo(2), "the middle: even-odd leaves it empty");
+            Assert.That(Math.Abs(pieces.Winding(new(50, 15))), Is.EqualTo(1), "a point of the star");
         });
     }
 
@@ -185,7 +185,7 @@ public class PathCurvesTests
     public void ACircleWindsOnceInsideAndNotOutside()
     {
         var circle = new EllipseGeometry(new Vector2<double>(0, 0), 50, 50);
-        var bands = CurveBands.Of(circle.CurvesForDrawing.FillCurves(), 16);
+        var pieces = CurvePieces.Of(circle.CurvesForDrawing.FillCurves());
 
         var random = new Random(7);
         for (var i = 0; i < 500; i++)
@@ -197,7 +197,7 @@ public class PathCurvesTests
                 continue;
             }
 
-            Assert.That(Math.Abs(bands.Winding(p)), Is.EqualTo(radius < 50 ? 1 : 0), p.ToString());
+            Assert.That(Math.Abs(pieces.Winding(p)), Is.EqualTo(radius < 50 ? 1 : 0), p.ToString());
         }
     }
 

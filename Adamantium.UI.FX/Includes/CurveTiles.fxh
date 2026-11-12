@@ -26,6 +26,11 @@ static const int CurveTilePixels = 16;
 // How near a tile a piece has to pass to be listed by it: a piece within half a pixel softens the tile's edge pixels.
 static const float CurveTileMargin = 1.0;
 
+// Whether the draw's coverage comes from the flush's tiles (1) or from a walk over each fill's every piece (0), and
+// which of the flush's items its first instance is.
+uint CurveTiled;
+uint CurveTileItemBase;
+
 CurveTileItem* CurveTileItems;
 uint* CurveTileCounts;       // per tile: pieces listed
 uint* CurveTileOffsets;      // per tile: where its list starts in CurveTileEntries
@@ -39,12 +44,12 @@ float2 CurveTilePixel(CurveTileItem item, float2 p)
     return float2(dot(h, item.ToPixelX.xyz), dot(h, item.ToPixelY.xyz));
 }
 
-// Piece k of an item, in framebuffer pixels. The packed pieces are relative to the banded box's corner.
+// Piece k of an item, in framebuffer pixels. The packed pieces are relative to their box's corner.
 void CurveTilePiece(CurveTileItem item, uint k, out float2 s, out float2 c, out float2 e)
 {
     uint* words = item.Curves;
     float2 corner = float2(asfloat(words[0]), asfloat(words[1]));
-    uint at = 12u + k * 6u;
+    uint at = CurveHeaderWords + k * 6u;
     s = CurveTilePixel(item, corner + float2(asfloat(words[at]), asfloat(words[at + 1u])));
     c = CurveTilePixel(item, corner + float2(asfloat(words[at + 2u]), asfloat(words[at + 3u])));
     e = CurveTilePixel(item, corner + float2(asfloat(words[at + 4u]), asfloat(words[at + 5u])));
@@ -111,4 +116,16 @@ float CurveTileCoverage(float2 pos, uint itemIndex)
     float weightY = saturate(1.0 - nearestY);
     float weights = weightX + weightY;
     return weights > 1e-4 ? (coverX * weightX + coverY * weightY) / weights : coverX;
+}
+
+// The coverage of a curve fill's fragment: local is where it is in the fill's local space, pos in framebuffer pixels,
+// instance its instance within the draw. The choice is uniform over the draw, so the walk's derivatives stay valid.
+float CurveCoverage(float2 local, float2 pos, uint instance)
+{
+    if (CurveTiled != 0u)
+    {
+        return CurveTileCoverage(pos, CurveTileItemBase + instance);
+    }
+
+    return CurveFillCoverage(local);
 }
