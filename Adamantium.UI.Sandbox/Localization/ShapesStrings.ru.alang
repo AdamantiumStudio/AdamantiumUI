@@ -61,6 +61,26 @@
     <Phrase Key="BottomRight" Text="Справа снизу"/>
     <Phrase Key="BottomLeft" Text="Слева снизу"/>
 
+    <Phrase Key="FillCases" Text="Заливка с касаниями — в каждой дыре видна карточка:"/>
+    <Phrase Key="FillPointTouch" Text="дыра касается края в точке"/>
+    <Phrase Key="FillCornerHole" Text="дыра в углу"/>
+    <Phrase Key="FillHolesTouch" Text="дыры касаются в точке"/>
+    <Phrase Key="FillSharedSide" Text="дыры с общей стороной"/>
+    <Phrase Key="FillIsland" Text="островок в дыре (NonZero)"/>
+    <Phrase Key="FillPinch" Text="кольцо дважды через точку"/>
+    <Phrase Key="FillSameRings" Text="два одинаковых кольца (EvenOdd) — дыры нет"/>
+    <Phrase Key="FillHoleStartsAtTouch" Text="дыра начинается в точке касания"/>
+    <Phrase Key="FillHoleTouchesTwice" Text="дыра касается кольца дважды"/>
+    <Phrase Key="FillCornerHoleNonZero" Text="дыра в углу (NonZero)"/>
+    <Phrase Key="FillHoleAtTurn" Text="дыра начинается на изломе кольца"/>
+    <Phrase Key="Combined" Text="Комбинированная геометрия — залито то, что оставляет режим:"/>
+    <Phrase Key="CombinedSharedSide" Text="объединение квадратов с общей стороной"/>
+    <Phrase Key="CombinedCornerTouch" Text="объединение квадратов, касающихся углом"/>
+    <Phrase Key="CombinedCornerBite" Text="квадрат минус квадрат в его углу"/>
+    <Phrase Key="CombinedXor" Text="два круга, xor"/>
+    <Phrase Key="CombinedIntersect" Text="прямоугольник и круг, пересечение"/>
+    <Phrase Key="CombinedRing" Text="круг минус круг внутри"/>
+
     <Phrase Key="Overlap" Text="Полупрозрачное наложение — пересечение не должно быть темнее образца:"/>
     <Phrase Key="ReferenceTone" Text="эталонный тон"/>
     <Phrase Key="SelfCrossingStroke" Text="обводка пересекает себя"/>

@@ -1,3 +1,4 @@
+using System.Linq;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
@@ -8,9 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Regression tests for CombinedGeometry boolean modes (Union / Intersect / Exclude / Xor). Pure CPU path
-// (ProcessGeometryCore -> intersection/merge -> triangulate); no GPU. Guards the mode fixes:
-//  - disjoint shapes now respect the mode (Intersect = empty, Exclude = Geometry1 only) instead of always unioning.
+// CombinedGeometry's modes (Union / Intersect / Exclude / Xor) on the CPU, through the engine's overlay; no GPU.
 public class CombinedGeometryTests
 {
     // ---- disjoint inputs (bounding boxes don't overlap) -> the fixed else-branch ----
@@ -88,7 +87,7 @@ public class CombinedGeometryTests
         Assert.IsFalse(Covered(m, new Vector2<double>(50, 50)), "overlap excluded");
     }
 
-    // ---- nested inputs (one fully inside the other, no edge crossings) -> the non-crossing fast path ----
+    // ---- nested inputs (one fully inside the other, no edge crossings) ----
     // This is the Border's geometry: outer [0,100]^2 with inner [30,70]^2 fully inside it.
 
     [Test]
@@ -677,6 +676,49 @@ public class CombinedGeometryTests
         }
 
         return false;
+    }
+
+    // A combined operand comes in through its contours, rounded to five decimals, so its cuts lie a little off the edges
+    // of the other operand they came from: they are welded back onto them, and the outline runs no spike into the shape.
+    [Test]
+    public void ACombinedOperand_SharingEdgesWithTheOther_GivesAnOutlineWithoutSpikes()
+    {
+        var turned = new RectangleGeometry(new Rect(50, 0, 50, 100)) { Transform = new Transform { RotationAngle = 10 } };
+        var square = new RectangleGeometry(new Rect(0, 0, 100, 100));
+        var inner = new CombinedGeometry { GeometryCombineMode = GeometryCombineMode.Exclude, Geometry1 = square, Geometry2 = turned };
+        var outer = new CombinedGeometry
+        {
+            GeometryCombineMode = GeometryCombineMode.Union,
+            Geometry1 = inner,
+            Geometry2 = new RectangleGeometry(new Rect(50, 0, 50, 100)) { Transform = new Transform { RotationAngle = 10 } },
+        };
+        outer.ProcessGeometry(GeometryType.Both);
+
+        var inside = outer.Mesh.Contours.SelectMany(c => c.Points).Where(p => p.X > 1e-3 && p.X < 100 - 1e-3 && p.Y > 1e-3 && p.Y < 100 - 1e-3);
+        Assert.That(inside, Is.Empty, "no corner of the union's outline lies inside the square");
+    }
+
+    // A rectangle's corners are rounded to four decimals; a path beside it given exactly meets it without a seam.
+    [Test]
+    public void ARoundedRectangle_AndAnExactPathBesideIt_UniteIntoOneRing()
+    {
+        var rect = new RectangleGeometry(new Rect(0, 0, 33.333304, 100));
+        var path = Path(false, [V(33.333304, 0), V(100, 0), V(100, 100), V(33.333304, 100)]);
+        var m = Combine(GeometryCombineMode.Union, rect, path);
+        Assert.That(m.Contours, Has.Count.EqualTo(1));
+    }
+
+    // A polygon with a ring thickness is the polygon less a smaller one: it fills its band and leaves its middle.
+    [Test]
+    public void APolygonRing_FillsItsBand()
+    {
+        var ring = RegularPolygonGeometry.Build(new Rect(10.3, 10.7, 80, 80), 6, 0, 5);
+        ring.ProcessGeometry(GeometryType.Both);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Covered(ring.Mesh, V(87, 50.7)), Is.True, "the band");
+            Assert.That(Covered(ring.Mesh, V(50.3, 50.7)), Is.False, "the middle");
+        });
     }
 
     static Vector2<double> V(double x, double y) => new(x, y);

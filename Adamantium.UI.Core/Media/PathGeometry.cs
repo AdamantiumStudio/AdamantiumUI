@@ -157,12 +157,6 @@ public class PathGeometry : Geometry
 
         polygon.FillRule = FillRule;
         var points = polygon.FillIndirect(geometryType != GeometryType.Outlined);
-
-        foreach (var processedContour in polygon.ProcessedContours)
-        {
-            Mesh.AddContour(processedContour);
-        }
-
         if (geometryType != GeometryType.Outlined) Mesh.SetPoints(points);
         
         foreach (var outline in outlines)

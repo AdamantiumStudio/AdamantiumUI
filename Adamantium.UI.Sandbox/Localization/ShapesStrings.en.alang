@@ -61,6 +61,26 @@
     <Phrase Key="BottomRight" Text="Bottom right"/>
     <Phrase Key="BottomLeft" Text="Bottom left"/>
 
+    <Phrase Key="FillCases" Text="Fill with touching rings — every hole shows the card behind it:"/>
+    <Phrase Key="FillPointTouch" Text="hole touching the edge at a point"/>
+    <Phrase Key="FillCornerHole" Text="hole at a corner"/>
+    <Phrase Key="FillHolesTouch" Text="holes touching at a point"/>
+    <Phrase Key="FillSharedSide" Text="holes with a common side"/>
+    <Phrase Key="FillIsland" Text="island in a hole (NonZero)"/>
+    <Phrase Key="FillPinch" Text="ring passing one point twice"/>
+    <Phrase Key="FillSameRings" Text="two identical rings (EvenOdd) — no hole"/>
+    <Phrase Key="FillHoleStartsAtTouch" Text="hole starting at the point it touches"/>
+    <Phrase Key="FillHoleTouchesTwice" Text="hole touching the ring twice"/>
+    <Phrase Key="FillCornerHoleNonZero" Text="hole at a corner (NonZero)"/>
+    <Phrase Key="FillHoleAtTurn" Text="hole starting at the ring's turn"/>
+    <Phrase Key="Combined" Text="Combined geometry — the fill is what the mode keeps:"/>
+    <Phrase Key="CombinedSharedSide" Text="union of squares sharing a side"/>
+    <Phrase Key="CombinedCornerTouch" Text="union of squares touching at a corner"/>
+    <Phrase Key="CombinedCornerBite" Text="square less a square in its corner"/>
+    <Phrase Key="CombinedXor" Text="two circles, xor"/>
+    <Phrase Key="CombinedIntersect" Text="rectangle and circle, intersect"/>
+    <Phrase Key="CombinedRing" Text="circle less a circle inside it"/>
+
     <Phrase Key="Overlap" Text="Translucent overlap — a crossing must not be darker than the swatch:"/>
     <Phrase Key="ReferenceTone" Text="reference tone"/>
     <Phrase Key="SelfCrossingStroke" Text="self-crossing stroke"/>

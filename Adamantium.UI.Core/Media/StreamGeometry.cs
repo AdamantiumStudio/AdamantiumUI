@@ -134,7 +134,7 @@ public sealed class StreamGeometry : Geometry
             polygon.AddContours(toFill.ToArray());
 
             var points = polygon.FillIndirect();
-            Mesh.AddContours(polygon.ProcessedContours);
+            Mesh.AddContours(toFill);
             Mesh.SetPoints(points);
         }
 

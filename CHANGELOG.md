@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- The sandbox's Shapes tab shows fills with touching rings: holes touching the outer ring or each other at a point,
+  holes with a common side, an island in a hole, a ring passing one point twice, identical rings. Below them,
+  `CombinedGeometry` in each mode: squares sharing a side or touching at a corner, a square less one in its corner,
+  two circles, a rectangle and a circle, a circle less one inside it.
 - `ZoomBox.PanBy(dx, dy)` moves what the box shows as a drag that far would, stopping at its edges; automation pans a
   zoom box as it pans a canvas (`adam-auto pan`, `<Pan>` in a scenario).
 - The downloads list outlives the run: `WebViewEngine.Downloads` is kept in the profile (`downloads.json`, written off
@@ -266,6 +270,13 @@ All packages share one version.
 
 ### Changed
 
+- `CombinedGeometry` combines its operands through the engine's `GeometryOverlay` and fills the result with
+  `RingFill`, the same code `Path` fills with; its properties and markup stay as they were. Its own copy of the overlay
+  and its own fill are gone, so the engine's fixes reach it: rings touching at a point, a ring passing one point twice,
+  huge coordinates. Points nearer than the step meshes round to (`Mesh.RoundPrecision`, 1e-4) are welded: operands
+  rounded differently - a rectangle and an exact path beside it, a combined operand and the shape it was cut by - meet
+  without a seam or a spike in the outline. The result's rings now turn with the filled side on their left and may come
+  in another order, so text along a combined geometry, or a dash, may start elsewhere on it.
 - `IFileManagerPlatform` has `OpenItem` and `DownloadsFolder`: a platform of an application's own implements them too.
 - Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
   low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
@@ -365,6 +376,11 @@ All packages share one version.
 
 ### Fixed
 
+- A regular polygon with a ring thickness (`RegularPolygonGeometry.Build`) fills its band. It came out empty: its
+  outline had no contour for the combination to read.
+- `PathGeometry` and `StreamGeometry` stroke their figures as given. A ring passing one point twice was stroked
+  without its second pass, closed by a side it never had. A filled `PathGeometry` figure was stroked twice, and in an
+  even-odd `GeometryGroup` it was laid in twice and cancelled out.
 - `ZoomBox.Reset()` holds: a wheel zoom still easing, or one waiting for its extent, no longer undoes it.
 - A style `BasedOn` another keeps its own value of a property the base sets too: a base's `{ObservableResource}`
   setter wrote its resource over the derived style's value when the resource came in or moved - a theme swap took
