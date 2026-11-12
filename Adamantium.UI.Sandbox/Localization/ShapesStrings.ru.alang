@@ -73,6 +73,13 @@
     <Phrase Key="FillHoleTouchesTwice" Text="дыра касается кольца дважды"/>
     <Phrase Key="FillCornerHoleNonZero" Text="дыра в углу (NonZero)"/>
     <Phrase Key="FillHoleAtTurn" Text="дыра начинается на изломе кольца"/>
+    <Phrase Key="Combined" Text="Комбинированная геометрия — залито то, что оставляет режим:"/>
+    <Phrase Key="CombinedSharedSide" Text="объединение квадратов с общей стороной"/>
+    <Phrase Key="CombinedCornerTouch" Text="объединение квадратов, касающихся углом"/>
+    <Phrase Key="CombinedCornerBite" Text="квадрат минус квадрат в его углу"/>
+    <Phrase Key="CombinedXor" Text="два круга, xor"/>
+    <Phrase Key="CombinedIntersect" Text="прямоугольник и круг, пересечение"/>
+    <Phrase Key="CombinedRing" Text="круг минус круг внутри"/>
 
     <Phrase Key="Overlap" Text="Полупрозрачное наложение — пересечение не должно быть темнее образца:"/>
     <Phrase Key="ReferenceTone" Text="эталонный тон"/>

@@ -73,6 +73,13 @@
     <Phrase Key="FillHoleTouchesTwice" Text="hole touching the ring twice"/>
     <Phrase Key="FillCornerHoleNonZero" Text="hole at a corner (NonZero)"/>
     <Phrase Key="FillHoleAtTurn" Text="hole starting at the ring's turn"/>
+    <Phrase Key="Combined" Text="Combined geometry — the fill is what the mode keeps:"/>
+    <Phrase Key="CombinedSharedSide" Text="union of squares sharing a side"/>
+    <Phrase Key="CombinedCornerTouch" Text="union of squares touching at a corner"/>
+    <Phrase Key="CombinedCornerBite" Text="square less a square in its corner"/>
+    <Phrase Key="CombinedXor" Text="two circles, xor"/>
+    <Phrase Key="CombinedIntersect" Text="rectangle and circle, intersect"/>
+    <Phrase Key="CombinedRing" Text="circle less a circle inside it"/>
 
     <Phrase Key="Overlap" Text="Translucent overlap — a crossing must not be darker than the swatch:"/>
     <Phrase Key="ReferenceTone" Text="reference tone"/>

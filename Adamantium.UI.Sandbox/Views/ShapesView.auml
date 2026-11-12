@@ -741,6 +741,90 @@
             </StackPanel>
         </WrapPanel>
 
+        <!-- COMBINED GEOMETRY: two operands that share a side, touch at a point, overlap or nest, combined in each mode.
+             The fill must be what the mode keeps; the outline traces the result's rings. -->
+        <TextBlock x:Name="CombinedHeading" Text="{Localize ShapesStrings.Combined}" Margin="0,20,0,6"/>
+        <WrapPanel AutomationProperties.LabeledBy="{Binding ElementName=CombinedHeading}" Orientation="Horizontal">
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Union">
+                                <CombinedGeometry.Geometry1><RectangleGeometry Rect="0,30,60,60"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><RectangleGeometry Rect="60,30,60,60"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedSharedSide}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Union">
+                                <CombinedGeometry.Geometry1><RectangleGeometry Rect="0,0,60,60"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><RectangleGeometry Rect="60,60,60,60"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedCornerTouch}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Exclude">
+                                <CombinedGeometry.Geometry1><RectangleGeometry Rect="0,0,120,120"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><RectangleGeometry Rect="0,0,50,50"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedCornerBite}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Xor">
+                                <CombinedGeometry.Geometry1><EllipseGeometry Center="42,60" RadiusX="40" RadiusY="40"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><EllipseGeometry Center="78,60" RadiusX="40" RadiusY="40"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedXor}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Intersect">
+                                <CombinedGeometry.Geometry1><RectangleGeometry Rect="0,20,120,80"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><EllipseGeometry Center="60,60" RadiusX="55" RadiusY="55"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedIntersect}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="10" Width="140">
+                <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1">
+                        <Path.Data>
+                            <CombinedGeometry GeometryCombineMode="Exclude">
+                                <CombinedGeometry.Geometry1><EllipseGeometry Center="60,60" RadiusX="58" RadiusY="58"/></CombinedGeometry.Geometry1>
+                                <CombinedGeometry.Geometry2><EllipseGeometry Center="60,60" RadiusX="38" RadiusY="38"/></CombinedGeometry.Geometry2>
+                            </CombinedGeometry>
+                        </Path.Data>
+                    </Path>
+                </Border>
+                <TextBlock Text="{Localize ShapesStrings.CombinedRing}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
+            </StackPanel>
+        </WrapPanel>
+
         <!-- TRANSLUCENT OVERLAP. Every stroke here is the same color at the same alpha, so anything that draws a piece
              of coverage TWICE shows up as a darker patch. The swatch is the reference tone: a crossing that matches it
              is correct, a crossing darker than it is double-blended. -->
