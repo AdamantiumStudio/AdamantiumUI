@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- The sandbox's Shapes tab shows fills with touching rings: holes touching the outer ring or each other at a point,
+  holes with a common side, an island in a hole, a ring passing one point twice, identical rings.
 - The downloads list outlives the run: `WebViewEngine.Downloads` is kept in the profile (`downloads.json`, written off
   the UI loop, by one run of the profile at a time; a record that cannot be read is left out, a file that cannot be
   read is set aside as `downloads.json.damaged`) and listed again by the next run - a download coming in when the
