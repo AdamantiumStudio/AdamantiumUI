@@ -16,6 +16,11 @@
   <Expect Target="id=Zoom" Zoom="180..190" />
   <Pinch Target="id=Zoom" Scale="0.5" />
   <Expect Target="id=Zoom" Zoom="95..100" />
+  <!-- Zoomed in and scrolled to its start, a drag up and left shows what lay that far right and down. -->
+  <Zoom Target="id=Zoom" Percent="300" />
+  <Scroll Target="id=Zoom" Horizontal="0" Vertical="0" />
+  <Pan Target="id=Zoom" By="-50,-30" />
+  <Expect Target="id=Zoom" OffsetX="50" OffsetY="30" />
   <!-- Back as the page opens: the box at 1:1 on both axes, scrolled to its start. -->
   <Zoom Target="id=Zoom" Percent="100" />
   <Scroll Target="id=Zoom" Horizontal="0" Vertical="0" />

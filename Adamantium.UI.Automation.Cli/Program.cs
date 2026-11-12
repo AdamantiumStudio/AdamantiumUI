@@ -61,7 +61,7 @@ public static class Program
           move <selector> <dx> <dy>                           move a splitter or a canvas node, in its own units
           resize <selector> <width> <height>                  resize a canvas node, in its own units
           zoom <selector> <%>                                 zoom a zoom box, a canvas or a fractal view
-          pan <selector> <dx> <dy>                            drag what a canvas or a fractal view shows, in its units
+          pan <selector> <dx> <dy>                            drag what a zoom box, a canvas or a fractal view shows
           wheel <selector> <notches>                          turn the wheel over it, inside the application:
                                                               positive scrolls up, negative down
           context-menu <selector>                             open its context menu as the menu key would
