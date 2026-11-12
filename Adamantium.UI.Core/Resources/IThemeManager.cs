@@ -50,6 +50,26 @@ public interface IThemeManager : IThemeEngine
     /// <exception cref="InvalidOperationException"><typeparamref name="T"/> was added with other sets per theme.</exception>
     void AddStyleSet<T>(System.Collections.Generic.IReadOnlyDictionary<Type, Type> byTheme) where T : StyleSet, new();
 
+    /// <summary>Adds the resource dictionary <typeparamref name="T"/> to every theme, the ones added later included: how
+    /// a library gives its controls resources - icons, sizes - whichever theme is current. It is in force while its theme
+    /// is, before the theme's own dictionaries, so a theme declaring the same keys has its own way. Adding it twice adds
+    /// it once.</summary>
+    void AddResources<T>() where T : ResourceDictionary, new();
+
+    /// <summary>Adds the resource dictionary of <paramref name="dictionaryType"/> to every theme, as
+    /// <see cref="AddResources{T}()"/> does, for a type known only at run time.</summary>
+    /// <exception cref="ArgumentException">The type is not a resource dictionary made without arguments.</exception>
+    void AddResources(Type dictionaryType);
+
+    /// <summary>Adds a resource dictionary per theme, the themes added later included: for a theme
+    /// <paramref name="byTheme"/> names by its type - or a type it derives from - the dictionary given there, and
+    /// <typeparamref name="T"/> for every other.</summary>
+    /// <exception cref="ArgumentException">A dictionary given is not one made without arguments.</exception>
+    /// <exception cref="InvalidOperationException"><typeparamref name="T"/> was added with other dictionaries per
+    /// theme.</exception>
+    void AddResources<T>(System.Collections.Generic.IReadOnlyDictionary<Type, Type> byTheme)
+        where T : ResourceDictionary, new();
+
     void RemoveTheme(string name);
 
     void SetTheme(ITheme theme);

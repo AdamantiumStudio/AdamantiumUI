@@ -11,7 +11,8 @@ public class ThemeManager : IThemeManager
     private Dictionary<StyleSelector, IUIComponent> components;
     private TrackingCollection<ITheme> _themes;
     private IResourceManager _resourceManager;
-    private readonly List<(Type Default, IReadOnlyDictionary<Type, Type> ByTheme)> _styleSetsOfEveryTheme = [];
+    private readonly List<PerThemeChoice> _styleSetsOfEveryTheme = [];
+    private readonly List<PerThemeChoice> _resourcesOfEveryTheme = [];
 
     public IReadOnlyList<ITheme> Themes => _themes;
 
@@ -224,6 +225,14 @@ public class ThemeManager : IThemeManager
     {
         if (theme is not AdamantiumComponent component) return;
 
+        lock (_resourcesOfEveryTheme)
+        {
+            foreach (var added in _resourcesOfEveryTheme)
+            {
+                _resourceManager.AddSource(component, added.For(theme), ResourceScope.Theme);
+            }
+        }
+
         var link = ResourceContext.GetSource(component);
         if (link?.Source != null)
             _resourceManager.AddSource(component, link.Source, link.Scope);
@@ -314,9 +323,9 @@ public class ThemeManager : IThemeManager
         theme.Initialize();
         lock (_styleSetsOfEveryTheme)
         {
-            foreach (var (fallback, byTheme) in _styleSetsOfEveryTheme)
+            foreach (var added in _styleSetsOfEveryTheme)
             {
-                theme.AddStyleSet((StyleSet)Activator.CreateInstance(StyleSetFor(theme, fallback, byTheme)));
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(added.For(theme)));
             }
         }
 
@@ -332,56 +341,69 @@ public class ThemeManager : IThemeManager
 
     private void AddStyleSet(Type styleSetType, IReadOnlyDictionary<Type, Type> byTheme)
     {
-        foreach (var (theme, styleSet) in byTheme ?? new Dictionary<Type, Type>())
-        {
-            if (!typeof(StyleSet).IsAssignableFrom(styleSet) || styleSet.GetConstructor(Type.EmptyTypes) == null)
-            {
-                throw new ArgumentException(
-                    $"The style set for {theme.Name}, {styleSet.Name}, must be a StyleSet made without arguments.",
-                    nameof(byTheme));
-            }
-        }
-
+        var choice = new PerThemeChoice(styleSetType, byTheme);
+        choice.Check(typeof(StyleSet), "style set", nameof(byTheme));
         lock (_styleSetsOfEveryTheme)
         {
-            if (_styleSetsOfEveryTheme.FirstOrDefault(entry => entry.Default == styleSetType) is { Default: not null } added)
+            if (!TryAddChoice(_styleSetsOfEveryTheme, choice, "style sets"))
             {
-                if (!SameSets(added.ByTheme, byTheme))
-                {
-                    throw new InvalidOperationException(
-                        $"{styleSetType.Name} was added already, with other style sets for some themes.");
-                }
-
                 return;
             }
 
-            _styleSetsOfEveryTheme.Add((styleSetType, byTheme));
             foreach (var theme in _themes)
             {
-                theme.AddStyleSet((StyleSet)Activator.CreateInstance(StyleSetFor(theme, styleSetType, byTheme)));
+                theme.AddStyleSet((StyleSet)Activator.CreateInstance(choice.For(theme)));
             }
         }
     }
 
-    private static bool SameSets(IReadOnlyDictionary<Type, Type> left, IReadOnlyDictionary<Type, Type> right) =>
-        (left?.Count ?? 0) == (right?.Count ?? 0) &&
-        (left ?? new Dictionary<Type, Type>()).All(pair =>
-            right != null && right.TryGetValue(pair.Key, out var other) && other == pair.Value);
+    public void AddResources<T>() where T : ResourceDictionary, new() => AddResources(typeof(T), null);
 
-    private static Type StyleSetFor(ITheme theme, Type fallback, IReadOnlyDictionary<Type, Type> byTheme)
+    public void AddResources(Type dictionaryType) => AddResources(dictionaryType, null);
+
+    public void AddResources<T>(IReadOnlyDictionary<Type, Type> byTheme) where T : ResourceDictionary, new() =>
+        AddResources(typeof(T), byTheme);
+
+    private void AddResources(Type dictionaryType, IReadOnlyDictionary<Type, Type> byTheme)
     {
-        if (byTheme != null)
+        var choice = new PerThemeChoice(dictionaryType, byTheme);
+        choice.Check(typeof(ResourceDictionary), "resource dictionary", nameof(byTheme));
+        lock (_resourcesOfEveryTheme)
         {
-            for (var type = theme.GetType(); type != null; type = type.BaseType)
+            if (!TryAddChoice(_resourcesOfEveryTheme, choice, "resources"))
             {
-                if (byTheme.TryGetValue(type, out var styleSet))
-                {
-                    return styleSet;
-                }
+                return;
             }
         }
 
-        return fallback;
+        if (CurrentTheme is AdamantiumComponent current)
+        {
+            _resourceManager.RemoveSources(current);
+            ActivateThemeSources(CurrentTheme);
+            _resourceManager.NotifyResourcesChanged();
+        }
+    }
+
+    private static bool TryAddChoice(List<PerThemeChoice> choices, PerThemeChoice choice, string what)
+    {
+        foreach (var added in choices)
+        {
+            if (added.Default != choice.Default)
+            {
+                continue;
+            }
+
+            if (!added.SameAs(choice))
+            {
+                throw new InvalidOperationException(
+                    $"{choice.Default.Name} was added already, with other {what} for some themes.");
+            }
+
+            return false;
+        }
+
+        choices.Add(choice);
+        return true;
     }
 
     public void RemoveTheme(string name)
