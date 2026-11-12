@@ -1,4 +1,4 @@
-// CURVE FILLS BY SCREEN TILES - the compute side bins every curve fill of a flush into 16x16 pixel tiles, each tile
+// CURVE FILLS BY SCREEN TILES - the compute side bins every curve fill of a flush into small screen tiles, each tile
 // listing the pieces that pass within a pixel of it and holding, per pixel row, the winding of the pieces wholly to its
 // right; a fragment then walks only its own tile's list. Include after CurveMath.fxh.
 
@@ -20,8 +20,11 @@ struct CurveTileItem
     uint Pad;
 };
 
-static const float CurveTileSize = 16.0;
-static const int CurveTilePixels = 16;
+// A tile's width and height in pixels - CurveTiler.TileWidth and TileHeight. Low: a pixel walks only the pieces near its
+// own few rows, and a piece is listed in as many tiles as rows of them it crosses.
+static const int CurveTileWidth = 8;
+static const int CurveTileHeight = 4;
+static const float2 CurveTileSize = float2(8.0, 4.0);
 
 // How near a tile a piece has to pass to be listed by it: a piece within half a pixel softens the tile's edge pixels.
 static const float CurveTileMargin = 1.0;
@@ -69,9 +72,9 @@ float CurveTileCoverage(float2 pos, uint itemIndex)
     }
 
     uint t = item.TileBase + uint(tile.y) * item.Columns + uint(tile.x);
-    int row = int(floor(pos.y)) - (item.TileY + tile.y) * CurveTilePixels;
+    int row = int(floor(pos.y)) - (item.TileY + tile.y) * CurveTileHeight;
     int* backdrops = CurveTileBackdrops;
-    float hard = float(backdrops[t * 16u + uint(clamp(row, 0, 15))]);
+    float hard = float(backdrops[t * uint(CurveTileHeight) + uint(clamp(row, 0, CurveTileHeight - 1))]);
     float softX = hard;
     float softY = 0.0;
     float nearestX = 1e20;

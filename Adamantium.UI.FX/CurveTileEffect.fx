@@ -10,7 +10,7 @@
 #include "Includes/CurveTiles.fxh"
 
 uint* CurveTileCursors;      // per tile: entries written so far by Fill
-uint* CurveTileCounter;      // one uint: entries placed so far by Allocate - read back to size the next flush
+uint* CurveTileCounter;      // one uint: entries placed so far by Allocate
 uint CurveTileItemCount;
 uint CurveTilePieceTotal;
 uint CurveTileTotal;         // tiles of all items
@@ -46,8 +46,8 @@ void CurveTileBin(CurveTileItem item, uint k, float2 s, float2 c, float2 e, bool
 {
     float ylo = min(s.y, e.y);
     float yhi = max(s.y, e.y);
-    int r0 = max(int(floor((ylo - CurveTileMargin) / CurveTileSize)) - item.TileY, 0);
-    int r1 = min(int(floor((yhi + CurveTileMargin) / CurveTileSize)) - item.TileY, int(item.Rows) - 1);
+    int r0 = max(int(floor((ylo - CurveTileMargin) / CurveTileSize.y)) - item.TileY, 0);
+    int r1 = min(int(floor((yhi + CurveTileMargin) / CurveTileSize.y)) - item.TileY, int(item.Rows) - 1);
     int columns = int(item.Columns);
     int turn = e.y > s.y ? 1 : -1;
     uint* counts = CurveTileCounts;
@@ -57,19 +57,19 @@ void CurveTileBin(CurveTileItem item, uint k, float2 s, float2 c, float2 e, bool
     int* backdrops = CurveTileBackdrops;
     for (int r = r0; r <= r1; r++)
     {
-        int top = (item.TileY + r) * CurveTilePixels;
+        int top = (item.TileY + r) * CurveTileHeight;
         float xa = s.x;
         float xb = e.x;
         if (yhi > ylo)
         {
             float bandTop = clamp(float(top) - CurveTileMargin, ylo, yhi);
-            float bandBottom = clamp(float(top) + CurveTileSize + CurveTileMargin, ylo, yhi);
+            float bandBottom = clamp(float(top) + CurveTileSize.y + CurveTileMargin, ylo, yhi);
             xa = CurveAt(s.x, c.x, e.x, CurveCrossing(s.y, c.y, e.y, bandTop));
             xb = CurveAt(s.x, c.x, e.x, CurveCrossing(s.y, c.y, e.y, bandBottom));
         }
 
-        int c0 = int(floor((min(xa, xb) - CurveTileMargin) / CurveTileSize)) - item.TileX;
-        int c1 = int(floor((max(xa, xb) + CurveTileMargin) / CurveTileSize)) - item.TileX;
+        int c0 = int(floor((min(xa, xb) - CurveTileMargin) / CurveTileSize.x)) - item.TileX;
+        int c1 = int(floor((max(xa, xb) + CurveTileMargin) / CurveTileSize.x)) - item.TileX;
         uint rowTile = item.TileBase + uint(r) * item.Columns;
 
         if (!fill && c0 > 0 && yhi > ylo)
@@ -77,10 +77,10 @@ void CurveTileBin(CurveTileItem item, uint k, float2 s, float2 c, float2 e, bool
             // The pixel rows of this tile row whose centres it spans: ylo <= j + 0.5 < yhi.
             uint left = rowTile + uint(min(c0, columns) - 1);
             int j0 = max(int(ceil(ylo - 0.5)), top);
-            int j1 = min(int(ceil(yhi - 0.5)) - 1, top + CurveTilePixels - 1);
+            int j1 = min(int(ceil(yhi - 0.5)) - 1, top + CurveTileHeight - 1);
             for (int j = j0; j <= j1; j++)
             {
-                InterlockedAdd(backdrops[left * 16u + uint(j - top)], turn);
+                InterlockedAdd(backdrops[left * uint(CurveTileHeight) + uint(j - top)], turn);
             }
         }
 
@@ -140,9 +140,9 @@ void CurveTileClearCS(uint3 id : SV_DispatchThreadID)
     int* backdrops = CurveTileBackdrops;
     counts[t] = 0u;
     cursors[t] = 0u;
-    for (uint k = 0u; k < 16u; k++)
+    for (uint k = 0u; k < uint(CurveTileHeight); k++)
     {
-        backdrops[t * 16u + k] = 0;
+        backdrops[t * uint(CurveTileHeight) + k] = 0;
     }
 }
 
@@ -180,13 +180,13 @@ void CurveTileAllocateCS(uint3 id : SV_DispatchThreadID)
 void CurveTileBackdropCS(uint3 id : SV_DispatchThreadID)
 {
     uint g = id.x;
-    if (g >= CurveTileRowTotal * 16u)
+    if (g >= CurveTileRowTotal * uint(CurveTileHeight))
     {
         return;
     }
 
-    uint row = g / 16u;
-    uint pixelRow = g % 16u;
+    uint row = g / uint(CurveTileHeight);
+    uint pixelRow = g % uint(CurveTileHeight);
     CurveTileItem* items = CurveTileItems;
     CurveTileItem item = items[CurveTileItemOf(row, true)];
     uint rowTile = item.TileBase + (row - item.RowBase) * item.Columns;
@@ -194,7 +194,7 @@ void CurveTileBackdropCS(uint3 id : SV_DispatchThreadID)
     int sum = 0;
     for (int col = int(item.Columns) - 1; col >= 0; col--)
     {
-        uint at = (rowTile + uint(col)) * 16u + pixelRow;
+        uint at = (rowTile + uint(col)) * uint(CurveTileHeight) + pixelRow;
         sum += backdrops[at];
         backdrops[at] = sum;
     }

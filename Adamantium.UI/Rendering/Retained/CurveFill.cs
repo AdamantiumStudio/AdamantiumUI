@@ -15,12 +15,17 @@ internal sealed class CurveFill
     /// <summary>How many words the header takes.</summary>
     public const int HeaderWords = 6;
 
-    private CurveFill(uint[] words, Rect bounds, long fingerprint)
+    private CurveFill(uint[] words, Rect bounds, long fingerprint, Vector2<double> extentSum)
     {
         Words = words;
         Bounds = bounds;
         Fingerprint = fingerprint;
+        ExtentSum = extentSum;
     }
+
+    /// <summary>How far its pieces reach, summed: the widths of their boxes, and the heights - what bounds how many screen
+    /// tiles they can cross at a given scale.</summary>
+    public Vector2<double> ExtentSum { get; }
 
     /// <summary>The packed fill.</summary>
     public uint[] Words { get; }
@@ -51,15 +56,19 @@ internal sealed class CurveFill
         words[5] = curves.FillRule == FillRule.EvenOdd ? 1u : 0u;
 
         var origin = new Vector2<double>(bounds.X, bounds.Y);
+        double widths = 0, heights = 0;
         for (var i = 0; i < pieces.Length; i++)
         {
             var at = HeaderWords + i * 6;
             Put(words, at, pieces[i].Start - origin);
             Put(words, at + 2, pieces[i].Control - origin);
             Put(words, at + 4, pieces[i].End - origin);
+            // A piece runs one way, so its ends span its box.
+            widths += Math.Abs(pieces[i].End.X - pieces[i].Start.X);
+            heights += Math.Abs(pieces[i].End.Y - pieces[i].Start.Y);
         }
 
-        return new CurveFill(words, bounds, Hash(words));
+        return new CurveFill(words, bounds, Hash(words), new Vector2<double>(widths, heights));
     }
 
     private static uint Word(double value) => BitConverter.SingleToUInt32Bits((float)value);

@@ -65,6 +65,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // The same curves as the CPU keeps them: their box and counts, read when a flush bins them into tiles.
         public uint[] CurveWords;
 
+        // Its pieces' widths and heights, summed, in its local units (CurveFill.ExtentSum).
+        public Vector2<double> CurveExtent;
+
         // When (Stopwatch ticks) this key was last asked for. A key is kept by being USED and by nothing else - see
         // Sweep for why the cache has to forget.
         public long LastUsed;
@@ -1581,14 +1584,16 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     private uint _tilePieces;
     private uint _tileTotal;
     private uint _tileRows;
+    private double _tileEntries;   // the most list entries the items can make
     private Matrix4x4F _tileProjection;
-    private Viewport _tileViewport;
+    private RectangleF _tileViewport;   // in the target's pixels
 
     // The totals before the key being binned, to drop it again.
     private int _keyTileCount;
     private uint _keyTilePieces;
     private uint _keyTileTotal;
     private uint _keyTileRows;
+    private double _keyTileEntries;
 
     // Per key of each of the flush's runs, its first item among the flush's (-1: not a curve fill).
     private int[] _solidTileBase = new int[16];
@@ -1605,12 +1610,18 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         var viewports = _device.CurrentViewports;
         if (SlotMatrix == null || viewports is not { Length: > 0 }) return false;
 
-        _tileViewport = viewports[0];
+        // The viewport is in the window's pixels; a fragment's position is in the target's, which an offscreen layer
+        // places at TargetOrigin.
+        // A copy: the device's viewport is an object it keeps, not this collector's to move.
+        var viewport = viewports[0];
+        _tileViewport = new RectangleF(viewport.X - _device.TargetOrigin.X, viewport.Y - _device.TargetOrigin.Y,
+            viewport.Width, viewport.Height);
         _tileProjection = projection;
         _tileCount = 0;
         _tilePieces = 0;
         _tileTotal = 0;
         _tileRows = 0;
+        _tileEntries = 0;
 
         Fit(ref _solidTileBase, rec.Keys.Count);
         for (var i = 0; i < rec.Keys.Count; i++)
@@ -1682,7 +1693,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (rec.Tiles.Holds(items, _tilePieces, _tileTotal, _tileRows)) return true;
 
         _device.SuspendRendering();
-        rec.Tiles.Run(items, _tilePieces, _tileTotal, _tileRows);
+        rec.Tiles.Run(items, _tilePieces, _tileTotal, _tileRows,
+            (uint)Math.Min(Math.Ceiling(_tileEntries), uint.MaxValue));
         _device.ResumeRendering();
         return true;
     }
@@ -1697,6 +1709,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _keyTilePieces = _tilePieces;
         _keyTileTotal = _tileTotal;
         _keyTileRows = _tileRows;
+        _keyTileEntries = _tileEntries;
         return _tileCount;
     }
 
@@ -1707,6 +1720,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _tilePieces = _keyTilePieces;
         _tileTotal = _keyTileTotal;
         _tileRows = _keyTileRows;
+        _tileEntries = _keyTileEntries;
         return -1;
     }
 
@@ -1765,18 +1779,35 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         maxY = Math.Min(maxY + 1f, Math.Max(vp.Y, vp.Y + vp.Height) - 0.001f);
         if (minX <= maxX && minY <= maxY)
         {
-            item.TileX = (int)MathF.Floor(minX / 16f);
-            item.TileY = (int)MathF.Floor(minY / 16f);
-            item.Columns = (uint)((int)MathF.Floor(maxX / 16f) - item.TileX + 1);
-            item.Rows = (uint)((int)MathF.Floor(maxY / 16f) - item.TileY + 1);
+            item.TileX = (int)MathF.Floor(minX / CurveTiler.TileWidth);
+            item.TileY = (int)MathF.Floor(minY / CurveTiler.TileHeight);
+            item.Columns = (uint)((int)MathF.Floor(maxX / CurveTiler.TileWidth) - item.TileX + 1);
+            item.Rows = (uint)((int)MathF.Floor(maxY / CurveTiler.TileHeight) - item.TileY + 1);
         }
 
         _tileTotal += item.Columns * item.Rows;
         _tileRows += item.Rows;
         _tilePieces += item.PieceCount;
+        _tileEntries += Math.Min(EntriesAtMost(seg.CurveExtent, item), (double)item.PieceCount * item.Columns * item.Rows);
         if (_tileCount == _tileItems.Length) Array.Resize(ref _tileItems, _tileCount * 2);
         _tileItems[_tileCount++] = item;
         return true;
+    }
+
+    // The most list entries an item's pieces can make, from their summed extents: a piece running one way, w by h pixels,
+    // crosses at most (h + 2m)/H + 2 rows of tiles; in each, (span + 2m)/W + 2 columns, its spans summing to w counted
+    // once for every band of rows a point of it falls in - two, for bands a margin taller than a row. So the lists are
+    // made big enough on the first run, not grown a frame later.
+    private static double EntriesAtMost(Vector2<double> extent, in CurveTileItem item)
+    {
+        const double m = 1.0;
+        const double w = CurveTiler.TileWidth;
+        const double h = CurveTiler.TileHeight;
+        var widths = Math.Abs(item.ToPixelX.X) * extent.X + Math.Abs(item.ToPixelX.Y) * extent.Y;
+        var heights = Math.Abs(item.ToPixelY.X) * extent.X + Math.Abs(item.ToPixelY.Y) * extent.Y;
+        var bandsPerPoint = Math.Ceiling((h + 2 * m) / h);
+        var rows = heights / h + item.PieceCount * (2 * m / h + 2);
+        return widths * bandsPerPoint / w + rows * (2 * m / w + 2);
     }
 
     // Hands an effect's curve passes the flush's tiles, or tells them to walk each fill's pieces.
@@ -1920,6 +1951,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
             seg ??= new KeySegment();
             seg.CurveWords = curves.Words;
+            seg.CurveExtent = curves.ExtentSum;
             seg.CurveBuffer = Upload(curves.Words, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
                 "shared curve fill");
             seg.MeshUploaded = true;

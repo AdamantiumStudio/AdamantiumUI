@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.EffectsFramework;
@@ -8,50 +9,49 @@ using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.Retained;
 
-/// <summary>Bins one flush's curve fills into 16x16 pixel screen tiles on the GPU (CurveTileEffect.fx), so a fill's
-/// fragment walks only the pieces near it, however large or dense the fill. Each flush keeps its own: binned before its
-/// draws and outside the render pass when its fills change, drawn from as they are when they do not.</summary>
+/// <summary>Bins one flush's curve fills into small screen tiles on the GPU (CurveTileEffect.fx), so a fill's fragment
+/// walks only the pieces near it, however large or dense the fill. Each flush keeps its own: binned before its draws and
+/// outside the render pass when its fills change, drawn from as they are when they do not.</summary>
 internal sealed class CurveTiler : DeferredDisposableObject
 {
+    /// <summary>A tile's size in pixels - CurveTileWidth and CurveTileHeight in CurveTiles.fxh.</summary>
+    public const int TileWidth = 8;
+
+    public const int TileHeight = 4;
+
     private const uint GroupSize = 64;
     private const BufferUsageFlags Usage = BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress;
-    private const MemoryPropertyFlags Readback = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.HostCoherent;
 
-    // The fewest list entries and tiles kept; more as the flush is seen to need them.
+    // The fewest list entries and tiles kept; more as a run needs them.
     private const uint LeastCapacity = 1024;
     private const uint LeastTiles = 64;
 
     private readonly IGraphicsDevice _device;
     private readonly CurveTileEffect _effect;
 
-    // The scratch the passes write and the fragments read: the GPU alone touches it, in submission order, so one set
-    // serves every flush - each starts behind a barrier on the last one's reads.
+    // What the passes write and the fragments read: the GPU alone touches it, in submission order - a run starts behind
+    // a barrier on the reads of the draws before it.
     private Buffer _counts;
     private Buffer _cursors;
     private Buffer _offsets;
     private Buffer _backdrops;
     private Buffer _entries;
+    private Buffer _counter;
     private uint _tileCapacity;
     private uint _capacity;
 
-    // How many entries a flush placed, one copy per frame in flight, read back once its frame has finished.
-    private Buffer<uint>[] _counters = [];
-    private bool[] _countersUsed = [];
-
-    // The items the tiles were last binned for, one copy per frame in flight: a run writes the copy after the one frames
-    // still in flight read, and a flush that holds the same items draws from the one written.
+    // The items the tiles were last binned for, one copy per frame in flight and one more: a run writes the copy after
+    // the ones frames still in flight read, and a flush that holds the same items draws from the one written.
     private Buffer<CurveTileItem>[] _itemCopies = [];
     private int _itemCopy;
     private ulong _items;
 
-    // What the last run binned, and when - its tiles are only trusted once its count is back and fitted.
+    // What the last run binned.
     private CurveTileItem[] _held = [];
-    private int _heldCount;
+    private int _heldCount = -1;
     private uint _heldPieces;
     private uint _heldTiles;
     private uint _heldRows;
-    private uint _heldFrame;
-    private int _heldCounter = -1;
 
     /// <summary>A flush's tiles, binned with <paramref name="effect"/> - shared by every flush, and not this one's to
     /// dispose.</summary>
@@ -63,32 +63,16 @@ internal sealed class CurveTiler : DeferredDisposableObject
 
     /// <summary>Whether the tiles already hold exactly <paramref name="items"/> - a clean frame of an unchanged scene -
     /// so the flush draws from them without binning again.</summary>
-    public bool Holds(ReadOnlySpan<CurveTileItem> items, uint pieces, uint tiles, uint rows)
-    {
-        if (_heldCounter < 0 || items.Length != _heldCount || pieces != _heldPieces || tiles != _heldTiles ||
-            rows != _heldRows)
-        {
-            return false;
-        }
-
-        // Its count can be read once its frame has surely finished: a run that found the lists too small bins again, with
-        // them grown.
-        if (_device.CurrentFrame - _heldFrame >= Math.Max(1u, _device.MaxFramesInFlight) &&
-            _counters[_heldCounter].GetData<uint>()[0] > _capacity)
-        {
-            return false;
-        }
-
-        return System.Runtime.InteropServices.MemoryMarshal.AsBytes(items)
-            .SequenceEqual(System.Runtime.InteropServices.MemoryMarshal.AsBytes(_held.AsSpan(0, _heldCount)));
-    }
+    public bool Holds(ReadOnlySpan<CurveTileItem> items, uint pieces, uint tiles, uint rows) =>
+        items.Length == _heldCount && pieces == _heldPieces && tiles == _heldTiles && rows == _heldRows &&
+        MemoryMarshal.AsBytes(items).SequenceEqual(MemoryMarshal.AsBytes(_held.AsSpan(0, _heldCount)));
 
     /// <summary>Bins <paramref name="items"/>: <paramref name="pieces"/>, <paramref name="tiles"/> and
-    /// <paramref name="rows"/> are their totals. Recorded into the current command buffer, outside any render pass.
-    /// </summary>
-    public void Run(ReadOnlySpan<CurveTileItem> items, uint pieces, uint tiles, uint rows)
+    /// <paramref name="rows"/> are their totals, <paramref name="entries"/> the most list entries they can make - the
+    /// lists are made that long. Recorded into the current command buffer, outside any render pass.</summary>
+    public void Run(ReadOnlySpan<CurveTileItem> items, uint pieces, uint tiles, uint rows, uint entries)
     {
-        var counter = TakeCounter(pieces);
+        EnsureEntries(entries);
         EnsureScratch(tiles);
         _items = WriteItems(items);
         Hold(items, pieces, tiles, rows);
@@ -99,24 +83,24 @@ internal sealed class CurveTiler : DeferredDisposableObject
         _effect.CurveTileOffsets.SetValue(_offsets.GetDeviceAddress());
         _effect.CurveTileBackdrops.SetValue(_backdrops.GetDeviceAddress());
         _effect.CurveTileEntries.SetValue(_entries.GetDeviceAddress());
-        _effect.CurveTileCounter.SetValue(counter.GetDeviceAddress());
+        _effect.CurveTileCounter.SetValue(_counter.GetDeviceAddress());
         _effect.CurveTileCapacity.SetValue(_capacity);
         _effect.CurveTileItemCount.SetValue((uint)items.Length);
         _effect.CurveTilePieceTotal.SetValue(pieces);
         _effect.CurveTileTotal.SetValue(tiles);
         _effect.CurveTileRowTotal.SetValue(rows);
 
-        BarrierAll(counter, PipelineStageFlagBits2.FragmentShaderBit | PipelineStageFlagBits2.ComputeShaderBit,
+        BarrierAll(PipelineStageFlagBits2.FragmentShaderBit | PipelineStageFlagBits2.ComputeShaderBit,
             PipelineStageFlagBits2.ComputeShaderBit);
         Dispatch(_effect.CurveTileClearPass, Math.Max(tiles, 1u));
-        BarrierAll(counter, PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
+        BarrierAll(PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
         Dispatch(_effect.CurveTileCountPass, pieces);
-        BarrierAll(counter, PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
+        BarrierAll(PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
         Dispatch(_effect.CurveTileAllocatePass, tiles);
-        Dispatch(_effect.CurveTileBackdropPass, rows * 16u);
-        BarrierAll(counter, PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
+        Dispatch(_effect.CurveTileBackdropPass, rows * TileHeight);
+        BarrierAll(PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.ComputeShaderBit);
         Dispatch(_effect.CurveTileFillPass, pieces);
-        BarrierAll(counter, PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.FragmentShaderBit);
+        BarrierAll(PipelineStageFlagBits2.ComputeShaderBit, PipelineStageFlagBits2.FragmentShaderBit);
     }
 
     /// <summary>Hands the last run's tiles to an effect whose fill passes read them (see CurveTiles.fxh).</summary>
@@ -161,8 +145,6 @@ internal sealed class CurveTiler : DeferredDisposableObject
         _heldPieces = pieces;
         _heldTiles = tiles;
         _heldRows = rows;
-        _heldFrame = _device.CurrentFrame;
-        _heldCounter = (int)(_device.CurrentFrame % Math.Max(1u, _device.MaxFramesInFlight));
     }
 
     private void Dispatch(IEffectPass pass, uint threads)
@@ -173,14 +155,14 @@ internal sealed class CurveTiler : DeferredDisposableObject
         _device.Dispatch((threads + GroupSize - 1) / GroupSize);
     }
 
-    private void BarrierAll(Buffer counter, PipelineStageFlagBits2 from, PipelineStageFlagBits2 to)
+    private void BarrierAll(PipelineStageFlagBits2 from, PipelineStageFlagBits2 to)
     {
         Barrier(_counts, from, to);
         Barrier(_cursors, from, to);
         Barrier(_offsets, from, to);
         Barrier(_backdrops, from, to);
         Barrier(_entries, from, to);
-        Barrier((Buffer)counter, from, to);
+        Barrier(_counter, from, to);
     }
 
     private void Barrier(Buffer buffer, PipelineStageFlagBits2 from, PipelineStageFlagBits2 to)
@@ -189,37 +171,14 @@ internal sealed class CurveTiler : DeferredDisposableObject
         _device.BufferBarrier(buffer, from, access, to, access);
     }
 
-    // This frame's counter: the copy it last used finished a lap of frames ago, so what it counted is read now - and a
-    // flush that found the lists too small has them grown from here on.
-    private Buffer<uint> TakeCounter(uint pieces)
+    private void EnsureEntries(uint entries)
     {
-        var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
-        if (_counters.Length != copies)
-        {
-            foreach (var old in _counters) _device.AddToDeferDisposeQueue(old);
-            _counters = new Buffer<uint>[copies];
-            _countersUsed = new bool[copies];
-        }
+        _counter ??= Buffer.New<uint>(_device, 1ul, Usage, MemoryPropertyFlags.DeviceLocal);
+        var wanted = Math.Max(LeastCapacity, entries);
+        if (_entries != null && wanted <= _capacity) return;
 
-        var slot = (int)(_device.CurrentFrame % (uint)copies);
-
-        _counters[slot] ??= Buffer.New<uint>(_device, 1ul, Usage, Readback);
-        var counter = _counters[slot];
-        var wanted = Math.Max(LeastCapacity, pieces * 4u);
-        if (_countersUsed[slot])
-        {
-            var placed = counter.GetData<uint>()[0];
-            if (placed > _capacity) wanted = Math.Max(wanted, placed + placed / 4u);
-        }
-
-        _countersUsed[slot] = true;
-        if (wanted > _capacity)
-        {
-            Replace(ref _entries, wanted);
-            _capacity = wanted;
-        }
-
-        return counter;
+        Replace(ref _entries, wanted);
+        _capacity = wanted;
     }
 
     private void EnsureScratch(uint tiles)
@@ -230,13 +189,13 @@ internal sealed class CurveTiler : DeferredDisposableObject
         Replace(ref _counts, capacity);
         Replace(ref _cursors, capacity);
         Replace(ref _offsets, capacity);
-        Replace(ref _backdrops, capacity * 16u);
+        Replace(ref _backdrops, capacity * TileHeight);
         _tileCapacity = capacity;
     }
 
     private void Replace(ref Buffer buffer, uint words)
     {
-        if (buffer != null) _device.AddToDeferDisposeQueue(buffer);
+        Release(buffer);
         buffer = Buffer.New<uint>(_device, words, Usage, MemoryPropertyFlags.DeviceLocal);
     }
 
@@ -256,7 +215,7 @@ internal sealed class CurveTiler : DeferredDisposableObject
             Release(_offsets);
             Release(_backdrops);
             Release(_entries);
-            foreach (var counter in _counters) Release(counter);
+            Release(_counter);
             foreach (var copy in _itemCopies) Release(copy);
         }
 
