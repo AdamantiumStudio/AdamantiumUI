@@ -36,7 +36,7 @@ public class CurveFillCostProbe
     [
         new("glyphs: 4000 small cubic shapes", Glyphs),
         new("coastline: one polygon of 20000 lines", Coastline),
-        new("hatch: one path of 500 thin bars", Hatch),
+        new("hatch: one path of 2000 thin bars", Hatch),
         new("circles: 200 large, overlapping", Circles),
         new("circles at 800%", Circles, 8.0)
     ];
@@ -46,24 +46,29 @@ public class CurveFillCostProbe
     {
         var report = new StringBuilder();
         report.AppendLine($"target {Dim}x{Dim}, {Frames} clean frames each; ms");
-        report.AppendLine("scene | prep mesh | prep curves | first frame mesh | first frame curves | frame mesh | frame curves | pieces | pieces/band max");
+        report.AppendLine("scene | prep mesh | prep curves | frame mesh | frame bands | frame tiles | pieces | pieces/band max");
         var curvesWere = InstancedFillCollector.CurvesEnabled;
+        var tilesWere = InstancedFillCollector.CurveTilesEnabled;
         try
         {
             foreach (var scene in Scenes)
             {
                 var (meshPrep, curvePrep, pieces, densest) = Prep(scene);
                 InstancedFillCollector.CurvesEnabled = false;
-                var (meshFirst, meshFrame) = Frame(scene);
+                var meshFrame = Frame(scene);
                 InstancedFillCollector.CurvesEnabled = true;
-                var (curveFirst, curveFrame) = Frame(scene);
-                report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFirst:F1} | {curveFirst:F1} | " +
-                                  $"{meshFrame:F2} | {curveFrame:F2} | {pieces} | {densest}");
+                InstancedFillCollector.CurveTilesEnabled = false;
+                var bandFrame = Frame(scene);
+                InstancedFillCollector.CurveTilesEnabled = true;
+                var tileFrame = Frame(scene);
+                report.AppendLine($"{scene.Name} | {meshPrep:F1} | {curvePrep:F1} | {meshFrame:F2} | {bandFrame:F2} | " +
+                                  $"{tileFrame:F2} | {pieces} | {densest}");
             }
         }
         finally
         {
             InstancedFillCollector.CurvesEnabled = curvesWere;
+            InstancedFillCollector.CurveTilesEnabled = tilesWere;
         }
 
         var path = Environment.GetEnvironmentVariable("ADAM_PROBE_OUT")
@@ -111,7 +116,7 @@ public class CurveFillCostProbe
         return most;
     }
 
-    private static (double First, double Frame) Frame(Scene scene)
+    private static double Frame(Scene scene)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -140,11 +145,10 @@ public class CurveFillCostProbe
         }
 
         var root = new VisualRoot(content, Dim, Dim);
-        var watch = Stopwatch.StartNew();
         Assert.That(renderer.RenderFrame(root), Is.True);
-        var first = watch.Elapsed.TotalMilliseconds;
 
         for (var i = 0; i < 5; i++) renderer.RenderAgain(root);
+        var watch = new Stopwatch();
         var times = new double[Frames];
         for (var i = 0; i < Frames; i++)
         {
@@ -154,7 +158,7 @@ public class CurveFillCostProbe
         }
 
         Array.Sort(times);
-        return (first, times[Frames / 2]);
+        return times[Frames / 2];
     }
 
     private static List<Geometry> Glyphs()
@@ -213,9 +217,9 @@ public class CurveFillCostProbe
     {
         var g = new StreamGeometry();
         var context = g.Open();
-        for (var i = 0; i < 500; i++)
+        for (var i = 0; i < 2000; i++)
         {
-            var x = 20 + i * ((Dim - 40) / 500.0);
+            var x = 20 + i * ((Dim - 40) / 2000.0);
             context.BeginFigure(new Vector2<double>(x, 20), true, true)
                 .PolylineLineTo([new(x + 0.5, 20), new(x + 0.5, Dim - 20), new(x, Dim - 20)], true);
         }

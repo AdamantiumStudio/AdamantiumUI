@@ -10,6 +10,7 @@
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 #include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 // The draw's instances, by the kind it draws.
 GeometryInstance* Geometries;
@@ -791,8 +792,8 @@ struct CurvePSInput
     nointerpolation float4 ClipRadii : TEXCOORD2;
 };
 
-[shader("vertex")]
-CurvePSInput InstancedCurveFillVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+// A corner of an instance's quad over its fill's box: shared by the two curve fill passes.
+CurvePSInput CurveFillCorner(uint vertexId, uint instanceId)
 {
     GeometryInstance* instances = Geometries;
     GeometryInstance inst = instances[instanceId];
@@ -813,10 +814,56 @@ CurvePSInput InstancedCurveFillVS(uint vertexId : SV_VertexID, uint instanceId :
     return o;
 }
 
+[shader("vertex")]
+CurvePSInput InstancedCurveFillVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    return CurveFillCorner(vertexId, instanceId);
+}
+
 [shader("fragment")]
 float4 InstancedCurveFillPS(CurvePSInput input) : SV_Target
 {
     float coverage = CurveFillCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    float clip = ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
+    return float4(input.Color.rgb, input.Color.a * coverage * clip);
+}
+
+// ---- CurveTileFill pass: the same solid fills, their coverage from the flush's screen tiles (see CurveTiles.fxh) ---
+
+// The draw's first item among the flush's: its instances are the items that follow.
+uint CurveTileItemBase;
+
+struct CurveTilePSInput
+{
+    float4 Position : SV_Position;
+    float4 Color    : COLOR0;
+    nointerpolation float4 ClipBox   : TEXCOORD0;
+    nointerpolation float4 ClipRadii : TEXCOORD1;
+    nointerpolation uint Item        : TEXCOORD2;
+};
+
+[shader("vertex")]
+CurveTilePSInput InstancedCurveTileVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    CurvePSInput quad = CurveFillCorner(vertexId, instanceId);
+    CurveTilePSInput o;
+    o.Position = quad.Position;
+    o.Color = quad.Color;
+    o.ClipBox = quad.ClipBox;
+    o.ClipRadii = quad.ClipRadii;
+    o.Item = CurveTileItemBase + instanceId;
+    return o;
+}
+
+[shader("fragment")]
+float4 InstancedCurveTilePS(CurveTilePSInput input) : SV_Target
+{
+    float coverage = CurveTileCoverage(input.Position.xy, input.Item);
     if (coverage <= 0.0)
     {
         discard;
@@ -850,6 +897,12 @@ technique Batch
     {
         VertexShader = InstancedCurveFillVS;
         PixelShader = InstancedCurveFillPS;
+    }
+
+    pass CurveTileFill
+    {
+        VertexShader = InstancedCurveTileVS;
+        PixelShader = InstancedCurveTilePS;
     }
 
     // The analytic-AA fringe of those same instances: one shared scale-free ring, the same instance buffer, one draw.
