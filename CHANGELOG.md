@@ -270,6 +270,14 @@ All packages share one version.
 
 ### Changed
 
+- Paths are filled and stroked from their curves on the GPU, exact at any zoom, instead of from triangles and a
+  polyline cut on the CPU. A fill's outline is cut once into quadratic pieces (a cubic within a thousandth of its size)
+  and those into a tree of square tiles of the fill's own space, made on the record thread for each version of the
+  geometry; a pixel walks only the pieces of its tile, and moving, turning, scaling or a perspective re-lay nothing. Every
+  brush a path takes - solid, gradient (a radial between two circles too), pattern, noise, picture, material - and a
+  path clip are drawn this way; a path is no longer cut into triangles where its fill is drawn from its curves (a
+  `MeshGeometry` keeps the triangles it is given). A stroke follows the curves: its ends, joins and dashes are measured
+  along them.
 - `CombinedGeometry` combines its operands through the engine's `GeometryOverlay` and fills the result with
   `RingFill`, the same code `Path` fills with; its properties and markup stay as they were. Its own copy of the overlay
   and its own fill are gone, so the engine's fixes reach it: rings touching at a point, a ring passing one point twice,
@@ -378,6 +386,13 @@ All packages share one version.
   shows is which control it is.
 
 ### Fixed
+
+- A component with a `ComponentUpdated` subscriber and no `PropertyChanged` one was not told its properties changed, so
+  a `GeometryGroup` or `CombinedGeometry` kept drawing a child as it was before the child changed; a group now watches
+  its children as a combined geometry does its operands.
+- An arc ending where it starts is left out and one with no radius is a straight line, as SVG reads them, instead of
+  making the figure's points not numbers.
+- A `PathGeometry` or `GeometryGroup` processed again kept the triangles it was cut into before.
 
 - A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
   origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.

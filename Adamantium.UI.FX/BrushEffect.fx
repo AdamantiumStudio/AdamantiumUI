@@ -1,5 +1,5 @@
 // THE BRUSHES: computed or sampled fills (gradients, patterns, noise, textures, fractals). One technique per family, one
-// pass per carrier (Sdf, Mesh, Fringe); shares CommonData.fxh with BatchEffect.fx.
+// pass per carrier (Sdf, Mesh, Curve, Fringe); shares CommonData.fxh with BatchEffect.fx.
 
 // In dependency order - each header builds on the ones above it, and BrushData is last because everything in it is
 // built from the other four. NOTHING after the path on these lines: a trailing comment on an #include stops the
@@ -15,6 +15,8 @@
 #include "Includes/BrushData.fxh"
 #include "Includes/GradientMath.fxh"
 #include "Includes/ColorMath.fxh"
+#include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 // The draw's instances, by the kind it draws.
 GradientRectData* GradientRects;
@@ -332,7 +334,7 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     // MESH (type 4) here too: a mesh brush has NO axis geometry, so without this branch the maths above runs on zeros and
     // walks the stop table with a meaningless parameter. Same branch-free select as the rect pass.
     float4 mesh = lerp(lerp(meshCols[0], meshCols[1], uv.x), lerp(meshCols[2], meshCols[3], uv.x), uv.y);
-    return lerp(grad, mesh, step(3.5, gd.Params.y));
+    return lerp(grad, mesh, step(3.5, gd.Params.y) * step(gd.Params.y, 4.5));
 }
 
 [shader("fragment")]
@@ -341,6 +343,46 @@ float4 GradientFillPS(GradFillPSInput input) : SV_Target
     GradGeomData* items = GradientGeometries;
     float4 c = GradGeomColor(items[input.InstId], input.Local);
     return float4(c.rgb, c.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
+}
+
+// The same gradient instances drawn from their curves (see CurveMath.fxh): a quad each over the fill's box, the mesh's
+// local space carried down so the gradient is mapped exactly as on the mesh.
+[shader("vertex")]
+GradFillPSInput GradientCurveVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    GradGeomData* items = GradientGeometries;
+    // Field by field, as GradientFillVS.
+    float4x4 local = items[instanceId].Local;
+    float4 geom1 = items[instanceId].Geom1;
+    float4 gparams = items[instanceId].Params;
+    float4 clip = items[instanceId].Clip;
+    NodeSlot* nodes = Transforms;
+    float4x4 toSlot = mul(local, nodes[(uint)geom1.w].World);
+    float2 at = CurveQuadCorner(vertexId, toSlot);
+
+    GradFillPSInput o;
+    o.Position = mul(mul(float4(at, 0.0, 1.0), toSlot), Projection);
+    o.Local = at;
+    o.InstId = instanceId;
+    int gradFadeSlot = int(gparams.w * 0.5) - 1;
+    o.Fade = lerp(1.0, nodes[max(gradFadeSlot, 0)].Params.x, step(0.0, float(gradFadeSlot)));
+    o.ClipBox   = ClipShapeBox(clip.x);
+    o.ClipRadii = ClipShapeRadii(clip.x);
+    return o;
+}
+
+[shader("fragment")]
+float4 GradientCurvePS(GradFillPSInput input) : SV_Target
+{
+    GradGeomData* items = GradientGeometries;
+    float4 c = GradGeomColor(items[input.InstId], input.Local);
+    float coverage = CurveCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    return float4(c.rgb, c.a * coverage * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
 // The analytic-AA fringe of those gradient instances: same shared ring, same instance buffer, one draw. Unlike the
@@ -574,6 +616,39 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
     return float4(c.rgb, c.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
+// The same pattern instances drawn from their curves (see CurveMath.fxh), the mesh's local space carried down.
+[shader("vertex")]
+PatFillPSInput PatternCurveVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    PatternGeomData* items = PatternGeometries;
+    PatternGeomData it = items[instanceId];
+    NodeSlot* nodes = Transforms;
+    float4x4 toSlot = mul(it.Local, nodes[(uint)it.Params.w].World);
+    float2 at = CurveQuadCorner(vertexId, toSlot);
+
+    PatFillPSInput o;
+    o.Position = mul(mul(float4(at, 0.0, 1.0), toSlot), Projection);
+    o.Local = at;
+    o.InstId = instanceId;
+    int patFadeSlot = int(it.Params.x);
+    o.Fade = lerp(1.0, nodes[max(patFadeSlot, 0)].Params.x, step(0.0, float(patFadeSlot)));
+    o.ClipBox   = ClipShapeBox(it.Anim.w);
+    o.ClipRadii = ClipShapeRadii(it.Anim.w);
+    return o;
+}
+
+float4 PatternCurveShade(PatFillPSInput input, int kind)
+{
+    float4 c = PatternMeshShade(input, kind);
+    float coverage = CurveCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    return float4(c.rgb, c.a * coverage);
+}
+
 // ---- ONE ENTRY POINT PER KIND ---------------------------------------------------------------------------------------
 // The same body with a compile-time literal, so each pass keeps only its branch. Literals are the Params.y values:
 // 0 checker, 1 stripes, 2 dots, 3 grid, 5 hexagon, 6 hatch; noise 4 simplex, 7 perlin, 8 value, 9 worley, 10 ridged,
@@ -614,6 +689,24 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 [shader("fragment")] float4 NoiseVoronoiMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 106); }
 [shader("fragment")] float4 NoiseCombustibleMeshPS(PatFillPSInput i) : SV_Target { return PatternMeshShade(i, 107); }
 [shader("fragment")] float4 NoiseCircuitMeshPS(PatFillPSInput i)     : SV_Target { return PatternMeshShade(i, 108); }
+
+[shader("fragment")] float4 PatternCheckerboardCurvePS(PatFillPSInput i) : SV_Target { return PatternCurveShade(i, 0); }
+[shader("fragment")] float4 PatternStripesCurvePS(PatFillPSInput i)      : SV_Target { return PatternCurveShade(i, 1); }
+[shader("fragment")] float4 PatternDotsCurvePS(PatFillPSInput i)         : SV_Target { return PatternCurveShade(i, 2); }
+[shader("fragment")] float4 PatternGridCurvePS(PatFillPSInput i)         : SV_Target { return PatternCurveShade(i, 3); }
+[shader("fragment")] float4 PatternHexagonCurvePS(PatFillPSInput i)      : SV_Target { return PatternCurveShade(i, 4); }
+[shader("fragment")] float4 PatternHatchCurvePS(PatFillPSInput i)        : SV_Target { return PatternCurveShade(i, 5); }
+[shader("fragment")] float4 PatternWeaveCurvePS(PatFillPSInput i)        : SV_Target { return PatternCurveShade(i, 6); }
+
+[shader("fragment")] float4 NoiseSimplexCurvePS(PatFillPSInput i)     : SV_Target { return PatternCurveShade(i, 100); }
+[shader("fragment")] float4 NoisePerlinCurvePS(PatFillPSInput i)      : SV_Target { return PatternCurveShade(i, 101); }
+[shader("fragment")] float4 NoiseValueCurvePS(PatFillPSInput i)       : SV_Target { return PatternCurveShade(i, 102); }
+[shader("fragment")] float4 NoiseWorleyCurvePS(PatFillPSInput i)      : SV_Target { return PatternCurveShade(i, 103); }
+[shader("fragment")] float4 NoiseRidgedCurvePS(PatFillPSInput i)      : SV_Target { return PatternCurveShade(i, 104); }
+[shader("fragment")] float4 NoiseTurbulenceCurvePS(PatFillPSInput i)  : SV_Target { return PatternCurveShade(i, 105); }
+[shader("fragment")] float4 NoiseVoronoiCurvePS(PatFillPSInput i)     : SV_Target { return PatternCurveShade(i, 106); }
+[shader("fragment")] float4 NoiseCombustibleCurvePS(PatFillPSInput i) : SV_Target { return PatternCurveShade(i, 107); }
+[shader("fragment")] float4 NoiseCircuitCurvePS(PatFillPSInput i)     : SV_Target { return PatternCurveShade(i, 108); }
 
 
 // ---- TEXTURED rounded rect: a fill whose color is SAMPLED rather than computed - SDF, one uv wrap, one sample, one
@@ -796,6 +889,52 @@ float4 TexFillPS(TexFillPSInput input) : SV_Target
     float4 color = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * tint;
     color.a *= inside * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
 
+    return color;
+}
+
+// The same textured instances drawn from their curves (see CurveMath.fxh), the mesh's local space carried down.
+[shader("vertex")]
+TexFillPSInput TexCurveVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    TextureGeomData* items = TextureGeometries;
+    TextureGeomData it = items[instanceId];
+    NodeSlot* nodes = Transforms;
+    float4x4 toSlot = mul(it.Local, nodes[(uint)it.Params.w].World);
+    float2 at = CurveQuadCorner(vertexId, toSlot);
+
+    TexFillPSInput o;
+    o.Position = mul(mul(float4(at, 0.0, 1.0), toSlot), Projection);
+    o.Local = at;
+    o.InstId = instanceId;
+    int texFadeSlot = int(it.Params.z);
+    o.Fade = lerp(1.0, nodes[max(texFadeSlot, 0)].Params.x, step(0.0, float(texFadeSlot)));
+    o.ClipBox   = ClipShapeBox(it.Clip.x);
+    o.ClipRadii = ClipShapeRadii(it.Clip.x);
+    return o;
+}
+
+[shader("fragment")]
+float4 TexCurvePS(TexFillPSInput input) : SV_Target
+{
+    TextureGeomData* items = TextureGeometries;
+    TextureGeomData it = items[input.InstId];
+
+    // Clamped to the box, as the fringe is: a pixel the edge cuts can have its centre just past the box, and unclamped
+    // the single-copy clip would erase what of it the fill covers.
+    float2 t = saturate((input.Local - it.LocalBounds.xy) / max(it.LocalBounds.zw, float2(1e-4, 1e-4)));
+    float inside;
+    float2 uv = TileSourceUv(t, it.Rotation, it.Tile, it.Drawn, it.UvRect, float2(it.Params.x, it.Params.x), it.Params.y,
+        inside);
+
+    float4 tint = float4(it.Tint.x, it.Tint.y, it.Tint.z, it.Tint.w) * (1.0 / 255.0);
+    float4 color = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * tint;
+    float coverage = CurveCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    color.a *= coverage * inside * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
     return color;
 }
 
@@ -1178,7 +1317,8 @@ float4 FractalDeepPS(FractalPSInput input) : SV_Target { return FractalShade(inp
 
 // =====================================================================================================================
 // TECHNIQUES - one per brush family. Passes: Sdf (rounded rect, ellipse or polygon by record flag), Mesh (a shared
-// tessellated mesh), Fringe (the AA ring). Accessor: technique Gradient, pass Sdf -> Effect.GradientSdfPass.
+// tessellated mesh), Curve (a quad over the fill's curves), Fringe (the AA ring). Accessor: technique Gradient, pass Sdf
+// -> Effect.GradientSdfPass.
 // =====================================================================================================================
 
 // LINEAR / RADIAL gradients, up to 8 stops, interpolated perceptually in OKLab. The gradient is evaluated PER FRAGMENT,
@@ -1195,6 +1335,12 @@ technique Gradient
     {
         VertexShader = GradientFillVS;
         PixelShader = GradientFillPS;
+    }
+
+    pass Curve
+    {
+        VertexShader = GradientCurveVS;
+        PixelShader = GradientCurvePS;
     }
 
     // Its OWN pixel stage, unlike the other two families: the ring is colored by the gradient per fragment, so it
@@ -1292,6 +1438,48 @@ technique Pattern
     {
         VertexShader = PatternFillVS;
         PixelShader = PatternWeaveMeshPS;
+    }
+
+    pass CheckerboardCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternCheckerboardCurvePS;
+    }
+
+    pass StripesCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternStripesCurvePS;
+    }
+
+    pass DotsCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternDotsCurvePS;
+    }
+
+    pass GridCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternGridCurvePS;
+    }
+
+    pass HexagonCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternHexagonCurvePS;
+    }
+
+    pass HatchCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternHatchCurvePS;
+    }
+
+    pass WeaveCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = PatternWeaveCurvePS;
     }
 }
 
@@ -1406,6 +1594,60 @@ technique Noise
         VertexShader = PatternFillVS;
         PixelShader = NoiseCircuitMeshPS;
     }
+
+    pass SimplexCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseSimplexCurvePS;
+    }
+
+    pass PerlinCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoisePerlinCurvePS;
+    }
+
+    pass ValueCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseValueCurvePS;
+    }
+
+    pass WorleyCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseWorleyCurvePS;
+    }
+
+    pass RidgedCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseRidgedCurvePS;
+    }
+
+    pass TurbulenceCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseTurbulenceCurvePS;
+    }
+
+    pass VoronoiCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseVoronoiCurvePS;
+    }
+
+    pass CombustibleCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseCombustibleCurvePS;
+    }
+
+    pass CircuitCurve
+    {
+        VertexShader = PatternCurveVS;
+        PixelShader = NoiseCircuitCurvePS;
+    }
 }
 
 // SAMPLED fills - an ImageBrush is one instance, a NineSliceBrush is nine, so a whole skinned frame is still one draw.
@@ -1428,6 +1670,12 @@ technique Texture
     {
         VertexShader = TexFillVS;
         PixelShader = TexFillPS;
+    }
+
+    pass Curve
+    {
+        VertexShader = TexCurveVS;
+        PixelShader = TexCurvePS;
     }
 
     pass Fringe

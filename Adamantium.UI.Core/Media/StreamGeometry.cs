@@ -71,6 +71,8 @@ public sealed class StreamGeometry : Geometry
        typeof(FillRule), typeof(StreamGeometry),
        new PropertyMetadata(FillRule.EvenOdd, PropertyMetadataOptions.AffectsRender));
 
+    protected internal override FillRule CurveFillRule => FillRule;
+
     public FillRule FillRule
     {
         get => GetValue<FillRule>(FillRuleProperty);
@@ -92,6 +94,16 @@ public sealed class StreamGeometry : Geometry
             points.AddRange(contour.Points);
         }
         bounds = Rect.FromPoints(points);
+    }
+
+    private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        foreach (var figure in context.Figures)
+        {
+            figure.AppendCurves(builder);
+        }
+
+        return true;
     }
 
     protected internal override void ProcessGeometryCore(GeometryType geometryType)

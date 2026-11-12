@@ -60,12 +60,12 @@ internal static class GradientBake
     // Conic: Geom0 = (centerXY, startAngleTurns, 0) - the shader sweeps the angle around the center.
     private static Vector4F Fold(Color c, float alpha) { var v = c.ToVector4(); v.W *= alpha; return v; }
 
-    /// <summary>The type of a radial gradient between two circles: its origin's radius rides <c>Geom1.z</c>, which only the
-    /// per-unit uniforms leave free.</summary>
+    /// <summary>The type of a radial gradient between two circles: its origin's radius rides <c>Geom1.z</c>, which the
+    /// per-unit uniforms and the geometry records leave free.</summary>
     public const float TwoCircleRadial = 5f;
 
-    /// <summary>Whether a gradient can be packed into a batched record, whose <c>Geom1.zw</c> carry the record's own
-    /// flags.</summary>
+    /// <summary>Whether a gradient can be packed into a rect, ellipse or polygon record, whose <c>Geom1.zw</c> carry the
+    /// record's own flags; a geometry record carries every gradient.</summary>
     public static bool FitsBatch(GradientBrush g) => g is not RadialGradientBrush { GradientOriginRadius: > 0 };
 
     public static float PackGeometry(GradientBrush g, out Vector4F geom0, out Vector4F geom1)
@@ -79,8 +79,8 @@ internal static class GradientBake
         if (g is RadialGradientBrush radial)
         {
             geom0 = new Vector4F((float)radial.Center.X, (float)radial.Center.Y, (float)radial.RadiusX, (float)radial.RadiusY);
-            // Between two circles: type 5, the origin's radius in Geom1.z - which the batched records keep for their own
-            // flags, so a type 5 gradient is drawn by its unit (TwoCircleRadial).
+            // Between two circles: type 5, the origin's radius in Geom1.z - which the shape records keep for their own
+            // flags (FitsBatch).
             var originRadius = radial.GradientOriginRadius;
             geom1 = new Vector4F((float)radial.GradientOrigin.X, (float)radial.GradientOrigin.Y,
                 originRadius > 0 ? (float)originRadius : 0f, 0f);

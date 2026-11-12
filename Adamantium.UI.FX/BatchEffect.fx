@@ -9,6 +9,8 @@
 #include "Includes/Ring.fxh"
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
+#include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 // The draw's instances, by the kind it draws.
 GeometryInstance* Geometries;
@@ -18,10 +20,6 @@ EllipseData* Ellipses;
 PolygonData* Polygons;
 HaloRectData* HaloRects;
 HaloLivingData* LivingHalos;
-
-
-
-
 
 struct PSInput
 {
@@ -783,6 +781,52 @@ float4 HaloLivingPS(HaloPSInput input) : SV_Target
 }
 
 // =====================================================================================================================
+// ---- CurveFill pass: a solid fill drawn from its curves (see CurveMath.fxh and CurveTiles.fxh) ---------------------
+
+struct CurvePSInput
+{
+    float4 Position : SV_Position;
+    float2 Local    : TEXCOORD0;   // the fill's local space, as its mesh's vertices
+    float4 Color    : COLOR0;
+    nointerpolation float4 ClipBox   : TEXCOORD1;
+    nointerpolation float4 ClipRadii : TEXCOORD2;
+};
+
+[shader("vertex")]
+CurvePSInput InstancedCurveFillVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    GeometryInstance* instances = Geometries;
+    GeometryInstance inst = instances[instanceId];
+    NodeSlot* nodes = Transforms;
+    float4x4 toSlot = mul(inst.Local, nodes[(uint)inst.Params.x].World);
+
+    float2 local = CurveQuadCorner(vertexId, toSlot);
+
+    CurvePSInput o;
+    o.Position = mul(mul(float4(local, 0.0, 1.0), toSlot), Projection);
+    o.Local = local;
+    int fillFadeSlot = int(inst.Params.y);
+    float fillFade = lerp(1.0, nodes[max(fillFadeSlot, 0)].Params.x, step(0.0, float(fillFadeSlot)));
+    float4 instColor = float4(inst.Color) * (1.0 / 255.0);
+    o.Color = float4(instColor.rgb, instColor.a * fillFade);
+    o.ClipBox   = ClipShapeBox(inst.Params.z);
+    o.ClipRadii = ClipShapeRadii(inst.Params.z);
+    return o;
+}
+
+[shader("fragment")]
+float4 InstancedCurveFillPS(CurvePSInput input) : SV_Target
+{
+    float coverage = CurveCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    float clip = ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
+    return float4(input.Color.rgb, input.Color.a * coverage * clip);
+}
+
 // TECHNIQUE - one pass per draw variant, all instanced from a BDA buffer by SV_InstanceID. The C# accessor is
 // "{Technique}{Pass}Pass" (pass Rect -> Effect.BatchRectPass).
 // =====================================================================================================================
@@ -800,6 +844,13 @@ technique Batch
     {
         VertexShader = InstancedFillVS;
         PixelShader = InstancedFillPS;
+    }
+
+    // A fill drawn from its curves: a quad per instance, coverage from the winding - no mesh, no fringe.
+    pass CurveFill
+    {
+        VertexShader = InstancedCurveFillVS;
+        PixelShader = InstancedCurveFillPS;
     }
 
     // The analytic-AA fringe of those same instances: one shared scale-free ring, the same instance buffer, one draw.

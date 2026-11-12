@@ -118,9 +118,11 @@ public abstract class Geometry : AdamantiumComponent
             Mesh.ApplyTransform(matrix);
          }
          RecalculateBounds();
+         // Processed from here: the stroke is made from the geometry's curves, which a geometry with none of its own
+         // reads off this mesh - through this method.
+         IsProcessed = true;
          _readyFill = ContoursAreFillBoundary ? PreparedFill.Of(this, Version) : null;
          _readyStroke = ContoursAreStrokePaths ? PreparedStroke.Of(this, Version, layOut: true) : null;
-         IsProcessed = true;
       }
    }
 
@@ -135,7 +137,7 @@ public abstract class Geometry : AdamantiumComponent
       var given = FiguresCore();
       if (given == null)
       {
-         ProcessGeometry(GeometryType.Both);
+         ProcessGeometry(TrianglesAreGiven ? GeometryType.Both : GeometryType.Outlined);
          var fromMesh = new List<(Vector2<double>[] Points, bool IsClosed)>();
          var mirrored = Transform is { } mirror &&
                         mirror.Matrix.M11 * mirror.Matrix.M22 - mirror.Matrix.M12 * mirror.Matrix.M21 < 0;
@@ -198,10 +200,65 @@ public abstract class Geometry : AdamantiumComponent
    /// along are made when the geometry is processed, on whatever thread processes it.</summary>
    protected internal virtual bool ContoursAreStrokePaths => false;
 
+   /// <summary>Whether the mesh's triangles are given with the geometry rather than worked out from its outline: such a
+   /// geometry keeps them even where its fill is drawn from its curves.</summary>
+   protected internal virtual bool TrianglesAreGiven => false;
+
    /// <summary>The fill as the renderer draws it: the one <see cref="ProcessGeometry"/> made, while the geometry is as
    /// it was then; otherwise made now, from the mesh as it is, and not kept. Null when it has no triangles.</summary>
    internal PreparedFill FillForDrawing =>
       _readyFill is { } ready && ready.Version == Version ? ready : PreparedFill.Of(this, Version);
+
+   private Curves.PathCurves _curves;
+
+   /// <summary>The outline as quadratic curves, its <see cref="Transform"/> applied - what the GPU fills and strokes at
+   /// any zoom. Made once for each <see cref="Version"/>, on whatever thread asks first.</summary>
+   internal Curves.PathCurves CurvesForDrawing
+   {
+      get
+      {
+         if (_curves is { } made && made.Version == Version)
+         {
+            return made;
+         }
+
+         var version = Version;
+         var builder = new Curves.PathCurveBuilder();
+         if (AppendCurves(builder))
+         {
+            return _curves = builder.Build(version, Transform?.Matrix, CurveFillRule);
+         }
+
+         // The figures as points, the transform applied already: a geometry that keeps no curves of its own.
+         foreach (var (points, isClosed) in GetFigures())
+         {
+            if (points.Length == 0)
+            {
+               continue;
+            }
+
+            builder.BeginFigure(points[0], EnclosesArea);
+            for (var i = 1; i < points.Length; i++)
+            {
+               builder.LineTo(points[i]);
+            }
+
+            builder.EndFigure(isClosed);
+         }
+
+         return _curves = builder.Build(version, null, CurveFillRule);
+      }
+   }
+
+   /// <summary>Whether its figures enclose an area a fill paints; false for lines made only to be stroked.</summary>
+   protected internal virtual bool EnclosesArea => true;
+
+   /// <summary>Which points the curves enclose: the geometry's own rule where it has one, else non-zero.</summary>
+   protected internal virtual FillRule CurveFillRule => FillRule.NonZero;
+
+   /// <summary>Gives the geometry's figures to <paramref name="builder"/> as curves, before its
+   /// <see cref="Transform"/>; false for one that keeps none, whose figures are then given as their points.</summary>
+   private protected virtual bool AppendCurves(Curves.PathCurveBuilder builder) => false;
 
    /// <summary>Bumped every time the content is invalidated. A geometry can be REFILLED in place (a Polygon reopens its
    /// one StreamGeometry with new points on every render), so the instance stays the same while what it describes does

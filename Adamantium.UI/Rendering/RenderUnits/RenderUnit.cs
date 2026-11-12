@@ -6,6 +6,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Extensions;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
+using Adamantium.Mathematics.Triangulation;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
@@ -391,7 +392,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     {
         // No ProcessGeometry here: the payload tessellated on the RECORD thread (see GeometryPayload). The applier only
         // freezes a copy of the result.
-        _frozenMesh = FrozenMesh.From(Payload.Geometry);   // freeze the tessellated mesh for the instanced path
+        _frozenMesh = FillOf(Payload);
         GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, _frozenMesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
@@ -404,42 +405,81 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     // snapshot (captured at record after ProcessGeometry), never the live Geometry.Mesh - so it is render-thread safe.
     private FrozenMesh _frozenMesh;
 
-    // A fill the instanced path draws BODY AND FRINGE for builds no per-unit fringe at all: every brush that has an
-    // instanced fringe pass, on a mesh that has a ring. What is left per-unit is a mesh with no closed boundary, or a
-    // fill kind with no instanced pass at all (an image fill).
-    protected override bool FringeInstanced => HasInstancedFringe;
+    // A fill the instanced path draws BODY AND EDGE for builds no per-unit fringe at all: one drawn from its curves, or
+    // a brush that has an instanced fringe pass on a mesh that has a ring. What is left per-unit is a mesh with no closed
+    // boundary, or a fill kind with no instanced pass at all.
+    protected override bool FringeInstanced => DrawsCurves || HasInstancedFringe;
 
-    // The geometry a fringe of its own was last tried for: one with no closed contour gets none, and is not tried again.
-    private Geometry _fringeTriedFor;
-
-    /// <summary>Takes the fill back from the instanced path once its brush became a gradient no instanced record carries
-    /// (a radial between two circles): the body is drawn by the unit again and the edge gets its own fringe, placed and
-    /// filled at once - this runs in the walk, after the frame's PreRender.</summary>
-    public void TakeBackFill(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
-    {
-        if (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient)) return;
-        FillInstanced = false;
-        if (FillFringeRenderer != null || ReferenceEquals(_fringeTriedFor, Payload.Geometry)) return;
-        _fringeTriedFor = Payload.Geometry;
-        ProcessFillFringe(Payload.Geometry, Payload.Brush);
-        if (FillFringeRenderer != null) PrepareBuiltLate(transform, projection, renderScale);
-    }
-
-    // A fringe of its own built while its gradient was one no instanced record carries is not drawn while the instanced
-    // path draws the edge again: both would darken it.
+    // A fringe of its own built for a brush the instanced path did not take is not drawn while that path draws the edge
+    // again: both would darken it.
     public override void Render()
     {
-        if (!FillInstanced) GeometryRenderer?.Render();
-        if (!(FillInstanced && HasInstancedFringe)) FillFringeRenderer?.Render();
+        if (!FillInstanced)
+        {
+            EnsureBody();
+            GeometryRenderer?.Render();
+        }
+
+        if (!(FillInstanced && FringeInstanced)) FillFringeRenderer?.Render();
         StrokeRenderer?.Render();
+    }
+
+    private FrozenMesh _bodyCutFor;
+
+    private static FrozenMesh FillOf(GeometryPayload payload) =>
+        payload.Brush != null ? FrozenMesh.From(payload.Geometry, payload.Outline) : null;
+
+    private void EnsureBody()
+    {
+        if (_frozenMesh is not { Vertices.Length: 0 } frozen || ReferenceEquals(_bodyCutFor, frozen) ||
+            GeometryRenderer is not GeometryRenderComponent body)
+        {
+            return;
+        }
+
+        _bodyCutFor = frozen;
+        if (frozen.Loops is not { Count: > 0 } loops)
+        {
+            return;
+        }
+
+        var rings = new List<Vector2<double>[]>(loops.Count);
+        foreach (var (points, _) in loops)
+        {
+            rings.Add(points);
+        }
+
+        var mesh = new Mesh();
+        mesh.SetPoints(RingFill.Fill(rings, frozen.FillRule).ToArray());
+        body.UpdateGeometry(mesh);
+    }
+
+    private bool TryBatchedShape(out FrozenMesh shape, out GeometryKey key)
+    {
+        shape = _frozenMesh;
+        key = default;
+        if (shape == null) return false;
+        if (DrawsCurves)
+        {
+            key = shape.CurveKey;
+            return true;
+        }
+
+        if (shape.Vertices.Length == 0) return false;
+        key = shape.Key;
+        return true;
     }
 
     /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
     /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
     public bool HasInstancedFringe =>
-        InstancedFillCollector.Enabled && _frozenMesh is { Ring.Length: > 0 } &&
-        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
-        (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient));
+        InstancedFillCollector.Enabled && !DrawsCurves && _frozenMesh is { Ring.Length: > 0 } &&
+        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush;
+
+    /// <summary>Whether its instanced fill is drawn from its curves, its edge exact with it: no fringe at all.</summary>
+    public bool DrawsCurves =>
+        InstancedFillCollector.Enabled && InstancedFillCollector.CurvesEnabled && _frozenMesh?.Curves != null &&
+        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush or TileBrush or MaterialBrush;
 
     public override bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color)
     {
@@ -447,9 +487,9 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         if (Payload.Brush is not SolidColorBrush solid) return false;
         // Instanceable if the frozen mesh has drawable vertices - an indexed OR a non-indexed triangle list. UI shape
         // fills tessellate to a NON-indexed list; the retained renderer picks DrawIndexed vs Draw off the topology.
-        if (_frozenMesh is not { HasPoints: true } fm) return false;
+        if (!TryBatchedShape(out var fm, out var shapeKey)) return false;
 
-        key = fm.Key;
+        key = shapeKey;
         mesh = fm;
         var c = solid.Color.ToVector4();
         // same bake as the per-unit fill: color x brush opacity x element opacity
@@ -465,10 +505,10 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         out Rect localBounds, out double opacity)
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0;
-        if (Payload.Brush is not GradientBrush g || !GradientBake.FitsBatch(g)) return false;
-        if (_frozenMesh is not { HasPoints: true } fm) return false;
+        if (Payload.Brush is not GradientBrush g) return false;
+        if (!TryBatchedShape(out var fm, out var shapeKey)) return false;
 
-        key = fm.Key;
+        key = shapeKey;
         mesh = fm;
         brush = g;
         localBounds = fm.Bounds;
@@ -499,13 +539,13 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0; texture = null;
         if (Payload.Brush is not TileBrush image) return false;
-        if (_frozenMesh is not { HasPoints: true } fm) return false;
+        if (!TryBatchedShape(out var fm, out var shapeKey)) return false;
         // Baked at the SAME box the shader maps its UVs from (localBounds below) - the geometry's own bounds are a
         // different box, and the picture then sampled at a shifted scale and spilled past the shape.
         texture = TextureBatchCollector.BrushTexture(image, ResourceFactory, fm.Bounds.Size, DrawCommand.Component);
         if (texture == null) return false;
 
-        key = fm.Key;
+        key = shapeKey;
         mesh = fm;
         brush = image;
         localBounds = fm.Bounds;
@@ -525,9 +565,9 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0;
         if (Payload.Brush is not MaterialBrush material) return false;
-        if (_frozenMesh is not { HasPoints: true } fm) return false;
+        if (!TryBatchedShape(out var fm, out var shapeKey)) return false;
 
-        key = fm.Key;
+        key = shapeKey;
         mesh = fm;
         brush = material;
         localBounds = fm.Bounds;
@@ -540,9 +580,9 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0;
         if (Payload.Brush is not (PatternBrush or NoiseBrush)) return false;
-        if (_frozenMesh is not { HasPoints: true } fm) return false;
+        if (!TryBatchedShape(out var fm, out var shapeKey)) return false;
 
-        key = fm.Key;
+        key = shapeKey;
         mesh = fm;
         brush = Payload.Brush;
         localBounds = fm.Bounds;
@@ -561,10 +601,10 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
 
         // Geometry change: rewrite the body's buffers in place (no new component / no Vulkan allocation - the resize/
         // animation fast path). The brush is a cheap repoint, applied either way.
-        if (rebuild)
+        if (rebuild || _frozenMesh == null && inputPayload.Brush != null)
         {
             // Tessellated already, on the record thread that built inputPayload - the applier must not rebuild it here.
-            _frozenMesh = FrozenMesh.From(inputPayload.Geometry);   // re-freeze the re-tessellated mesh
+            _frozenMesh = FillOf(inputPayload);
             ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh, _frozenMesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;

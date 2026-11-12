@@ -15,9 +15,13 @@ internal struct StrokeRecord
     public const uint BatchedContours = 2;
     public const uint HasRuns = 4;
     public const uint WindowThickness = 8;
+    public const uint Bends = 16;
 
     public Matrix4x4F Local;
     public ulong Points;
+
+    /// <summary>Each point's piece's control; 0 when every piece is straight.</summary>
+    public ulong Controls;
     public ulong Arcs;
     public ulong Contours;
     public ulong PointContours;
@@ -28,6 +32,8 @@ internal struct StrokeRecord
     public uint Caps;
     public uint RoundSegments;
     public uint JoinType;
+    private uint _pad0;
+    private uint _pad1;
 
     /// <summary>.x thickness, .y least device thickness (0 none), .z dash offset, .w piece salt.</summary>
     public Vector4F Pen;

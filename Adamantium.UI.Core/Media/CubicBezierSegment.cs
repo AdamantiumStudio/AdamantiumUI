@@ -43,4 +43,7 @@ public class CubicBezierSegment : BezierSegmentBase
         MathHelper.Curves.AppendCubicBezier(currentPoint, ControlPoint1, ControlPoint2, Point, 256, dense);
         return ResampledEvenly(dense);
     }
+
+    internal override void AppendCurves(Curves.PathCurveBuilder builder) =>
+        builder.CubicTo(ControlPoint1, ControlPoint2, Point);
 }

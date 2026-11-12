@@ -64,4 +64,12 @@ public class PolyQuadraticBezierSegment : PathSegment
 
         return points.ToArray();
     }
+
+    internal override void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        for (var i = 0; i + 1 < Points.Count; i += 2)
+        {
+            builder.QuadraticTo(Points[i], Points[i + 1]);
+        }
+    }
 }

@@ -52,6 +52,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         public uint VertexCount;     // the draw's vertex count
         public float[] PointsData;   // x,y interleaved - re-uploaded to the current ring slot when stale
         public ReusableBuffer PointsBuffer;
+        public float[] ControlsData; // each point's piece's control, x,y interleaved; null when every piece is straight
+        public ReusableBuffer ControlsBuffer;
+        public double Length;        // a lone contour's length, its closing piece included
         public float[] ArcsData;              // each point's distance along its contour
         public ReusableBuffer ArcsBuffer;
         public float[] PatternData;           // dashes as read, stretched by DashScale
@@ -72,7 +75,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     public GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager)
-        : this(device, uiBasicEffect, effect, contours, null, pen, bufferManager)
+        : this(device, uiBasicEffect, effect, StrokeContour.Straight(contours), null, pen, bufferManager)
     {
     }
 
@@ -80,7 +83,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     /// <paramref name="laidOut"/> - what <see cref="PreparedStrokeBatch.Of"/> made of these same contours - rather than
     /// laid out here.</summary>
     internal GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, PreparedStrokeBatch[] laidOut, Pen pen,
+        IReadOnlyList<StrokeContour> contours, PreparedStrokeBatch[] laidOut, Pen pen,
         GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         _device = device;
@@ -95,12 +98,12 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var valid = Valid(contours);
         _gradient = new GradientUniforms(effect);
         _localBounds = GradientUniforms.BoundsOf(valid);
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> alone = [];
+        IReadOnlyList<StrokeContour> alone = [];
         var together = valid;
         if (_hasDashes && _pen.FitDashesToContour)
         {
-            var fitted = new List<(Vector2<double>[] Points, bool IsClosed)>();
-            var open = new List<(Vector2<double>[] Points, bool IsClosed)>();
+            var fitted = new List<StrokeContour>();
+            var open = new List<StrokeContour>();
             foreach (var contour in valid) (contour.IsClosed ? fitted : open).Add(contour);
             alone = fitted;
             together = fitted.Count > 0 ? open : valid;
@@ -114,7 +117,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             for (var r = 0; r < runs.Count; r++)
             {
                 var (start, count) = runs[r];
-                var contour = count == 1 ? BuildContour(together[start].Points, together[start].IsClosed)
+                var contour = count == 1 ? BuildContour(together[start])
                     : reuse && laidOut[r] is { } batch && batch.Start == start && batch.Count == count ? BuildBatch(batch)
                     : BuildBatch(together, start, count);
                 if (contour != null) _contours.Add(contour);
@@ -123,9 +126,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             valid = alone;
         }
 
-        foreach (var (points, isClosed) in valid)
+        foreach (var given in valid)
         {
-            var contour = BuildContour(points, isClosed);
+            var contour = BuildContour(given);
             if (contour != null) _contours.Add(contour);
         }
     }
@@ -139,21 +142,22 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     /// <summary>What draw <paramref name="draw"/>'s dash pattern is stretched by to fit its contour (1 = not at all).</summary>
     internal float DashScaleOf(int draw) => _contours[draw].DashScale;
 
-    private static IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> Valid(
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) => PreparedStrokeBatch.Valid(contours);
+    private static IReadOnlyList<StrokeContour> Valid(IReadOnlyList<StrokeContour> contours) =>
+        PreparedStrokeBatch.Valid(contours);
 
-    private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) =>
+    private static List<(int Start, int Count)> Batches(IReadOnlyList<StrokeContour> contours) =>
         PreparedStrokeBatch.Batches(contours);
 
     // The triangles a point of the contour draws for its join, and so its draw's vertices: a round join's fan, a bevel's
-    // two - and a miter's two only where some corner reaches past the limit, where it is beveled.
+    // two - and a miter's two only where some corner reaches past the limit, where it is beveled, or where the contour
+    // bends: its pieces' quads are their own, so a miter is a wedge of two.
     private void SetJoinTriangles(Contour c)
     {
         c.RoundSegments = _joinType switch
         {
             2u => RoundSegmentsCount,
             1u => 2u,
-            _ => AnyCornerPastLimit(c) ? 2u : 0u,
+            _ => c.ControlsData != null || AnyCornerPastLimit(c) ? 2u : 0u,
         };
         c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
     }
@@ -161,10 +165,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private bool AnyCornerPastLimit(Contour c)
     {
         var limit = MiterLimitValue;
-        if (!c.Batched) return AnyCornerPastLimit(c.PointsData, 0, (int)c.PointCount, c.IsClosed, limit);
+        if (!c.Batched)
+            return AnyCornerPastLimit(c.PointsData, c.ControlsData, 0, (int)c.PointCount, c.IsClosed, limit);
         for (var k = 0; k + 2 < c.ContoursData.Length; k += 3)
         {
-            if (AnyCornerPastLimit(c.PointsData, (int)c.ContoursData[k], (int)c.ContoursData[k + 1],
+            if (AnyCornerPastLimit(c.PointsData, c.ControlsData, (int)c.ContoursData[k], (int)c.ContoursData[k + 1],
                     c.ContoursData[k + 2] != 0, limit))
             {
                 return true;
@@ -175,18 +180,26 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // The shader's test (StrokeEffect.fx PastMiterLimit): the cosine of half the turn times the limit below 1 - with a
-    // little room, so a corner the shader's float arithmetic bevels always has its two triangles.
-    private static bool AnyCornerPastLimit(float[] points, int first, int count, bool closed, float limit)
+    // little room, so a corner the shader's float arithmetic bevels always has its two triangles. The turn is the
+    // tangents': into a point from its piece's control before, out of it toward its own.
+    private static bool AnyCornerPastLimit(float[] points, float[] controls, int first, int count, bool closed,
+        float limit)
     {
         for (var i = 0; i < count; i++)
         {
             if (!closed && (i == 0 || i == count - 1)) continue;
-            var (prev, here, next) = (first + (i + count - 1) % count, first + i, first + (i + 1) % count);
-            var (ax, ay) = (points[2 * here] - points[2 * prev], points[2 * here + 1] - points[2 * prev + 1]);
-            var (bx, by) = (points[2 * next] - points[2 * here], points[2 * next + 1] - points[2 * here + 1]);
-            var lengths = MathF.Sqrt(ax * ax + ay * ay) * MathF.Sqrt(bx * bx + by * by);
+            var previous = first + (i + count - 1) % count;
+            var here = first + i;
+            var next = first + (i + 1) % count;
+            var bends = controls ?? points;
+            var outAt = controls != null ? here : next;
+            var inX = points[2 * here] - bends[2 * previous];
+            var inY = points[2 * here + 1] - bends[2 * previous + 1];
+            var outX = bends[2 * outAt] - points[2 * here];
+            var outY = bends[2 * outAt + 1] - points[2 * here + 1];
+            var lengths = MathF.Sqrt(inX * inX + inY * inY) * MathF.Sqrt(outX * outX + outY * outY);
             if (lengths <= 0) return true;
-            var halfTurnCos = MathF.Sqrt(MathF.Max(0f, (1f + (ax * bx + ay * by) / lengths) / 2f));
+            var halfTurnCos = MathF.Sqrt(MathF.Max(0f, (1f + (inX * outX + inY * outY) / lengths) / 2f));
             if (halfTurnCos * limit < 1.001f) return true;
         }
 
@@ -205,6 +218,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             LaidOutElsewhere = true,
             PointCount = (uint)batch.PointContours.Length,
             PointsData = batch.Points,
+            ControlsData = batch.Controls,
             ContoursData = batch.Contours,
             PointContoursData = batch.PointContours,
             ArcsData = batch.Arcs,
@@ -212,6 +226,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
+        if (c.ControlsData != null) c.ControlsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
         c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
         c.ArcsBuffer = NewStorage((ulong)(c.ArcsData.Length * sizeof(float)));
@@ -219,7 +234,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return c;
     }
 
-    private Contour BuildBatch(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start, int count)
+    private Contour BuildBatch(IReadOnlyList<StrokeContour> contours, int start, int count)
     {
         var total = 0;
         for (var k = start; k < start + count; k++) total += contours[k].Points.Length;
@@ -229,91 +244,63 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             Batched = true,
             PointCount = (uint)total,
             PointsData = new float[total * 2],
+            ControlsData = PreparedStrokeBatch.AnyBends(contours, start, count) ? new float[total * 2] : null,
             ContoursData = new uint[count * 3],
             PointContoursData = new uint[total],
+            ArcsData = new float[total],
         };
         FillBatch(c, contours, start, count);
 
         SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
+        if (c.ControlsData != null) c.ControlsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
         c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
-        c.ArcsData = new float[total];
-        FillArcs(c);
         c.ArcsBuffer = NewStorage((ulong)(total * sizeof(float)));
         if (_hasDashes) SetPattern(c, _pen);
         return c;
     }
 
-    private static void FillArcs(Contour c)
-    {
-        var points = c.PointsData;
-        var arcs = c.ArcsData;
-        if (!c.Batched)
-        {
-            Arcs(points, arcs, 0, (int)c.PointCount);
-            return;
-        }
-
-        for (var k = 0; k < c.ContoursData.Length; k += 3)
-        {
-            Arcs(points, arcs, (int)c.ContoursData[k], (int)c.ContoursData[k + 1]);
-        }
-
-        static void Arcs(float[] points, float[] arcs, int first, int count)
-        {
-            var along = 0.0;
-            arcs[first] = 0f;
-            for (var i = first + 1; i < first + count; i++)
-            {
-                var dx = points[i * 2] - points[i * 2 - 2];
-                var dy = points[i * 2 + 1] - points[i * 2 - 1];
-                along += Math.Sqrt((double)dx * dx + (double)dy * dy);
-                arcs[i] = (float)along;
-            }
-        }
-    }
-
-    // Whether contour or batch c holds exactly these contours - counts and closedness, in order.
-    private static bool Matches(Contour c, IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start,
-        int count)
+    // Whether contour or batch c holds exactly these contours - counts, closedness and whether they bend, in order.
+    private static bool Matches(Contour c, IReadOnlyList<StrokeContour> contours, int start, int count)
     {
         if (!c.Batched)
-            return count == 1 && contours[start].Points.Length == c.PointCount && contours[start].IsClosed == c.IsClosed;
+            return count == 1 && contours[start].Points.Length == c.PointCount && contours[start].IsClosed == c.IsClosed &&
+                   (contours[start].Controls != null) == (c.ControlsData != null);
 
         if (count * 3 != c.ContoursData.Length) return false;
+        if (PreparedStrokeBatch.AnyBends(contours, start, count) != (c.ControlsData != null)) return false;
         var at = 0u;
         for (var k = 0; k < count; k++)
         {
-            var (points, isClosed) = contours[start + k];
-            if (c.ContoursData[k * 3] != at || c.ContoursData[k * 3 + 1] != (uint)points.Length ||
-                c.ContoursData[k * 3 + 2] != (isClosed ? 1u : 0u))
+            var contour = contours[start + k];
+            if (c.ContoursData[k * 3] != at || c.ContoursData[k * 3 + 1] != (uint)contour.Points.Length ||
+                c.ContoursData[k * 3 + 2] != (contour.IsClosed ? 1u : 0u))
                 return false;
-            at += (uint)points.Length;
+            at += (uint)contour.Points.Length;
         }
 
         return true;
     }
 
-    private static void FillBatch(Contour c, IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start,
-        int count)
+    private static void FillBatch(Contour c, IReadOnlyList<StrokeContour> contours, int start, int count)
     {
         var at = 0;
         for (var k = 0; k < count; k++)
         {
-            var (points, isClosed) = contours[start + k];
+            var contour = contours[start + k];
             c.ContoursData[k * 3] = (uint)at;
-            c.ContoursData[k * 3 + 1] = (uint)points.Length;
-            c.ContoursData[k * 3 + 2] = isClosed ? 1u : 0u;
-            foreach (var point in points)
-            {
-                c.PointsData[at * 2] = (float)point.X;
-                c.PointsData[at * 2 + 1] = (float)point.Y;
-                c.PointContoursData[at] = (uint)k;
-                at++;
-            }
+            c.ContoursData[k * 3 + 1] = (uint)contour.Points.Length;
+            c.ContoursData[k * 3 + 2] = contour.IsClosed ? 1u : 0u;
+            PreparedStrokeBatch.Write(contour, c.PointsData, c.ControlsData, c.ArcsData, at);
+            for (var i = 0; i < contour.Points.Length; i++) c.PointContoursData[at + i] = (uint)k;
+            at += contour.Points.Length;
         }
     }
+
+    // A lone contour's points, controls and arcs written over its own, and its length.
+    private static void FillLone(Contour c, StrokeContour contour) =>
+        c.Length = PreparedStrokeBatch.Write(contour, c.PointsData, c.ControlsData, c.ArcsData, 0);
 
     private ReusableBuffer NewStorage(ulong bytes)
     {
@@ -388,7 +375,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Same-topology geometry update (a resize): if the new contours match the current ones (count + per-contour point
     // count + closedness) and the pen stays size-compatible, rewrite the points in place: no new component, no
     // allocation. Returns false (caller rebuilds) on any topology/pen-size change.
-    public bool TryUpdateGeometry(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen)
+    public bool TryUpdateGeometry(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen) =>
+        TryUpdateGeometry(StrokeContour.Straight(contours), pen);
+
+    /// <summary>As the other overload, for contours that may bend.</summary>
+    internal bool TryUpdateGeometry(IReadOnlyList<StrokeContour> contours, Pen pen)
     {
         if (!IsPenSizeCompatible(pen)) return false;
 
@@ -409,6 +400,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 if (c.LaidOutElsewhere)
                 {
                     c.PointsData = new float[c.PointsData.Length];
+                    if (c.ControlsData != null) c.ControlsData = new float[c.ControlsData.Length];
                     c.ContoursData = new uint[c.ContoursData.Length];
                     c.PointContoursData = new uint[c.PointContoursData.Length];
                     c.ArcsData = new float[c.ArcsData.Length];
@@ -416,10 +408,10 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 }
 
                 if (c.Batched) FillBatch(c, valid, parts[i].Start, parts[i].Count);
-                else c.PointsData = ToFloats(valid[parts[i].Start].Points);
+                else FillLone(c, valid[parts[i].Start]);
                 SetJoinTriangles(c);
-                FillArcs(c);
                 c.PointsBuffer.Invalidate();
+                c.ControlsBuffer?.Invalidate();
                 c.ArcsBuffer.Invalidate();
                 if (c.Batched || !c.IsClosed || !_pen.FitDashesToContour) continue;
 
@@ -434,16 +426,16 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         if (valid.Count != _contours.Count) return false;
         for (var i = 0; i < valid.Count; i++)
-            if (valid[i].Points.Length != _contours[i].PointCount || valid[i].IsClosed != _contours[i].IsClosed)
+            if (!Matches(_contours[i], valid, i, 1))
                 return false;
 
         for (var i = 0; i < valid.Count; i++)
         {
             var c = _contours[i];
-            c.PointsData = ToFloats(valid[i].Points);
+            FillLone(c, valid[i]);
             SetJoinTriangles(c);
-            FillArcs(c);
             c.PointsBuffer.Invalidate();
+            c.ControlsBuffer?.Invalidate();
             c.ArcsBuffer.Invalidate();
             if (!c.IsClosed || !_pen.FitDashesToContour) continue;
 
@@ -455,17 +447,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _localBounds = bounds;
         Adopt(pen);
         return true;
-    }
-
-    private static float[] ToFloats(Vector2<double>[] points)
-    {
-        var floats = new float[points.Length * 2];
-        for (var i = 0; i < points.Length; i++)
-        {
-            floats[i * 2] = (float)points[i].X;
-            floats[i * 2 + 1] = (float)points[i].Y;
-        }
-        return floats;
     }
 
     // How much the dash pattern must stretch for a WHOLE number of periods to go round this closed contour. Never more
@@ -490,13 +471,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             return;
         }
 
-        // Its length: the last point's distance along it, and the closing segment back to the first - in the pen's unit,
-        // which its pattern is in.
-        var last = (int)c.PointCount - 1;
-        var dx = (double)c.PointsData[0] - c.PointsData[last * 2];
-        var dy = (double)c.PointsData[1] - c.PointsData[last * 2 + 1];
-        var length = c.ArcsData[last] + Math.Sqrt(dx * dx + dy * dy);
-        c.DashScale = FitScale(length / DashUnitScale(), _pen);
+        // Its length, the closing piece included - in the pen's unit, which its pattern is in.
+        c.DashScale = FitScale(c.Length / DashUnitScale(), _pen);
     }
 
     private void RefitToWindow()
@@ -521,18 +497,26 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // Builds the GPU buffers for one contour. Returns null for a degenerate contour.
-    private Contour BuildContour(Vector2<double>[] points, bool isClosed)
+    private Contour BuildContour(StrokeContour contour)
     {
+        var points = contour.Points;
         if (points.Length < 2) return null;
 
-        var c = new Contour { IsClosed = isClosed, PointCount = (uint)points.Length, PointsData = ToFloats(points) };
+        var c = new Contour
+        {
+            IsClosed = contour.IsClosed,
+            PointCount = (uint)points.Length,
+            PointsData = new float[points.Length * 2],
+            ControlsData = contour.Controls != null ? new float[points.Length * 2] : null,
+            ArcsData = new float[points.Length],
+        };
+        FillLone(c, contour);
 
         // Disc segments are needed by the JOIN only: round (a disc) or bevel (a wedge). Caps need none - they are a
         // per-fragment mask. Drawn straight from its points (StrokePullVS).
         SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
-        c.ArcsData = new float[points.Length];
-        FillArcs(c);
+        if (c.ControlsData != null) c.ControlsBuffer = NewStorage(c.PointsBytes);
         c.ArcsBuffer = NewStorage((ulong)(points.Length * sizeof(float)));
 
         // A CLOSED contour's length almost never divides by the dash pattern, and the remainder lands where the contour
@@ -707,6 +691,12 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         {
             var points = c.PointsBuffer.Acquire(c.PointsBytes, out var writePoints);
             if (writePoints) points.SetData(c.PointsData, 0, (uint)c.PointsData.Length);
+            if (c.ControlsBuffer != null)
+            {
+                var controls = c.ControlsBuffer.Acquire(c.PointsBytes, out var writeControls);
+                if (writeControls) controls.SetData(c.ControlsData, 0, (uint)c.ControlsData.Length);
+            }
+
             if (c.Batched)
             {
                 var table = c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out var writeTable);
@@ -833,6 +823,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         var c = _contours[draw];
         record.Points = c.PointsBuffer.Acquire(c.PointsBytes, out _).GetDeviceAddress();
+        record.Controls = ControlsAddress(c);
         record.Arcs = ArcsAddress(c);
         record.Contours = c.Batched ? ContoursAddress(c) : 0;
         record.PointContours = c.Batched ? PointContoursAddress(c) : 0;
@@ -840,7 +831,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         record.PointCount = c.PointCount;
         record.PatternCount = PatternCountValue;
         record.Flags = (c.IsClosed ? StrokeRecord.Closed : 0u) | (c.Batched ? StrokeRecord.BatchedContours : 0u) |
-                       (HasRuns ? StrokeRecord.HasRuns : 0u) |
+                       (HasRuns ? StrokeRecord.HasRuns : 0u) | (c.ControlsData != null ? StrokeRecord.Bends : 0u) |
                        (_pen.ThicknessUnit == PenThicknessUnit.Window ? StrokeRecord.WindowThickness : 0u);
         record.Caps = MapCap(_pen.StartLineCap) | MapCap(_pen.EndLineCap) << 4 | MapCap(_pen.DashStartCap) << 8 |
                       MapCap(_pen.DashEndCap) << 12;
@@ -1004,14 +995,19 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         // The miter clamp lets a corner reach 4x the WIDENED half-extent (half + Fringe/2): 2 thicknesses + 2 fringes.
         var pad = 4.0f * HalfThickness() + 2.0f * ComputeFringe() + 1.0f;
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        // A piece lies inside its ends' and control's hull, so the controls bound the bends.
         foreach (var c in _contours)
         {
-            for (var i = 0; i + 1 < c.PointsData.Length; i += 2)
+            foreach (var data in (ReadOnlySpan<float[]>)[c.PointsData, c.ControlsData])
             {
-                if (c.PointsData[i] < minX) minX = c.PointsData[i];
-                if (c.PointsData[i] > maxX) maxX = c.PointsData[i];
-                if (c.PointsData[i + 1] < minY) minY = c.PointsData[i + 1];
-                if (c.PointsData[i + 1] > maxY) maxY = c.PointsData[i + 1];
+                if (data == null) continue;
+                for (var i = 0; i + 1 < data.Length; i += 2)
+                {
+                    if (data[i] < minX) minX = data[i];
+                    if (data[i] > maxX) maxX = data[i];
+                    if (data[i + 1] < minY) minY = data[i + 1];
+                    if (data[i + 1] > maxY) maxY = data[i + 1];
+                }
             }
         }
         if (minX > maxX) return false;
@@ -1076,6 +1072,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             if (_hasDashes) _effect.UDashOffset.SetValue(DashOffsetOf(c));
 
             _effect.UPoints.SetValue(c.PointsBuffer.Acquire(c.PointsBytes, out _).GetDeviceAddress());
+            _effect.UControls.SetValue(ControlsAddress(c));
+            _effect.UBends.SetValue(c.ControlsData != null ? 1u : 0u);
             _effect.UArcs.SetValue(ArcsAddress(c));
             _effect.UPointCount.SetValue(c.PointCount);
             _effect.UIsClosed.SetValue(c.IsClosed ? 1u : 0u);
@@ -1108,6 +1106,10 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     private static ulong PatternAddress(Contour c) =>
         c.PatternBuffer?.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out _).GetDeviceAddress() ?? 0;
+
+    // Zero for a contour of straight pieces: the shader takes each piece's control halfway along it.
+    private static ulong ControlsAddress(Contour c) =>
+        c.ControlsBuffer?.Acquire(c.PointsBytes, out _).GetDeviceAddress() ?? 0;
 
     private static ulong ArcsAddress(Contour c) =>
         c.ArcsBuffer.Acquire((ulong)(c.ArcsData.Length * sizeof(float)), out _).GetDeviceAddress();

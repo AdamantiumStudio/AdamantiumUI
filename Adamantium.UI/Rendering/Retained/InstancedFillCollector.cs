@@ -29,94 +29,19 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
     public static bool Enabled = true;
 
+    /// <summary>Whether a path's fill is drawn from its curves - exact at any zoom - rather than from its triangles and
+    /// fringe.</summary>
+    public static bool CurvesEnabled = true;
+
+    /// <summary>Whether a curve fill's coverage comes from its own tiles (CurveTileTree), rather than from a walk over
+    /// its every piece - what the tiles are checked against.</summary>
+    public static bool CurveTilesEnabled = true;
+
     private const MemoryPropertyFlags Mem = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private static readonly int InstanceStride = Marshal.SizeOf<GeometryInstance>();
     private static readonly int GradInstanceStride = Marshal.SizeOf<GradientGeometryInstance>();
     private static readonly int PatInstanceStride = Marshal.SizeOf<PatternGeometryInstance>();
     private static readonly int TexInstanceStride = Marshal.SizeOf<TextureGeometryInstance>();
-
-    // Per-key GPU + per-frame accumulation state. The mesh buffers are exact-size and written once (another mesh is
-    // another key); the instance buffer is rewritten each frame (grown only at BeginFrame).
-    private sealed class KeySegment
-    {
-        public Buffer VtxBuffer, IdxBuffer;
-        public uint VertexCount, IndexCount;
-        public bool Indexed;
-        public PrimitiveType Topology;
-        public bool MeshUploaded;
-
-        // The shared analytic-AA ring for this key's mesh (built once with the mesh - see FrozenMesh.Ring). Every
-        // instance draws it with the SAME instance buffer as the body, so N elements cost one fringe draw instead of N.
-        public Buffer RingBuffer;
-        public uint RingVertexCount;
-
-        // When (Stopwatch ticks) this key was last asked for. A key is kept by being USED and by nothing else - see
-        // Sweep for why the cache has to forget.
-        public long LastUsed;
-
-        // The device memory its vertex, index and fringe buffers hold - what the budget counts.
-        public long MeshBytes;
-
-        public GeometryInstance[] Items = new GeometryInstance[64];
-        public int Count;        // instances appended this frame (across all this key's flushes)
-        public int Flushed;      // instances already drawn this frame (= firstInstance for the next flush)
-        // The instance data is rebuilt EVERY frame, so a single buffer was being overwritten while frames that drew from
-        // it were still in flight (measured: hundreds of such writes per second of scrolling). One buffer per frame in
-        // flight, picked by the device's frame slot - the same slot whose fence BeginDraw waits on. Gpu/GradGpu/PatGpu
-        // stay as "the copy this frame writes and draws", so the collect + draw code below is unchanged.
-        public Buffer[] GpuRing, GradGpuRing, PatGpuRing;
-        public Buffer Gpu;       // instance SSBO (BDA); = GpuRing[frame slot]
-        public int GpuCapacity;
-        public bool Recreated;   // grown this frame -> a clean-skip is unsafe (fresh buffer holds no prior bytes)
-        public bool InPending;   // currently listed in _pendingKeys
-
-        // Parallel GRADIENT instance state for this key's shared mesh (a gradient fill on the same geometry). Solid and
-        // gradient instances of one mesh share the vtx/idx buffers but have separate instance buffers + draw passes.
-        public GradientGeometryInstance[] GradItems = new GradientGeometryInstance[16];
-        public int GradCount;
-        public int GradFlushed;
-        public Buffer GradGpu;
-        public int GradGpuCapacity;
-        public bool GradRecreated;
-
-        // Parallel PATTERN/NOISE instance state for this key's shared mesh (a procedural fill on the same geometry).
-        public PatternGeometryInstance[] PatItems = new PatternGeometryInstance[16];
-        public int PatCount;
-        public int PatFlushed;
-        public Buffer PatGpu;
-        public int PatGpuCapacity;
-        public bool PatRecreated;
-
-        // Parallel TEXTURED instance state for this key's shared mesh (an ImageBrush fill on the same geometry). The
-        // texture is NOT part of the key: one is bound per DRAW, so a texture change splits the run, not the segment.
-        public TextureGeometryInstance[] TexItems = new TextureGeometryInstance[16];
-        public int TexCount;
-        public int TexFlushed;
-        public Buffer[] TexGpuRing;
-        public Buffer TexGpu;
-        public int TexGpuCapacity;
-        public bool TexRecreated;
-        public ITexture PendingTexture;   // what the instances appended since the last run all sample
-        public SamplerState PendingSampler;   // and how - one picture's, as the texture is
-
-        // Parallel MATERIAL instance state for this key's shared mesh. The record is the PATTERN one deliberately: both
-        // feed PatternGeomData, so a second identical struct would only be a second thing to keep in step.
-        public PatternGeometryInstance[] MatItems = new PatternGeometryInstance[16];
-        public int MatCount;
-        public int MatFlushed;
-        public Buffer[] MatGpuRing;
-        public Buffer MatGpu;
-        public int MatGpuCapacity;
-        public bool MatRecreated;
-        // What the instances appended since the last run agree about: the image bound to them, the pass that reads it,
-        // and the frame region the capture is taken from. A disagreement about either of the first two ends the run.
-        public bool MatPending;
-        public bool MatWallpaper;
-        public Core.Media.MaterialTreatment MatTreatment;
-        public Rect2D MatRegion;
-        public ITexture MatSource;          // a picture of the author's own, replacing the built-in source
-        public MaterialAnchor MatAnchor;    // and what it is pinned to, which decides the mapping
-    }
 
     private readonly IGraphicsDevice _device;
     // BOTH effects, because this collector draws both families: a solid instanced fill and its fringe come from
@@ -135,37 +60,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     private double _uL, _uT, _uR, _uB;
     private bool _hasUnion;
 
-    // One clip group's recorded flush (key ranges, deferred units, clip), replayed by ReplayFlush on clean frames; pooled.
-    private sealed class FlushRecord
-    {
-        public readonly List<(KeySegment Seg, uint First, uint Count)> Keys = new();
-        public readonly List<(KeySegment Seg, uint First, uint Count)> GradKeys = new();
-        // The pattern/noise runs, each UNIFORM IN KIND: every kind is its own pass now, so a run is cut wherever the kind
-        // changes (see RecordGroup). Without that a single draw would paint two different fields with one shader.
-        public readonly List<(KeySegment Seg, uint First, uint Count, int Kind)> PatKeys = new();
-        // Textured runs carry their TEXTURE: one is bound per draw, so a run ends where the texture changes.
-        public readonly List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> TexKeys = new();
-        // Material runs carry the whole description of their source: which image (a capture of the frame, or the
-        // desktop), which pass reads it, and which region the capture is taken from.
-        public readonly List<(KeySegment Seg, uint First, uint Count, bool Wallpaper, Core.Media.MaterialTreatment Treatment,
-            Rect2D Region, ITexture Source, MaterialAnchor Anchor)> MatKeys = new();
-        public readonly List<IRenderUnit> Units = new();
-        public Rect2D Scissor;
-
-        // First stencil mark of this group; key N stamps StencilRef + N in paint order, and fringes draw only where the
-        // stencil is lower. Replays reuse the recorded value.
-        public uint StencilRef;
-
-        /// <summary>The mark key <paramref name="index"/> stamps - its place in the group's paint order, clamped to the
-        /// field so a long group cannot wrap back onto an earlier key's mark.</summary>
-        public uint MarkFor(int index) => Math.Min(StencilRef + (uint)index, CoverageMarkBits);
-
-        public void Reset() { Keys.Clear(); GradKeys.Clear(); PatKeys.Clear(); TexKeys.Clear(); MatKeys.Clear(); Units.Clear(); }
-    }
     private readonly List<FlushRecord> _flushRecords = new();
     private int _flushCount;   // records used this frame (pooled objects reused up to this count)
 
-    private const uint CoverageMarkBits = 0xFF;
+    /// <summary>The coverage marks a frame has: 8 bits of stencil.</summary>
+    internal const uint CoverageMarkBits = 0xFF;
 
     // Marks are 8 bits and the buffer is cleared per frame, so a frame has 255 of them; past that the caller falls back
     // to closing the group on overlap.
@@ -510,11 +409,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _live.Clear();
         foreach (var record in _flushRecords)
         {
-            foreach (var run in record.Keys) _live.Add(run.Seg);
-            foreach (var run in record.GradKeys) _live.Add(run.Seg);
-            foreach (var run in record.PatKeys) _live.Add(run.Seg);
-            foreach (var run in record.TexKeys) _live.Add(run.Seg);
-            foreach (var run in record.MatKeys) _live.Add(run.Seg);
+            foreach (var run in record.Keys) _live.Add(run.Segment);
+            foreach (var run in record.GradKeys) _live.Add(run.Segment);
+            foreach (var run in record.PatKeys) _live.Add(run.Segment);
+            foreach (var run in record.TexKeys) _live.Add(run.Segment);
+            foreach (var run in record.MatKeys) _live.Add(run.Segment);
         }
 
         _cold.Clear();
@@ -572,10 +471,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (seg.VtxBuffer != null) _device.AddToDeferDisposeQueue(seg.VtxBuffer);
         if (seg.IdxBuffer != null) _device.AddToDeferDisposeQueue(seg.IdxBuffer);
         if (seg.RingBuffer != null) _device.AddToDeferDisposeQueue(seg.RingBuffer);
+        if (seg.CurveBuffer != null) _device.AddToDeferDisposeQueue(seg.CurveBuffer);
 
         seg.VtxBuffer = null;
         seg.IdxBuffer = null;
         seg.RingBuffer = null;
+        seg.CurveBuffer = null;
         seg.MeshUploaded = false;
         _meshBytes -= seg.MeshBytes;
         seg.MeshBytes = 0;
@@ -724,8 +625,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         inst.Offsets1 = new Vector4F(offs[4], offs[5], offs[6], offs[7]);
         var type = GradientBake.PackGeometry(g, out var geom0, out var geom1);
         inst.Geom0 = geom0;
-        geom1.W = transformSlot;   // .xy is the radial focal; .w carries the slot, as in the SDF gradient record
-        inst.Geom1 = geom1;        // .z stays the SHAPE FLAG the pixel shader branches on - not a spare
+        geom1.W = transformSlot;   // .xy is the radial focal, .z a two-circle radial's origin radius; .w the slot
+        inst.Geom1 = geom1;
         inst.LocalBounds = new Vector4F((float)localBounds.X, (float)localBounds.Y, (float)localBounds.Width, (float)localBounds.Height);
         // .w packs the interp mode (0 sRGB / 1 OKLab) with the OPACITY slot above it - this record has no spare
         // component, and the one that looked spare (Geom1.z) is the shape flag. Unpacked in GradGeomFadeSlot/Interp.
@@ -1081,7 +982,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // buffer (re)allocated this frame. Offset the BDA by firstInstance so SV_InstanceID starts at 0.
                 if (!SceneClean || seg.Recreated)
                     seg.Gpu.SetData(seg.Items.AsSpan(seg.Flushed, count), (uint)(seg.Flushed * InstanceStride));
-                rec.Keys.Add((seg, (uint)seg.Flushed, (uint)count));
+                rec.Keys.Add(new InstanceRun(seg, (uint)seg.Flushed, (uint)count));
                 seg.Flushed = seg.Count;
             }
             var gcount = seg.GradCount - seg.GradFlushed;
@@ -1089,7 +990,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (!SceneClean || seg.GradRecreated)
                     seg.GradGpu.SetData(seg.GradItems.AsSpan(seg.GradFlushed, gcount), (uint)(seg.GradFlushed * GradInstanceStride));
-                rec.GradKeys.Add((seg, (uint)seg.GradFlushed, (uint)gcount));
+                rec.GradKeys.Add(new InstanceRun(seg, (uint)seg.GradFlushed, (uint)gcount));
                 seg.GradFlushed = seg.GradCount;
             }
             var pcount = seg.PatCount - seg.PatFlushed;
@@ -1105,11 +1006,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 {
                     var kk = (int)seg.PatItems[k].Params.Y;
                     if (kk == runKind) continue;
-                    rec.PatKeys.Add((seg, (uint)runStart, (uint)(k - runStart), runKind));
+                    rec.PatKeys.Add(new PatternRun(seg, (uint)runStart, (uint)(k - runStart), runKind));
                     runStart = k;
                     runKind = kk;
                 }
-                rec.PatKeys.Add((seg, (uint)runStart, (uint)(seg.PatCount - runStart), runKind));
+                rec.PatKeys.Add(new PatternRun(seg, (uint)runStart, (uint)(seg.PatCount - runStart), runKind));
                 seg.PatFlushed = seg.PatCount;
             }
             var tcount = seg.TexCount - seg.TexFlushed;
@@ -1117,7 +1018,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (!SceneClean || seg.TexRecreated)
                     seg.TexGpu.SetData(seg.TexItems.AsSpan(seg.TexFlushed, tcount), (uint)(seg.TexFlushed * TexInstanceStride));
-                rec.TexKeys.Add((seg, (uint)seg.TexFlushed, (uint)tcount, seg.PendingTexture,
+                rec.TexKeys.Add(new TextureRun(seg, (uint)seg.TexFlushed, (uint)tcount, seg.PendingTexture,
                     seg.PendingSampler ?? SamplerStates.LinearClampToEdge));
                 seg.TexFlushed = seg.TexCount;
                 seg.PendingTexture = null;   // the run is closed; the next texture starts a fresh one
@@ -1127,8 +1028,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (!SceneClean || seg.MatRecreated)
                     seg.MatGpu.SetData(seg.MatItems.AsSpan(seg.MatFlushed, mcount), (uint)(seg.MatFlushed * PatInstanceStride));
-                rec.MatKeys.Add((seg, (uint)seg.MatFlushed, (uint)mcount, seg.MatWallpaper, seg.MatTreatment, seg.MatRegion,
-                    seg.MatSource, seg.MatAnchor));
+                rec.MatKeys.Add(new MaterialRun(seg, (uint)seg.MatFlushed, (uint)mcount, seg.MatWallpaper,
+                    seg.MatTreatment, seg.MatRegion, seg.MatSource, seg.MatAnchor));
                 seg.MatFlushed = seg.MatCount;
                 seg.MatPending = false;   // the run is closed; the next source starts a fresh one
             }
@@ -1175,29 +1076,29 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     // Asked BEFORE the state is set, not discovered inside the loop. A pipeline, five stencil writes and two scissor
     // sets went in ahead of a loop that then skipped every single entry - a mesh with no closed boundary has no fringe,
     // and a textured run with no texture is not drawn at all. Checking a handful of list entries is the cheap half.
-    private static bool AnyRing(List<(KeySegment Seg, uint First, uint Count)> keys)
+    private static bool AnyRing(List<InstanceRun> keys)
     {
         foreach (var k in keys)
-            if (k.Seg.RingBuffer != null) return true;
+            if (k.Segment.RingBuffer != null) return true;
         return false;
     }
 
     // Same question for the kind-tagged pattern runs.
-    private static bool AnyRing(List<(KeySegment Seg, uint First, uint Count, int Kind)> keys)
+    private static bool AnyRing(List<PatternRun> keys)
     {
         foreach (var k in keys)
-            if (k.Seg.RingBuffer != null) return true;
+            if (k.Segment.RingBuffer != null) return true;
         return false;
     }
 
-    private static bool AnyDrawableRing(List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> keys)
+    private static bool AnyDrawableRing(List<TextureRun> keys)
     {
         foreach (var k in keys)
-            if (k.Seg.RingBuffer != null && k.Texture != null) return true;
+            if (k.Segment.RingBuffer != null && k.Texture != null) return true;
         return false;
     }
 
-    private static bool AnyTexture(List<(KeySegment Seg, uint First, uint Count, ITexture Texture, SamplerState Sampler)> keys)
+    private static bool AnyTexture(List<TextureRun> keys)
     {
         foreach (var k in keys)
             if (k.Texture != null) return true;
@@ -1218,8 +1119,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
     private void DrawFlushRecord(FlushRecord rec, Rect2D fullScissor, Matrix4x4F projection)
     {
+        // A curve fill draws from its own tiles, or - checking them - by walking its every piece.
+        var tiled = CurveTilesEnabled ? 1u : 0u;
         if (rec.Keys.Count > 0)
         {
+            _effect.CurveTiled.SetValue(tiled);
             SetupInstancedState(projection);
 
             // Stamp this group's coverage mark wherever a fill lands, so the fringes below can tell "my group's fill"
@@ -1238,6 +1142,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // can tell what is under them from what is over them.
                 _device.StencilReference = rec.MarkFor(i);
                 _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, _effect.BatchCurveFillPass, _effect.CurveData, _effect.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 _effect.BatchFillPass.Apply();
@@ -1293,10 +1204,19 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         {
             SetupInstancedState(projection);
             var brush = Brush(projection);
+            brush.CurveTiled.SetValue(tiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count) in rec.GradKeys)
+            for (var k = 0; k < rec.GradKeys.Count; k++)
             {
+                var (seg, first, count) = rec.GradKeys[k];
                 brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, brush.GradientCurvePass, brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.GradientMeshPass.Apply();
@@ -1314,11 +1234,20 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             SetupInstancedState(projection);
             var brush = Brush(projection);
             brush.Time.SetValue((float)NoiseClock.Time);   // animated noise reads the shared flow clock
+            brush.CurveTiled.SetValue(tiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, kind) in rec.PatKeys)
+            for (var k = 0; k < rec.PatKeys.Count; k++)
             {
+                var (seg, first, count, kind) = rec.PatKeys[k];
                 if (!DrewMoving) DrewMoving = Flows(seg.PatItems.AsSpan((int)first, (int)count));
                 brush.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, CurvePassFor(brush, kind), brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 MeshPassFor(brush, kind).Apply();
@@ -1336,9 +1265,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         {
             SetupInstancedState(projection);
             var brush = Brush(projection);
+            brush.CurveTiled.SetValue(tiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, texture, sampler) in rec.TexKeys)
+            for (var k = 0; k < rec.TexKeys.Count; k++)
             {
+                var (seg, first, count, texture, sampler) = rec.TexKeys[k];
                 // NO texture, NO draw: the heap path passes a texture as an INDEX written into push data by whoever bound
                 // one last, so drawing without binding samples whatever descriptor sits there - in practice the glyph
                 // atlas, smeared across the frame. See TextureBatchCollector.DrawSegment.
@@ -1346,6 +1277,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
                 brush.SourceSampler.SetResource(sampler);
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, brush.TextureCurvePass, brush.CurveData, brush.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.TextureMeshPass.Apply();
@@ -1366,9 +1304,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             var material = Material(projection);
             material.Projection.SetValue(projection);
             material.Transforms.SetValue(TransformsAddress);
+            material.CurveTiled.SetValue(tiled);
             _device.SetScissors(rec.Scissor);
-            foreach (var (seg, first, count, wallpaper, treatment, region, source, anchor) in rec.MatKeys)
+            for (var k = 0; k < rec.MatKeys.Count; k++)
             {
+                var (seg, first, count, wallpaper, treatment, region, source, anchor) = rec.MatKeys[k];
                 // NO backdrop, NO draw - the same refusal the textured runs make, and for the same reason: a pass that
                 // samples an unbound descriptor paints whatever was left there. The SURFACES read no backdrop at all,
                 // so the refusal does not apply to them: asking would refuse every velvet surface there is.
@@ -1376,6 +1316,20 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                     && !Backdrop.BindSource(_device, wallpaper, region, source, anchor,
                         material.SourceTexture, material.SourceSampler, material.SourceUv)) continue;
                 material.MaterialGeometries.SetValue(seg.MatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                if (seg.CurveBuffer != null)
+                {
+                    DrawCurves(seg, count, treatment switch
+                    {
+                        Core.Media.MaterialTreatment.Glass => material.MaterialGlassCurvePass,
+                        Core.Media.MaterialTreatment.Sheen => material.MaterialSheenCurvePass,
+                        Core.Media.MaterialTreatment.Metal => material.MaterialMetalCurvePass,
+                        Core.Media.MaterialTreatment.Wood => material.MaterialWoodCurvePass,
+                        _ => material.MaterialFrostedCurvePass
+                    }, material.CurveData, material.ViewportSize);
+                    continue;
+                }
+
+                _device.VertexType = typeof(UIVertex);
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 (treatment switch
@@ -1473,6 +1427,24 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// it. Set by the caller each frame (the table may have been reallocated), same as for the SDF batches.</summary>
     public ulong TransformsAddress { get; set; }
 
+    // A curve fill's instances, a quad each over the fill's box: no vertex buffer, the corners from the vertex index. The
+    // pass and its effect's parameters are the brush's; the instance buffer is already set.
+    private void DrawCurves(KeySegment seg, uint count, IEffectPass pass, EffectParameter curveData,
+        EffectParameter viewportSize)
+    {
+        var viewports = _device.CurrentViewports;
+        if (viewports is { Length: > 0 })
+        {
+            viewportSize.SetValue(new Vector2F(viewports[0].Width, viewports[0].Height));
+        }
+
+        _device.VertexType = null;
+        _device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        curveData.SetValue(seg.CurveBuffer.GetDeviceAddress());
+        pass.Apply();
+        _device.Draw(4, count, 0, 0);
+    }
+
     private void SetupInstancedState(Matrix4x4F projection)
     {
         // Written every time - see SdfBatchCollector.DrawSegment for why a "same as last time" cache is not this
@@ -1521,6 +1493,28 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _ => brush.PatternCheckerboardMeshPass
     };
 
+    // The curve pass for one procedural kind, numbered as MeshPassFor.
+    private static IEffectPass CurvePassFor(BrushEffect brush, int kind) => kind switch
+    {
+        1 => brush.PatternStripesCurvePass,
+        2 => brush.PatternDotsCurvePass,
+        3 => brush.PatternGridCurvePass,
+        4 => brush.PatternHexagonCurvePass,
+        5 => brush.PatternHatchCurvePass,
+        6 => brush.PatternWeaveCurvePass,
+
+        100 => brush.NoiseSimplexCurvePass,
+        101 => brush.NoisePerlinCurvePass,
+        102 => brush.NoiseValueCurvePass,
+        103 => brush.NoiseWorleyCurvePass,
+        104 => brush.NoiseRidgedCurvePass,
+        105 => brush.NoiseTurbulenceCurvePass,
+        106 => brush.NoiseVoronoiCurvePass,
+        107 => brush.NoiseCombustibleCurvePass,
+        108 => brush.NoiseCircuitCurvePass,
+        _ => brush.PatternCheckerboardCurvePass
+    };
+
     // Fringe device state: as the fill, but no vertex buffer (the ring is read by address) and the pixel basis its VS
     // offsets in.
     private void SetupFringeState(Matrix4x4F projection)
@@ -1549,6 +1543,22 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (_keys.TryGetValue(key, out var seg) && seg.MeshUploaded)
         {
             seg.LastUsed = now;
+            return seg;
+        }
+
+        // A curve fill holds its packed curves and nothing else: no mesh, no ring.
+        if (key.Kind == GeometryKind.Curves)
+        {
+            if (mesh.Curves is not { } curves) return null;
+
+            seg ??= new KeySegment();
+            seg.CurveBuffer = Upload(curves.Words, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                "shared curve fill");
+            seg.MeshUploaded = true;
+            seg.LastUsed = now;
+            seg.MeshBytes = (long)seg.CurveBuffer.DeviceMemoryBytes;
+            _meshBytes += seg.MeshBytes;
+            _keys[key] = seg;
             return seg;
         }
 
@@ -1637,7 +1647,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         var rec = _flushRecords[flush];
         foreach (var entry in rec.Keys)
         {
-            if (ReferenceEquals(entry.Seg, seg)) return ((int)entry.First, (int)entry.Count);
+            if (ReferenceEquals(entry.Segment, seg)) return ((int)entry.First, (int)entry.Count);
         }
 
         return (-1, -1);
@@ -1655,7 +1665,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         {
             foreach (var entry in _flushRecords[i].Keys)
             {
-                if (ReferenceEquals(entry.Seg, seg) && slot >= entry.First && slot < entry.First + entry.Count) return i;
+                if (ReferenceEquals(entry.Segment, seg) && slot >= entry.First && slot < entry.First + entry.Count) return i;
             }
         }
 
@@ -1720,7 +1730,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         PrepareRetainedWrite();
         var rec = _flushRecords[flush];
-        var index = rec.Keys.FindIndex(k => ReferenceEquals(k.Seg, seg));
+        var index = rec.Keys.FindIndex(k => ReferenceEquals(k.Segment, seg));
         if (index < 0) return false;
 
         var entry = rec.Keys[index];
@@ -1739,7 +1749,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         seg.Count += delta;
         seg.Flushed = seg.Count;
-        rec.Keys[index] = (seg, entry.First, (uint)(count + delta));
+        rec.Keys[index] = entry with { Count = (uint)(count + delta) };
 
         // Every later run of THIS key shifted by the same amount - in this record and in the LIVE ones after it.
         for (var f = flush; f < _flushCount; f++)
@@ -1748,8 +1758,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             for (var k = 0; k < other.Keys.Count; k++)
             {
                 var later = other.Keys[k];
-                if (!ReferenceEquals(later.Seg, seg) || later.First <= entry.First) continue;
-                other.Keys[k] = (later.Seg, (uint)(later.First + delta), later.Count);
+                if (!ReferenceEquals(later.Segment, seg) || later.First <= entry.First) continue;
+                other.Keys[k] = later with { First = (uint)(later.First + delta) };
             }
         }
 
@@ -1783,7 +1793,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         var rec = TakeFlushRecord();
         rec.Scissor = scissor;
         rec.StencilRef = Math.Min(++_groupRef, CoverageMarkBits);
-        rec.Keys.Add((seg, (uint)first, (uint)stageCount));
+        rec.Keys.Add(new InstanceRun(seg, (uint)first, (uint)stageCount));
         return _flushCount - 1;
     }
 

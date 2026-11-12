@@ -94,4 +94,48 @@ public sealed class RectangleGeometry : Geometry
    {
       CreateRectangle(Rect, CornerRadius, geometryType);
    }
+
+   // Its sides, and a quarter of a circle at each rounded corner, clockwise from the top left.
+   private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+   {
+      var rect = Rect;
+      if (rect.Width <= 0 || rect.Height <= 0)
+      {
+         return true;
+      }
+
+      var limit = Math.Min(rect.Width, rect.Height) / 2;
+      var corners = CornerRadius;
+      var topLeft = Math.Clamp(corners.TopLeft, 0, limit);
+      var topRight = Math.Clamp(corners.TopRight, 0, limit);
+      var bottomRight = Math.Clamp(corners.BottomRight, 0, limit);
+      var bottomLeft = Math.Clamp(corners.BottomLeft, 0, limit);
+      const double reach = 0.5522847498307936;
+
+      builder.BeginFigure(new Vector2<double>(rect.X + topLeft, rect.Y), true);
+      builder.LineTo(new Vector2<double>(rect.Right - topRight, rect.Y));
+      Corner(builder, new Vector2<double>(rect.Right, rect.Y), new Vector2<double>(rect.Right, rect.Y + topRight), topRight, reach);
+      builder.LineTo(new Vector2<double>(rect.Right, rect.Bottom - bottomRight));
+      Corner(builder, new Vector2<double>(rect.Right, rect.Bottom), new Vector2<double>(rect.Right - bottomRight, rect.Bottom),
+         bottomRight, reach);
+      builder.LineTo(new Vector2<double>(rect.X + bottomLeft, rect.Bottom));
+      Corner(builder, new Vector2<double>(rect.X, rect.Bottom), new Vector2<double>(rect.X, rect.Bottom - bottomLeft), bottomLeft,
+         reach);
+      builder.LineTo(new Vector2<double>(rect.X, rect.Y + topLeft));
+      Corner(builder, new Vector2<double>(rect.X, rect.Y), new Vector2<double>(rect.X + topLeft, rect.Y), topLeft, reach);
+      builder.EndFigure(true);
+      return true;
+   }
+
+   private static void Corner(Curves.PathCurveBuilder builder, Vector2<double> corner, Vector2<double> end, double radius,
+      double reach)
+   {
+      if (radius <= 0)
+      {
+         return;
+      }
+
+      var start = builder.Current;
+      builder.CubicTo(start + (corner - start) * reach, end + (corner - end) * reach, end);
+   }
 }
