@@ -659,82 +659,82 @@
         </StackPanel>
 
         <!-- FILL RULE cases: rings that touch at a point, share a side or pass a point twice. Each hole must show the card
-             behind it; each filled part must be filled once. -->
+             behind it; each filled part must be filled once. The thin outline traces the rings as given. -->
         <TextBlock x:Name="FillCasesHeading" Text="{Localize ShapesStrings.FillCases}" Margin="0,20,0,6"/>
         <WrapPanel AutomationProperties.LabeledBy="{Binding ElementName=FillCasesHeading}" Orientation="Horizontal">
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L120,120 L0,120 Z M60,0 L90,40 L60,80 L30,40 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillPointTouch}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L120,120 L0,120 Z M0,0 L60,20 L20,60 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillCornerHole}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L120,120 L0,120 Z M20,20 L60,20 L60,60 L20,60 Z M60,60 L100,60 L100,100 L60,100 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillHolesTouch}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L120,120 L0,120 Z M20,30 L60,30 L60,90 L20,90 Z M60,30 L100,30 L100,90 L60,90 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillSharedSide}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F1 M0,0 L120,0 L120,120 L0,120 Z M20,20 L20,100 L100,100 L100,20 Z M45,45 L75,45 L75,75 L45,75 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillIsland}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L60,60 L120,120 L0,120 L60,60 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillPinch}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="10">
-                    <Path Width="120" Height="120" Fill="#3B82F6"
+                    <Path Width="120" Height="120" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L120,0 L120,120 L0,120 Z M10,10 L60,10 L60,60 L10,60 Z M10,10 L60,10 L60,60 L10,60 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillSameRings}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="20">
-                    <Path Width="100" Height="100" Fill="#3B82F6"
+                    <Path Width="100" Height="100" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L100,0 L100,100 L0,100 Z M100,50 L60,70 L60,30 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillHoleStartsAtTouch}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="20">
-                    <Path Width="100" Height="100" Fill="#3B82F6"
+                    <Path Width="100" Height="100" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M0,0 L100,0 L100,100 L0,100 Z M0,50 L50,20 L100,50 L50,80 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillHoleTouchesTwice}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="20">
-                    <Path Width="100" Height="100" Fill="#3B82F6"
+                    <Path Width="100" Height="100" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F1 M0,0 L100,0 L100,100 L0,100 Z M100,100 L70,40 L40,70 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillCornerHoleNonZero}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Vertical" Margin="10" Width="140">
                 <Border Background="{ResourceReference CardBackgroundFillColorDefault}" CornerRadius="8" Padding="20">
-                    <Path Width="100" Height="100" Fill="#3B82F6"
+                    <Path Width="100" Height="100" Fill="#3B82F6" Stroke="#F59E0B" StrokeThickness="1"
                           Data="F0 M66.667,40 L62.222,26.667 L80,0 L100,100 L40,80 L40,60 L53.333,40 Z M66.667,40 L80,80 L80,40 Z"/>
                 </Border>
                 <TextBlock Text="{Localize ShapesStrings.FillHoleAtTurn}" TextWrapping="WrapByWords" Margin="0,4,0,0"/>
