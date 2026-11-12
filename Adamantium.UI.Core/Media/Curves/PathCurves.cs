@@ -20,7 +20,7 @@ internal sealed class PathCurves
     public FillRule FillRule { get; }
 
     /// <summary>Bands each way at most in <see cref="FillBands"/>; a fill of more pieces has fuller bands.</summary>
-    public const int MostBands = 64;
+    public const int MostBands = 512;
 
     private CurveBands _fillBands;
 

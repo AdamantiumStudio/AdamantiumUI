@@ -7,7 +7,7 @@ namespace Adamantium.UI.Core.Media.Curves;
 internal sealed class PathCurveBuilder
 {
     // How far a quadratic may stray from the cubic it stands for, as a part of the cubic's size.
-    private const double CubicTolerance = 1.0 / 16384;
+    private const double CubicTolerance = 1.0 / 4096;
 
     // A cubic is cut in two at most this many times over.
     private const int MostCuts = 12;
