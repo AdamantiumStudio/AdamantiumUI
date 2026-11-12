@@ -74,4 +74,12 @@ public class PolyCubicBezierSegment : PathSegment
 
         return points.ToArray();
     }
+
+    internal override void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        for (var i = 0; i + 2 < Points.Count; i += 3)
+        {
+            builder.CubicTo(Points[i], Points[i + 1], Points[i + 2]);
+        }
+    }
 }

@@ -8,16 +8,16 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Rendering;
+using Adamantium.UI.Rendering.Retained;
 using Adamantium.Vulkan.Core;
 using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
 /// <summary>
-/// Pixel-level proof that the analytic-AA fill fringe lands OUTSIDE the shape and is exactly one DEVICE pixel wide at any
-/// scale. Both matter and neither is visible from CPU state: the fringe is expanded in the vertex shader in pixels (see
-/// FillFringeEffect.fx), so a sign slip in the screen-space miter would feather INWARD - eating a pixel of the body
-/// instead of smoothing its edge - and a scale leaking back into the ring geometry would widen it under a zoom.
+/// Pixel-level proof that a fill drawn from its curves covers exactly its own area whatever its brush, and that the mesh
+/// path's analytic-AA fringe - still there with curves switched off - lands OUTSIDE the shape and is exactly one DEVICE
+/// pixel wide at any scale. Neither is visible from CPU state.
 /// </summary>
 [TestFixture]
 [Category("Gpu")]
@@ -69,10 +69,71 @@ public class FillFringeRenderTests
         Assert.That(Alpha(pixels, edge + 1, y), Is.EqualTo(0), "the fringe must not reach a second pixel");
     }
 
-    // Solid fill: body AND fringe are drawn by the INSTANCED path (one shared ring per mesh).
-    [TestCase(1.0, 50, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale1")]
-    [TestCase(4.0, 200, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale4")]
-    public void Fringe_IsOutside_AndOnePixelWide(double scale, int edge) => AssertOnePixelEdge(RenderSquare(scale), edge);
+    private static Brush BrushNamed(string name) => name switch
+    {
+        "Pattern" => new PatternBrush
+        {
+            Pattern = PatternType.Checkerboard,
+            Color1 = Colors.Red,
+            Color2 = Colors.Blue,
+            CellSize = 8
+        },
+        "Gradient" => new LinearGradientBrush
+        {
+            GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
+        },
+        // The lit surfaces: no capture behind them, so they draw off-screen as they do in a window.
+        "Velvet" => new MaterialBrush { Material = MaterialType.Velvet },
+        "Metal" => new MaterialBrush { Material = MaterialType.Metal },
+        "Wood" => new MaterialBrush { Material = MaterialType.Wood },
+        _ => Brushes.Red
+    };
+
+    // Drawn from its curves, a pixel is covered by exactly the share of it inside the shape - no ring feathered past the
+    // contour. The right edge falls in the middle of a device pixel at either scale.
+    [TestCase("Solid", 1.0, 40.5, 50)]
+    [TestCase("Solid", 4.0, 40.125, 200)]
+    [TestCase("Pattern", 1.0, 40.5, 50)]
+    [TestCase("Pattern", 4.0, 40.125, 200)]
+    [TestCase("Gradient", 1.0, 40.5, 50)]
+    [TestCase("Gradient", 4.0, 40.125, 200)]
+    [TestCase("Velvet", 1.0, 40.5, 50)]
+    [TestCase("Metal", 4.0, 40.125, 200)]
+    [TestCase("Wood", 1.0, 40.5, 50)]
+    public void CurveFill_CoversThePixelItsEdgeHalves_ByHalf(string brush, double scale, double width, int edge)
+    {
+        var pixels = RenderFilled(new RectangleGeometry(new Rect(10, 10, width, 40)), scale, BrushNamed(brush));
+        var y = edge / 2;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, edge - 1, y), Is.EqualTo(255), "the last pixel inside stays fully covered");
+            Assert.That(Alpha(pixels, edge, y), Is.InRange(120, 135), "the pixel the edge halves is half covered");
+            Assert.That(Alpha(pixels, edge + 1, y), Is.EqualTo(0), "nothing past the contour");
+        });
+    }
+
+    // On a pixel boundary the edge is crisp: the last pixel inside is whole, the first outside untouched.
+    [TestCase("Solid", 1.0, 50)]
+    [TestCase("Solid", 4.0, 200)]
+    [TestCase("Pattern", 1.0, 50)]
+    [TestCase("Pattern", 4.0, 200)]
+    [TestCase("Gradient", 1.0, 50)]
+    [TestCase("Gradient", 4.0, 200)]
+    [TestCase("Velvet", 4.0, 200)]
+    [TestCase("Metal", 1.0, 50)]
+    [TestCase("Wood", 4.0, 200)]
+    public void CurveFill_OnAPixelBoundary_IsCrisp(string brush, double scale, int edge)
+    {
+        var pixels = RenderSquare(scale, BrushNamed(brush));
+        var y = edge / 2;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, edge - 1, y), Is.EqualTo(255));
+            Assert.That(Alpha(pixels, edge, y), Is.EqualTo(0));
+        });
+    }
 
     // A geometry of lines has no area: filling it draws nothing, not an edge round an empty body.
     [Test]
@@ -87,33 +148,26 @@ public class FillFringeRenderTests
         Assert.That(drawn, Is.Zero);
     }
 
-    // A PATTERN/NOISE fill is feathered by the INSTANCED ring too - the unit builds no per-unit fringe for it any more,
-    // so losing that pass would show up here as a hard edge rather than as a crash.
-    [TestCase(1.0, 50, TestName = "PatternFringe_IsOutside_AndOnePixelWide_AtScale1")]
-    [TestCase(4.0, 200, TestName = "PatternFringe_IsOutside_AndOnePixelWide_AtScale4")]
-    public void PatternFringe_IsOutside_AndOnePixelWide(double scale, int edge)
+    // With curves switched off a fill is its mesh, feathered by the instanced ring expanded in screen pixels: a sign slip
+    // there would feather INWARD and a scale leaking into the ring would widen it under a zoom.
+    [TestCase("Solid", 1.0, 50)]
+    [TestCase("Solid", 4.0, 200)]
+    [TestCase("Pattern", 1.0, 50)]
+    [TestCase("Pattern", 4.0, 200)]
+    [TestCase("Gradient", 1.0, 50)]
+    [TestCase("Gradient", 4.0, 200)]
+    public void MeshFringe_IsOutside_AndOnePixelWide(string brush, double scale, int edge)
     {
-        var brush = new PatternBrush
+        var curves = InstancedFillCollector.CurvesEnabled;
+        InstancedFillCollector.CurvesEnabled = false;
+        try
         {
-            Pattern = PatternType.Checkerboard,
-            Color1 = Colors.Red,
-            Color2 = Colors.Blue,
-            CellSize = 8
-        };
-        AssertOnePixelEdge(RenderSquare(scale, brush), edge);
-    }
-
-    // A GRADIENT fill still feathers per-unit (FillFringeEffect.fx), which offsets the ring in screen pixels the same
-    // way - so it has to hold at both scales too, or the two paths have drifted apart.
-    [TestCase(1.0, 50, TestName = "GradientFringe_IsOutside_AndOnePixelWide_AtScale1")]
-    [TestCase(4.0, 200, TestName = "GradientFringe_IsOutside_AndOnePixelWide_AtScale4")]
-    public void GradientFringe_IsOutside_AndOnePixelWide(double scale, int edge)
-    {
-        var brush = new LinearGradientBrush
+            AssertOnePixelEdge(RenderSquare(scale, BrushNamed(brush)), edge);
+        }
+        finally
         {
-            GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
-        };
-        AssertOnePixelEdge(RenderSquare(scale, brush), edge);
+            InstancedFillCollector.CurvesEnabled = curves;
+        }
     }
 
     // A gradient fill on ARBITRARY geometry goes through the instanced gradient pass, whose record now stores the

@@ -115,6 +115,9 @@ public class PolylineGeometry : Geometry
 
     protected internal override bool ContoursAreStrokePaths => true;
 
+    /// <summary>Never: its lines and rings are for a pen alone.</summary>
+    protected internal override bool EnclosesArea => false;
+
     // One snapshot of each collection: what is checked is what is stroked, even if a collection changes meanwhile.
     protected internal override void ProcessGeometryCore(GeometryType geometryType)
     {

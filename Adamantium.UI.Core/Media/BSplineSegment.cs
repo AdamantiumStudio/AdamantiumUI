@@ -23,6 +23,23 @@ public class BSplineSegment : PolylineSegment
         MathHelper.Curves.AppendQuadraticBSpline<double>(controls, 256, dense);
         return ResampledEvenly(dense);
     }
+
+    // Each span of a quadratic B-spline is a quadratic Bezier: from the middle of one control leg to the middle of the
+    // next, its control the control between.
+    internal override void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        Vector2<double>[] controls = [builder.Current, .. Points];
+        if (controls.Length < 3)
+        {
+            return;
+        }
+
+        builder.LineTo((controls[0] + controls[1]) * 0.5);
+        for (var piece = 1; piece < controls.Length - 1; piece++)
+        {
+            builder.QuadraticTo(controls[piece], (controls[piece] + controls[piece + 1]) * 0.5);
+        }
+    }
     
     protected double CalculatePointsLength(PointsCollection points)
     {

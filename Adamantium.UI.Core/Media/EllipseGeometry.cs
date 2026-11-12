@@ -134,4 +134,31 @@ public sealed class EllipseGeometry : Geometry
    {
       CreateEllipse(Bounds, geometryType, StartAngle, SweepAngle, EllipseType);
    }
+
+   // A whole ellipse as eight cubics; a part of one is given as its points.
+   private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+   {
+      if (SweepAngle < 360 || RadiusX <= 0 || RadiusY <= 0)
+      {
+         return false;
+      }
+
+      const int pieces = 8;
+      var step = 2 * Math.PI / pieces;
+      var reach = 4.0 / 3.0 * Math.Tan(step / 4);
+      var center = Center;
+      Vector2<double> At(double angle) => center + new Vector2<double>(Math.Cos(angle) * RadiusX, Math.Sin(angle) * RadiusY);
+      Vector2<double> Tangent(double angle) => new(-Math.Sin(angle) * RadiusX, Math.Cos(angle) * RadiusY);
+
+      builder.BeginFigure(At(0), true);
+      for (var i = 0; i < pieces; i++)
+      {
+         var from = i * step;
+         var to = from + step;
+         builder.CubicTo(At(from) + Tangent(from) * reach, At(to) - Tangent(to) * reach, At(to));
+      }
+
+      builder.EndFigure(true);
+      return true;
+   }
 }

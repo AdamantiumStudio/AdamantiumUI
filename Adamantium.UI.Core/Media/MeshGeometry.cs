@@ -179,6 +179,9 @@ public class MeshGeometry : Geometry
     /// points or more - into the mesh; else the edge is worked out of the triangles.</summary>
     protected internal override bool ContoursAreFillBoundary => _hasBoundary;
 
+    /// <summary>Always: the triangles are what the geometry is given.</summary>
+    protected internal override bool TrianglesAreGiven => true;
+
     public override void RecalculateBounds()
     {
         _boundsStale = false;

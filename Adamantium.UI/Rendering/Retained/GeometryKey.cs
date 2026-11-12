@@ -12,7 +12,11 @@ public enum GeometryKind : byte
 {
     RoundedRect,
     Ellipse,
-    Mesh
+    Mesh,
+
+    /// <summary>A fill drawn from its curves by the curve fill shader, identified by a fingerprint of its packed curves.
+    /// </summary>
+    Curves
 }
 
 /// <summary>
@@ -52,6 +56,9 @@ public readonly struct GeometryKey : IEquatable<GeometryKey>
 
     /// <summary>Arbitrary tessellated geometry (a Path), identified by a content fingerprint of its LOCAL vertices.</summary>
     public static GeometryKey ArbitraryMesh(long fingerprint) => new(GeometryKind.Mesh, default, default, fingerprint);
+
+    /// <summary>A fill drawn from its curves, identified by a fingerprint of the packed curves.</summary>
+    public static GeometryKey CurveFill(long fingerprint) => new(GeometryKind.Curves, default, default, fingerprint);
 
     public bool Equals(GeometryKey other) =>
         Kind == other.Kind && _meshHash == other._meshHash && _p0.Equals(other._p0) && _p1.Equals(other._p1);
