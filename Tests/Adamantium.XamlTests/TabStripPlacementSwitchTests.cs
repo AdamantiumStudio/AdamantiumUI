@@ -1,7 +1,11 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -31,6 +35,7 @@ public class TabStripPlacementSwitchTests
     [SetUp]
     public void Fresh()
     {
+        ParkedVisuals.Clear();
         _app.ResourceManager = new ResourceManager();
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
@@ -157,6 +162,104 @@ public class TabStripPlacementSwitchTests
             var part = first.GetTemplateChild("InnerBorder") as Adamantium.UI.Controls.Base.UIComponent;
             Assert.That(part?.TemplatedParent, Is.SameAs(first), "the item's parts are still its own");
         });
+    }
+
+    // A page kept while its tab is away is kept while the strip moves too: the next template shows the same page, never
+    // let go - a browser's page would be made again, loading from scratch with its history gone.
+    [TestCase(TabStripPlacement.Top, TabStripPlacement.Left)]
+    [TestCase(TabStripPlacement.Left, TabStripPlacement.Bottom)]
+    public void AKeptPage_MovesWithTheStrip(TabStripPlacement from, TabStripPlacement to)
+    {
+        var control = new TabControl
+        {
+            TabStripPlacement = from,
+            ItemsSource = new[] { "One", "Two" },
+            ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new KeptPage() }),
+        };
+        control.SelectedIndex = 1;
+        Lay(control);
+        var page = ShownPage(control);
+        Assume.That(page, Is.Not.Null, "the page shown before the move");
+
+        control.TabStripPlacement = to;
+        Lay(control);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ShownPage(control), Is.SameAs(page), "the same page in the moved strip");
+            Assert.That(page.IsDiscarded, Is.False, "never let go");
+            Assert.That(page.IsParked, Is.False, "shown again, not left parked");
+        });
+    }
+
+    // The strip moved while the page was still being built in the background: the page landing late waits with the tab
+    // control, for whoever comes back to that tab - not with the presenter that went with the old template, where
+    // nothing would ever let it go.
+    [Test]
+    public void APageBuiltLate_AfterTheStripMoved_WaitsWithTheTabControl()
+    {
+        using var building = new ManualResetEventSlim(false);
+        using var gate = new ManualResetEventSlim(false);
+        var builds = 0;
+        var control = new TabControl
+        {
+            DeferContent = true,
+            ItemsSource = new[] { "One", "Two" },
+            ContentTemplate = new DataTemplate(() =>
+            {
+                if (Interlocked.Increment(ref builds) == 1)
+                {
+                    building.Set();
+                    gate.Wait(TimeSpan.FromSeconds(10));
+                }
+
+                return new TemplateResult { RootComponent = new KeptPage() };
+            }),
+        };
+        control.SelectedIndex = 1;
+        Lay(control);
+        Assume.That(building.Wait(TimeSpan.FromSeconds(5)), Is.True, "the page is being built in the background");
+
+        control.TabStripPlacement = TabStripPlacement.Left;
+        Lay(control);
+        gate.Set();
+        var shown = PumpUntil(control, () => ShownPage(control) != null);
+        PumpUntil(control, () => false, seconds: 0.3);
+
+        var waited = ParkedVisuals.TryTake(control, "Two", null, out var late, out _, out _, out _);
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.True, "the moved strip shows a page");
+            Assert.That(waited, Is.True, "the page built late waits with the tab control");
+            Assert.That(late, Is.Not.SameAs(ShownPage(control)), "it is the late one, not the one shown");
+            Assert.That((late as KeptPage)?.IsDiscarded, Is.False, "and is whole");
+        });
+    }
+
+    private static bool PumpUntil(TabControl control, Func<bool> done, double seconds = 5)
+    {
+        var watch = Stopwatch.StartNew();
+        while (watch.Elapsed.TotalSeconds < seconds)
+        {
+            LoopSignal.Drain();
+            Lay(control);
+            if (done())
+            {
+                return true;
+            }
+
+            Thread.Sleep(1);
+        }
+
+        return false;
+    }
+
+    private static KeptPage ShownPage(TabControl control) =>
+        (control.GetTemplateChild("PART_SelectedContentHost") as IUIComponent)?.VisualChildren.OfType<KeptPage>().FirstOrDefault();
+
+    private sealed class KeptPage : Border
+    {
+        public override NavigationCacheMode KeepAlive => NavigationCacheMode.Required;
     }
 
     private sealed class DerivedStrip : TabControl

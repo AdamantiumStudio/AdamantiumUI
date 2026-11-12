@@ -366,6 +366,7 @@ public class ContentPresenter : InputUIComponent
     private void StartDeferredBuild(object content, DataTemplate template)
     {
         var token = ++_deferToken;
+        var owner = ParkOwner;
         _deferInFlight = true;
 
         // The spinner belongs to the tab being entered: it appears after the swap, if the content has not arrived by then.
@@ -394,11 +395,12 @@ public class ContentPresenter : InputUIComponent
                 BuildQueue.Release();
             }
 
-            LoopSignal.Post(() => AdoptDeferred(token, content, template, built, failure));
+            LoopSignal.Post(() => AdoptDeferred(token, owner, content, template, built, failure));
         });
     }
 
-    private void AdoptDeferred(int token, object content, DataTemplate template, TemplateResult built, Exception failure)
+    private void AdoptDeferred(int token, object owner, object content, DataTemplate template, TemplateResult built,
+        Exception failure)
     {
         if (failure != null)
         {
@@ -408,9 +410,10 @@ public class ContentPresenter : InputUIComponent
         if (token != _deferToken)
         {
             // Left before it was ready: a view that asked to be kept is parked like one that was on screen.
-            if (built?.RootComponent is { } finished && ParkedVisuals.ShouldKeep(finished) && CanComeBack(content))
+            if (built?.RootComponent is { } finished && ParkedVisuals.ShouldKeep(finished) &&
+                owner is not FundamentalUIComponent { IsDiscarded: true } && OwnerHolds(owner, content))
             {
-                ParkedVisuals.Keep(ParkOwner, content, finished, built, template, new Size<double>(Double.NaN, Double.NaN));
+                ParkedVisuals.Keep(owner, content, finished, built, template, new Size<double>(Double.NaN, Double.NaN));
                 return;
             }
 
@@ -421,7 +424,7 @@ public class ContentPresenter : InputUIComponent
         // Waits for its own swap, or the outgoing tab slides over it.
         if (_transitionPending || _transitionRunning)
         {
-            _afterTransition = () => AdoptDeferred(token, content, template, built, failure);
+            _afterTransition = () => AdoptDeferred(token, owner, content, template, built, failure);
             return;
         }
         if (_currentRoot == null && built?.RootComponent != null)
@@ -434,7 +437,7 @@ public class ContentPresenter : InputUIComponent
                 AnimationManager.AddTicker(_ =>
                 {
                     if (!Compositor.RecordedSince(recordedAt, shownAt)) return false;
-                    AdoptDeferred(token, content, template, built, failure);
+                    AdoptDeferred(token, owner, content, template, built, failure);
                     return true;
                 });
                 return;
@@ -484,6 +487,28 @@ public class ContentPresenter : InputUIComponent
         return false;
     }
 
+    /// <summary>Parks the content it shows when that is kept between visits (<c>x:KeepAlive</c>): its owner is taking
+    /// the template down, and the next template's presenter takes the content up. A slide or a background build under
+    /// way ends here.</summary>
+    internal void ParkShown()
+    {
+        _deferToken++;
+        _deferInFlight = false;
+        _transitionPending = false;
+        TransitionFinished();
+        if (_currentRoot == null || !ParkedVisuals.ShouldKeep(_currentRoot) || !CanComeBack(_builtFor))
+        {
+            return;
+        }
+
+        ParkCurrent(_builtFor, _currentRoot, _currentTemplateResult, _currentTemplate);
+        _currentRoot = null;
+        _currentTemplateResult = null;
+        _currentTemplate = null;
+        _builtFor = null;
+        _label = null;
+    }
+
     private void ParkCurrent(object key, IUIComponent root, TemplateResult built, DataTemplate template)
     {
         ParkedVisuals.Keep(ParkOwner, key, root, built, template, _lastArrangeSize);
@@ -506,8 +531,10 @@ public class ContentPresenter : InputUIComponent
     private bool IsGivenContent(IUIComponent visual) =>
         ReferenceEquals(visual, _builtFor) || ReferenceEquals(visual, _outgoingRoot) && _outgoingIsContent;
 
-    private bool CanComeBack(object content) =>
-        TemplatedParent is not ItemsControl owner || owner.HoldsContent(content);
+    private bool CanComeBack(object content) => OwnerHolds(TemplatedParent, content);
+
+    private static bool OwnerHolds(object owner, object content) =>
+        owner is not ItemsControl items || items.HoldsContent(content);
 
     private void Release(IUIComponent visual, TemplateResult built)
     {

@@ -398,13 +398,15 @@ All packages share one version.
 
 - A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
   a lookup from an element always did: a key both declare had one value from an element and another without one.
+- A tab's page kept between visits (`x:KeepAlive`) stays the same page when the `TabControl` takes another template -
+  its strip moved to another side. It was let go and made again: a browser tab loaded its page from scratch, its history and what
+  was typed in it gone, and showed its address in place of its title until the page came back.
 - A component with a `ComponentUpdated` subscriber and no `PropertyChanged` one was not told its properties changed, so
   a `GeometryGroup` or `CombinedGeometry` kept drawing a child as it was before the child changed; a group now watches
   its children as a combined geometry does its operands.
 - An arc ending where it starts is left out and one with no radius is a straight line, as SVG reads them, instead of
   making the figure's points not numbers.
 - A `PathGeometry` or `GeometryGroup` processed again kept the triangles it was cut into before.
-
 - A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
   origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.
 - A regular polygon with a ring thickness (`RegularPolygonGeometry.Build`) fills its band. It came out empty: its

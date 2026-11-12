@@ -41,8 +41,8 @@ public static class ParkedVisuals
     /// <summary>True when this visual is worth keeping at all - the question every caller asks before letting go.</summary>
     public static bool ShouldKeep(IUIComponent visual) => ModeOf(visual) != NavigationCacheMode.Disabled;
 
-    /// <summary>Parks <paramref name="root"/> under <paramref name="key"/>. Call before removing it, so the removal reads
-    /// as "coming back"; the caller does the removing.</summary>
+    /// <summary>Parks <paramref name="root"/> under <paramref name="key"/>, letting go of another visual parked there
+    /// before. Call before removing it, so the removal reads as "coming back"; the caller does the removing.</summary>
     public static void Keep(object owner, object key, IUIComponent root, TemplateResult built = null, DataTemplate template = null,
         Mathematics.Size<double> hostSize = default)
     {
@@ -53,12 +53,17 @@ public static class ParkedVisuals
             Core.Resources.ThemeManager.PaletteVersion);
 
         var slot = new Slot(owner, key);
+        if (_kept.TryGetValue(slot, out var replaced) && !ReferenceEquals(replaced.Root, root))
+        {
+            EndPark(replaced);
+        }
+
         ParkedSubtree.Park(root);
         _kept[slot] = new Entry(root, built, template, ModeOf(root), hostSize, world);
 
+        _evictable.Remove(slot);
         if (ModeOf(root) != NavigationCacheMode.Required)
         {
-            _evictable.Remove(slot);
             _evictable.Add(slot);
             Evict();
         }
