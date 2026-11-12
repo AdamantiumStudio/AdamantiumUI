@@ -75,6 +75,28 @@ public class PathGeometry : Geometry
         return figures;
     }
 
+    /// <summary>Its filled figures under its own <see cref="FillRule"/>.</summary>
+    internal override (List<Vector2<double>[]> Rings, FillRule Rule) Area()
+    {
+        var rings = new List<Vector2<double>[]>();
+        foreach (var figure in Figures ?? [])
+        {
+            figure.ProcessSegments();
+            if (figure.IsFilled && figure.Points.Count >= 3)
+            {
+                var points = figure.Points.ToArray();
+                if (Transform is { } transform)
+                {
+                    Vector2<double>.TransformCoordinate(points, transform.Matrix, points);
+                }
+
+                rings.Add(points);
+            }
+        }
+
+        return (rings, FillRule);
+    }
+
     public override Geometry Clone()
     {
         throw new System.NotImplementedException();

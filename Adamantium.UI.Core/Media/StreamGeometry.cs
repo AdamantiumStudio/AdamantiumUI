@@ -34,6 +34,28 @@ public sealed class StreamGeometry : Geometry
         return figures;
     }
 
+    /// <summary>Its filled figures under its own <see cref="FillRule"/>.</summary>
+    internal override (List<Vector2<double>[]> Rings, FillRule Rule) Area()
+    {
+        context.ProcessFigures();
+        var rings = new List<Vector2<double>[]>();
+        foreach (var figure in context.Figures)
+        {
+            if (figure is { IsFilled: true, Points.Count: >= 3 })
+            {
+                var points = figure.Points.ToArray();
+                if (Transform is { } transform)
+                {
+                    Vector2<double>.TransformCoordinate(points, transform.Matrix, points);
+                }
+
+                rings.Add(points);
+            }
+        }
+
+        return (rings, FillRule);
+    }
+
     public StreamGeometryContext Open()
     {
         context = new StreamGeometryContext();
