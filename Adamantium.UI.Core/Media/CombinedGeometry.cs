@@ -1,4 +1,3 @@
-using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.Mathematics.Triangulation;
 using Adamantium.ProceduralGeometry;
@@ -10,8 +9,9 @@ namespace Adamantium.UI.Core.Media;
 /// Two closed geometries combined: their union, intersection, the first less the second, or either but not both
 /// (<see cref="GeometryCombineMode"/>). The outlines are laid over each other by <see cref="GeometryOverlay"/>, which
 /// takes them crossing, touching or running along one another; each operand's inside is by its own fill rule, and an
-/// open operand adds nothing. Points nearer than the step meshes round to are one, so operands rounded differently
-/// still meet without seams.
+/// open operand adds nothing. Points nearer than twice the step coordinates are rounded to
+/// (<see cref="MathHelper.Coordinates.Step"/>) are one: two roundings of one point lie at most a diagonal step apart, so
+/// operands meet without seams.
 /// </summary>
 public class CombinedGeometry : Geometry
 {
@@ -134,7 +134,7 @@ public class CombinedGeometry : Geometry
         Mesh.SetPoints(RingFill.Fill(rings, FillRule.NonZero));
     }
 
-    private static readonly double Weld = Math.Pow(10, -Mesh.RoundPrecision);
+    private const double Weld = 2 * MathHelper.Coordinates.Step;
 
     private static AreaCombineMode ModeOf(GeometryCombineMode mode) => mode switch
     {
@@ -153,13 +153,11 @@ public class CombinedGeometry : Geometry
 
     private static bool Strokeable(Vector2<double>[] ring)
     {
-        // A contour keeps five decimals: a sliver narrower than that on average would collapse into its own sides.
         var rounded = new Vector2<double>[ring.Length];
-        for (var i = 0; i < ring.Length; i++) rounded[i] = Vector2<double>.Round(ring[i], MeshContour.CoordinatePrecision);
+        for (var i = 0; i < ring.Length; i++) rounded[i] = MathHelper.Coordinates.Round(ring[i]);
         var perimeter = 0.0;
         for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++) perimeter += (rounded[i] - rounded[j]).Length();
-        var precision = Math.Pow(10, -MeshContour.CoordinatePrecision);
-        return perimeter > 0 && 2 * Math.Abs(SignedArea(rounded)) / perimeter >= precision;
+        return perimeter > 0 && 2 * Math.Abs(SignedArea(rounded)) / perimeter >= MathHelper.Coordinates.Step;
     }
 
     private static double SignedArea(Vector2<double>[] ring)

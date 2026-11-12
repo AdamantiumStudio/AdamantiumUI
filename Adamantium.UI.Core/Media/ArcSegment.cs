@@ -145,7 +145,7 @@ public class ArcSegment : PathSegment
 
             var pt = Vector2<double>.Transform(new Vector2<double>(x, y), transform);
 
-            points.Add(Vector2.Round(pt, 4));
+            points.Add(MathHelper.Coordinates.Round(pt));
 
             currentAngle += angle;
         }
