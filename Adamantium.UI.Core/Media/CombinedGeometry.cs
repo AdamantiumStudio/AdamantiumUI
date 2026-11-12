@@ -1,3 +1,4 @@
+using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.Mathematics.Triangulation;
 using Adamantium.ProceduralGeometry;
@@ -9,7 +10,8 @@ namespace Adamantium.UI.Core.Media;
 /// Two closed geometries combined: their union, intersection, the first less the second, or either but not both
 /// (<see cref="GeometryCombineMode"/>). The outlines are laid over each other by <see cref="GeometryOverlay"/>, which
 /// takes them crossing, touching or running along one another; each operand's inside is by its own fill rule, and an
-/// open operand adds nothing.
+/// open operand adds nothing. Points nearer than the step meshes round to are one, so operands rounded differently
+/// still meet without seams.
 /// </summary>
 public class CombinedGeometry : Geometry
 {
@@ -121,7 +123,7 @@ public class CombinedGeometry : Geometry
 
         Mesh.Clear();
 
-        var rings = GeometryOverlay.Combine(AreaOf(Geometry1), AreaOf(Geometry2), ModeOf(GeometryCombineMode));
+        var rings = GeometryOverlay.Combine(AreaOf(Geometry1), AreaOf(Geometry2), ModeOf(GeometryCombineMode), Weld);
         foreach (var ring in rings)
         {
             if (Strokeable(ring)) Mesh.AddContour(ring, true);
@@ -131,6 +133,8 @@ public class CombinedGeometry : Geometry
 
         Mesh.SetPoints(RingFill.Fill(rings, FillRule.NonZero));
     }
+
+    private static readonly double Weld = Math.Pow(10, -Mesh.RoundPrecision);
 
     private static AreaCombineMode ModeOf(GeometryCombineMode mode) => mode switch
     {
