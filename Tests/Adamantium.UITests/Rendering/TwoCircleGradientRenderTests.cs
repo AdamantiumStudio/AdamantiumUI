@@ -46,7 +46,22 @@ public class TwoCircleGradientRenderTests
         GradientStops = { new GradientStop(Colors.Blue, 0), new GradientStop(Colors.HotPink, 1) }
     };
 
-    private static byte[] Render(Path path)
+    // One circle inside the other, from a point - as a PDF radial shading from its center or a focus - with that point on
+    // a pixel's middle: every point inside is on one circle, so nothing there is left partly covered.
+    private static RadialGradientBrush Nested(double focusX) => new()
+    {
+        GradientOrigin = new Vector2<double>((focusX + 0.5) / Dim, (Dim / 2 + 0.5) / Dim),
+        GradientOriginRadius = 1e-9,
+        Center = new Vector2<double>((Dim / 2 + 0.5) / Dim, (Dim / 2 + 0.5) / Dim),
+        RadiusX = 0.4,
+        RadiusY = 0.4,
+        SpreadMethod = GradientSpreadMethod.Pad,
+        GradientStops = { new GradientStop(Colors.Blue, 0), new GradientStop(Colors.HotPink, 1) }
+    };
+
+    private static byte[] Render(Path path) => Render(path, Cone);
+
+    private static byte[] Render(Path path, Func<Brush> brush)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
@@ -56,11 +71,11 @@ public class TwoCircleGradientRenderTests
         {
             if (path == Path.Geometry)
             {
-                session.DrawGeometry(Cone(), new RectangleGeometry(box), null);
+                session.DrawGeometry(brush(), new RectangleGeometry(box), null);
             }
             else
             {
-                session.DrawRectangle(Cone(), box);
+                session.DrawRectangle(brush(), box);
             }
         }), Dim, Dim);
         ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
@@ -86,6 +101,27 @@ public class TwoCircleGradientRenderTests
             Assert.That(AlphaAt(pixels, 0.5, 0.3), Is.EqualTo(255), "inside, at the large circle's middle");
             Assert.That(AlphaAt(pixels, 0.05, 0.5), Is.Zero, "left of the cone");
             Assert.That(AlphaAt(pixels, 0.9, 0.9), Is.Zero, "right of the cone, low down");
+        });
+    }
+
+    [TestCase(Path.Geometry, Dim / 2)]
+    [TestCase(Path.Rectangle, Dim / 2)]
+    [TestCase(Path.Geometry, Dim / 2 - 20)]
+    [TestCase(Path.Rectangle, Dim / 2 - 20)]
+    public void OneCircleInsideTheOther_IsWhole_AtItsFocusToo(Path path, int focusX)
+    {
+        var pixels = Render(path, () => Nested(focusX));
+
+        var holes = 0;
+        for (var at = 3; at < pixels.Length; at += 4)
+        {
+            holes += pixels[at] == 255 ? 0 : 1;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pixels[((Dim / 2) * Dim + focusX) * 4 + 3], Is.EqualTo(255), "at the focus");
+            Assert.That(holes, Is.Zero, "every pixel painted whole: padded past the end circle, one circle on each");
         });
     }
 

@@ -340,11 +340,12 @@ internal sealed partial class PdfPageInterpreter
 
     private static ImageSource RasterizeTwoCircles(PdfRadialShading shading, Rect area, double alpha)
     {
-        var (x0, y0, r0) = (shading.StartCenter.X, shading.StartCenter.Y, shading.StartRadius);
-        var (x1, y1, r1) = (shading.EndCenter.X, shading.EndCenter.Y, shading.EndRadius);
+        var startX = shading.StartCenter.X;
+        var startY = shading.StartCenter.Y;
+        var startRadius = shading.StartRadius;
         var scale = RadialRasterSide / Math.Max(area.Width, area.Height);
-        var (width, height) = (Math.Max(1, (int)Math.Ceiling(area.Width * scale)),
-            Math.Max(1, (int)Math.Ceiling(area.Height * scale)));
+        var width = Math.Max(1, (int)Math.Ceiling(area.Width * scale));
+        var height = Math.Max(1, (int)Math.Ceiling(area.Height * scale));
         // Red, green and blue along s, three bytes a sample.
         var table = new byte[(FunctionSamples + 1) * 3];
         for (var sample = 0; sample <= FunctionSamples; sample++)
@@ -355,26 +356,27 @@ internal sealed partial class PdfPageInterpreter
             table[sample * 3 + 2] = Byte(color.B);
         }
 
-        var cx = x1 - x0;
-        var cy = y1 - y0;
-        var dr = r1 - r0;
-        var a = cx * cx + cy * cy - dr * dr;
-        var size = cx * cx + cy * cy + dr * dr;
+        var travelX = shading.EndCenter.X - startX;
+        var travelY = shading.EndCenter.Y - startY;
+        var growth = shading.EndRadius - startRadius;
+        var leading = travelX * travelX + travelY * travelY - growth * growth;
+        var size = travelX * travelX + travelY * travelY + growth * growth;
         var opacity = Byte(alpha);
         var texelWidth = area.Width / width;
         var texelHeight = area.Height / height;
 
         // The s at a point of the area, or null where the shading paints nothing.
-        double? At(double x, double y)
+        double? At(double pageX, double pageY)
         {
-            var px = x - x0;
-            var py = y - y0;
-            return RadialParameter(shading, a, size, px * cx + py * cy + r0 * dr, px * px + py * py - r0 * r0, r0, dr);
+            var offsetX = pageX - startX;
+            var offsetY = pageY - startY;
+            return RadialParameter(shading, leading, size, offsetX * travelX + offsetY * travelY + startRadius * growth,
+                offsetX * offsetX + offsetY * offsetY - startRadius * startRadius, startRadius, growth);
         }
 
-        void Paint(byte[] into, int texel, double s, byte cover)
+        void Paint(byte[] into, int texel, double along, byte cover)
         {
-            var sample = (int)Math.Round(Math.Clamp(s, 0, 1) * FunctionSamples) * 3;
+            var sample = (int)Math.Round(Math.Clamp(along, 0, 1) * FunctionSamples) * 3;
             into[texel * 4] = table[sample];
             into[texel * 4 + 1] = table[sample + 1];
             into[texel * 4 + 2] = table[sample + 2];
@@ -387,10 +389,10 @@ internal sealed partial class PdfPageInterpreter
         {
             for (var column = 0; column < width; column++)
             {
-                if (At(area.X + (column + 0.5) * texelWidth, area.Y + (row + 0.5) * texelHeight) is { } s)
+                if (At(area.X + (column + 0.5) * texelWidth, area.Y + (row + 0.5) * texelHeight) is { } along)
                 {
                     painted[row * width + column] = true;
-                    Paint(rgba, row * width + column, s, opacity);
+                    Paint(rgba, row * width + column, along, opacity);
                 }
             }
         }
@@ -416,10 +418,10 @@ internal sealed partial class PdfPageInterpreter
                     for (var across = 0; across < EdgeSamples; across++)
                     {
                         if (At(area.X + (column + (across + 0.5) / EdgeSamples) * texelWidth,
-                                area.Y + (row + (down + 0.5) / EdgeSamples) * texelHeight) is { } s)
+                                area.Y + (row + (down + 0.5) / EdgeSamples) * texelHeight) is { } along)
                         {
                             hits++;
-                            first ??= s;
+                            first ??= along;
                         }
                     }
                 }
@@ -440,7 +442,7 @@ internal sealed partial class PdfPageInterpreter
         return ToImage(width, height, rgba);
     }
 
-    // Samples a side of a texel the shading's edge crosses is covered by.
+    // A texel the shading's edge crosses is sampled this many times across and down.
     private const int EdgeSamples = 4;
 
     // Gives every clear pixel the color of the nearest painted one along its row, then its column: a smooth sampler
