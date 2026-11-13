@@ -34,6 +34,7 @@ public partial class WebViewFrameTests
     private CefTestThread loop;
     private IGraphicsDeviceService devices;
     private WebViewEngine engine;
+    private WebViewOptions options;
     private string profile;
 
     [OneTimeSetUp]
@@ -50,7 +51,8 @@ public partial class WebViewFrameTests
         {
             devices = new GraphicsDeviceService(new GraphicsDeviceFactory(), false, GraphicsSettings.CreateDefault());
             devices.CreateMainDevice("WebViewFrameTests");
-            engine = new WebViewEngine(devices, null, new WebViewOptions { ProfileFolder = profile });
+            options = new WebViewOptions { ProfileFolder = profile };
+            engine = new WebViewEngine(devices, null, options);
         });
     }
 
@@ -664,6 +666,39 @@ public partial class WebViewFrameTests
         {
             "first 1/3", "next 2/3", "round 1/3", "back 3/3", "case 1/1", "none 0/0", "again 1/3", "gone 0/0"
         }), string.Join(", ", found));
+    }
+
+    // A page is asked in the engine's color scheme, whatever the system's - the light one makes an empty page white -
+    // and so is the next it goes to.
+    [TestCase(WebViewColorScheme.Light, "light")]
+    [TestCase(WebViewColorScheme.Dark, "dark")]
+    public void APage_IsAskedInTheEnginesColorScheme(WebViewColorScheme scheme, string expected)
+    {
+        const string ask = "matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'";
+        string asked = null;
+        string askedNext = null;
+        options.ColorScheme = scheme;
+        try
+        {
+            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>Scheme</title>", (browser, view) =>
+            {
+                asked = Await(browser.EvaluateAsync(ask));
+                var completed = view.Completed.Count;
+                browser.Navigate("data:text/html,<title>Next</title>");
+                Pump(() => view.Completed.Count > completed, TimeSpan.FromSeconds(10));
+                askedNext = Await(browser.EvaluateAsync("document.title + ':' + (" + ask + ")"));
+            }));
+        }
+        finally
+        {
+            options.ColorScheme = WebViewColorScheme.System;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.EqualTo("\"" + expected + "\""));
+            Assert.That(askedNext, Is.EqualTo("\"Next:" + expected + "\""), "the next page is asked so too");
+        });
     }
 
     // A script answers with its value as JSON, a promise waited for; one that throws says why.

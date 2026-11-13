@@ -1569,7 +1569,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         {
             var host = Host();
             scriptsPending = true;
-            devTools.Attach(host, view.ScriptsForNewDocuments(this), GoWhereWanted);
+            devTools.Attach(host, view.ScriptsForNewDocuments(this), engine.ColorScheme, GoWhereWanted);
             CefRefCounting.ReleaseCef(host);
         }
 

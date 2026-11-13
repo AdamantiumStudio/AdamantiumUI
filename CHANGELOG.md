@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WebViewOptions.ColorScheme` (`WebViewColorScheme`: `System`, `Light`, `Dark`): the color scheme every page is asked
+  in - what its `prefers-color-scheme` reads - whatever the system's; the system's by default. In the system's dark one
+  Chromium paints an empty page, as about:blank, dark; `Light` makes it white. The sandbox asks its pages in `Light`.
 - A `WebView`'s page is searched as in a browser: `IsFindOpen`, `FindText` (sought as it is typed), `FindMatchCase`,
   and from the page `FindMatchCount` and `FindActiveMatch` (the first match made current at once); `OpenFindCommand`,
   `CloseFindCommand`, `FindNextCommand`, `FindPreviousCommand`. The theme's `WebViewFindBar` (`PART_FindBar`) shows
@@ -293,6 +296,8 @@ All packages share one version.
 
 ### Changed
 
+- A `WebView`'s `PageBackground` shows under the page's frames: before the first one too, where the theme's background
+  under the view showed.
 - `LaunchOptions.VirtualDisplay` (and `adam-auto start --virtual`) works on Windows too: the application runs on a
   desktop of its own that nobody sees, whose foreground is its own - its windows never show where someone works, and
   nothing it does can take the keyboard or switch the screen. It draws there as anywhere, and the agent's pictures are
