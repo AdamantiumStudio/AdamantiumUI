@@ -110,15 +110,29 @@ public class CanvasSheetHooksTests
     }
 
     [Test]
-    public void ItemsCutToTheSameSheet_ShareOnePlacement()
+    public void ItemsCutToTheSameSheet_OneAfterAnother_ShareOneGroup()
     {
         var board = Board();
         var layer = new CanvasDrawLayer { Owner = board };
         layer.Sync([Box(10, 10), Box(50, 40)]);
 
+        Assert.That(Drawn(layer).Groups, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void AnItemOffTheSheetBetweenTwoOnIt_ClosesTheGroup_AndTheNextOpensItAgain()
+    {
+        var board = Board();
+        var layer = new CanvasDrawLayer { Owner = board };
+        layer.Sync([Box(10, 10), Box(300, 10), Box(50, 40)]);
+
         var groups = Drawn(layer).Groups;
 
-        Assert.That(groups.Select(group => group.ClipPlacement).Distinct().Count(), Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(groups, Has.Count.EqualTo(2));
+            Assert.That(groups[0].ClipPlacement, Is.SameAs(groups[1].ClipPlacement), "the same sheet, one placement");
+        });
     }
 
     [Test]

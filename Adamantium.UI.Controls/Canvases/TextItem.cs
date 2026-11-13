@@ -172,7 +172,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
 
         var quad = CanvasTouch.Corners(world);
         var pivot = Pivot;
-        for (var i = 0; i < quad.Length; i++) quad[i] = Transform.Undo(quad[i], pivot);
+        for (var corner = 0; corner < quad.Length; corner++) quad[corner] = Transform.Undo(quad[corner], pivot);
 
         return CanvasTouch.ConvexOverlap(quad, CanvasTouch.Corners(Bounds));
     }

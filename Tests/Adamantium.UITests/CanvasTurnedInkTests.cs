@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
@@ -43,6 +45,44 @@ public class CanvasTurnedInkTests
         {
             Assert.That(stroke.Touches(new Rect(45, 35, 10, 10)), Is.True);
             Assert.That(stroke.Touches(new Rect(85, -5, 10, 10)), Is.False);
+        });
+    }
+
+    [Test]
+    public void ATurnedStroke_IsRubbedWhereItIsDrawn_AndItsPiecesStayThere()
+    {
+        var stroke = Horizontal();
+        stroke.Transform = new CanvasTransform(90);
+        var pieces = new List<StrokeItem>();
+
+        var rubbed = stroke.Erase(new Vector2<double>(50, 0), 5, pieces);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rubbed, Is.True, "the middle of the turned line is under the eraser");
+            Assert.That(pieces, Has.Count.EqualTo(2));
+            foreach (var piece in pieces)
+            {
+                Assert.That(piece.Transform.IsSomething, Is.False, "the turn is laid into the points");
+                Assert.That(piece.Bounds.X + piece.Bounds.Width / 2, Is.EqualTo(50).Within(1.5), "still upright at x = 50");
+            }
+
+            Assert.That(stroke.Erase(new Vector2<double>(90, 0), 5, []), Is.False, "where it would lie unturned");
+        });
+    }
+
+    [Test]
+    public void ATurnedStroke_IsWrittenToSvgWithItsTurnLaidIn()
+    {
+        var stroke = Horizontal();
+        stroke.Transform = new CanvasTransform(90);
+
+        var read = CanvasSvg.Load(CanvasSvg.Save([stroke]), out _).OfType<StrokeItem>().Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(read.Bounds.Width, Is.LessThan(5), "standing upright");
+            Assert.That(read.Bounds.Height, Is.EqualTo(102).Within(1));
         });
     }
 

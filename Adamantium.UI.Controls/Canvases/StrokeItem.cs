@@ -188,11 +188,15 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem, ICanvasTrans
     }
 
     /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
-    /// two).</summary>
+    /// two). The pieces of a turned stroke stand where it was drawn, the turn laid into their points.</summary>
     /// <returns>Whether anything was rubbed out at all.</returns>
     public bool Erase(Vector2<double> center, double radius, List<StrokeItem> pieces)
     {
         if (_points.Count == 0 || radius <= 0) return false;
+
+        var turn = Transform;
+        var pivot = Pivot;
+        if (turn.IsSomething) center = turn.Undo(center, pivot);
 
         // Cut half the ink width further, so the pieces' round caps do not close the hole again.
         var reach = radius + Thickness / 2;
@@ -247,8 +251,9 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem, ICanvasTrans
 
         foreach (var kept in runs)
         {
-            var piece = new StrokeItem(kept[0].At, Brush, Thickness);
-            foreach (var point in kept) piece.Add(point.At, point.Pressure);
+            var start = turn.IsSomething ? turn.Apply(kept[0].At, pivot) : kept[0].At;
+            var piece = new StrokeItem(start, Brush, Thickness);
+            foreach (var point in kept) piece.Add(turn.IsSomething ? turn.Apply(point.At, pivot) : point.At, point.Pressure);
 
             pieces.Add(piece);
         }
@@ -512,14 +517,14 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem, ICanvasTrans
     {
         var quad = CanvasTouch.Corners(world);
         var pivot = Pivot;
-        for (var i = 0; i < quad.Length; i++) quad[i] = Transform.Undo(quad[i], pivot);
+        for (var corner = 0; corner < quad.Length; corner++) quad[corner] = Transform.Undo(quad[corner], pivot);
 
         var reach = Math.Max(Thickness, 0) / 2;
         if (_points.Count == 1) return CanvasTouch.CircleOverlap(quad, World(0), reach);
 
-        for (var i = 1; i < _points.Count; i++)
+        for (var index = 1; index < _points.Count; index++)
         {
-            if (CanvasTouch.ConvexOverlap(quad, CanvasTouch.Thick(World(i - 1), World(i), reach))) return true;
+            if (CanvasTouch.ConvexOverlap(quad, CanvasTouch.Thick(World(index - 1), World(index), reach))) return true;
         }
 
         return false;
