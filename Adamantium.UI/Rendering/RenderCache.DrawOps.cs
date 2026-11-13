@@ -153,7 +153,7 @@ public partial class RenderCache
     // In a layer's own space a recorded clip is re-derived against the bounds it draws in this frame: the ones it was
     // recorded or refreshed against may be the window's, or a region since moved.
     private Rect2D ScissorIn(IUIComponent owner, Rect2D bounds) =>
-        owner != null && CumulativeClip(owner) is { } logical ? ToFramebufferScissor(logical, bounds) : bounds;
+        owner != null && CumulativeClip(owner) is { } logical ? ToClipScissor(logical, bounds) : bounds;
 
     // Gives a per-unit draw (re-issued by the CPU on replay) its slot's current composed alpha times its own.
     private void RefreshOverlayFade(IRenderUnit unit)
@@ -476,7 +476,7 @@ public partial class RenderCache
         if (worldTransform.M34 != 0 || worldTransform.M14 != 0 || worldTransform.M24 != 0)
         {
             clipped = true;
-            return ToFramebufferScissor(logical, fullScissor);
+            return ToClipScissor(logical, fullScissor);
         }
 
         // Motion-node units are never culled: the node scrolls them into view without a re-record, and the scissor still
@@ -484,7 +484,7 @@ public partial class RenderCache
         if (NodeOf(component) != null)
         {
             clipped = true;
-            return ToFramebufferScissor(logical, fullScissor);
+            return ToClipScissor(logical, fullScissor);
         }
 
         // Is the owner fully outside the clip on any axis? Then let the caller cull it. Use the SAME world the caller will
@@ -497,7 +497,7 @@ public partial class RenderCache
         cull = bounds.Right <= logical.X || bounds.X >= logical.Right || bounds.Bottom <= logical.Y || bounds.Y >= logical.Bottom;
 
         clipped = true;
-        return ToFramebufferScissor(logical, fullScissor);
+        return ToClipScissor(logical, fullScissor);
     }
 
     /// <summary>Where this window sits on the DESKTOP, in physical pixels. What mica needs, and the one number a
@@ -545,18 +545,30 @@ public partial class RenderCache
 
     // Window-logical rect -> Vulkan scissor in framebuffer pixels (logical x RenderScale), clamped to the window scissor so
     // it never exceeds the attachment and collapses to empty when fully scrolled out.
-    private Rect2D ToFramebufferScissor(Rect logical, Rect2D fullScissor)
+    private Rect2D ToFramebufferScissor(Rect logical, Rect2D fullScissor) =>
+        ClampScissor((int)Math.Floor(logical.X * _renderScale), (int)Math.Floor(logical.Y * _renderScale),
+            (int)Math.Ceiling(logical.Right * _renderScale), (int)Math.Ceiling(logical.Bottom * _renderScale), fullScissor);
+
+    private Rect2D ToClipScissor(Rect logical, Rect2D fullScissor) => ClipScissorOf(logical, _renderScale, fullScissor);
+
+    /// <summary>An element's clip in framebuffer pixels: its edges taken to the device pixel the way a drawn rectangle's
+    /// are (<see cref="DevicePixels.ToDevicePixel"/>), so what is clipped stops where a snapped border next to it starts -
+    /// rounding the clip outward let a pixel of the content show past that border at fractional scales.</summary>
+    internal static Rect2D ClipScissorOf(Rect logical, double scale, Rect2D fullScissor) =>
+        ClampScissor(DevicePixels.ToDevicePixel(logical.X, scale), DevicePixels.ToDevicePixel(logical.Y, scale),
+            DevicePixels.ToDevicePixel(logical.Right, scale), DevicePixels.ToDevicePixel(logical.Bottom, scale),
+            fullScissor);
+
+    private static Rect2D ClampScissor(int left, int top, int right, int bottom, Rect2D fullScissor)
     {
-        var fbLeft = fullScissor.Offset.X;
-        var fbTop = fullScissor.Offset.Y;
-        var fbRight = fbLeft + (int)fullScissor.Extent.Width;
-        var fbBottom = fbTop + (int)fullScissor.Extent.Height;
-
-        var left = Math.Clamp((int)Math.Floor(logical.X * _renderScale), fbLeft, fbRight);
-        var top = Math.Clamp((int)Math.Floor(logical.Y * _renderScale), fbTop, fbBottom);
-        var right = Math.Clamp((int)Math.Ceiling(logical.Right * _renderScale), fbLeft, fbRight);
-        var bottom = Math.Clamp((int)Math.Ceiling(logical.Bottom * _renderScale), fbTop, fbBottom);
-
+        var fullLeft = fullScissor.Offset.X;
+        var fullTop = fullScissor.Offset.Y;
+        var fullRight = fullLeft + (int)fullScissor.Extent.Width;
+        var fullBottom = fullTop + (int)fullScissor.Extent.Height;
+        left = Math.Clamp(left, fullLeft, fullRight);
+        top = Math.Clamp(top, fullTop, fullBottom);
+        right = Math.Clamp(right, fullLeft, fullRight);
+        bottom = Math.Clamp(bottom, fullTop, fullBottom);
         return new Rect2D
         {
             Offset = new Offset2D { X = left, Y = top },

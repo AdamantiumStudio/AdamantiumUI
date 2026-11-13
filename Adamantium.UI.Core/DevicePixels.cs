@@ -76,10 +76,12 @@ public static class DevicePixels
         return new Rect(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
     }
 
-    // A local coordinate snapped to the nearest pixel boundary. AwayFromZero: at 150% integer DIPs land on midpoints, and
-    // banker's rounding would move neighbors opposite ways.
-    private static double Edge(double local, double origin, double scale)
-    {
-        return Math.Round((origin + local) * scale, MidpointRounding.AwayFromZero) / scale - origin;
-    }
+    /// <summary>The pixel boundary nearest an absolute coordinate in DIPs - the one rule every edge snapped to the device
+    /// takes, a drawn rectangle's and a clip's alike, so the two meet. Midpoints go away from zero: at 150% integer DIPs
+    /// land on them, and rounding half to even would move neighbors opposite ways.</summary>
+    public static int ToDevicePixel(double coordinate, double scale) =>
+        (int)Math.Round(coordinate * scale, MidpointRounding.AwayFromZero);
+
+    private static double Edge(double local, double origin, double scale) =>
+        ToDevicePixel(origin + local, scale) / scale - origin;
 }
