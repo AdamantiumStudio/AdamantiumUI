@@ -490,8 +490,31 @@ public class DockingArea : Panel
         foreach (var handler in subscribers.GetInvocationList())
         {
             await ((Func<object, PaneClosingEventArgs, Task>)handler)(Owner, args);
+            await BackOnTheLoop();
             if (args.CancelAll) args.Cancel = true;
             if (args.Cancel) return;   // refused - no point asking anyone else about this pane
+        }
+    }
+
+    // The tree is the loop thread's, and that thread has no synchronization context: what follows an await that really
+    // waited - a question answered, a handler that saved - ran on the thread pool, rebuilding the layout while the loop
+    // laid it out and recorded it, and the render cache kept a panel the tree no longer had. Every await of a task that
+    // is not this area's own comes back here first.
+    private static LoopReturn BackOnTheLoop() => default;
+
+    // Awaited, it goes on on the loop thread: posted there, unless it is there already or there is no loop to go to.
+    // An awaiter rather than a posted task completion: that one could complete before the await saw it, and the code
+    // after it would then go on right where it was.
+    private readonly struct LoopReturn : System.Runtime.CompilerServices.INotifyCompletion
+    {
+        public LoopReturn GetAwaiter() => this;
+
+        public bool IsCompleted => !LoopSignal.IsClaimed || LoopSignal.IsLoopThread;
+
+        public void OnCompleted(Action continuation) => LoopSignal.Post(continuation);
+
+        public void GetResult()
+        {
         }
     }
 
@@ -539,10 +562,17 @@ public class DockingArea : Panel
         foreach (var handler in owner.UnsavedClosing?.GetInvocationList() ?? [])
         {
             await ((Func<object, UnsavedClosingEventArgs, Task>)handler)(owner, asked);
+            await BackOnTheLoop();
             if (asked.Answer != UnsavedAnswer.None) break;
         }
 
-        var answer = asked.Answer != UnsavedAnswer.None ? asked.Answer : await AskUnsavedAsync(dirty);
+        var answer = asked.Answer;
+        if (answer == UnsavedAnswer.None)
+        {
+            answer = await AskUnsavedAsync(dirty);
+            await BackOnTheLoop();
+        }
+
         if (answer == UnsavedAnswer.Discard) return true;
         if (answer != UnsavedAnswer.Save || owner.PanesSaving == null) return false;
 
@@ -550,6 +580,7 @@ public class DockingArea : Panel
         foreach (var handler in owner.PanesSaving.GetInvocationList())
         {
             await ((Func<object, PanesSavingEventArgs, Task>)handler)(owner, saving);
+            await BackOnTheLoop();
         }
 
         return !saving.Failed;
