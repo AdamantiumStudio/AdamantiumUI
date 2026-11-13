@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- A `WebView`'s page is searched as in a browser: `IsFindOpen`, `FindText` (sought as it is typed), `FindMatchCase`,
+  and from the page `FindMatchCount` and `FindActiveMatch` (the first match made current at once); `OpenFindCommand`,
+  `CloseFindCommand`, `FindNextCommand`, `FindPreviousCommand`. The theme's `WebViewFindBar` (`PART_FindBar`) shows
+  the search over the page's top right while it is open. Ctrl+F opens it, or puts the keyboard back into its text;
+  Enter and F3 step to the next match, with Shift to the previous; Esc closes it, the current match left selected -
+  unless the window binds those keys itself. The page going elsewhere counts its matches again. The sandbox's Web tab
+  keeps the search in its view model, so it outlives the view made again on another theme.
+
 - `ContentPresenter.ParkShown()`: parks the content it shows when that is kept between visits (`x:KeepAlive`), for the
   next template's presenter to take up. A control of its own whose template holds a presenter calls it from its
   `OnTemplateRemoving` when another template follows; `TabControl` and `ContentControl` do, a `ContentControl` through

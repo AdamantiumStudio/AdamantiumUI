@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.WebView">
+
+    <!-- The theme's search bar of its view: a card with the text sought, which match of how many (in the critical
+         color when there is none), capitals told apart, a separator, a step up and down, closing. Its fields read the
+         view itself, its data context. Glyphs are drawn, never typed: a glyph depends on a font having it. -->
+    <Style Selector="WebViewFindBar">
+        <!-- Its own cursor, not the one the page under it asked of the view. -->
+        <Setter Property="Cursor" Value="Arrow"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebViewFindBar">
+                    <Border DataContext="{TemplateBinding View}" Padding="8 4 4 4" CornerRadius="8" BorderThickness="1"
+                            Background="{ResourceReference SolidBackgroundFillColorBase}"
+                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                            AutomationProperties.AutomationId="WebFindBar"
+                            AutomationProperties.Name="{Localize WebViewStrings.FindOnPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBox x:Name="PART_Text" Width="180" VerticalAlignment="Center"
+                                     Text="{Binding FindText, Mode=TwoWay}"
+                                     Placeholder="{Localize WebViewStrings.FindOnPage}"
+                                     AutomationProperties.AutomationId="WebFindText"
+                                     AutomationProperties.Name="{Localize WebViewStrings.FindOnPage}"/>
+                            <TextBlock x:Name="PART_Matches" MinWidth="48" Margin="4 0" VerticalAlignment="Center"
+                                       HorizontalTextAlignment="Center"
+                                       Text="{TemplateBinding MatchesText}"
+                                       Foreground="{ResourceReference TextFillColorSecondary}"
+                                       AutomationProperties.AutomationId="WebFindMatches"/>
+                            <ToggleButton Classes="WebViewFindToggle" Content="Aa"
+                                          IsChecked="{Binding FindMatchCase, Mode=TwoWay}"
+                                          ToolTipService.ToolTip="{Localize WebViewStrings.MatchCase}"
+                                          AutomationProperties.AutomationId="WebFindMatchCase"
+                                          AutomationProperties.Name="{Localize WebViewStrings.MatchCase}"/>
+                            <Border Width="1" Height="18" VerticalAlignment="Center"
+                                    Background="{ResourceReference ControlStrokeColorDefault}"/>
+                            <Button Classes="WebViewFindButton" Command="{Binding FindPreviousCommand}"
+                                    ToolTipService.ToolTip="{Localize WebViewStrings.FindPrevious}"
+                                    AutomationProperties.AutomationId="WebFindPrevious"
+                                    AutomationProperties.Name="{Localize WebViewStrings.FindPrevious}">
+                                <Path Data="M0,5 L5,0 L10,5" StrokeThickness="1.5"
+                                      Stroke="{ResourceReference TextFillColorPrimary}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Classes="WebViewFindButton" Command="{Binding FindNextCommand}"
+                                    ToolTipService.ToolTip="{Localize WebViewStrings.FindNext}"
+                                    AutomationProperties.AutomationId="WebFindNext"
+                                    AutomationProperties.Name="{Localize WebViewStrings.FindNext}">
+                                <Path Data="M0,0 L5,5 L10,0" StrokeThickness="1.5"
+                                      Stroke="{ResourceReference TextFillColorPrimary}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button Classes="WebViewFindButton" Command="{Binding CloseFindCommand}"
+                                    ToolTipService.ToolTip="{Localize WebViewStrings.CloseFind}"
+                                    AutomationProperties.AutomationId="WebFindClose"
+                                    AutomationProperties.Name="{Localize WebViewStrings.CloseFind}">
+                                <Path Data="M0,0 L9,9 M9,0 L0,9" StrokeThickness="1.2"
+                                      Stroke="{ResourceReference TextFillColorPrimary}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="NothingFound" Value="true">
+                            <Setter TargetName="PART_Matches" Property="Foreground"
+                                    Value="{ResourceReference SystemFillColorCritical}"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The bar's buttons: flat squares, the theme's own hover and press under the glyph. -->
+    <Style Selector="Button.WebViewFindButton">
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Capitals told apart: as flat as the buttons beside it, lit while on. -->
+    <Style Selector="ToggleButton.WebViewFindToggle">
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="MinWidth" Value="28"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="4 0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+</StyleSet>

@@ -82,6 +82,15 @@ public partial class WebPageViewModel : TabPageViewModel
     /// <summary>Whether the page's DevTools are shown beside it.</summary>
     [Bindable] private bool _devToolsOpen;
 
+    /// <summary>Whether the page is searched, kept here so the search outlives the view made again.</summary>
+    [Bindable] private bool _findOpen;
+
+    /// <summary>The text the page is searched for.</summary>
+    [Bindable] private string _findText = string.Empty;
+
+    /// <summary>Whether the search tells capitals from small letters.</summary>
+    [Bindable] private bool _findMatchCase;
+
     /// <summary>The side of the page the DevTools stand on.</summary>
     [Bindable] private WebViewDevToolsDock _devToolsDock = WebViewDevToolsDock.Right;
 

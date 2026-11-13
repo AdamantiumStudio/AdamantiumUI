@@ -21,6 +21,7 @@ public partial class WebView
     private bool compositionShown;
     private bool releasingCapture;
     private bool draggingFromPage;
+    private bool pointerOnFindBar;
 
     /// <summary>Whether keys typed now go into the page: its focus is in a field that takes typing. Keys that type stay
     /// with it then, as with a text box; a key held with Ctrl, Alt or Meta, or a function key, bound in the window, is
@@ -30,10 +31,18 @@ public partial class WebView
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (browser == null || draggingFromPage || !IsPagesPointer(e))
+        if (browser == null || draggingFromPage)
         {
             return;
         }
+
+        if (!IsPagesPointer(e))
+        {
+            LeavePageForFindBar(e);
+            return;
+        }
+
+        pointerOnFindBar = false;
 
         var at = e.GetPosition(this);
         if (e.Pointer.Type == PointerType.Mouse)
@@ -60,11 +69,43 @@ public partial class WebView
         }
     }
 
+    // The mouse went from the page onto its search bar, which lies inside the page's part: the page hears it go, as
+    // it does when the pointer leaves that part.
+    private void LeavePageForFindBar(PointerEventArgs e)
+    {
+        if (pointerOnFindBar || e.Pointer.Type != PointerType.Mouse || IsPointerCaptured || !IsOverFindBar(e))
+        {
+            return;
+        }
+
+        pointerOnFindBar = true;
+        HidePageTip();
+        var at = e.GetPosition(this);
+        browser.SendMouseMove(at.X, at.Y, e.Modifiers, true);
+    }
+
+    private bool IsOverFindBar(PointerEventArgs e)
+    {
+        if (findBar == null || !IsFindOpen)
+        {
+            return false;
+        }
+
+        var at = e.GetPosition(findBar);
+        return at.X >= 0 && at.Y >= 0 && at.X < findBar.ActualWidth && at.Y < findBar.ActualHeight;
+    }
+
     // Whether the pointer is over the page's own part, not the status bar or the DevTools beside it.
     private bool IsOverPage(PointerEventArgs e)
     {
         // A page waiting for its script's dialog takes nothing: the dialog over it does.
         if (PageWaits)
+        {
+            return false;
+        }
+
+        // Nor where its search bar lies over it.
+        if (IsOverFindBar(e))
         {
             return false;
         }
@@ -187,7 +228,19 @@ public partial class WebView
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || browser == null || PageWaits)
+        if (e.Handled || PageWaits)
+        {
+            return;
+        }
+
+        if (!keysKeptByWindow.Contains(e.Key) && !StaysWithTheWindow(e) && FindsByKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        // What is typed into the search bar is the bar's, not the page's.
+        if (browser == null || IsKeyboardInFindBar)
         {
             return;
         }
@@ -281,7 +334,7 @@ public partial class WebView
 
     private void OnTyped(object sender, TextInputEventArgs e)
     {
-        if (e.Handled || browser == null || string.IsNullOrEmpty(e.Text) || PageWaits)
+        if (e.Handled || browser == null || string.IsNullOrEmpty(e.Text) || PageWaits || IsKeyboardInFindBar)
         {
             return;
         }
@@ -308,10 +361,11 @@ public partial class WebView
         e.Handled = true;
     }
 
-    // A page waiting for its dialog takes no composition: what is composed is the dialog's field's.
+    // A page waiting for its dialog takes no composition: what is composed is the dialog's field's - or the search
+    // bar's, with the keyboard there.
     private void OnCompositionStarted(object sender, TextCompositionEventArgs e)
     {
-        if (PageWaits)
+        if (PageWaits || IsKeyboardInFindBar)
         {
             return;
         }
@@ -323,7 +377,7 @@ public partial class WebView
 
     private void OnCompositionChanged(object sender, TextCompositionEventArgs e)
     {
-        if (PageWaits)
+        if (PageWaits || IsKeyboardInFindBar)
         {
             return;
         }
@@ -345,7 +399,7 @@ public partial class WebView
 
     private void OnCompositionEnded(object sender, TextCompositionEventArgs e)
     {
-        if (PageWaits && !composing)
+        if ((PageWaits || IsKeyboardInFindBar) && !composing)
         {
             return;
         }

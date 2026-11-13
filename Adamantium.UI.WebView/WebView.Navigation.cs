@@ -159,6 +159,7 @@ public partial class WebView
         ZoomInCommand = new WebViewCommand(() => StepZoom(true), () => ZoomFactor < MaxZoom - 1e-3);
         ZoomOutCommand = new WebViewCommand(() => StepZoom(false), () => ZoomFactor > MinZoom + 1e-3);
         ResetZoomCommand = new WebViewCommand(() => SetCurrentValue(ZoomFactorProperty, 1d), () => true);
+        MakeFindCommands();
     }
 
     private void RaiseCommandsChanged()
@@ -167,6 +168,7 @@ public partial class WebView
         GoForwardCommand.RaiseCanExecuteChanged();
         ReloadCommand.RaiseCanExecuteChanged();
         StopCommand.RaiseCanExecuteChanged();
+        RaiseFindCommandsChanged();
     }
 
     private void ForgetPage()
@@ -181,6 +183,7 @@ public partial class WebView
         ShowIcon(null);
         HidePageTip();
         SetCurrentValue(IsSecureProperty, false);
+        ForgetFindResult();
         RaiseCommandsChanged();
     }
 
