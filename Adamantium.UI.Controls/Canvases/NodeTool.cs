@@ -46,6 +46,8 @@ public class NodeTool : ICanvasTool
             return;
         }
 
+        if (!canvas.CanDrawAt(e.World)) return;
+
         if (canvas is NodeGraph graph) graph.AskForNode(e.World);
         e.Handled = true;
     }

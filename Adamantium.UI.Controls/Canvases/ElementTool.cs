@@ -50,7 +50,10 @@ public class ElementTool : ICanvasTool
 
     public void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e)
     {
-        if (e.Button != MouseButtons.Left || canvas.Scene == null || _make == null) return;
+        if (e.Button != MouseButtons.Left || canvas.Scene == null || _make == null || !canvas.CanDrawAt(e.World))
+        {
+            return;
+        }
 
         _from = e.World;
         _box = new Rect(_from.X, _from.Y, 0, 0);

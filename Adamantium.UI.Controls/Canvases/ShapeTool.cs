@@ -59,7 +59,11 @@ public class ShapeTool : ICanvasTool
 
     public void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e)
     {
-        if (e.Button != MouseButtons.Left || canvas.Scene == null || canvas is not DrawingBoard board) return;
+        if (e.Button != MouseButtons.Left || canvas.Scene == null || canvas is not DrawingBoard board ||
+            !canvas.CanDrawAt(e.World))
+        {
+            return;
+        }
 
         _from = e.World;
         // A PAINT OF ITS OWN, copied off the setting: the color in hand is what the next thing is drawn WITH, not a

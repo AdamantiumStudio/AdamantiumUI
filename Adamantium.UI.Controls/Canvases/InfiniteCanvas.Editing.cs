@@ -983,13 +983,23 @@ public partial class InfiniteCanvas
         return -1;
     }
 
+    /// <summary>Whether a tool may start making something at a world point; anywhere by default. A tool that makes things
+    /// asks before it begins - a viewer whose marks belong to its sheets says no between them.</summary>
+    public virtual bool CanDrawAt(Vector2<double> world) => true;
+
+    /// <summary>Whether what is selected is framed as one - one box with grips that stretch and turn it all - or each
+    /// thing by its own outline, with no grips: things that must not be stretched across what lies between them. One
+    /// frame by default.</summary>
+    protected virtual bool SharesFrame(IReadOnlyList<ICanvasItem> selection) => true;
+
     /// <summary>Which grips what is selected offers - the AND of what every selected item offers, because a frame round
-    /// several things can only do what all of them can.</summary>
+    /// several things can only do what all of them can; none when they are not framed as one
+    /// (<see cref="SharesFrame"/>).</summary>
     public CanvasHandles OfferedHandles
     {
         get
         {
-            if (_selection.Count == 0) return CanvasHandles.None;
+            if (_selection.Count == 0 || !SharesFrame(_selection)) return CanvasHandles.None;
 
             // What offers NOTHING does not get a vote: a wire has no handles, and counted in it took the frame and the
             // body drag away from every node it was selected with.

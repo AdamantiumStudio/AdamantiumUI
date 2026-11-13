@@ -50,6 +50,8 @@ public class PenTool : ICanvasTool
             return;
         }
 
+        if (!_chaining && !canvas.CanDrawAt(e.World)) return;
+
         if (canvas.SnapToGrid)
         {
             if (_drawing == null)

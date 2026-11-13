@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
+  of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
+  the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same
+  rectangle share it); `CanDrawAt(world)` - whether a tool may start making something there, asked by the shape, pen,
+  curve, text, control and node tools as they begin; `SharesFrame(selection)` - whether what is selected is framed as
+  one, with grips, or each thing by its own outline with none. Each answers as before by default.
+
 - A `WebView`'s page is searched as in a browser: `IsFindOpen`, `FindText` (sought as it is typed), `FindMatchCase`,
   and from the page `FindMatchCount` and `FindActiveMatch` (the first match made current at once); `OpenFindCommand`,
   `CloseFindCommand`, `FindNextCommand`, `FindPreviousCommand`. The theme's `WebViewFindBar` (`PART_FindBar`) shows

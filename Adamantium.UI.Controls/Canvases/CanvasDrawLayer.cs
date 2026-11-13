@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Canvases;
 
@@ -106,7 +107,19 @@ public class CanvasDrawLayer : MeasurableUIComponent
 
         foreach (var item in _items)
         {
+            var clip = Owner.ClipOf(item);
+            if (!clip.IsEmpty)
+            {
+                session.PushGroup(new DrawingGroupOptions
+                {
+                    Clip = new RectangleGeometry(new Rect(0, 0, clip.Width, clip.Height)),
+                    ClipPlacement = _places.Clip(Owner, clip)
+                });
+            }
+
             item.Render(_places.For(session, Owner, item));
+
+            if (!clip.IsEmpty) session.PopGroup();
 
             if (Owner.ChromeGoesAfter(item)) Owner.DrawChrome(session, _places);
         }
