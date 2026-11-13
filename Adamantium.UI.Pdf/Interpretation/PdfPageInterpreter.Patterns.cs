@@ -346,7 +346,6 @@ internal sealed partial class PdfPageInterpreter
         var scale = RadialRasterSide / Math.Max(area.Width, area.Height);
         var width = Math.Max(1, (int)Math.Ceiling(area.Width * scale));
         var height = Math.Max(1, (int)Math.Ceiling(area.Height * scale));
-        // Red, green and blue along s, three bytes a sample.
         var table = new byte[(FunctionSamples + 1) * 3];
         for (var sample = 0; sample <= FunctionSamples; sample++)
         {
@@ -365,7 +364,6 @@ internal sealed partial class PdfPageInterpreter
         var texelWidth = area.Width / width;
         var texelHeight = area.Height / height;
 
-        // The s at a point of the area, or null where the shading paints nothing.
         double? At(double pageX, double pageY)
         {
             var offsetX = pageX - startX;
@@ -397,8 +395,6 @@ internal sealed partial class PdfPageInterpreter
             }
         }
 
-        // Where the shading's edge crosses a texel - its neighbors differ from it - the texel is covered by how much of
-        // it the shading paints, so the edge is smooth instead of a step per texel.
         for (var row = 0; row < height; row++)
         {
             for (var column = 0; column < width; column++)
@@ -442,7 +438,6 @@ internal sealed partial class PdfPageInterpreter
         return ToImage(width, height, rgba);
     }
 
-    // A texel the shading's edge crosses is sampled this many times across and down.
     private const int EdgeSamples = 4;
 
     // Gives every clear pixel the color of the nearest painted one along its row, then its column: a smooth sampler

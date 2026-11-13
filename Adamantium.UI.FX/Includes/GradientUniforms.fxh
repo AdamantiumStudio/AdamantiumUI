@@ -36,7 +36,7 @@ float4 GradientColorIn(float2 p, float4 box)
         return lerp(lerp(GS0, GS1, c.x), lerp(GS2, GS3, c.x), c.y);
     }
 
-    if (int(GParams.y) == 5)   // between two circles: faded out across the edge where none passes
+    if (int(GParams.y) == 5)
     {
         float covered;
         float t = TwoCirclesParam(GGeom0, GGeom1, uv, covered);

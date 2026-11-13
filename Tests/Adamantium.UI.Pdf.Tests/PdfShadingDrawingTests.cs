@@ -142,7 +142,6 @@ public class PdfShadingDrawingTests
     [Test]
     public void AShadingWorkedOutPointByPoint_HasASmoothEdge()
     {
-        // Two equal circles apart, neither end extended: the picture's edge is the circles' outline.
         var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
         pdf.Add("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [20 50 10 80 50 10] /Function 6 0 R >>");
         pdf.Add(RedToBlue);
@@ -171,7 +170,6 @@ public class PdfShadingDrawingTests
             }
         }
 
-        // A step stays only where the outline runs along a texel's side - at a circle's left and right ends.
         Assert.Multiple(() =>
         {
             Assert.That(partial, Is.GreaterThan(0), "texels the edge crosses are partly covered");

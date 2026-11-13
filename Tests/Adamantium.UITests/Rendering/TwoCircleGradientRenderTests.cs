@@ -18,12 +18,13 @@ public class TwoCircleGradientRenderTests
 {
     private const int Dim = 128;
 
+    /// <summary>How the gradient reaches the screen.</summary>
     public enum Path
     {
-        // A geometry: drawn from its curves.
+        /// <summary>A geometry, drawn from its curves.</summary>
         Geometry,
 
-        // A rectangle: the gradient the batches cannot carry, drawn by its unit.
+        /// <summary>A rectangle, drawn by its unit.</summary>
         Rectangle
     }
 
@@ -34,7 +35,6 @@ public class TwoCircleGradientRenderTests
         protected override void OnRender(IDrawingContext context) => draw(context.ForControl(this));
     }
 
-    // A small circle low down, a large one higher up and to the right: the cone between them opens upward.
     private static RadialGradientBrush Cone() => new()
     {
         GradientOrigin = new Vector2<double>(0.3, 0.85),
@@ -46,8 +46,6 @@ public class TwoCircleGradientRenderTests
         GradientStops = { new GradientStop(Colors.Blue, 0), new GradientStop(Colors.HotPink, 1) }
     };
 
-    // One circle inside the other, from a point - as a PDF radial shading from its center or a focus - with that point on
-    // a pixel's middle: every point inside is on one circle, so nothing there is left partly covered.
     private static RadialGradientBrush Nested(double focusX) => new()
     {
         GradientOrigin = new Vector2<double>((focusX + 0.5) / Dim, (Dim / 2 + 0.5) / Dim),
@@ -131,7 +129,6 @@ public class TwoCircleGradientRenderTests
     {
         var pixels = Render(path);
 
-        // Across a row through the cone: clear, then partly covered, then whole - and back again past the other side.
         var row = Dim / 2;
         var partial = 0;
         var steps = 0;

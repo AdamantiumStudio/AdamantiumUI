@@ -324,7 +324,6 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     gd.Offsets0 = it.Offsets0; gd.Offsets1 = it.Offsets1;
 
     float2 uv = (local - it.LocalBounds.xy) / max(it.LocalBounds.zw, float2(1e-4, 1e-4));
-    // Two circles: worked out for every instance, chosen after - derivatives in flow the whole quad shares.
     float circlesEdge;
     float circlesPass;
     float circlesT = TwoCirclesRoot(gd.Geom0, gd.Geom1, uv, circlesEdge, circlesPass);

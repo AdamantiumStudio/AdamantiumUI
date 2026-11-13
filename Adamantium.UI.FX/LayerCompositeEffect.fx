@@ -103,7 +103,6 @@ float MaskAt(float2 pixel)
         float2 c = saturate(uv);
         return lerp(lerp(MaskAlpha0.x, MaskAlpha0.y, c.x), lerp(MaskAlpha0.z, MaskAlpha0.w, c.x), c.y);
     }
-    // Between two circles, faded out across the edge where none passes.
     float covered = 1.0;
     float raw;
     if (type == 5)
