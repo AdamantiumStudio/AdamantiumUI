@@ -132,7 +132,9 @@ public static class ScenarioTranslator
             "Wait" => Wait(step),
             "WaitIdle" => "session.WaitForIdleAsync()",
             "Expect" => $"{Target(step)}.ExpectAsync({Expectations(step, true)})",
-            "Absent" => $"{Target(step)}.ExpectAbsentAsync()",
+            "Absent" => step.Attribute("Timeout") is { } limit
+                ? $"{Target(step)}.WaitForAbsentAsync({Duration(limit.Value)})"
+                : $"{Target(step)}.ExpectAbsentAsync()",
             _ => throw new InvalidOperationException(step.Name.LocalName)
         };
 

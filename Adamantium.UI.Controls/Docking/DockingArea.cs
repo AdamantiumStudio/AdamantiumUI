@@ -543,6 +543,7 @@ public class DockingArea : Panel
         }
 
         var answer = asked.Answer != UnsavedAnswer.None ? asked.Answer : await AskUnsavedAsync(dirty);
+
         if (answer == UnsavedAnswer.Discard) return true;
         if (answer != UnsavedAnswer.Save || owner.PanesSaving == null) return false;
 

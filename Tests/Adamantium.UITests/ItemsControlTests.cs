@@ -263,6 +263,37 @@ public class ItemsControlTests
         });
     }
 
+    // An item taken out: the container that showed it goes back to the pool, and out of sight at once - not only at the
+    // next layout, before which the window would show a container standing for no item (the editor's hierarchy did,
+    // as a scene's entity left it).
+    [Test]
+    public void ARemovedItemsContainer_IsHiddenAtOnce_BeforeTheNextLayout()
+    {
+        var items = new ObservableCollection<object>(Enumerable.Range(0, 5).Cast<object>());
+        var template = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Height = 20 } });
+        var ic = new ItemsControl { ItemTemplate = template, ItemsSource = items };
+        ic.Template = ItemsPresenterTemplate();
+        ic.Measure(new Size<double>(100, 300));
+        ic.Arrange(new Rect(0, 0, 100, 300));
+        var removed = ic.ItemContainerGenerator.ContainerFromIndex(2);
+        Assume.That(removed, Is.Not.Null);
+
+        items.RemoveAt(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(removed.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(((Adamantium.UI.Core.FundamentalUIComponent)removed).IsAwaitingReturn, Is.True, "pooled, not dead");
+            Assert.That(ic.ItemContainerGenerator.ContainerFromIndex(2)?.Visibility, Is.Not.EqualTo(Visibility.Collapsed),
+                "the item after it, moved up, still shows");
+        });
+
+        ic.Measure(new Size<double>(100, 300));
+        ic.Arrange(new Rect(0, 0, 100, 300));
+
+        Assert.That(ic.ItemContainerGenerator.RealizedCount, Is.EqualTo(4));
+    }
+
     private static void ScrollTo(ItemsControl list, double offset)
     {
         var panel = list.ItemsHostPanel;

@@ -115,8 +115,8 @@
         <xs:element name="Expect" type="ExpectStep">
           <xs:annotation><xs:documentation>Checks the element reads as the keys say.</xs:documentation></xs:annotation>
         </xs:element>
-        <xs:element name="Absent" type="TargetOnly">
-          <xs:annotation><xs:documentation>Checks nothing matches the selector.</xs:documentation></xs:annotation>
+        <xs:element name="Absent" type="AbsentStep">
+          <xs:annotation><xs:documentation>Checks nothing matches the selector - or, given a timeout, waits until nothing does.</xs:documentation></xs:annotation>
         </xs:element>
       </xs:choice>
       <xs:attribute name="Name" type="Identifier">
@@ -510,6 +510,16 @@
           <xs:annotation><xs:documentation>How long to wait at most; ten seconds by default.</xs:documentation></xs:annotation>
         </xs:attribute>
         <xs:attributeGroup ref="Keys" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="AbsentStep">
+    <xs:complexContent>
+      <xs:extension base="TargetOnly">
+        <xs:attribute name="Timeout" type="Duration">
+          <xs:annotation><xs:documentation>Waits until nothing matches, for this long at most; without it, checks once.</xs:documentation></xs:annotation>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
