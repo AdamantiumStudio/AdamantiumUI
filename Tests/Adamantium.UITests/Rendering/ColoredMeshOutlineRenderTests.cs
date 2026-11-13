@@ -28,20 +28,22 @@ public class ColoredMeshOutlineRenderTests
         protected override void OnRender(IDrawingContext context) => draw(context.ForControl(this));
     }
 
-    private static ColoredMesh Disc(bool outlined)
+    private static ColoredMesh Disc(bool outlined, double centerX = 0, double centerY = 0)
     {
         var reach = (Radius + 1) / Math.Cos(Math.PI / Sides);
         var vertices = new List<ColoredVertex>();
         for (var side = 0; side < Sides; side++)
         {
-            var from = 2 * Math.PI * side / Sides;
-            var to = 2 * Math.PI * (side + 1) / Sides;
-            vertices.Add(new ColoredVertex(new Vector2<double>(0, 0), Colors.White));
-            vertices.Add(new ColoredVertex(new Vector2<double>(reach * Math.Cos(from), reach * Math.Sin(from)), Colors.White));
-            vertices.Add(new ColoredVertex(new Vector2<double>(reach * Math.Cos(to), reach * Math.Sin(to)), Colors.White));
+            var start = 2 * Math.PI * side / Sides;
+            var end = 2 * Math.PI * (side + 1) / Sides;
+            vertices.Add(new ColoredVertex(new Vector2<double>(centerX, centerY), Colors.White));
+            vertices.Add(new ColoredVertex(
+                new Vector2<double>(centerX + reach * Math.Cos(start), centerY + reach * Math.Sin(start)), Colors.White));
+            vertices.Add(new ColoredVertex(
+                new Vector2<double>(centerX + reach * Math.Cos(end), centerY + reach * Math.Sin(end)), Colors.White));
         }
 
-        var circle = new EllipseGeometry(new Rect(-Radius, -Radius, 2 * Radius, 2 * Radius));
+        var circle = new EllipseGeometry(new Rect(centerX - Radius, centerY - Radius, 2 * Radius, 2 * Radius));
         return outlined ? new ColoredMesh(vertices, circle) : new ColoredMesh(vertices);
     }
 
@@ -129,12 +131,12 @@ public class ColoredMeshOutlineRenderTests
         var vertices = new List<ColoredVertex>();
         void Square(double left)
         {
-            var corners = new[]
-            {
-                new Vector2<double>(left, 0), new Vector2<double>(left + 40, 0),
-                new Vector2<double>(left + 40, 40), new Vector2<double>(left, 40)
-            };
-            foreach (var index in new[] { 0, 1, 2, 0, 2, 3 })
+            Vector2<double>[] corners =
+            [
+                new(left, 0), new(left + 40, 0), new(left + 40, 40), new(left, 40)
+            ];
+            int[] order = [0, 1, 2, 0, 2, 3];
+            foreach (var index in order)
             {
                 vertices.Add(new ColoredVertex(corners[index], Colors.White));
             }
@@ -165,10 +167,14 @@ public class ColoredMeshOutlineRenderTests
     [Test]
     public void TheEdge_LiesOnTheCurve_TurnedToo()
     {
-        const float zoom = 6;
-        var turn = Matrix4x4.CreateRotationZ<float>(0.6f);
-        var pixels = Render(Disc(true), Matrix4x4.CreateScale<float>(zoom, zoom, 1) * turn *
-                                        Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0));
+        const float zoom = 5;
+        const double offsetX = 4;
+        const double offsetY = -2;
+        var place = Matrix4x4.CreateScale<float>(zoom, zoom, 1) * Matrix4x4.CreateRotationZ<float>(0.6f) *
+                    Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0);
+        var pixels = Render(Disc(true, offsetX, offsetY), place);
+        var centerX = offsetX * place.M11 + offsetY * place.M21 + place.M41;
+        var centerY = offsetX * place.M12 + offsetY * place.M22 + place.M42;
         var radius = Radius * zoom;
 
         Assert.Multiple(() =>
@@ -176,10 +182,10 @@ public class ColoredMeshOutlineRenderTests
             for (var step = 0; step < 16; step++)
             {
                 var angle = 2 * Math.PI * (step + 0.21) / 16;
-                Assert.That(AlphaAt(pixels, (int)(Dim / 2.0 + (radius - 2) * Math.Cos(angle)),
-                    (int)(Dim / 2.0 + (radius - 2) * Math.Sin(angle))), Is.EqualTo(255), $"inside at step {step}");
-                Assert.That(AlphaAt(pixels, (int)(Dim / 2.0 + (radius + 2) * Math.Cos(angle)),
-                    (int)(Dim / 2.0 + (radius + 2) * Math.Sin(angle))), Is.Zero, $"outside at step {step}");
+                Assert.That(AlphaAt(pixels, (int)(centerX + (radius - 2) * Math.Cos(angle)),
+                    (int)(centerY + (radius - 2) * Math.Sin(angle))), Is.EqualTo(255), $"inside at step {step}");
+                Assert.That(AlphaAt(pixels, (int)(centerX + (radius + 2) * Math.Cos(angle)),
+                    (int)(centerY + (radius + 2) * Math.Sin(angle))), Is.Zero, $"outside at step {step}");
             }
         });
     }

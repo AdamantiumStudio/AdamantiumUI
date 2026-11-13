@@ -228,17 +228,43 @@ public class PdfShadingDrawingTests
     public void TwoTrianglesSharingASide_HaveABorderOnTheirOuterSidesOnly()
     {
         var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        byte[] stream =
+        [
+            0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255,
+            0, 100, 0, 0, 255, 0, 0, 100, 50, 255, 255, 255, 0, 0, 50, 0, 0, 255,
+        ];
         pdf.AddStream("/ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
-                      "/Decode [0 255 0 255 0 1 0 1 0 1]",
-            new byte[]
-            {
-                0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255,
-                0, 100, 0, 0, 255, 0, 0, 100, 50, 255, 255, 255, 0, 0, 50, 0, 0, 255,
-            });
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]", stream);
         var (_, session) = Draw(pdf, "/S sh");
         var mesh = session.All<DrawnMesh>().Single().Mesh;
 
-        Assert.That(mesh.Vertices, Has.Count.EqualTo(4 * 6 + 2 * 3), "a strip on each of the four outer sides, none on the shared one");
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.Vertices, Has.Count.EqualTo(4 * 6 + 2 * 3),
+                "a strip on each of the four outer sides, none on the shared one");
+            Assert.That(((StreamGeometry)mesh.Outline).Figures, Has.Count.EqualTo(1), "one loop round both");
+        });
+    }
+
+    [Test]
+    public void ATriangleShrunkToALine_LeavesItsNeighboursOutlineWhole()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        byte[] stream =
+        [
+            0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255,
+            0, 0, 0, 255, 0, 0, 0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0,
+        ];
+        pdf.AddStream("/ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]", stream);
+        var (_, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single().Mesh;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((StreamGeometry)mesh.Outline).Figures, Has.Count.EqualTo(1), "the real triangle's loop");
+            Assert.That(mesh.Vertices.Count, Is.EqualTo(3 * 6 + 3), "the real triangle and a strip on its three sides");
+        });
     }
 
     [Test]
@@ -250,8 +276,8 @@ public class PdfShadingDrawingTests
         {
             for (var column = 0; column < side; column++)
             {
-                data.AddRange(new[] { (byte)(column >> 8), (byte)column, (byte)(row >> 8), (byte)row });
-                data.AddRange(new[] { (byte)column, (byte)row, (byte)128 });
+                data.AddRange([(byte)(column >> 8), (byte)column, (byte)(row >> 8), (byte)row]);
+                data.AddRange([(byte)column, (byte)row, (byte)128]);
             }
         }
 
@@ -265,6 +291,7 @@ public class PdfShadingDrawingTests
         {
             Assert.That(page.Problems, Has.None.Contains("first"), "nothing left out");
             Assert.That(mesh.Vertices.Count, Is.GreaterThanOrEqualTo(2 * (side - 1) * (side - 1) * 3));
+            Assert.That(((StreamGeometry)mesh.Outline).Figures, Has.Count.EqualTo(1), "one loop round the lattice");
         });
     }
 

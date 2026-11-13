@@ -41,7 +41,7 @@ internal sealed partial class PdfPageInterpreter
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<(PdfRadialShading, Rect, double), ImageSource> _rasterized = [];
-    private readonly Dictionary<(PdfMeshShading, double), PdfMesh> _meshes = [];
+    private readonly Dictionary<PdfMeshKey, PdfMesh> _meshes = [];
     private Rect _pageBox;
 
     /// <summary>What a pattern may cover in the stream being walked: the page, or the cell being drawn.</summary>
@@ -142,7 +142,7 @@ internal sealed partial class PdfPageInterpreter
                 // Cut as fine as the scale it is shown at asks; see through as one, so triangles that overlap do not
                 // darken where they do.
                 var scale = PdfMatrices.Scale(space);
-                if (!_meshes.TryGetValue((mesh, scale), out var tessellated))
+                if (!_meshes.TryGetValue(new PdfMeshKey(mesh, scale), out var tessellated))
                 {
                     tessellated = PdfMeshTessellator.Tessellate(mesh, space, out var left);
                     if (left)
@@ -150,7 +150,7 @@ internal sealed partial class PdfPageInterpreter
                         Tell($"A mesh shading is drawn with its first {PdfMeshTessellator.MaxTriangles} triangles only.");
                     }
 
-                    _meshes[(mesh, scale)] = tessellated;
+                    _meshes[new PdfMeshKey(mesh, scale)] = tessellated;
                 }
 
                 var triangles = tessellated.Mesh;

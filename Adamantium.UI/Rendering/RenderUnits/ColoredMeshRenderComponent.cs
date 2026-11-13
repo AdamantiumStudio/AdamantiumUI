@@ -42,7 +42,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         _outlineWords = packed.Words;
         _outlineBuffer = ToDispose(BufferManager.CreateBuffer(
             BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, MeshMemory, "colored mesh outline"));
-        _outlineBuffer.Reserve(OutlineBytes());
+        _outlineBuffer.Reserve(CountOutlineBytes());
         _outlineBuffer.Invalidate();
     }
 
@@ -50,10 +50,10 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         _vertices = new ColoredMeshVertexRecord[mesh.Vertices.Count];
-        for (var i = 0; i < _vertices.Length; i++)
+        for (var index = 0; index < _vertices.Length; index++)
         {
-            var vertex = mesh.Vertices[i];
-            _vertices[i] = new ColoredMeshVertexRecord
+            var vertex = mesh.Vertices[index];
+            _vertices[index] = new ColoredMeshVertexRecord
             {
                 Position = new Vector2F((float)vertex.Position.X, (float)vertex.Position.Y),
                 Color = vertex.Color.ToVector4(),
@@ -62,13 +62,13 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
 
         _buffer = ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
             MeshMemory, "colored mesh"));
-        _buffer.Reserve(Bytes);
+        _buffer.Reserve(CountBytes());
         _buffer.Invalidate();
     }
 
-    private ulong Bytes => (ulong)(_vertices.Length * Marshal.SizeOf<ColoredMeshVertexRecord>());
+    private ulong CountBytes() => (ulong)(_vertices.Length * Marshal.SizeOf<ColoredMeshVertexRecord>());
 
-    private ulong OutlineBytes() => (ulong)(_outlineWords.Length * sizeof(uint));
+    private ulong CountOutlineBytes() => (ulong)(_outlineWords.Length * sizeof(uint));
 
     public override void Render()
     {
@@ -77,7 +77,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
             return;
         }
 
-        var buffer = _buffer.Acquire(Bytes, out var write);
+        var buffer = _buffer.Acquire(CountBytes(), out var write);
         if (write)
         {
             buffer.SetData(_vertices, 0, (uint)_vertices.Length);
@@ -89,7 +89,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         UIBasicEffect.MeshOutlined.SetValue(_outlineBuffer != null ? 1u : 0u);
         if (_outlineBuffer != null)
         {
-            var outline = _outlineBuffer.Acquire(OutlineBytes(), out var writeOutline);
+            var outline = _outlineBuffer.Acquire(CountOutlineBytes(), out var writeOutline);
             if (writeOutline)
             {
                 outline.SetData(_outlineWords, 0, (uint)_outlineWords.Length);

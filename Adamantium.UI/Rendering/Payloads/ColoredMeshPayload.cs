@@ -13,7 +13,7 @@ public sealed class ColoredMeshPayload(ColoredMesh mesh, Matrix4x4F localTransfo
     public ColoredMesh Mesh { get; } = mesh;
 
     /// <summary>The mesh's outline as curves, its fill tiles made on the record thread; null for none.</summary>
-    internal PathCurves Outline { get; } = Prepared(mesh?.Outline);
+    internal PathCurves Outline { get; } = PrepareCurves(mesh?.Outline);
 
     /// <summary>What the outline held when this was recorded: a geometry reopened is a different outline.</summary>
     public int OutlineVersion { get; } = mesh?.Outline?.Version ?? 0;
@@ -44,7 +44,7 @@ public sealed class ColoredMeshPayload(ColoredMesh mesh, Matrix4x4F localTransfo
     public override int GetHashCode() =>
         HashCode.Combine(Mesh, OutlineVersion, Placement != null ? Placement.GetHashCode() : LocalTransform.GetHashCode());
 
-    private static PathCurves Prepared(Geometry outline)
+    private static PathCurves PrepareCurves(Geometry outline)
     {
         var curves = outline?.CurvesForDrawing;
         _ = curves?.FillTiles;
