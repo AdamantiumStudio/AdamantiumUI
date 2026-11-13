@@ -64,6 +64,7 @@
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"/>
                                 <Ellipse x:Name="DirtyMark" Grid.Column="2"
+                                        AutomationProperties.AutomationId="DirtyMark"
                                         Width="6" Height="6"
                                         Margin="4 0 0 0"
                                         VerticalAlignment="Center"

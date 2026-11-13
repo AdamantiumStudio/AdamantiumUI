@@ -71,6 +71,7 @@
                                     ContentTemplateSelector="{TemplateBinding HeaderTemplateSelector}"/>
                             <!-- Unsaved work: shown by a docking pane's IsDirty trigger, collapsed otherwise. -->
                             <Ellipse x:Name="DirtyMark" Grid.Column="2"
+                                    AutomationProperties.AutomationId="DirtyMark"
                                     Width="6" Height="6"
                                     Margin="6 0 0 0"
                                     VerticalAlignment="Center"
