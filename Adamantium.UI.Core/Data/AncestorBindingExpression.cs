@@ -9,7 +9,9 @@ namespace Adamantium.UI.Core.Data;
 /// refreshes the binding instead of leaving it pointed at a stale (or never-found) ancestor - the WPF failure mode.
 /// A tree with no window raises no visual attach: there the binding walks again when the element it starts from, or the
 /// top of its visual chain, is given a parent. A chain broken and joined again above that element, while it already
-/// found its ancestor, is not seen without a window.
+/// found its ancestor, is not seen without a window. A logical walk that finds nothing below a part torn down, parked or
+/// pooled has missed nothing - what hangs there is out of the tree with that part, though it keeps its own parents - and
+/// is not reported; a miss found only while such a part comes back is not reported either.
 /// </summary>
 public class AncestorBindingExpression : BindingExpressionBase
 {
@@ -214,9 +216,22 @@ public class AncestorBindingExpression : BindingExpressionBase
     private bool IsTargetAttached()
     {
         var element = DataContextSource;
-        return _def.Logical ? element?.GetLogicalParentOrBridge() != null
+        return _def.Logical ? element?.GetLogicalParentOrBridge() != null && !IsOutOfUse(element)
              : element is IUIComponent visual ? visual.IsAttachedToVisualTree
              : element != null && NearestElement(element) is { IsAttachedToVisualTree: true };   // non-visual: its host is
+    }
+
+    private static bool IsOutOfUse(IFundamentalUIComponent element)
+    {
+        for (var node = element; node != null; node = node.GetLogicalParentOrBridge())
+        {
+            if (node is FundamentalUIComponent { Lifecycle: not VisualLifecycle.Live })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnDetached()

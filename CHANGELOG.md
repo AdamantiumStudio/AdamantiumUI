@@ -395,6 +395,8 @@ All packages share one version.
 
 ### Fixed
 
+- An `{Ancestor Logical=True}` binding below a part torn down, parked or pooled (a closed tab's page, which keeps its
+  own parents inside) is no longer reported as having found no ancestor: it is out of the tree with that part.
 - A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
   a lookup from an element always did: a key both declare had one value from an element and another without one.
 - A page kept between visits (`x:KeepAlive`) stays the same page when its `ContentControl` or `ScrollViewer` takes
