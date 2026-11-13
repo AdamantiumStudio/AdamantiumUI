@@ -87,6 +87,9 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         return templateResult.GetComponentByName(name);
     }
 
+    /// <summary>The name <paramref name="part"/> has in the template built now, or null.</summary>
+    internal string PartName(IAdamantiumComponent part) => templateResult?.NameOf(part);
+
     /// <summary>Hold the template back instead of building it as soon as it is themed. By default a collapsed control
     /// holds it until it is shown: a scroll bar with nothing to scroll, a page nobody has turned to. A control shown
     /// nowhere inline - a <c>ContextMenu</c>, whose rows live in the popup overlay - answers for itself, and calls

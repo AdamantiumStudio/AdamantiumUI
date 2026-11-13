@@ -7,15 +7,14 @@ All packages share one version.
 
 ### Added
 
-- `IDrawingSession.PushClip(rect, corners, placement)` and `PopClip()`: what is drawn between them is cut to a
-  rectangle, its corners maybe rounded, that moves with a `Placement` - rewriting the placement's matrix moves the cut
-  without drawing anything again, as it moves the drawings. A clip inside another cuts by both, and by the element's
-  rounded clip. The cut follows the screen's axes: a placement may move, scale and turn by quarter turns. A shape no
-  batch takes, drawn by its own unit, is cut by the scissor round the clip, its corners square.
-- `IThemeManager.AddResources<T>()`: a library's resource dictionary - its icons, its sizes - in every theme, the ones
-  added later included, as `AddStyleSet` adds its style sets. It is in force while its theme is current, before the
-  theme's own dictionaries, so a theme declaring the same keys has its own way; a dictionary per theme may be given by
-  theme type.
+- `ContentPresenter.ParkShown()`: parks the content it shows when that is kept between visits (`x:KeepAlive`), for the
+  next template's presenter to take up. A control of its own whose template holds a presenter calls it from its
+  `OnTemplateRemoving` when another template follows; `TabControl` and `ContentControl` do, a `ContentControl` through
+  its `ContentHost` (`PART_ContentPresenter`; `ScrollViewer` names its own). `ParkedVisuals.Release(owner, key)` lets go
+  of what an owner parked under a key, and `ParkedVisuals.Holds(owner, key)` says whether something is parked there.
+  `ParkedVisuals.Keep(..., part)`, `TryTake(owner, key, part, ...)` and `Holds(owner, key, part)` keep each part of an
+  owner's template apart (a presenter passes its name in the template); `TemplateResult.NameOf(component)` gives the
+  name a part is registered under.
 - The sandbox's Shapes tab shows fills with touching rings: holes touching the outer ring or each other at a point,
   holes with a common side, an island in a hole, a ring passing one point twice, identical rings. Below them,
   `CombinedGeometry` in each mode: squares sharing a side or touching at a corner, a square less one in its corner,
@@ -398,6 +397,17 @@ All packages share one version.
 
 - A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
   a lookup from an element always did: a key both declare had one value from an element and another without one.
+- A page kept between visits (`x:KeepAlive`) stays the same page when its `ContentControl` or `ScrollViewer` takes
+  another template - a theme swapped - as a `TabControl`'s page does; it was let go and made again. A `ContentControl`
+  left with no template shows its content itself, as before, and what was parked for it is let go. A page built in the
+  background (`DeferContent`) is one page: built
+  again while its tab was left and entered again, the first one is shown and the second let go; landing late while the
+  tab shows one, or for a template taken down, it is let go - before, it was kept beside the page shown for as long as
+  the control lived, or took the place of the page parked there, its history gone. A page built in the background and
+  let go unshown is discarded whole: a browser page in it was left running. One landing after its presenter was thrown
+  away - its window closed - is let go, not hosted there for good. A header showing the same content as its body no
+  longer takes the body's parked page, nor parks over it: each part of a template parks and takes only its own.
+  `ParkedVisuals.MoveOwner` lets go of a view parked where the moved one lands; it was left there unreachable for good.
 - A tab's page kept between visits (`x:KeepAlive`) stays the same page when the `TabControl` takes another template -
   its strip moved to another side. It was let go and made again: a browser tab loaded its page from scratch, its history and what
   was typed in it gone, and showed its address in place of its title until the page came back.

@@ -58,6 +58,20 @@ public class TemplateResult
 
         return component;
     }
+
+    /// <summary>The name <paramref name="component"/> is registered under in this template, or null.</summary>
+    public string NameOf(IAdamantiumComponent component)
+    {
+        foreach (var (name, named) in namesMap)
+        {
+            if (ReferenceEquals(named, component))
+            {
+                return name;
+            }
+        }
+
+        return null;
+    }
     
     public TriggerCollection Triggers { get; }
 
