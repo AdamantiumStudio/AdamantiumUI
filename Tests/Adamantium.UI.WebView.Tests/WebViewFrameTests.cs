@@ -65,6 +65,11 @@ public partial class WebViewFrameTests
             devices?.MainGraphicsDevice?.Dispose();
         });
         loop?.Dispose();
+        if (profile == null)
+        {
+            return;
+        }
+
         try
         {
             Directory.Delete(profile, true);

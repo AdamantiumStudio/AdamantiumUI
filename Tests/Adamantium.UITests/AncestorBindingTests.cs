@@ -4,6 +4,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Resources;
@@ -196,6 +197,36 @@ public class AncestorBindingTests
                 Assert.That(messages, Is.Empty);
             });
             GC.KeepAlive(unrooted);
+        }
+        finally
+        {
+            BindingTrace.Sink = null;
+        }
+    }
+
+    // The logical walk below a part torn down - a closed tab's page, taken out with what it holds, which keeps its own
+    // parents: what hangs there is out of the tree with it and has missed nothing, however it is asked again.
+    [Test]
+    public void Ancestor_Logical_UnderAPartTornDown_IsNotReported()
+    {
+        var messages = new List<string>();
+        BindingTrace.Sink = messages.Add;
+        try
+        {
+            var leaf = new TextBlock();
+            var page = new Border { Child = leaf };
+            var host = new StackPanel();
+            host.AddLogicalChild(page);
+            DiscardedVisuals.PublishSubtree(page);
+
+            var binding = new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true }.Apply(leaf, "Width");
+            BindingUpdateQueue.Flush();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(binding.Status, Is.EqualTo(BindingStatus.NotAttached));
+                Assert.That(messages, Is.Empty);
+            });
         }
         finally
         {
