@@ -114,11 +114,14 @@ All packages share one version.
   puts down what lies between `q` and `Q`: cut to a path by its own fill rule, to glyphs (`PlacedGlyphRun`), let
   through a soft mask read by its alpha or by its luminosity over a backdrop color (`MaskKind`), faded as a whole and
   laid down by any of the sixteen PDF blend modes (`BlendMode`). A group is drawn apart into a target the size of what
-  it shows and laid down at its end; one that only cuts to a rectangle along the axes is cut by a scissor, with no
-  target. Groups nest; one left open ends with its element's drawing; a group's masks are drawn at full strength, the
-  element's opacity reaching the group itself. A move - a scroll, a placement, a composited animation - replays the
-  frame with each group placed again where it now stands; the window is drawn again only when a group left out of
-  sight comes into view or one cut to a rectangle turns.
+  it shows and laid down at its end; one that only cuts to a rectangle along the axes - moved, scaled, mirrored or
+  turned by a quarter - is cut by a scissor, with no target. The clip can be given in a placement's units
+  (`DrawingGroupOptions.ClipPlacement`) and moves with it: marks on a sheet that rides a camera stay on the sheet as the
+  camera moves, with no record. Groups nest; one left open ends with its element's drawing; a group's masks are drawn
+  at full strength, the element's opacity reaching the group itself. A move - a scroll, a placement, a composited
+  animation - replays the frame with each group placed again where it now stands, placed draws inside it found where
+  their placement is now; the window is drawn again only when a group left out of sight comes into view or one cut to
+  a rectangle turns off the axes.
 - `IDrawingSession.DrawGlyphs` and `GlyphRun`: glyphs the caller placed, by index and pen position, drawn where one
   matrix puts the run - filled through the glyph atlas, outlined as paths (`GlyphRun.Outline`).
 - The sandbox has a "PDF drawing" tab: clips by a path, a rectangle and letters, both soft masks, a group in a group and
