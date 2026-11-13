@@ -341,44 +341,105 @@ internal sealed partial class PdfPageInterpreter
 
     private static ImageSource RasterizeTwoCircles(PdfRadialShading shading, Rect area, double alpha)
     {
-        var (x0, y0, r0) = (shading.StartCenter.X, shading.StartCenter.Y, shading.StartRadius);
-        var (x1, y1, r1) = (shading.EndCenter.X, shading.EndCenter.Y, shading.EndRadius);
+        var startX = shading.StartCenter.X;
+        var startY = shading.StartCenter.Y;
+        var startRadius = shading.StartRadius;
         var scale = RadialRasterSide / Math.Max(area.Width, area.Height);
-        var (width, height) = (Math.Max(1, (int)Math.Ceiling(area.Width * scale)),
-            Math.Max(1, (int)Math.Ceiling(area.Height * scale)));
-        var table = new (byte R, byte G, byte B)[FunctionSamples + 1];
-        for (var i = 0; i < table.Length; i++)
+        var width = Math.Max(1, (int)Math.Ceiling(area.Width * scale));
+        var height = Math.Max(1, (int)Math.Ceiling(area.Height * scale));
+        var table = new byte[(FunctionSamples + 1) * 3];
+        for (var sample = 0; sample <= FunctionSamples; sample++)
         {
-            var color = ColorAt(shading, (double)i / FunctionSamples);
-            table[i] = (Byte(color.R), Byte(color.G), Byte(color.B));
+            var color = ColorAt(shading, (double)sample / FunctionSamples);
+            table[sample * 3] = Byte(color.R);
+            table[sample * 3 + 1] = Byte(color.G);
+            table[sample * 3 + 2] = Byte(color.B);
         }
 
-        var (cx, cy, dr) = (x1 - x0, y1 - y0, r1 - r0);
-        var a = cx * cx + cy * cy - dr * dr;
-        var size = cx * cx + cy * cy + dr * dr;
+        var travelX = shading.EndCenter.X - startX;
+        var travelY = shading.EndCenter.Y - startY;
+        var growth = shading.EndRadius - startRadius;
+        var leading = travelX * travelX + travelY * travelY - growth * growth;
+        var size = travelX * travelX + travelY * travelY + growth * growth;
         var opacity = Byte(alpha);
+        var texelWidth = area.Width / width;
+        var texelHeight = area.Height / height;
+
+        double? At(double pageX, double pageY)
+        {
+            var offsetX = pageX - startX;
+            var offsetY = pageY - startY;
+            return RadialParameter(shading, leading, size, offsetX * travelX + offsetY * travelY + startRadius * growth,
+                offsetX * offsetX + offsetY * offsetY - startRadius * startRadius, startRadius, growth);
+        }
+
+        void Paint(byte[] into, int texel, double along, byte cover)
+        {
+            var sample = (int)Math.Round(Math.Clamp(along, 0, 1) * FunctionSamples) * 3;
+            into[texel * 4] = table[sample];
+            into[texel * 4 + 1] = table[sample + 1];
+            into[texel * 4 + 2] = table[sample + 2];
+            into[texel * 4 + 3] = cover;
+        }
+
         var rgba = new byte[width * height * 4];
+        var painted = new bool[width * height];
         for (var row = 0; row < height; row++)
         {
-            var py = area.Y + (row + 0.5) * area.Height / height - y0;
             for (var column = 0; column < width; column++)
             {
-                var px = area.X + (column + 0.5) * area.Width / width - x0;
-                if (RadialParameter(shading, a, size, px * cx + py * cy + r0 * dr, px * px + py * py - r0 * r0, r0, dr)
-                    is not { } s)
+                if (At(area.X + (column + 0.5) * texelWidth, area.Y + (row + 0.5) * texelHeight) is { } along)
+                {
+                    painted[row * width + column] = true;
+                    Paint(rgba, row * width + column, along, opacity);
+                }
+            }
+        }
+
+        for (var row = 0; row < height; row++)
+        {
+            for (var column = 0; column < width; column++)
+            {
+                var texel = row * width + column;
+                var own = painted[texel];
+                if ((column == 0 || painted[texel - 1] == own) && (column == width - 1 || painted[texel + 1] == own)
+                    && (row == 0 || painted[texel - width] == own) && (row == height - 1 || painted[texel + width] == own))
                 {
                     continue;
                 }
 
-                var (r, g, b) = table[(int)Math.Round(Math.Clamp(s, 0, 1) * FunctionSamples)];
-                var at = (row * width + column) * 4;
-                (rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3]) = (r, g, b, opacity);
+                var hits = 0;
+                double? first = null;
+                for (var down = 0; down < EdgeSamples; down++)
+                {
+                    for (var across = 0; across < EdgeSamples; across++)
+                    {
+                        if (At(area.X + (column + (across + 0.5) / EdgeSamples) * texelWidth,
+                                area.Y + (row + (down + 0.5) / EdgeSamples) * texelHeight) is { } along)
+                        {
+                            hits++;
+                            first ??= along;
+                        }
+                    }
+                }
+
+                var cover = (byte)Math.Round(opacity * (double)hits / (EdgeSamples * EdgeSamples));
+                if (own)
+                {
+                    rgba[texel * 4 + 3] = cover;
+                }
+                else if (first is { } edge)
+                {
+                    Paint(rgba, texel, edge, cover);
+                }
             }
         }
 
         BleedUnderClear(rgba, width, height);
         return ToImage(width, height, rgba);
     }
+
+    private const int EdgeSamples = 4;
 
     // Gives every clear pixel the color of the nearest painted one along its row, then its column: a smooth sampler
     // blends a painted pixel with its clear neighbors, and their black would rim the shading's edge dark.

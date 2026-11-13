@@ -15,4 +15,10 @@
     <Phrase Key="ReloadSite" Text="Reload site?"/>
     <Phrase Key="Reload" Text="Reload"/>
     <Phrase Key="ChangesMayBeLost" Text="Changes you made may not be saved."/>
+    <Phrase Key="FindOnPage" Text="Find on page"/>
+    <Phrase Key="MatchCase" Text="Match case"/>
+    <Phrase Key="FindPrevious" Text="Previous match"/>
+    <Phrase Key="FindNext" Text="Next match"/>
+    <Phrase Key="CloseFind" Text="Close find bar"/>
+    <Phrase Key="Matches" Text="{active} of {count}"/>
 </Language>

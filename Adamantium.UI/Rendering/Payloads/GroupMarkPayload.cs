@@ -17,8 +17,9 @@ public sealed class GroupMarkPayload
     /// <summary><see cref="GroupMarkKind.Begin"/>: how the group is laid down.</summary>
     public DrawingGroupOptions Options { get; private init; }
 
-    /// <summary><see cref="GroupMarkKind.Begin"/>: the clip as a rectangle in the element's units, when the group does
-    /// nothing but cut to one lying along the axes - a scissor can cut it then; null otherwise.</summary>
+    /// <summary><see cref="GroupMarkKind.Begin"/>: the clip as a rectangle in the element's units, or in
+    /// <see cref="DrawingGroupOptions.ClipPlacement"/>'s, when the group does nothing but cut to one lying along the axes
+    /// - a scissor can cut it then; null otherwise.</summary>
     public Rect? ClipRect { get; private init; }
 
     /// <summary><see cref="GroupMarkKind.MaskBegin"/>: what of the mask's picture lets the group through.</summary>

@@ -325,7 +325,13 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     gd.Offsets0 = it.Offsets0; gd.Offsets1 = it.Offsets1;
 
     float2 uv = (local - it.LocalBounds.xy) / max(it.LocalBounds.zw, float2(1e-4, 1e-4));
-    float gt = GradientSpread(GradientParam(int(gd.Params.y), gd.Geom0, gd.Geom1, uv), int(gd.Params.w));
+    float circlesEdge;
+    float circlesPass;
+    float circlesT = TwoCirclesRoot(gd.Geom0, gd.Geom1, uv, circlesEdge, circlesPass);
+    float circlesCovered = TwoCirclesCoverage(circlesEdge, circlesPass);
+    bool twoCircles = int(gd.Params.y) == 5;
+    float raw = twoCircles ? circlesT : GradientParam(int(gd.Params.y), gd.Geom0, gd.Geom1, uv);
+    float gt = GradientSpread(raw, int(gd.Params.w));
     // Widened in THIS stage's own body - see GradColor.
     float4 meshCols[8] = { float4(it.Stop0) * (1.0 / 255.0), float4(it.Stop1) * (1.0 / 255.0),
                            float4(it.Stop2) * (1.0 / 255.0), float4(it.Stop3) * (1.0 / 255.0),
@@ -335,7 +341,9 @@ float4 GradGeomColor(GradGeomData it, float2 local)
     // MESH (type 4) here too: a mesh brush has NO axis geometry, so without this branch the maths above runs on zeros and
     // walks the stop table with a meaningless parameter. Same branch-free select as the rect pass.
     float4 mesh = lerp(lerp(meshCols[0], meshCols[1], uv.x), lerp(meshCols[2], meshCols[3], uv.x), uv.y);
-    return lerp(grad, mesh, step(3.5, gd.Params.y) * step(gd.Params.y, 4.5));
+    float4 color = lerp(grad, mesh, step(3.5, gd.Params.y) * step(gd.Params.y, 4.5));
+    color.a *= twoCircles ? circlesCovered : 1.0;
+    return color;
 }
 
 [shader("fragment")]
