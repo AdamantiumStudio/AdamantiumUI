@@ -293,6 +293,10 @@ All packages share one version.
 
 ### Changed
 
+- `LaunchOptions.VirtualDisplay` (and `adam-auto start --virtual`) works on Windows too: the application runs on a
+  desktop of its own that nobody sees, whose foreground is its own - its windows never show where someone works, and
+  nothing it does can take the keyboard or switch the screen. It draws there as anywhere, and the agent's pictures are
+  its own frames. Generated scenario tests already ask for it, so on Windows they no longer show their windows.
 - Paths are filled and stroked from their curves on the GPU, exact at any zoom, instead of from triangles and a
   polyline cut on the CPU. A fill's outline is cut once into quadratic pieces (a cubic within a thousandth of its size)
   and those into a tree of square tiles of the fill's own space, made on the record thread for each version of the

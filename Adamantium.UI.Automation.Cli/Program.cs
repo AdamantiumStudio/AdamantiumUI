@@ -24,8 +24,9 @@ public static class Program
 
           start --exe <path> [--tab <Id>] [--theme <Name>]   start an instance with the agent and wait for its window;
                                                               beside the sandbox, the sandbox when no --exe is named
-          start ... --virtual                                 on Linux, on a virtual monitor of its own instead of the
-                                                              desktop: it takes no one's focus
+          start ... --virtual                                 where nobody sees it instead of on the desktop - a virtual
+                                                              monitor of its own on Linux, a desktop of its own on
+                                                              Windows: it shows nowhere and takes no one's focus
           start ... --screen <id>                             its windows on the monitor whose id ends with <id>, as
                                                               DISPLAY2 on Windows; ADAM_AUTOMATION_SCREEN does it for all
           start ... --args <text>                             the application's own command line

@@ -36,8 +36,11 @@ public sealed class LaunchOptions
     /// which it was drawn fails - what a broken render cache shows is caught by a run, not by someone's eye.</summary>
     public bool VerifyFrames { get; set; } = true;
 
-    /// <summary>Whether the application is shown on a virtual monitor of its own rather than on the desktop, so it takes
-    /// no focus from whoever works there. Linux only, with Mutter; elsewhere it shows on the desktop.</summary>
+    /// <summary>Whether the application runs where nobody sees it rather than on the desktop, so it never shows where
+    /// someone works and takes no focus from them: on Linux a virtual monitor of its own (Mutter), on Windows a desktop
+    /// of its own (<see cref="HiddenDesktop"/>), whose foreground is its own too - a desktop refused fails the launch.
+    /// Elsewhere, or with no Mutter, it shows on the desktop. Input through the system's own pointer (<c>--os</c>) does
+    /// not reach it.</summary>
     public bool VirtualDisplay { get; set; }
 
     /// <summary>The monitor its windows open on, named by the end of its id (<c>DISPLAY2</c> on Windows), so it keeps off
