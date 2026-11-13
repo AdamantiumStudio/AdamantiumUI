@@ -76,6 +76,29 @@ public class ThemeContextScopeTests
     }
 
     [Test]
+    public void AKeyInThePaletteAndTheThemesDictionary_HasOneValue_AskedFromAnElementOrNot()
+    {
+        var theme = TwoVariantTheme();
+        ResourceContext.SetScope(theme, ResourceScope.Theme);
+        var own = new ResourceDictionary();
+        own.Add("Background", "from the dictionary");
+        ResourceContext.SetResources(theme, own);
+        var manager = new ThemeManager(new AdamantiumDependencyContainer());
+        _app.ThemeManager = manager;
+        manager.AddTheme(theme.Name, theme);
+        manager.SetTheme(theme);
+
+        var element = new Border();
+        var fromPalette = theme.Palette["Background"];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_app.ResourceManager.FindResource(element, "Background"), Is.SameAs(fromPalette));
+            Assert.That(_app.ResourceManager.FindResource("Background"), Is.SameAs(fromPalette));
+        });
+    }
+
+    [Test]
     public void AThemeSetOnAnElement_ReachesEverythingUnderIt()
     {
         var theme = TwoVariantTheme();
