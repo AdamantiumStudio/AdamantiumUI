@@ -17,10 +17,11 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>
-/// A close that waited for an answer goes on on the loop thread. The loop thread has no synchronization context, so the
-/// rest of the close - the panel that empties going away - ran on the thread pool, rebuilding the layout while the loop
-/// laid it out and recorded it: the render cache kept the panel's chrome in the paint order, and the frame verifier
-/// found a panel drawn that the tree no longer had.
+/// A close that waited for an answer goes on on the loop thread, as everything that follows an await there does: the
+/// loop thread has its <see cref="LoopSynchronizationContext"/>. Without it the rest of the close - the panel that
+/// empties going away - ran on the thread pool, rebuilding the layout while the loop laid it out and recorded it: the
+/// render cache kept the panel's chrome in the paint order, and the frame verifier found a panel drawn that the tree no
+/// longer had.
 /// </summary>
 [TestFixture]
 public class DockingCloseOnTheLoopTests
@@ -103,7 +104,8 @@ public class DockingCloseOnTheLoopTests
 
         var loop = Environment.CurrentManagedThreadId;
         var previousContext = SynchronizationContext.Current;
-        SynchronizationContext.SetSynchronizationContext(null);   // as on the loop thread: there is none
+        // As the application's loop thread: claimed, with its own context.
+        SynchronizationContext.SetSynchronizationContext(new LoopSynchronizationContext());
         LoopSignal.Claim();
         try
         {
@@ -135,6 +137,43 @@ public class DockingCloseOnTheLoopTests
                 Assert.That(leaving.IsAttachedToVisualTree, Is.False, "the panel is gone");
                 Assert.That(leaving.IsDiscarded, Is.True, "...for good");
                 Assert.That(DrawnButNotInTheTree(root, cache), Is.Empty, "nothing is drawn that the tree no longer has");
+            });
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+    }
+
+    // Work sent to the loop from another thread runs there and is waited for; on the loop itself it runs at once.
+    [Test]
+    public void SentToTheLoop_ItRunsThere_AndTheSenderWaitsForIt()
+    {
+        var context = new LoopSynchronizationContext();
+        var loop = Environment.CurrentManagedThreadId;
+        var previousContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(context);
+        LoopSignal.Claim();
+        try
+        {
+            var ranOn = 0;
+            var sent = Task.Run(() => context.Send(_ => ranOn = Environment.CurrentManagedThreadId, null));
+            var waited = Stopwatch.StartNew();
+            while (!sent.IsCompleted && waited.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                LoopSignal.Drain();
+                sent.Wait(TimeSpan.FromMilliseconds(1));
+            }
+
+            var inline = 0;
+            context.Send(_ => inline = Environment.CurrentManagedThreadId, null);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(sent.IsCompletedSuccessfully, Is.True, "the sender went on once it ran");
+                Assert.That(ranOn, Is.EqualTo(loop), "it ran on the loop");
+                Assert.That(inline, Is.EqualTo(loop), "on the loop, at once");
             });
         }
         finally
