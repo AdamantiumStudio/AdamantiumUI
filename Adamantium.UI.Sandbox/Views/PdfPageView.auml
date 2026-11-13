@@ -1,5 +1,6 @@
 <View xmlns="http://adamantium/ui"
-      xmlns:x="http://adamantium/ui/xaml/extensions">
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- A PDF page as one drawing: read once, then zoomed and panned in the box without being read again. -->
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24">
         <StackPanel Grid.Row="0" Orientation="Vertical" MarginBottom="12">
@@ -40,7 +41,8 @@
             </ZoomBox>
         </Border>
 
-        <StackPanel Grid.Row="3" Orientation="Vertical" MarginTop="8">
+        <StackPanel Grid.Row="3" Orientation="Vertical" MarginTop="8"
+                    Visibility="{Binding HasProblems, Converter={conv:BoolToVisibilityConverter}}">
             <TextBlock x:Name="ProblemsLabel" Text="{Localize PdfPageStrings.Problems}" FontSize="14" MarginBottom="4"/>
             <ItemsControl ItemsSource="{Binding Problems}" MaxHeight="120"
                           AutomationProperties.LabeledBy="{Binding ElementName=ProblemsLabel}"/>

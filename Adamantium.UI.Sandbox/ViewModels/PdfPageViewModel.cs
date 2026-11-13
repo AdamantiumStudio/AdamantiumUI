@@ -31,6 +31,7 @@ public partial class PdfPageViewModel : TabPageViewModel
     [Bindable] private int _pageNumber;
     [Bindable] private int _pageCount;
     [Bindable] private string _status = "";
+    [Bindable] private bool _hasProblems;
 
     /// <summary>What the page shown could not draw.</summary>
     public TrackingCollection<string> Problems { get; } = [];
@@ -100,6 +101,8 @@ public partial class PdfPageViewModel : TabPageViewModel
         {
             Problems.Add(problem);
         }
+
+        HasProblems = Problems.Count > 0;
 
         if (name != null)
         {
