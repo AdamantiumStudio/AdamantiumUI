@@ -107,7 +107,7 @@ public partial class RenderCache
                         }
 
                         RefreshOverlayFade(op.Unit);
-                        RenderInPlacedClip(device, op.Unit, fullScissor);
+                        op.Unit.Render();
                         _unitDrewMoving |= op.Unit.DrawsMoving;
                         break;
                     case RenderOpKind.Segment:
@@ -251,7 +251,7 @@ public partial class RenderCache
         // OWN alpha only - the same split every batched fill makes.
         FadeBySlot(unit);
         if (!batch.TryAdd(band, shape, corners, kind, bakeWorld, unit.RenderData.Opacity, scissor, bounds,
-                band.Color, slot, field, fieldRange, ClipSlotOf(unit, _frameScissor), unit.FadeSlot,
+                band.Color, slot, field, fieldRange, RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot,
                 underWidth))
         {
             return false;
@@ -299,7 +299,7 @@ public partial class RenderCache
         FadeBySlot(unit);   // the chain comes from the slot now - the color carries the element's own alpha only
         if (!batch.TryAdd(bands, inner, shape, corners, kind, bakeWorld,
                 unit.RenderData.Opacity, scissor, haloBounds, slot, field, fieldRange,
-                ClipSlotOf(unit, _frameScissor), unit.FadeSlot, underWidth))
+                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot, underWidth))
         {
             return false;
         }
@@ -1064,7 +1064,6 @@ public partial class RenderCache
         }
 
         removed += ReleaseSlotsOf(_clipOwners, Departed, ReleaseClipSlot);
-        removed += ReleasePlacedClips(Departed);
         removed += ReleaseSlotsOf(_fadeOwners, Departed, ReleaseFadeSlot);
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.

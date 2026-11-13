@@ -116,9 +116,9 @@ public partial class RenderCache
             // Readied as the walk readies it: a shape's band reads the distance field its update bakes.
             unit.SetEffectiveOpacity(EffectiveOpacity(unit.Component));
             unit.SetFadeSlot(OpacitySlotOf(device, unit.Component));
-            var clipShape = ClipShapeOf(unit, fullScissor);
-            unit.RenderData.RoundedClipBox = clipShape.Box;
-            unit.RenderData.RoundedClipRadii = clipShape.Radii;
+            var (clipBox, clipRadii) = RoundedClipShape(unit.Component, fullScissor);
+            unit.RenderData.RoundedClipBox = clipBox;
+            unit.RenderData.RoundedClipRadii = clipRadii;
             unit.Update(wt, _projectionMatrix, _renderScale);
             CollectHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge);
             CollectLivingHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge);
@@ -208,11 +208,11 @@ public partial class RenderCache
         var soft = SoftOf(layer);
         var cut = soft > 0f && _softCut.Remove(layer, out var sides) ? sides : default;
         // Drawn whole, the rounded clip above it cuts what it lays down; otherwise it cut what it drew already.
-        var clipShape = whole && ApplySnap(layer).RenderParent is { } parent
+        var (clipBox, clipRadii) = whole && ApplySnap(layer).RenderParent is { } parent
             ? RoundedClipShape(parent, fullScissor)
             : default;
         _offscreenLayers.End(device, alpha, scissor, mask, soft, cut, mirror,
-            mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor, clipShape.Box, clipShape.Radii);
+            mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor, clipBox, clipRadii);
         return fullScissor;
     }
 

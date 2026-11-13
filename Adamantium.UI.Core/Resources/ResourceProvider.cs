@@ -14,17 +14,7 @@ public class ResourceProvider
 
     /// <summary>Registers the dictionary of <paramref name="sourceType"/> under <paramref name="owner"/>, creating it the
     /// first time. <paramref name="linkIncludes"/> registers what it links before it, so its own keys win over theirs.</summary>
-    public ResourceDictionary AddSource(IAdamantiumComponent owner, Type sourceType, Action<ResourceDictionary> linkIncludes = null) =>
-        AddSource(owner, sourceType, linkIncludes, beneath: false);
-
-    /// <summary>Registers the dictionary of <paramref name="sourceType"/> under <paramref name="owner"/> as
-    /// <see cref="AddSource(IAdamantiumComponent, Type, Action{ResourceDictionary})"/> does, but beneath every dictionary
-    /// already registered: a key any of them declares keeps their value, and its styles count first.</summary>
-    public ResourceDictionary AddSourceBeneath(IAdamantiumComponent owner, Type sourceType) =>
-        AddSource(owner, sourceType, null, beneath: true);
-
-    private ResourceDictionary AddSource(IAdamantiumComponent owner, Type sourceType,
-        Action<ResourceDictionary> linkIncludes, bool beneath)
+    public ResourceDictionary AddSource(IAdamantiumComponent owner, Type sourceType, Action<ResourceDictionary> linkIncludes = null)
     {
         var isNew = !_loadedDictionaries.TryGetValue(sourceType, out var info);
         if (isNew)
@@ -41,22 +31,12 @@ public class ResourceProvider
                 owned = new List<ResourceInfo>();
                 _byOwner[owner] = owned;
             }
-
-            if (beneath) owned.Insert(0, info);
-            else owned.Add(info);
+            owned.Add(info);
         }
 
         if (isNew)
         {
-            if (beneath)
-            {
-                _orderedDictionaries.Insert(0, info);
-                InvalidateCache();
-            }
-            else
-            {
-                Load(info);
-            }
+            Load(info);
         }
 
         return info.Resource;

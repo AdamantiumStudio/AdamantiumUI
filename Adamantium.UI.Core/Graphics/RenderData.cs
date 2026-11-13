@@ -51,8 +51,4 @@ public class RenderData
     /// <summary>The command draws a mask of a group of draws (<see cref="IDrawingSession.PushGroup"/>): at full strength,
     /// with no fade and no bands - the element's opacity reaches the group it lets through.</summary>
     public bool DrawsMask { get; init; }
-
-    /// <summary>The clip moving with a placement that cuts this command (<see cref="IDrawingSession.PushClip"/>), or
-    /// null.</summary>
-    public PlacedClip PlacedClip { get; init; }
 }

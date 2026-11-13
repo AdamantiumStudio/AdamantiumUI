@@ -45,12 +45,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    {
       drawCommands.Clear();
       _openGroups = 0;
-      _clip = null;
-      _clipsPushed = 0;
    }
-
-   private PlacedClip _clip;
-   private int _clipsPushed;
 
    // Groups the element being recorded has pushed and not yet popped.
    private int _openGroups;
@@ -82,7 +77,6 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          ((IDrawingSession)this).PopGroup();
       }
 
-      _clip = null;
       return drawCommands;
    }
 
@@ -467,25 +461,6 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   IDrawingSession IDrawingSession.PushClip(Rect clip, CornerRadius corners, Placement placement)
-   {
-      ArgumentNullException.ThrowIfNull(placement);
-      placement.DrawnBy(_currentComponent);
-      _clip = new PlacedClip(clip, corners, placement, _clip, _clipsPushed++);
-      return this;
-   }
-
-   IDrawingSession IDrawingSession.PopClip()
-   {
-      if (_clip == null)
-      {
-         throw new InvalidOperationException("No clip to end: PopClip without a PushClip.");
-      }
-
-      _clip = _clip.Outer;
-      return this;
-   }
-
    IDrawingSession IDrawingSession.PopGroup()
    {
       if (_openGroups == 0)
@@ -524,13 +499,13 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       if (_drawingMask > 0)
       {
          return new RenderData(1f, World(_currentComponent), _currentComponent.ClipToBounds,
-            _currentComponent.ClipRectangle) { DrawsMask = true, PlacedClip = _clip };
+            _currentComponent.ClipRectangle) { DrawsMask = true };
       }
 
       var renderData = new RenderData(GetEffectiveOpacity(),
          World(_currentComponent),
          _currentComponent.ClipToBounds,
-         _currentComponent.ClipRectangle) { PlacedClip = _clip };
+         _currentComponent.ClipRectangle);
       // Baked HERE, on the record thread: the aura/shadow objects are edited from the loop thread, so the renderer gets
       // values, never the live objects. Read ONCE - both bakes want the aura, and a property read is not free.
       var aura = _currentComponent.Aura;

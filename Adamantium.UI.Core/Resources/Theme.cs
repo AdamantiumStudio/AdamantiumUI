@@ -718,13 +718,13 @@ public class Theme : AdamantiumComponent, ITheme
 
     /// <summary>The theme's resources were registered, being the current theme's now: the styles of the dictionary files
     /// they link are the theme's too, as those written into them are.</summary>
-    internal bool TakeRegisteredStyles()
+    internal void TakeRegisteredStyles()
     {
         var before = _resourceStyles.ToList();
         TakeResourceStyles();
         if (before.SequenceEqual(_resourceStyles))
         {
-            return false;
+            return;
         }
 
         RemergeStyles();
@@ -735,8 +735,6 @@ public class Theme : AdamantiumComponent, ITheme
                 sibling.RemergeStyles();
             }
         }
-
-        return true;
     }
 
     private void TakeResourceStyles()

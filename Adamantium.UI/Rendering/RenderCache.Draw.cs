@@ -1139,9 +1139,9 @@ public partial class RenderCache
             // the same numbers from the table by slot). Written before Update so the draw sees this frame's clip.
             if (unit.RenderData != null)
             {
-                var clipShape = ClipShapeOf(unit, fullScissor);
-                unit.RenderData.RoundedClipBox = clipShape.Box;
-                unit.RenderData.RoundedClipRadii = clipShape.Radii;
+                var (clipBox, clipRadii) = RoundedClipShape(unit.Component, fullScissor);
+                unit.RenderData.RoundedClipBox = clipBox;
+                unit.RenderData.RoundedClipRadii = clipRadii;
             }
             CatchUp(unit);
             unit.Update(wt, _projectionMatrix, _renderScale);
@@ -1185,7 +1185,7 @@ public partial class RenderCache
                 var bakeWorld = ResolveBake(device, unit, wt, out var slot4Rect);
                 FadeBySlot(unit);   // this pass reads the alpha from the slot - keep it out of the color
                 if (_rectBatch.TryAdd(rru.RectPayload, bakeWorld, rru.FillOpacity, scissor, rectBounds, slot4Rect,
-                        rru.FadeSlot, TagOf(group), ClipSlotOf(unit, fullScissor)))
+                        rru.FadeSlot, TagOf(group), RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1215,7 +1215,7 @@ public partial class RenderCache
                 var inkBakeWorld = ResolveBake(device, unit, wt, out var slot4Ink);
                 FadeBySlot(unit);
                 if (_inkBatch.TryAdd(iru.RectPayload, inkBakeWorld, iru.FillOpacity, scissor, inkBounds, slot4Ink,
-                        iru.FadeSlot, ClipSlotOf(unit, fullScissor)))
+                        iru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1241,7 +1241,7 @@ public partial class RenderCache
                 var arrowBakeWorld = ResolveBake(device, unit, wt, out var slot4Arrow);
                 FadeBySlot(unit);
                 if (_arrowBatch.TryAdd(aru.RectPayload, arrowBakeWorld, aru.FillOpacity, scissor, arrowBounds,
-                        slot4Arrow, aru.FadeSlot, ClipSlotOf(unit, fullScissor)))
+                        slot4Arrow, aru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1268,7 +1268,7 @@ public partial class RenderCache
                 var gridBakeWorld = ResolveBake(device, unit, wt, out var slot4Grid);
                 FadeBySlot(unit);
                 if (_canvasGridBatch.TryAdd(cgru.RectPayload, gridBakeWorld, cgru.FillOpacity, scissor, gridBounds,
-                        slot4Grid, cgru.FadeSlot, ClipSlotOf(unit, fullScissor)))
+                        slot4Grid, cgru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1294,7 +1294,7 @@ public partial class RenderCache
                 FadeBySlot(unit);
                 if (!Admitted(_gradientRectBatch)) continue;
                 if (_gradientRectBatch.TryAdd(grru.RectPayload, gradBakeWorld, grru.FillOpacity, scissor, gradRectBounds, slot4Grad, grru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1318,7 +1318,7 @@ public partial class RenderCache
                 var bakeWorld = ResolveBake(device, unit, wt, out var slot4El);
                 FadeBySlot(unit);
                 if (_ellipseBatch.TryAdd(eru.EllipsePayload, bakeWorld, eru.FillOpacity, scissor, ellipseBounds, slot4El, eru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1343,7 +1343,7 @@ public partial class RenderCache
                 var bakeWorldPoly = ResolveBake(device, unit, wt, out var slot4Poly);
                 FadeBySlot(unit);   // this pass reads the alpha from the slot - keep the chain out of the color
                 if (_polygonBatch.TryAdd(pru2.PolygonPayload, bakeWorldPoly, pru2.FillOpacity, scissor, polyBounds, slot4Poly,
-                        ClipSlotOf(unit, fullScissor), pru2.FadeSlot))
+                        RoundedClipSlot(unit.Component, fullScissor), pru2.FadeSlot))
                 {
                     if (_recording)
                     {
@@ -1372,7 +1372,7 @@ public partial class RenderCache
                 FadeBySlot(unit);
                 if (!Admitted(_gradientRectBatch)) continue;
                 if (_gradientRectBatch.TryAddPolygon(gpru.PolygonPayload, gradPolyBake, gpru.FillOpacity, scissor, gradPolyBounds, slot4GradPoly,
-                        gpru.FadeSlot, ClipSlotOf(unit, fullScissor)))
+                        gpru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1401,7 +1401,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // the pattern passes read the chain from the slot now - keep it out of the colors
                 if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAddPolygon(ppru.PolygonPayload, patPolyBake, ppru.FillOpacity, scissor, patPolyBounds, slot4PatPoly, ppru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1438,7 +1438,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
                 if (TextureBatchCollector.IsLayerFill(tpru.PolygonPayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAddPolygon(tpru.PolygonPayload, texPolyBake, tpru.FillOpacity, scissor, texPolyBounds, texPolyTexture, slot4TexPoly, tpru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1464,7 +1464,7 @@ public partial class RenderCache
                 FadeBySlot(unit);
                 if (!Admitted(_gradientEllipseBatch)) continue;
                 if (_gradientEllipseBatch.TryAdd(geru.EllipsePayload, gradElBakeWorld, geru.FillOpacity, scissor, gradElBounds, slot4GradEl,
-                        geru.FadeSlot, ClipSlotOf(unit, fullScissor)))
+                        geru.FadeSlot, RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1495,7 +1495,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // see the pattern rect branch
                 if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAddEllipse(peru.EllipsePayload, patElBakeWorld, peru.FillOpacity, scissor, patElBounds, slot4PatEl, peru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1522,7 +1522,7 @@ public partial class RenderCache
                     var matBakeWorld = ResolveBake(device, unit, wt, out var slot4Mat);
                     FadeBySlot(unit);   // the material pass reads the chain from the slot; keep it out of the color
                     if (_materialBatch.TryAdd(mru.RectPayload, matBakeWorld, mru.FillOpacity, scissor, materialBounds,
-                            slot4Mat, mru.FadeSlot, matSource, ClipSlotOf(unit, fullScissor)))
+                            slot4Mat, mru.FadeSlot, matSource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
                         if (_recording)
                         {
@@ -1553,7 +1553,7 @@ public partial class RenderCache
                     var bake = ResolveBake(device, unit, wt, out var slot);
                     FadeBySlot(unit);
                     if (_materialBatch.TryAddEllipse(meru.EllipsePayload, bake, meru.FillOpacity, scissor, bounds,
-                            slot, meru.FadeSlot, elSource, ClipSlotOf(unit, fullScissor)))
+                            slot, meru.FadeSlot, elSource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
                         if (_recording)
                         {
@@ -1581,7 +1581,7 @@ public partial class RenderCache
                     var bake = ResolveBake(device, unit, wt, out var slot);
                     FadeBySlot(unit);
                     if (_materialBatch.TryAddPolygon(mpru.PolygonPayload, bake, mpru.FillOpacity, scissor, bounds,
-                            slot, mpru.FadeSlot, polySource, ClipSlotOf(unit, fullScissor)))
+                            slot, mpru.FadeSlot, polySource, RoundedClipSlot(unit.Component, fullScissor)))
                     {
                         if (_recording)
                         {
@@ -1613,7 +1613,7 @@ public partial class RenderCache
                 FadeBySlot(unit);
                 if (!Admitted(_patternBatch)) continue;
                 if (_patternBatch.TryAdd(pru.RectPayload, patBakeWorld, pru.FillOpacity, scissor, patternBounds, slot4Pat, pru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1648,7 +1648,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the colors
                 if (!Admitted(_fractalBatch)) continue;
                 if (_fractalBatch.TryAdd(fru.RectPayload, fracBakeWorld, fru.FillOpacity, scissor, fractalBounds, slot4Frac,
-                        ClipSlotOf(unit, fullScissor), fru.FadeSlot))
+                        RoundedClipSlot(unit.Component, fullScissor), fru.FadeSlot))
                 {
                     if (_recording)
                     {
@@ -1692,7 +1692,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
                 if (TextureBatchCollector.IsLayerFill(xru.RectPayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAdd(xru.RectPayload, texBakeWorld, xru.FillOpacity, scissor, texBounds, texture, slot4Tex, xru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1736,7 +1736,7 @@ public partial class RenderCache
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
                 if (TextureBatchCollector.IsLayerFill(xeru.EllipsePayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAddEllipse(xeru.EllipsePayload, texEllBakeWorld, xeru.FillOpacity, scissor, texEllBounds, texEllTexture, slot4TexEll, xeru.FadeSlot,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     if (_recording)
                     {
@@ -1762,7 +1762,7 @@ public partial class RenderCache
                 var textFirst = _textBatch.RetainedCount;
                 FadeBySlot(unit);   // this pass reads the alpha from the slot now - keep the chain out of the color
                 if (_textBatch.TryAdd(tc, textBake, slot4Text, unit.FadeSlot, scissor, atlas, LogicalBounds(unit.Component, wt),
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     // NOT slot-blind any more. Text used to bake the opacity CHAIN into its glyph colors because its
                     // shader could not read the table twice, so a fading ancestor had to re-bake every glyph under it;
@@ -1803,7 +1803,7 @@ public partial class RenderCache
                 var fillBake = ResolveBake(device, unit, wt, out var slot4Fill);
                 FadeBySlot(unit);
                 if (_instancedFill.TryAdd(gru, fillBake, scissor, LogicalBounds(unit.Component, wt), slot4Fill,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     gru.FillInstanced = true;
                     // WHERE this fill sits is a fact about the arena as it stands, so it is remembered on EVERY walk -
@@ -1837,7 +1837,7 @@ public partial class RenderCache
                 var gradBake = ResolveBake(device, unit, wt, out var slot4GradFill);
                 FadeBySlot(unit);
                 if (_instancedFill.TryAddGradient(ggru, gradBake, scissor, LogicalBounds(unit.Component, wt), slot4GradFill,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     ggru.FillInstanced = true;
                     // The fill rides the slot now; a per-unit overlay (its fringe, still per-unit here, or a stroke)
@@ -1863,7 +1863,7 @@ public partial class RenderCache
                 var matMeshBake = ResolveBake(device, unit, wt, out var slot4MatMesh);
                 FadeBySlot(unit);
                 if (_instancedFill.TryAddMaterial(mgru, matMeshBake, scissor, matBounds, slot4MatMesh,
-                        MaterialCaptureRegion(matBounds, scissor, fullScissor), ClipSlotOf(unit, fullScissor)))
+                        MaterialCaptureRegion(matBounds, scissor, fullScissor), RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     mgru.FillInstanced = true;
                     if (_recording) group.NotBatchable("instancedMaterialFill");
@@ -1883,7 +1883,7 @@ public partial class RenderCache
                 var patBake = ResolveBake(device, unit, wt, out var slot4PatFill);
                 FadeBySlot(unit);
                 if (_instancedFill.TryAddPattern(pgru, patBake, scissor, LogicalBounds(unit.Component, wt), slot4PatFill,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     pgru.FillInstanced = true;
                     // As the gradient above: the fill rides the slot, the overlay is re-pointed at the flush.
@@ -1904,7 +1904,7 @@ public partial class RenderCache
                 var texBake = ResolveBake(device, unit, wt, out var slot4TexFill);
                 FadeBySlot(unit);
                 if (_instancedFill.TryAddTextured(tgru, texBake, scissor, LogicalBounds(unit.Component, wt), slot4TexFill,
-                        ClipSlotOf(unit, fullScissor)))
+                        RoundedClipSlot(unit.Component, fullScissor)))
                 {
                     tgru.FillInstanced = true;
                     if (_recording) group.NotBatchable("instancedTexturedFill");
@@ -1931,7 +1931,7 @@ public partial class RenderCache
 
                 var strokeBake = strokeUnit.PlaceBaked(ResolveBake(device, unit, wt, out var slot4Stroke));
                 FadeBySlot(unit);
-                var strokeClip = ClipSlotOf(unit, fullScissor);
+                var strokeClip = RoundedClipSlot(unit.Component, fullScissor);
                 var strokeAdd = _strokeBatch.TryAdd(strokeUnit, batchStroke, strokeBake, slot4Stroke, unit.FadeSlot,
                     strokeClip, unit.RenderData.Opacity, scissor, strokeBounds);
                 if (strokeAdd == StrokeBatchCollector.Added.Breaks)
@@ -2025,7 +2025,7 @@ public partial class RenderCache
             // it (see ExecuteOps). It costs the group its rect-only slot patch, not the node its move.
             if (_recording) group.NotBatchable($"perUnitDraw<{unit.GetType().Name}>");
             RefreshOverlayFade(unit);   // the chain from the table, as the replay does it - see RefreshOverlayFade
-            RenderInPlacedClip(device, unit, fullScissor);
+            unit.Render();
             _unitDrewMoving |= unit.DrawsMoving;
             if (_recording) RecordOp(new RenderOp { Kind = RenderOpKind.Unit, Unit = unit, Fade = unit.FadeSlot, Order = _recordOrder });
             }
@@ -2851,7 +2851,7 @@ public partial class RenderCache
         {
             FadeBySlot(u);
             return _strokeBatch.Place(device, strokeRun.First, strokeRun.Count, strokeUnit.PlaceBaked(bakeWorld),
-                transformSlot, u.FadeSlot, ClipSlotOf(u, _frameScissor), u.RenderData.Opacity);
+                transformSlot, u.FadeSlot, RoundedClipSlot(u.Component, _frameScissor), u.RenderData.Opacity);
         }
 
         if (u is RectangleRenderUnit rru)
@@ -2870,13 +2870,13 @@ public partial class RenderCache
                 // The record the WALK writes carries its rounded clip (TryAdd, same line after the same bake). A patch
                 // that leaves it out writes a record the walk would never have written: dragging a shape across a rounded
                 // corner un-rounded the cut under it, and it came back only when something forced a walk.
-                item.Clip.X = ClipSlotOf(u, _frameScissor);
+                item.Clip.X = RoundedClipSlot(u.Component, _frameScissor);
                 _rectBatch.UpdateSlot(device, rectSlot, item);
                 return true;
             }
 
             var rectEntry = _sdfSlotByUnit[u];
-            var rectClip = ClipSlotOf(u, _frameScissor);   // every family stamps the same clip the walk does
+            var rectClip = RoundedClipSlot(u.Component, _frameScissor);   // every family stamps the same clip the walk does
 
             // The BRUSH families, each re-baked into the record it already occupies. They reached this path late: until
             // they were noted in the slot map a moved pattern/picture/fractal/material stayed where it was until an
@@ -2935,7 +2935,7 @@ public partial class RenderCache
             FadeBySlot(u);   // and bake the color WITHOUT the chain, exactly as the walk does - see the rect branch
             // The block's own placement rides on top of the bake, exactly as the recording walk composed it.
             return _textBatch.UpdateRun(device, _textRunByUnit[u].First, tru.TextComponent, tru.PlaceBaked(bakeWorld), transformSlot, tru.FadeSlot,
-                ClipSlotOf(u, _frameScissor));   // as the walk stamps it - see the rect branch
+                RoundedClipSlot(u.Component, _frameScissor));   // as the walk stamps it - see the rect branch
         }
 
         if (u is GeometryRenderUnit)
@@ -2947,7 +2947,7 @@ public partial class RenderCache
             var (fillArena, fillSlot) = _fillSlotByUnit[u];
             if (fillArena.ReadsFadeSlot) FadeBySlot(u);
             fillArena.ClearStage();
-            if (!fillArena.TryStage(u, bakeWorld, transformSlot, 0, ClipSlotOf(u, _frameScissor))) return false;
+            if (!fillArena.TryStage(u, bakeWorld, transformSlot, 0, RoundedClipSlot(u.Component, _frameScissor))) return false;
 
             fillArena.UpdateSlotFromStage(device, fillSlot, 0);
             fillArena.ClearStage();
@@ -2957,7 +2957,7 @@ public partial class RenderCache
         if (u is RegularPolygonRenderUnit pru && _sdfSlotByUnit.TryGetValue(u, out var poly))
         {
             FadeBySlot(u);   // every family under this unit reads the alpha from the slot - bake without the chain
-            var polyClip = ClipSlotOf(u, _frameScissor);
+            var polyClip = RoundedClipSlot(u.Component, _frameScissor);
             switch (poly.Kind)
             {
                 case SdfSlotKind.Polygon:
@@ -2997,7 +2997,7 @@ public partial class RenderCache
         var eru = (EllipseRenderUnit)u;
         var entry = _sdfSlotByUnit[u];
         FadeBySlot(u);   // every ellipse family reads the alpha from the slot - see the rectangle above
-        var elClip = ClipSlotOf(u, _frameScissor);
+        var elClip = RoundedClipSlot(u.Component, _frameScissor);
         switch (entry.Kind)
         {
             case SdfSlotKind.Ellipse:
@@ -3086,7 +3086,7 @@ public partial class RenderCache
 
         FadeBySlot(u);   // as the walk bakes it - the band's chain comes from the slot, not from its color
         var opacity = u.RenderData.Opacity;
-        var haloClip = ClipSlotOf(u, _frameScissor);   // the patch writes what the walk writes
+        var haloClip = RoundedClipSlot(u.Component, _frameScissor);   // the patch writes what the walk writes
         var haloFade = u.FadeSlot;
 
         // The outer bands of a soft-edged layer fill on under its fading edge.
@@ -3261,7 +3261,7 @@ public partial class RenderCache
                 // The families whose shaders read the opacity slot must be re-baked WITHOUT the chain in their color,
                 // exactly as the walk bakes them; the rest keep it. Which arena repairs this group says which it is.
                 if (arena.ReadsFadeSlot) FadeBySlot(u);
-                if (!arena.TryStage(u, bakeWorld, slot, TagOf(group), ClipSlotOf(u, fullScissor)))
+                if (!arena.TryStage(u, bakeWorld, slot, TagOf(group), RoundedClipSlot(u.Component, fullScissor)))
                     return SpliceRefused($"notStageable<{u.GetType().Name} in {comp.GetType().Name}>");
                 // How many INSTANCES it added, which is not how many units were asked: one rectangle is one instance, one
                 // text block is a whole run of glyphs. Counting units here left a repaired block drawing its first glyph
