@@ -53,7 +53,7 @@ namespace Adamantium.UI.Sandbox
             base.Initialize();
             Satellites.Add(new Selection());
             Satellites.Add(new Observatory(this, EntityWorld));
-            _lights = new LightManager(this, EntityWorld);
+            _lights = new LightManager(this, EntityWorld.MainScene);
             Satellites.Add(_lights);
             InitializeScene();
         }
