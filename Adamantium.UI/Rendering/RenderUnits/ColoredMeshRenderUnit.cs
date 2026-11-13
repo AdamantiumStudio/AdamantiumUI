@@ -34,7 +34,8 @@ public class ColoredMeshRenderUnit : RenderUnit<ColoredMeshPayload>
 
     private void Build()
     {
-        GeometryRenderer = new ColoredMeshRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Mesh, BufferManager)
+        GeometryRenderer = new ColoredMeshRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Mesh, Payload.Outline,
+            BufferManager)
         {
             RenderData = DrawCommand.RenderData,
             Owner = DrawCommand.Component,

@@ -8,18 +8,27 @@ namespace Adamantium.UI.Core.Media;
 /// Every three vertices are a triangle. Immutable, so a page drawn again draws the same mesh.</summary>
 public sealed class ColoredMesh
 {
-    public ColoredMesh(IReadOnlyList<ColoredVertex> vertices)
+    public ColoredMesh(IReadOnlyList<ColoredVertex> vertices) : this(vertices, null)
     {
+    }
+
+    /// <summary>A mesh cut to <paramref name="outline"/>: the triangles give the color, the outline the edge - exact and
+    /// smooth at any zoom, as a filled geometry's. The triangles should reach a little past the outline.</summary>
+    public ColoredMesh(IReadOnlyList<ColoredVertex> vertices, Geometry outline)
+    {
+        Outline = outline;
         ArgumentNullException.ThrowIfNull(vertices);
         var count = vertices.Count - vertices.Count % 3;
         var copy = new ColoredVertex[count];
         double left = double.MaxValue, top = double.MaxValue, right = double.MinValue, bottom = double.MinValue;
-        for (var i = 0; i < count; i++)
+        for (var index = 0; index < count; index++)
         {
-            copy[i] = vertices[i];
-            var p = copy[i].Position;
-            (left, right) = (Math.Min(left, p.X), Math.Max(right, p.X));
-            (top, bottom) = (Math.Min(top, p.Y), Math.Max(bottom, p.Y));
+            copy[index] = vertices[index];
+            var position = copy[index].Position;
+            left = Math.Min(left, position.X);
+            right = Math.Max(right, position.X);
+            top = Math.Min(top, position.Y);
+            bottom = Math.Max(bottom, position.Y);
         }
 
         Vertices = copy;
@@ -31,4 +40,7 @@ public sealed class ColoredMesh
 
     /// <summary>Where the triangles lie in the mesh's own space.</summary>
     public Rect Bounds { get; }
+
+    /// <summary>The edge the mesh is cut to, in its own space; null leaves the triangles' own edges.</summary>
+    public Geometry Outline { get; }
 }

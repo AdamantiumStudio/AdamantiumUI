@@ -128,9 +128,11 @@ All packages share one version.
   out point by point into a picture where it is not. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
   and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
 - `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
-  triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
-  shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it, seen through as one
-  where they are translucent, and a mesh past a million triangles is told. The sandbox's "PDF
+  triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A mesh can be cut to its
+  outline (`ColoredMesh.Outline`): its edge then comes from the curve coverage every fill's edge comes from - on the
+  curve and smooth at any zoom, however coarse the triangles. A PDF page's mesh shadings - free-form and lattice
+  triangles, Coons and tensor-product patches - are drawn with it, cut to the patches' sides as their curves and the
+  triangles' as lines, seen through as one where they are translucent, and a mesh past a million triangles is told. The sandbox's "PDF
   drawing" tab shows a color wheel of them.
 - `Pen.MiterLimit` and `Shape.StrokeMiterLimit`: how far a miter join's point may reach, in half thicknesses (10 by
   default); a sharper corner is beveled, as SVG, WPF and PDF do - before, every miter was cut short at four half

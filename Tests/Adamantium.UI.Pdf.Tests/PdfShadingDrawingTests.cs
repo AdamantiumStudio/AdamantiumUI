@@ -210,11 +210,17 @@ public class PdfShadingDrawingTests
             new byte[] { 0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255 });
         var (_, session) = Draw(pdf, "/S sh");
         var mesh = session.All<DrawnMesh>().Single();
-        Assert.That(mesh.Mesh.Vertices, Has.Count.EqualTo(3));
-        Assert.That(mesh.Mesh.Vertices.Select(v => v.Color), Is.EqualTo(new[]
+        // A border strip along each side first, reaching past the outline it is cut back to; the triangle last, on top.
+        var vertices = mesh.Mesh.Vertices;
+        Assert.That(vertices, Has.Count.EqualTo(3 * 6 + 3));
+        Assert.That(vertices.Skip(vertices.Count - 3).Select(vertex => vertex.Color), Is.EqualTo(new[]
         {
             new Color(255, 0, 0, 255), new Color(0, 255, 0, 255), new Color(0, 0, 255, 255),
         }));
+        var outline = mesh.Mesh.Outline.Bounds;
+        Assert.That(new[] { outline.X, outline.Y, outline.Width, outline.Height }, Is.EqualTo(new[] { 0.0, 0, 100, 50 }),
+            "cut to the triangle itself");
+        Assert.That(mesh.Mesh.Bounds.Width, Is.GreaterThan(100), "the border reaches past it");
         Assert.That(At(mesh.Transform, 100, 0), Is.EqualTo((100.0, 100.0)));
     }
 
@@ -280,12 +286,18 @@ public class PdfShadingDrawingTests
         Assert.That(corner.Color, Is.EqualTo(new Color(255, 0, 0, 255)), "c00 at p00");
         var far = mesh.Vertices.First(v => v.Position == new Vector2<double>(60, 60));
         Assert.That(far.Color, Is.EqualTo(new Color(0, 0, 255, 255)), "c33 at p33");
+        // The grid runs a cell past each side - the border, drawn first; the patch's own cells follow it.
+        var cuts = (int)System.Math.Round(System.Math.Sqrt(mesh.Vertices.Count / 6.0)) - 2;
+        var body = mesh.Vertices.Count - cuts * cuts * 6;
+        Assert.That(mesh.Vertices[body].Position, Is.EqualTo(new Vector2<double>(0, 0)), "the body starts at p00");
         // Rows of v first: the second piece is the next one along u, still on the row v = 0.
-        Assert.That(mesh.Vertices[6].Position.Y, Is.Zero);
-        Assert.That(mesh.Vertices[6].Position.X, Is.GreaterThan(0));
-        Assert.That((mesh.Bounds.X, mesh.Bounds.Y), Is.EqualTo((0.0, 0.0)));
-        Assert.That(mesh.Bounds.Width, Is.EqualTo(60).Within(1e-9));
-        Assert.That(mesh.Bounds.Height, Is.EqualTo(60).Within(1e-9));
+        Assert.That(mesh.Vertices[body + 6].Position.Y, Is.Zero);
+        Assert.That(mesh.Vertices[body + 6].Position.X, Is.GreaterThan(0));
+        var outline = mesh.Outline.Bounds;
+        Assert.That(new[] { outline.X, outline.Y }, Is.EqualTo(new[] { 0.0, 0.0 }));
+        Assert.That(outline.Width, Is.EqualTo(60).Within(1e-9));
+        Assert.That(outline.Height, Is.EqualTo(60).Within(1e-9));
+        Assert.That(mesh.Bounds.Width, Is.GreaterThan(60), "the border reaches past the outline");
     }
 
     [Test]

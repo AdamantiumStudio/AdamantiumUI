@@ -11,6 +11,10 @@ public sealed class ColoredMeshPayload(ColoredMesh mesh, Matrix4x4F localTransfo
 {
     public ColoredMesh Mesh { get; } = mesh;
 
+    /// <summary>The mesh's outline packed for the curve shaders, made on the record thread; null for none.</summary>
+    internal Retained.CurveFill Outline { get; } =
+        mesh?.Outline is { } outline ? Retained.CurveFill.From(outline.CurvesForDrawing) : null;
+
     public Matrix4x4F LocalTransform { get; } = localTransform;
 
     public Placement Placement { get; private set; }

@@ -3,6 +3,8 @@
 #include "Includes/TileMath.fxh"
 #include "Includes/GradientMath.fxh"
 #include "Includes/GradientUniforms.fxh"
+#include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 float4x4 wvp;
 
@@ -44,20 +46,26 @@ struct ColoredMeshVertex
 
 ColoredMeshVertex* MeshVertices;
 
+// 1 when the mesh is cut to an outline - its curves at CurveData, as a curve fill's (CurveTiles.fxh): the edge is the
+// outline's coverage, exact at any zoom; 0 leaves the triangles' own edges.
+uint MeshOutlined;
+
 struct COLORED_OUTPUT
 {
     float4 position : SV_POSITION;
     float4 color : COLOR0;
+    float2 local : TEXCOORD0;
 };
 
 [shader("vertex")]
 COLORED_OUTPUT ColoredMeshVS(uint vertexId : SV_VertexID)
 {
     ColoredMeshVertex* vertices = MeshVertices;
-    ColoredMeshVertex v = vertices[vertexId];
+    ColoredMeshVertex corner = vertices[vertexId];
     COLORED_OUTPUT output;
-    output.position = mul(float4(v.Position, 0, 1), wvp);
-    output.color = v.Color;
+    output.position = mul(float4(corner.Position, 0, 1), wvp);
+    output.color = corner.Color;
+    output.local = corner.Position;
     return output;
 }
 
@@ -66,6 +74,11 @@ float4 ColoredMesh_PS(COLORED_OUTPUT input) : SV_TARGET
 {
     float4 color = input.color;
     color.a *= opacity;
+    if (MeshOutlined != 0u)   // the same for the whole draw: the coverage's derivatives stay valid
+    {
+        color.a *= CurveCoverage(input.local);
+    }
+
     return color;
 }
 
