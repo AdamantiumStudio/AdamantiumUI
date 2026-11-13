@@ -395,6 +395,8 @@ All packages share one version.
 
 ### Fixed
 
+- A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
+  a lookup from an element always did: a key both declare had one value from an element and another without one.
 - A page kept between visits (`x:KeepAlive`) stays the same page when its `ContentControl` or `ScrollViewer` takes
   another template - a theme swapped - as a `TabControl`'s page does; it was let go and made again. A `ContentControl`
   left with no template shows its content itself, as before, and what was parked for it is let go. A page built in the

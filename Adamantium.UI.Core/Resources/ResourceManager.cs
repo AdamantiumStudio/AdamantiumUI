@@ -74,19 +74,18 @@ public class ResourceManager : IResourceManager
             return type;
         }
 
-        var resource = FindResourceInScope(name, ResourceScope.Theme);
-        if (resource != null)
-            return resource;
-
         // The APPLICATION theme's palette - the right answer when there is no requester, since with nobody to scope
-        // from the application's theme is the only theme in force. Without this, a theme that keeps its palette in
-        // variants rather than in a resource dictionary would answer every requester-aware lookup and none of the
-        // eager ones, which is a difference no theme author could see coming.
+        // from the application's theme is the only theme in force. Before the Theme scope, as the requester-aware lookup
+        // asks them: otherwise a key both declare would have one value here and another there.
         if (UIAppContext.Current?.ThemeManager?.CurrentTheme is Theme current
             && current.PaletteValue(name) is { } fromPalette)
         {
             return fromPalette;
         }
+
+        var resource = FindResourceInScope(name, ResourceScope.Theme);
+        if (resource != null)
+            return resource;
 
         return FindResourceInScope(name, ResourceScope.Global);
     }
