@@ -25,6 +25,7 @@ public sealed class AutomationSession : IAsyncDisposable
     private Process _process;
     private bool _closeOnDispose;
     private string _dataFolder;
+    private HiddenDesktop _desktop;
 
     private AutomationSession(IAutomationChannel channel)
     {
@@ -64,12 +65,15 @@ public sealed class AutomationSession : IAsyncDisposable
         var pipe = options.PipeName ?? $"adam-auto-{Guid.NewGuid():N}";
         var data = options.FreshData ? Directory.CreateTempSubdirectory("adam-data-").FullName : null;
         Process process;
+        HiddenDesktop desktop = null;
         try
         {
-            process = Start(path, options, pipe, data) ?? throw new AutomationException($"{path} did not start.");
+            process = Start(path, options, pipe, data, out desktop) ??
+                      throw new AutomationException($"{path} did not start.");
         }
         catch
         {
+            desktop?.Dispose();
             await DeleteDataAsync(data);
             throw;
         }
@@ -97,7 +101,8 @@ public sealed class AutomationSession : IAsyncDisposable
             {
                 _process = process,
                 _closeOnDispose = options.CloseOnDispose,
-                _dataFolder = data
+                _dataFolder = data,
+                _desktop = desktop
             };
             try
             {
@@ -122,10 +127,17 @@ public sealed class AutomationSession : IAsyncDisposable
         }
         catch
         {
-            if (!process.HasExited)
+            try
             {
-                process.Kill(entireProcessTree: true);
-                await process.WaitForExitAsync();
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync();
+                }
+            }
+            finally
+            {
+                desktop?.Dispose();
             }
 
             await DeleteDataAsync(data);
@@ -269,31 +281,38 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>Closes the connection; an application the session started is closed with it, unless told otherwise.</summary>
     public async ValueTask DisposeAsync()
     {
-        if (_process != null && _closeOnDispose && !_process.HasExited)
+        try
         {
-            try
+            if (_process != null && _closeOnDispose && !_process.HasExited)
             {
-                await _channel.SendAsync(new AutomationRequest { Command = AutomationCommand.Shutdown });
-                await _process.WaitForExitAsync().WaitAsync(ExitTimeout);
-            }
-            catch (Exception e) when (e is TimeoutException or AutomationException or IOException or ObjectDisposedException)
-            {
-                if (!_process.HasExited)
+                try
                 {
-                    _process.Kill(entireProcessTree: true);
+                    await _channel.SendAsync(new AutomationRequest { Command = AutomationCommand.Shutdown });
+                    await _process.WaitForExitAsync().WaitAsync(ExitTimeout);
                 }
+                catch (Exception e) when (e is TimeoutException or AutomationException or IOException or
+                                              ObjectDisposedException)
+                {
+                    if (!_process.HasExited)
+                    {
+                        _process.Kill(entireProcessTree: true);
+                    }
 
-                await _process.WaitForExitAsync();
+                    await _process.WaitForExitAsync();
+                }
+            }
+
+            await _channel.DisposeAsync();
+            if (_process?.HasExited ?? true)
+            {
+                await DeleteDataAsync(_dataFolder);
             }
         }
-
-        await _channel.DisposeAsync();
-        if (_process?.HasExited ?? true)
+        finally
         {
-            await DeleteDataAsync(_dataFolder);
+            _process?.Dispose();
+            _desktop?.Dispose();
         }
-
-        _process?.Dispose();
     }
 
     private static async Task DeleteDataAsync(string folder)
@@ -326,8 +345,9 @@ public sealed class AutomationSession : IAsyncDisposable
         }
     }
 
-    private static Process Start(string path, LaunchOptions options, string pipe, string data)
+    private static Process Start(string path, LaunchOptions options, string pipe, string data, out HiddenDesktop desktop)
     {
+        desktop = null;
         var variables = new Dictionary<string, string>(options.Environment) { [AutomationProtocol.PipeVariable] = pipe };
         if (options.VerifyFrames)
         {
@@ -354,6 +374,12 @@ public sealed class AutomationSession : IAsyncDisposable
 
             virtualStart.Environment.Remove("DISPLAY");
             return Process.Start(virtualStart);
+        }
+
+        if (options.VirtualDisplay && HiddenDesktop.Open() is { } hidden)
+        {
+            desktop = hidden;
+            return hidden.Start(path, options.Arguments, options.WorkingDirectory ?? Path.GetDirectoryName(path), variables);
         }
 
         var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
