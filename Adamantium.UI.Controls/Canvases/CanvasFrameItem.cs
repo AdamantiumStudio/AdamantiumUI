@@ -35,6 +35,18 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     /// <summary>What it says along the top. The whole point of the thing.</summary>
     public string Title { get; set; }
 
+    /// <summary>A frame's name is what it says along the top - one name, written either way. See
+    /// <see cref="ICanvasItem.Name"/>.</summary>
+    public string Name
+    {
+        get => Title;
+        set => Title = value;
+    }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
     public Brush Stroke { get; set; }
 
     /// <summary>What it is washed with, or null for an outline only. Meant to be nearly transparent: it is BEHIND the
@@ -87,7 +99,8 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     public ICanvasItem Copy() => new CanvasFrameItem(World, Title, Stroke?.Copy(), Fill?.Copy())
     {
         Thickness = Thickness,
-        TitleHeight = TitleHeight
+        TitleHeight = TitleHeight,
+        Comment = Comment
     };
 
     /// <summary>Remembers what is standing on the frame RIGHT NOW, so a drag can take it along.

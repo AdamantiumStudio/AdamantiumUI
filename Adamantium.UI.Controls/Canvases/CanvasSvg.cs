@@ -100,6 +100,8 @@ public static class CanvasSvg
         var at = 0;
         foreach (var child in document.Root.Elements())
         {
+            if (Describes(child)) continue;
+
             var item = Read(child, ref count);
 
             if (item == null) continue;
@@ -160,7 +162,27 @@ public static class CanvasSvg
                 break;
             }
         }
+
+        if (into.LastNode is XElement written) Named(written, item);
     }
+
+    private static void Named(XElement element, ICanvasItem item)
+    {
+        var words = element.Name.LocalName == "text";
+        if (!string.IsNullOrEmpty(item.Comment))
+        {
+            element.SetAttributeValue("data-adm-comment", item.Comment);
+            if (!words) element.AddFirst(new XElement(Svg + "desc", item.Comment));
+        }
+
+        if (!string.IsNullOrEmpty(item.Name))
+        {
+            element.SetAttributeValue("data-adm-name", item.Name);
+            if (!words) element.AddFirst(new XElement(Svg + "title", item.Name));
+        }
+    }
+
+    private static bool Describes(XElement element) => element.Name.LocalName is "title" or "desc";
 
     private static XElement Ink(StrokeItem ink)
     {
@@ -516,8 +538,17 @@ public static class CanvasSvg
         // theirs (see Inherit), and applying it again here would move everything twice.
         if (element.Name.LocalName != "g") Place(element, made);
 
+        if (made != null)
+        {
+            made.Name = (string)element.Attribute("data-adm-name") ?? Said(element, "title");
+            made.Comment = (string)element.Attribute("data-adm-comment") ?? Said(element, "desc");
+        }
+
         return made;
     }
+
+    private static string Said(XElement element, string what) =>
+        element.Elements().FirstOrDefault(child => child.Name.LocalName == what)?.Value;
 
     private static ICanvasItem Made(XElement element, ref int skipped)
     {
@@ -532,6 +563,8 @@ public static class CanvasSvg
 
                 foreach (var child in element.Elements())
                 {
+                    if (Describes(child)) continue;
+
                     // WHAT THE GROUP SAYS, said to whoever has not said it themselves. Paint in SVG is INHERITED, and
                     // an icon states it once on the group round everything - read without this, every shape inside
                     // fell back on the defaults and the drawing came in black and hollow.

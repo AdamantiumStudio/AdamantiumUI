@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Layer" Text="Layer"/>
     <Phrase Key="Index" Text="Index"/>
+    <Phrase Key="Comment" Text="Comment"/>
     <Phrase Key="StrokeItem" Text="Stroke"/>
     <Phrase Key="Color" Text="Color"/>
     <Phrase Key="Thickness" Text="Thickness"/>

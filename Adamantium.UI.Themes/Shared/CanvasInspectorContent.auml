@@ -13,6 +13,12 @@
              everything, which is the order the file is written in too. -->
         <CanvasSectionSet>
             <PropertySection Header="{Localize InspectorStrings.Layer}" IsExpanded="True">
+                <!-- What it is called and a note about it - a short name a list shows and a search finds, the note apart.
+                     Not for a wire, which is named by what it joins. -->
+                <StringProperty Header="{Localize InspectorStrings.Name}" Binding="{Binding Name}"
+                                IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}"/>
+                <StringProperty Header="{Localize InspectorStrings.Comment}" Binding="{Binding Comment}" IsMultiline="True"
+                                IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}"/>
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Index}" Binding="{Binding Order}"
                                  Minimum="0" Maximum="100000" Step="1"/>
             </PropertySection>
