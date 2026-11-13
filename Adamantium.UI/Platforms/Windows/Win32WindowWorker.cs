@@ -1612,19 +1612,8 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         return unchecked((uint)Win32Interop.GetMessageTime());
     }
 
-    private void HandleActivation()
-    {
-        window.SetIsActive(true);
-        UIContext.UIApplication.SetActiveWindow(window);
-        FocusManager.EnterWindow(window);
-    }
+    private void HandleActivation() => window.BecomeActive(UIContext.UIApplication);
 
-    private void HandleDeactivation()
-    {
-        window.SetIsActive(false);
-        UIContext.UIApplication.InactivateWindow(window);
-        // The one focused element must not stay pointing into a window the keys no longer reach - see LeaveWindow.
-        FocusManager.LeaveWindow(window);
-    }
+    private void HandleDeactivation() => window.StopBeingActive(UIContext.UIApplication);
 
 }

@@ -1106,9 +1106,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             return;
         }
 
-        window.SetIsActive(true);
-        UIContext.UIApplication.SetActiveWindow(window);
-        FocusManager.EnterWindow(window);
+        window.BecomeActive(UIContext.UIApplication);
     }
 
     private void HandleDeactivation()
@@ -1118,8 +1116,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             return;
         }
 
-        window.SetIsActive(false);
-        UIContext.UIApplication.InactivateWindow(window);
-        FocusManager.LeaveWindow(window);
+        window.StopBeingActive(UIContext.UIApplication);
     }
 }

@@ -208,4 +208,17 @@ public class AutomationEventsTests
         Assert.That(wrap.FindAutomationPeer(), Is.Null);
         Assert.That(second.FindAutomationPeer(), Is.Null);
     }
+
+    [Test]
+    public void AWindowClosed_IsTold_AsWindowClosedOnTheWindow()
+    {
+        var window = Shown(Holding(new Button { Content = "Save" }));
+        Listen();
+
+        window.Close();
+
+        var closed = _heard.Single(e => e.Event == AutomationEvent.WindowClosed);
+        Assert.That(closed.Element, Is.SameAs(window));
+        Assert.That(closed.Peer, Is.SameAs(window.GetAutomationPeer()));
+    }
 }
