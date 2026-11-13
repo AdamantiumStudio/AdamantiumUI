@@ -738,7 +738,14 @@ public partial class RenderCache
     }
 
     private Rect Placed(IPlacedPayload payload, Rect box) =>
-        payload.Placement is { } placement ? box.TransformToAABB(payload.LocalTransform * Newest(placement)) : box;
+        payload.Placement != null ? box.TransformToAABB(PlacedNow(payload)) : box;
+
+    // Where a draw sits on its element's world now. A placed draw's own matrix is its placement's as recorded, so a newer
+    // one heard since stands in its place - never on top of it.
+    private Matrix4x4F PlacedNow(IPlacedPayload payload) =>
+        payload.Placement is { } placement && _placementLatest.TryGetValue(placement, out var latest)
+            ? latest.Matrix
+            : payload.LocalTransform;
 
     private Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
     {
@@ -767,19 +774,13 @@ public partial class RenderCache
                 pen = MiterReach(polygon.Pen) * (polygon.Pen?.Thickness ?? 0);
                 break;
             case ImageRenderUnit { Payload: { } image }:
-                ink = image.DestinationRect.TransformToAABB(image.Placement is { } imagePlaced
-                    ? image.LocalTransform * Newest(imagePlaced)
-                    : image.LocalTransform);
+                ink = image.DestinationRect.TransformToAABB(PlacedNow(image));
                 break;
             case ColoredMeshRenderUnit { Payload: { } mesh }:
-                ink = mesh.Mesh.Bounds.TransformToAABB(mesh.Placement is { } meshPlaced
-                    ? mesh.LocalTransform * Newest(meshPlaced)
-                    : mesh.LocalTransform);
+                ink = mesh.Mesh.Bounds.TransformToAABB(PlacedNow(mesh));
                 break;
             case GeometryRenderUnit { Payload.Geometry: { } geometry } shape:
-                var place = shape.Payload.Placement is { } placed
-                    ? shape.Payload.LocalTransform * Newest(placed)
-                    : shape.Payload.LocalTransform;
+                var place = PlacedNow(shape.Payload);
                 var stroke = MiterReach(shape.Payload.Pen) * LocalWidth(shape.Payload.Pen, place * World(shape.Component));
                 ink = geometry.Bounds.Inflate(stroke).TransformToAABB(place);
                 break;
@@ -794,9 +795,7 @@ public partial class RenderCache
             case TextRenderUnit { Payload: { } text }:
                 var overhang = text.DesiredSize.Height * TextOverhang;
                 var drawn = text.Ink ?? new Rect(0, 0, text.DesiredSize.Width, text.DesiredSize.Height).Inflate(overhang);
-                ink = drawn.TransformToAABB(text.Placement is { } textPlaced
-                    ? text.LocalTransform * Newest(textPlaced)
-                    : text.LocalTransform);
+                ink = drawn.TransformToAABB(PlacedNow(text));
                 break;
         }
 

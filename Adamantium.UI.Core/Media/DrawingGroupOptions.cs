@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media.Drawings;
 
 namespace Adamantium.UI.Core.Media;
@@ -16,6 +17,10 @@ public sealed class DrawingGroupOptions
 
     /// <summary>Where <see cref="Clip"/> lies in the drawing's units.</summary>
     public Matrix4x4F ClipTransform { get; init; } = Matrix4x4F.Identity;
+
+    /// <summary>The placement <see cref="Clip"/> is given in and moves with, as anything drawn with it does; null for the
+    /// drawing's own units. Set with it, <see cref="ClipTransform"/> stays the identity.</summary>
+    public Placement ClipPlacement { get; init; }
 
     /// <summary>The glyphs the group is cut to - all of them together; null or empty cuts nothing.</summary>
     public IReadOnlyList<PlacedGlyphRun> TextClip { get; init; }

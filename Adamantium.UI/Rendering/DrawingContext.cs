@@ -421,6 +421,12 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    IDrawingSession IDrawingSession.PushGroup(DrawingGroupOptions options)
    {
       ArgumentNullException.ThrowIfNull(options);
+      if (options.ClipPlacement != null && !options.ClipTransform.IsIdentity)
+      {
+         throw new ArgumentException("A clip given in a placement's units has no transform of its own.",
+            nameof(options));
+      }
+
       CreateCommand(GroupMarkPayload.Begin(options, RectClipOf(options)));
       var session = (IDrawingSession)this;
       _drawingMask++;
@@ -429,7 +435,16 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          if (options.Clip != null)
          {
             CreateCommand(GroupMarkPayload.MaskBegin(MaskKind.Alpha, default));
-            session.DrawGeometry(Brushes.Black, options.Clip, null, options.ClipTransform);
+            // Drawn with its placement even when a scissor cuts instead: the walk learns the placement's matrix from it.
+            if (options.ClipPlacement != null)
+            {
+               session.DrawGeometry(Brushes.Black, options.Clip, null, options.ClipPlacement);
+            }
+            else
+            {
+               session.DrawGeometry(Brushes.Black, options.Clip, null, options.ClipTransform);
+            }
+
             CreateCommand(GroupMarkPayload.MaskEnd);
          }
 
@@ -473,8 +488,8 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   // The clip as a rectangle in the element's units, when cutting to it is all the group does and it lies along the axes
-   // of the element: then the walk can cut by a scissor instead of a mask.
+   // The clip as a rectangle in the element's units - or its placement's - when cutting to it is all the group does and it
+   // lies along their axes: then the walk can cut by a scissor instead of a mask.
    private static Rect? RectClipOf(DrawingGroupOptions options)
    {
       if (options.Clip is not RectangleGeometry { Transform: null } rectangle || rectangle.CornerRadius != CornerRadius.Empty
