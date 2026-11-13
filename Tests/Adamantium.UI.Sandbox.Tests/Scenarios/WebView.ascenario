@@ -27,6 +27,32 @@
   <WaitIdle />
   <Toggle Target="id=WebDevToolsOpen" />
   <WaitIdle />
+  <!-- The page searched: Ctrl+F opens the bar over it with the keyboard in its text, what is typed is sought, capitals
+       told apart on the switch, Esc closes it and the keyboard goes back to the page. -->
+  <Key Keys="Ctrl+F" Into="id=WebPage" />
+  <Wait Target="id=WebFindBar" Offscreen="False" />
+  <Wait Target="id=WebFindText" Focus="True" />
+  <Type Text="apple" Into="id=WebFindText" />
+  <Wait Target="id=WebPage" FindText="apple" IsFindOpen="True" />
+  <Toggle Target="id=WebFindMatchCase" />
+  <Wait Target="id=WebPage" FindMatchCase="True" />
+  <Toggle Target="id=WebFindMatchCase" />
+  <!-- Kept by the view model: the search outlives the view made again on another theme. -->
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Select Target="id=ThemeChooser/name=Graphite" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Wait Target="id=WebFindBar" Offscreen="False" />
+  <Wait Target="id=WebPage" FindText="apple" IsFindOpen="True" />
+  <Select Target="id=ThemeChooser/name=Fluent" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Key Keys="Ctrl+F" Into="id=WebPage" />
+  <Wait Target="id=WebFindText" Focus="True" />
+  <Key Keys="Escape" Into="id=WebFindText" />
+  <Wait Target="id=WebPage" IsFindOpen="False" Focus="True" />
+  <Expect Target="id=WebFindBar" Offscreen="True" />
   <!-- Back as the page opens. -->
   <Set Target="id=WebAddress" Value="https://example.org" />
   <Key Keys="Enter" Into="id=WebAddress" />

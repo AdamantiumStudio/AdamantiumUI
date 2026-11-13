@@ -132,4 +132,9 @@ internal interface IWebViewBrowserView
     /// <summary>The page downloads a file: the view model is asked where to save <paramref name="download"/>; false
     /// leaves it to be refused.</summary>
     bool DownloadRequested(WebViewBrowser browser, WebDownload download);
+
+    /// <summary>The search of the page found <paramref name="count"/> matches, <paramref name="activeMatch"/> the
+    /// current one counted from 1 (0 for none yet); <paramref name="final"/> once Chromium has counted them all.
+    /// </summary>
+    void FindResult(WebViewBrowser browser, int count, int activeMatch, bool final);
 }

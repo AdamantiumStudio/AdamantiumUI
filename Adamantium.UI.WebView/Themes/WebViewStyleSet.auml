@@ -29,14 +29,18 @@
                         <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
                                                      Dock="{TemplateBinding DevToolsDock}">
                             <Border x:Name="PART_PageHost" ClipToBounds="True">
-                                <!-- The page, and over it the list it drops - a select's - where the page places it, and
-                                     the dialog its script asks, over the page only. -->
+                                <!-- The page, and over it the list it drops - a select's - where the page places it, the
+                                     search bar at its top right while the page is searched, and the dialog its script
+                                     asks, over the page only. -->
                                 <Grid>
                                     <Canvas>
                                         <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
                                         <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
                                                            Visibility="Collapsed" IsHitTestVisible="False"/>
                                     </Canvas>
+                                    <local:WebViewFindBar x:Name="PART_FindBar" Visibility="Collapsed"
+                                                          HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                          Margin="0 8 12 0"/>
                                     <local:WebViewScriptDialog x:Name="PART_ScriptDialog"/>
                                 </Grid>
                             </Border>
@@ -59,6 +63,9 @@
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowStatusBar" Value="false">
                             <Setter TargetName="PART_StatusBar" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsFindOpen" Value="true">
+                            <Setter TargetName="PART_FindBar" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="DevToolsDock" Value="Right">
                             <Setter TargetName="PART_DevToolsSplitter" Property="Cursor" Value="SizeWE"/>

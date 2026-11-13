@@ -134,4 +134,8 @@ internal sealed class WebViewUnseenView : IWebViewBrowserView
     public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
 
     public bool DownloadRequested(WebViewBrowser browser, WebDownload download) => false;
+
+    public void FindResult(WebViewBrowser browser, int count, int activeMatch, bool final)
+    {
+    }
 }
