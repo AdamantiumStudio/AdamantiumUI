@@ -19,7 +19,8 @@ public sealed class DrawingGroupOptions
     public Matrix4x4F ClipTransform { get; init; } = Matrix4x4F.Identity;
 
     /// <summary>The placement <see cref="Clip"/> is given in and moves with, as anything drawn with it does; null for the
-    /// drawing's own units. Set with it, <see cref="ClipTransform"/> stays the identity.</summary>
+    /// drawing's own units. Set with it, <see cref="ClipTransform"/> stays the identity - another one is an error. It
+    /// places <see cref="Clip"/> alone, not <see cref="TextClip"/>.</summary>
     public Placement ClipPlacement { get; init; }
 
     /// <summary>The glyphs the group is cut to - all of them together; null or empty cuts nothing.</summary>

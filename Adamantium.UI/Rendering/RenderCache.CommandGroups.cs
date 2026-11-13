@@ -581,11 +581,21 @@ public partial class RenderCache
         }
     }
 
-    // A rectangle stays one on the window: moved, scaled, mirrored, or turned by a quarter.
-    private static bool AlongTheAxes(in Matrix4x4F world) =>
-        ((MathF.Abs(world.M12) < 1e-6f && MathF.Abs(world.M21) < 1e-6f)
-         || (MathF.Abs(world.M11) < 1e-6f && MathF.Abs(world.M22) < 1e-6f))
-        && world.M14 == 0f && world.M24 == 0f && world.M34 == 0f && world.M44 == 1f;
+    /// <summary>Whether a rectangle stays one on the window under <paramref name="world"/>: moved, scaled, mirrored or
+    /// turned by a quarter. What is left of a turn is weighed against the scale, so a deep zoom keeps its answer.
+    /// </summary>
+    internal static bool AlongTheAxes(in Matrix4x4F world)
+    {
+        if (world.M14 != 0f || world.M24 != 0f || world.M34 != 0f || world.M44 != 1f)
+        {
+            return false;
+        }
+
+        var straight = MathF.Max(MathF.Abs(world.M11), MathF.Abs(world.M22));
+        var turned = MathF.Max(MathF.Abs(world.M12), MathF.Abs(world.M21));
+        var tolerance = 1e-6f * MathF.Max(straight, turned);
+        return turned <= tolerance || straight <= tolerance;
+    }
 
     // Walks the group whose begin mark is at `begin`: where its content starts, where it ends (past the last unit when
     // its element left it open), what its content covers, and what its masks that cut by coverage leave of it, in window

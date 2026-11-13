@@ -42,6 +42,9 @@ public class ClipPlacementRenderTests
         public Rect? ElementClip;
         public Rect? OuterClip;
 
+        // The content filling the element in its own units: only the clip rides the camera.
+        public bool ContentStays;
+
         protected override void OnRender(IDrawingContext context)
         {
             base.OnRender(context);
@@ -57,7 +60,11 @@ public class ClipPlacementRenderTests
                 Clip = new RectangleGeometry(ElementClip ?? Sheet, Corners),
                 ClipPlacement = ElementClip == null ? Camera : null
             });
-            if (Shape == MarkShape.Rectangle)
+            if (ContentStays)
+            {
+                session.DrawRectangle(Brushes.White, new Rect(0, 0, Width, Height));
+            }
+            else if (Shape == MarkShape.Rectangle)
             {
                 session.DrawRectangle(Brushes.White, Mark, CornerRadius.Empty, null, Camera);
             }
@@ -74,11 +81,22 @@ public class ClipPlacementRenderTests
         }
     }
 
+    // Something else in the window that draws again on its own, dim enough not to count as lit.
+    private sealed class Neighbour : MeasurableUIComponent
+    {
+        public Color Shade = new(40, 40, 40);
+
+        protected override void OnRender(IDrawingContext context) =>
+            context.ForControl(this).DrawRectangle(new SolidColorBrush(Shade), new Rect(0, 0, 10, 10));
+    }
+
     private readonly record struct Lit(int Count, int Left, int Top, int Right, int Bottom);
 
     private OffscreenTestRenderer _renderer;
     private VisualRoot _root;
     private MarkedSheet _sheet;
+    private Neighbour _neighbour;
+    private byte[] _pixels;
 
     [SetUp]
     public void SetUp()
@@ -87,8 +105,12 @@ public class ClipPlacementRenderTests
         _renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)),
             Width, Height) { ClearColor = Colors.Black };
         _sheet = new MarkedSheet { Width = Width, Height = Height };
+        _neighbour = new Neighbour { Width = 10, Height = 10 };
+        Canvas.SetLeft(_neighbour, Width - 10);
+        Canvas.SetTop(_neighbour, Height - 10);
         var canvas = new Canvas();
         canvas.Children.Add(_sheet);
+        canvas.Children.Add(_neighbour);
         _root = new VisualRoot(canvas, Width, Height);
     }
 
@@ -112,26 +134,36 @@ public class ClipPlacementRenderTests
     private Lit Shown()
     {
         using var image = _renderer.RenderTarget.ResolveTexture.ToImage();
-        var pixels = new byte[(int)image.TotalSizeInBytes];
-        Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
+        _pixels = new byte[(int)image.TotalSizeInBytes];
+        Marshal.Copy(image.DataPointer, _pixels, 0, _pixels.Length);
         int count = 0, left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
-        for (var at = 0; at < pixels.Length; at += 4)
+        for (var at = 0; at < _pixels.Length; at += 4)
         {
-            if (pixels[at] < 128 && pixels[at + 1] < 128 && pixels[at + 2] < 128)
+            if (!LitAt(at))
             {
                 continue;
             }
 
-            var x = at / 4 % Width;
-            var y = at / 4 / Width;
+            var column = at / 4 % Width;
+            var row = at / 4 / Width;
             count++;
-            left = Math.Min(left, x);
-            top = Math.Min(top, y);
-            right = Math.Max(right, x);
-            bottom = Math.Max(bottom, y);
+            left = Math.Min(left, column);
+            top = Math.Min(top, row);
+            right = Math.Max(right, column);
+            bottom = Math.Max(bottom, row);
         }
 
         return new Lit(count, left, top, right, bottom);
+    }
+
+    private bool LitAt(int at) => _pixels[at] >= 128 || _pixels[at + 1] >= 128 || _pixels[at + 2] >= 128;
+
+    // Whether the last frame shows the point the camera takes the sheet's (`sheetX`, `sheetY`) to.
+    private bool LitThrough(Matrix4x4F camera, double sheetX, double sheetY)
+    {
+        var column = (int)(sheetX * camera.M11 + sheetY * camera.M21 + camera.M41);
+        var row = (int)(sheetX * camera.M12 + sheetY * camera.M22 + camera.M42);
+        return LitAt((row * Width + column) * 4);
     }
 
     // What of the mark the sheet lets through under `camera`, in window pixels, cut by `outer` when given.
@@ -201,21 +233,38 @@ public class ClipPlacementRenderTests
         });
     }
 
-    [Test]
-    public void ACameraTurnedByAQuarter_StillCutsByAScissor()
+    // A quarter turn and a mirror keep the sheet a rectangle on the window: still a scissor, still a replay.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ACameraTurnedByAQuarterOrMirrored_StillCutsByAScissor(bool mirrored)
     {
         _sheet.Camera.Matrix = At(10, 10);
         Draw();
+        var renders = _sheet.Renders;
 
-        var turned = QuarterTurnAt(100, 10);
+        var turned = mirrored ? Matrix4x4.CreateScale<float>(-1, 1, 1) * At(100, 10) : QuarterTurnAt(100, 10);
         _sheet.Camera.Matrix = turned;
         var lit = Draw();
 
         Assert.Multiple(() =>
         {
             Covers(lit, Expected(turned), "turned");
-            Assert.That(_renderer.Cache.LayersRedrawn, Is.Zero, "a quarter turn keeps the rectangle a rectangle");
+            Assert.That(_renderer.Cache.LayersRedrawn, Is.Zero, "the rectangle stays a rectangle");
+            Assert.That(_renderer.Cache.LastFrameReplayed, Is.True, "the turn is a replay");
+            Assert.That(_sheet.Renders, Is.EqualTo(renders), "the turn is not a record");
         });
+    }
+
+    // A twelfth of a turn about the sheet's corner: the mark leaves the sheet across its right edge, turned. Off the
+    // sheet but inside its bounding box nothing is drawn - a scissor by that box would draw there.
+    private static readonly Matrix4x4F TurnedAnyAngle =
+        Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6)) * At(40, 10);
+
+    private void AssertCutAlongTheTurnedSheet(string where)
+    {
+        Assert.That(LitThrough(TurnedAnyAngle, 30, 15), Is.True, $"{where}: the mark on the sheet");
+        Assert.That(LitThrough(TurnedAnyAngle, 45, 15), Is.False, $"{where}: the mark past the sheet's edge");
+        Assert.That(_renderer.Cache.LayersRedrawn, Is.GreaterThan(0), $"{where}: cut by a mask drawn apart");
     }
 
     [Test]
@@ -224,16 +273,53 @@ public class ClipPlacementRenderTests
         _sheet.Camera.Matrix = At(10, 10);
         Draw();
 
-        // A sixth of a half turn about the sheet's corner: the mark leaves the sheet across its right edge, turned.
-        _sheet.Camera.Matrix = Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6)) * At(40, 10);
-        var lit = Draw();
-        var unclipped = Mark.TransformToAABB(_sheet.Camera.Matrix);
+        _sheet.Camera.Matrix = TurnedAnyAngle;
+        Draw();
+
+        Assert.Multiple(() => AssertCutAlongTheTurnedSheet("turned"));
+    }
+
+    // The camera turns in a frame where something else draws again: the frame patches, and the patch must see the
+    // turn too.
+    [Test]
+    public void ACameraTurnedWhileAnotherElementRepaints_CutsByTheMask()
+    {
+        _sheet.Camera.Matrix = At(10, 10);
+        Draw();
+
+        _neighbour.Shade = new Color(60, 60, 60);
+        _neighbour.InvalidateRender(false);
+        _sheet.Camera.Matrix = TurnedAnyAngle;
+        Draw();
+
+        Assert.Multiple(() => AssertCutAlongTheTurnedSheet("turned while patching"));
+    }
+
+    // Only the cut rides the camera; what it cuts stays where its element drew it.
+    [Test]
+    public void AClipAlone_OnTheCamera_MovesOverContentThatStays()
+    {
+        _sheet.ContentStays = true;
+        var first = At(10, 10);
+        _sheet.Camera.Matrix = first;
+        var before = Draw();
+        var renders = _sheet.Renders;
+
+        var moved = At(70, 40);
+        _sheet.Camera.Matrix = moved;
+        var after = Draw();
+        var replayed = _renderer.Cache.LastFrameReplayed;
+
+        _sheet.InvalidateRender(false);
+        var recorded = Draw();
 
         Assert.Multiple(() =>
         {
-            Assert.That(lit.Count, Is.GreaterThan(0), "the part on the sheet is drawn");
-            Assert.That(lit.Right + 1, Is.LessThan(unclipped.Right - 10), "what runs past the sheet is cut");
-            Assert.That(_renderer.Cache.LayersRedrawn, Is.GreaterThan(0), "cut by a mask drawn apart");
+            Covers(before, Sheet.TransformToAABB(first), "first frame");
+            Covers(after, Sheet.TransformToAABB(moved), "camera moved");
+            Covers(recorded, Sheet.TransformToAABB(moved), "recorded again");
+            Assert.That(replayed, Is.True, "a camera move is a replay");
+            Assert.That(renders + 1, Is.EqualTo(_sheet.Renders), "recorded only when asked");
         });
     }
 

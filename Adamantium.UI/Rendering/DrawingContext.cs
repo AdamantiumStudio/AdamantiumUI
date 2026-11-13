@@ -499,14 +499,8 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          return null;
       }
 
-      var m = options.ClipTransform;
-      if (MathF.Abs(m.M12) > 1e-6f || MathF.Abs(m.M21) > 1e-6f || m.M14 != 0f || m.M24 != 0f || m.M34 != 0f
-          || m.M44 != 1f)
-      {
-         return null;
-      }
-
-      return rectangle.Rect.TransformToAABB(m);
+      var transform = options.ClipTransform;
+      return RenderCache.AlongTheAxes(transform) ? rectangle.Rect.TransformToAABB(transform) : null;
    }
 
    private RenderData GetRenderDataFromComponent()
