@@ -3,10 +3,12 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Input;
 using Adamantium.UI.WebView.Cef;
@@ -27,13 +29,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         typeof(WebView), new PropertyMetadata(null, OnSourceChanged));
 
     public static readonly AdamantiumProperty EngineProperty = AdamantiumProperty.Register(nameof(Engine),
-        typeof(WebViewEngine), typeof(WebView), new PropertyMetadata(null, OnBrowserSettingChanged));
+        typeof(WebViewEngine), typeof(WebView), new PropertyMetadata(null, OnPageMakerChanged));
 
     public static readonly AdamantiumProperty AllowSharedTextureProperty = AdamantiumProperty.Register(
-        nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnBrowserSettingChanged));
+        nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnAllowSharedTextureChanged));
 
     public static readonly AdamantiumProperty PageBackgroundProperty = AdamantiumProperty.Register(
-        nameof(PageBackground), typeof(Color), typeof(WebView), new PropertyMetadata(Colors.White, OnBrowserSettingChanged));
+        nameof(PageBackground), typeof(Color), typeof(WebView), new PropertyMetadata(Colors.White, OnPageBackgroundChanged));
 
     public static readonly AdamantiumProperty FramePathProperty = AdamantiumProperty.Register(nameof(FramePath),
         typeof(WebViewFramePath), typeof(WebView), new PropertyMetadata(WebViewFramePath.None));
@@ -81,7 +83,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         set => SetValue(SourceProperty, value);
     }
 
-    /// <summary>The CEF of the application the page is drawn by, bound from the view model; no page without it.</summary>
+    /// <summary>The CEF of the application the page is drawn by, bound from the view model; no page without it. It
+    /// outlives the page: gone for a moment - a data context passing through null - it leaves the page on the one it
+    /// has, its history kept; another one makes the page again.</summary>
     public WebViewEngine Engine
     {
         get => GetValue<WebViewEngine>(EngineProperty);
@@ -97,8 +101,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     }
 
     /// <summary>What shows where a page paints no background of its own, and before it loads: white, as in a browser.
-    /// Fully transparent shows what lies under the view - a page over a scene; any other alpha is taken as opaque.
-    /// Changing it makes the page again.</summary>
+    /// It lies under the page's frames, so it shows before the first one too, and for a page Chromium paints no frame
+    /// of - an empty one, as about:blank. Fully transparent shows what lies under the view - a page over a scene; any
+    /// other alpha is taken as opaque. Changing it makes the page again.</summary>
     public Color PageBackground
     {
         get => GetValue<Color>(PageBackgroundProperty);
@@ -133,6 +138,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             pageHost.PointerExited += OnPageExited;
         }
 
+        ShowPageBackground();
         TakeDevToolsView(GetTemplateChild("PART_DevTools") as WebViewDevToolsView);
         TakePageMenu(GetTemplateChild("PART_PageMenu") as ContextMenu, GetTemplateChild("PART_PageTipPopup") as Popup,
             GetTemplateChild("PART_PageTip") as ToolTip);
@@ -212,19 +218,42 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
     }
 
-    private static void OnBrowserSettingChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    private static void OnPageMakerChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
-        // The engine is the application's and outlives the page: an engine gone for a moment - a data context passing
-        // through null - leaves the page on the one it has rather than losing it and its history. A new page let go of
-        // once shown is the view's page all the same.
-        if ((e.Property == EngineProperty || e.Property == NewPageProperty) && e.NewValue == null && view.browser != null)
+        if (e.NewValue == null && view.browser != null)
         {
             return;
         }
 
-        view.StopBrowser();
-        view.StartBrowser();
+        view.RestartBrowser();
+    }
+
+    private static void OnAllowSharedTextureChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        ((WebView)component).RestartBrowser();
+
+    private static void OnPageBackgroundChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        var view = (WebView)component;
+        view.ShowPageBackground();
+        view.RestartBrowser();
+    }
+
+    private protected void RestartBrowser()
+    {
+        StopBrowser();
+        StartBrowser();
+    }
+
+    private void ShowPageBackground()
+    {
+        if (pageHost is not Border host)
+        {
+            return;
+        }
+
+        var color = PageBackground;
+        host.Background = color.A == 0 ? null : new SolidColorBrush(new Color(color.R, color.G, color.B));
     }
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -382,8 +411,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             return;
         }
 
-        StopBrowser();
-        StartBrowser();
+        RestartBrowser();
     }
 
     void IWebViewBrowserView.CursorChanged(WebViewBrowser from, Cursor cursor)

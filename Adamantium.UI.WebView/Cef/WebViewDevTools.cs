@@ -69,6 +69,7 @@ internal sealed class WebViewDevTools
     private int lastScriptAnswered;
     private readonly Dictionary<int, Action<JsonElement>> answeredOnTheLoop = [];
 
+    private WebViewColorScheme colorScheme;
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
@@ -81,14 +82,17 @@ internal sealed class WebViewDevTools
 
     /// <summary>Starts speaking to the browser behind <paramref name="host"/>: its runtime, the page's binding and
     /// script, for the documents to come and the one there now, and <paramref name="scripts"/> for the documents to
-    /// come. <paramref name="ready"/> runs once the page has taken them all - a document loaded before would miss
-    /// them.</summary>
-    public unsafe void Attach(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts, Action ready)
+    /// come, the page asked in <paramref name="colorScheme"/> - the one there now too. <paramref name="ready"/> runs once
+    /// the page has taken them all - a document loaded before would miss them.</summary>
+    public unsafe void Attach(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts, WebViewColorScheme colorScheme,
+        Action ready)
     {
         observer = new WebViewDevToolsObserver(this);
         registration = host->add_dev_tools_message_observer(host, observer.Shared);
+        this.colorScheme = colorScheme;
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
+        AskColorScheme(host);
         AddBindings(host);
         AskForTheMainFrame(host);
         AddScript(host, PageScript, id => pageScriptAsked = id);
@@ -109,6 +113,25 @@ internal sealed class WebViewDevTools
         var ready = scriptsReady;
         scriptsReady = null;
         ready?.Invoke();
+    }
+
+    private unsafe void AskColorScheme(CefBrowserHost* host)
+    {
+        var value = colorScheme switch
+        {
+            WebViewColorScheme.Light => "light",
+            WebViewColorScheme.Dark => "dark",
+            _ => string.Empty
+        };
+        Send(host, "Emulation.setEmulatedMedia", writer =>
+        {
+            writer.WriteStartArray("features");
+            writer.WriteStartObject();
+            writer.WriteString("name", "prefers-color-scheme");
+            writer.WriteString("value", value);
+            writer.WriteEndObject();
+            writer.WriteEndArray();
+        });
     }
 
     private unsafe void AddBindings(CefBrowserHost* host)
@@ -309,8 +332,9 @@ internal sealed class WebViewDevTools
 
     /// <summary>A front end went, or another took its place: its calls are forgotten - their answers would reach the
     /// next under the same ids - and what it may have left the page in is undone: a debugger paused at a breakpoint,
-    /// the inspect overlay, a device emulated, new targets held for a debugger, the cache off. The page's own runtime,
-    /// page, binding and scripts for new documents are asked for again - turning the page off drops the scripts.
+    /// the inspect overlay, a device emulated, a color scheme emulated, new targets held for a debugger, the cache off.
+    /// The page's own runtime, page, color scheme, binding and scripts for new documents are asked for again - turning
+    /// the page off drops the scripts.
     /// </summary>
     public unsafe void FrontEndGone(CefBrowserHost* host)
     {
@@ -332,6 +356,7 @@ internal sealed class WebViewDevTools
         Send(host, "Network.setCacheDisabled", writer => writer.WriteBoolean("cacheDisabled", false));
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
+        AskColorScheme(host);
         AddBindings(host);
 
         var scripts = new List<WebDocumentScript>(scriptsAsked.Count);
