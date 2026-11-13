@@ -240,6 +240,9 @@ public sealed unsafe class WebViewEngine : IDisposable
     /// it to resume, and is answered no each time it tries.</summary>
     internal bool IsDownloadGivenUp(uint id) => downloadsGivenUp.Contains(id);
 
+    /// <summary>The color scheme every page is asked in (<see cref="WebViewOptions.ColorScheme"/>).</summary>
+    internal WebViewColorScheme ColorScheme => options.ColorScheme;
+
     /// <summary>Refuses the downloads <paramref name="browser"/> asked about and the application has not answered: the
     /// page goes, and an answer coming later would start a download nobody hears of.</summary>
     internal void RefuseAsked(WebViewBrowser browser)

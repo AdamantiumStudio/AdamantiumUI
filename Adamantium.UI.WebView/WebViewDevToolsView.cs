@@ -44,9 +44,5 @@ public sealed class WebViewDevToolsView : WebView
 
     /// <summary>Opens or closes the DevTools to follow the inspected view: its page made again, or the DevTools asked
     /// for or put away.</summary>
-    internal void Restart()
-    {
-        StopBrowser();
-        StartBrowser();
-    }
+    internal void Restart() => RestartBrowser();
 }
