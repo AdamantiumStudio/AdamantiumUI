@@ -17,14 +17,17 @@ internal sealed unsafe class WebViewClient : CefObject
     private readonly WebViewDialogHandler dialogHandler;
     private readonly WebViewPermissionHandler permissionHandler;
     private readonly WebViewDownloadHandler downloadHandler;
+    private readonly WebViewFindHandler findHandler;
 
     public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
         WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler,
         WebViewContextMenuHandler contextMenuHandler, WebViewJsDialogHandler jsDialogHandler,
         WebViewDialogHandler dialogHandler, WebViewPermissionHandler permissionHandler,
-        WebViewDownloadHandler downloadHandler)
+        WebViewDownloadHandler downloadHandler, WebViewFindHandler findHandler)
         : base(sizeof(CefClient))
     {
+        this.findHandler = findHandler;
+        findHandler.AddReference();
         this.downloadHandler = downloadHandler;
         downloadHandler.AddReference();
         this.jsDialogHandler = jsDialogHandler;
@@ -56,6 +59,13 @@ internal sealed unsafe class WebViewClient : CefObject
         client->get_dialog_handler = &GetDialogHandler;
         client->get_permission_handler = &GetPermissionHandler;
         client->get_download_handler = &GetDownloadHandler;
+        client->get_find_handler = &GetFindHandler;
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefFindHandler* GetFindHandler(CefClient* self)
+    {
+        return (CefFindHandler*)From<WebViewClient>(self).findHandler.Share();
     }
 
     [UnmanagedCallersOnly]
@@ -103,6 +113,7 @@ internal sealed unsafe class WebViewClient : CefObject
         dialogHandler.Release();
         permissionHandler.Release();
         downloadHandler.Release();
+        findHandler.Release();
     }
 
     [UnmanagedCallersOnly]

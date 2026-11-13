@@ -65,6 +65,11 @@ public partial class WebViewFrameTests
             devices?.MainGraphicsDevice?.Dispose();
         });
         loop?.Dispose();
+        if (profile == null)
+        {
+            return;
+        }
+
         try
         {
             Directory.Delete(profile, true);
@@ -608,6 +613,57 @@ public partial class WebViewFrameTests
 
         Assert.That(center, Is.EqualTo(new byte[] { 0, 255, 0, 255 }),
             $"green: laid out at half the width (blue: another width) - {string.Join(",", center ?? [])}");
+    }
+
+    // The page is searched as a browser searches it: the matches counted, the current one stepped either way and round,
+    // capitals told apart when asked; the page going elsewhere, Chromium tells there are none.
+    [Test]
+    public void APageSearched_CountsItsMatches_AndStepsBetweenThem()
+    {
+        const string page = "data:text/html,<p>apple Apple</p><p>apple</p><p>pear</p>";
+        var found = new List<string>();
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            void Look(string what)
+            {
+                Pump(() => view.FindFinal, TimeSpan.FromSeconds(10), view);
+                Pump(() => false, TimeSpan.FromMilliseconds(100), view);
+                found.Add($"{what} {view.FindActive}/{view.FindCount}");
+            }
+
+            void Find(string text, bool forward, bool matchCase, bool findNext)
+            {
+                Pump(() => false, TimeSpan.FromMilliseconds(100), view);
+                view.FindFinal = false;
+                browser.Find(text, forward, matchCase, findNext);
+            }
+
+            Find("apple", true, false, false);
+            Look("first");
+            Find("apple", true, false, true);
+            Look("next");
+            Find("apple", true, false, true);
+            Find("apple", true, false, true);
+            Look("round");
+            Find("apple", false, false, true);
+            Look("back");
+            Find("Apple", true, true, false);
+            Look("case");
+            Find("plum", true, false, false);
+            Look("none");
+            Find("apple", true, false, false);
+            Look("again");
+            var before = view.Completed.Count;
+            browser.Navigate("data:text/html,<p>pear</p>");
+            Pump(() => view.Completed.Count > before, TimeSpan.FromSeconds(10), view);
+            found.Add($"gone {view.FindActive}/{view.FindCount}");
+            browser.StopFinding(true);
+        }));
+
+        Assert.That(found, Is.EqualTo(new[]
+        {
+            "first 1/3", "next 2/3", "round 1/3", "back 3/3", "case 1/1", "none 0/0", "again 1/3", "gone 0/0"
+        }), string.Join(", ", found));
     }
 
     // A script answers with its value as JSON, a promise waited for; one that throws says why.

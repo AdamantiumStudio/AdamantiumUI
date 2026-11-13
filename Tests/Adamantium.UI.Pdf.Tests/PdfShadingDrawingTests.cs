@@ -139,6 +139,44 @@ public class PdfShadingDrawingTests
         Assert.That(PixelAt(picture, 75, 50).A, Is.Zero);
     }
 
+    [Test]
+    public void AShadingWorkedOutPointByPoint_HasASmoothEdge()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.Add("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [20 50 10 80 50 10] /Function 6 0 R >>");
+        pdf.Add(RedToBlue);
+        var (_, session) = Draw(pdf, "/S sh");
+        var bitmap = (Adamantium.UI.Core.Media.Imaging.BitmapSource)session.All<DrawnImage>().Single().Image;
+        var width = (int)bitmap.PixelWidth;
+        var pixels = bitmap.PixelBytes;
+
+        var partial = 0;
+        var steps = 0;
+        for (var row = 0; row < (int)bitmap.PixelHeight; row++)
+        {
+            for (var column = 1; column < width; column++)
+            {
+                var alpha = pixels[(row * width + column) * 4 + 3];
+                var before = pixels[(row * width + column - 1) * 4 + 3];
+                if (alpha is > 0 and < 255)
+                {
+                    partial++;
+                }
+
+                if (System.Math.Min(alpha, before) == 0 && System.Math.Max(alpha, before) == 255)
+                {
+                    steps++;
+                }
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(partial, Is.GreaterThan(0), "texels the edge crosses are partly covered");
+            Assert.That(steps * 20, Is.LessThan(partial), "clear beside whole only where the edge runs along a side");
+        });
+    }
+
     // The picture's pixel under a point of the page, in PDF points (y up from the bottom of the 100-point page).
     private static (int R, int G, int B, int A) PixelAt(DrawnImage drawn, double x, double y)
     {

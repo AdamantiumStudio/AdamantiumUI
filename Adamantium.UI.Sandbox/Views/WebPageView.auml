@@ -59,6 +59,9 @@
                          AllowSharedTexture="{Binding AllowSharedTexture}"
                          IsDevToolsOpen="{Binding DevToolsOpen, Mode=TwoWay}"
                          DevToolsDock="{Binding DevToolsDock}"
+                         IsFindOpen="{Binding FindOpen, Mode=TwoWay}"
+                         FindText="{Binding FindText, Mode=TwoWay}"
+                         FindMatchCase="{Binding FindMatchCase, Mode=TwoWay}"
                          AutomationProperties.AutomationId="WebPage"/>
             <!-- What the page opened last - a link to a new tab, window.open, its page source - beside it, as a browser
                  shows it in a tab of its own, the page that opened it still there. -->

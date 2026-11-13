@@ -15,4 +15,10 @@
     <Phrase Key="ReloadSite" Text="Перезагрузить сайт?"/>
     <Phrase Key="Reload" Text="Перезагрузить"/>
     <Phrase Key="ChangesMayBeLost" Text="Внесённые изменения могут не сохраниться."/>
+    <Phrase Key="FindOnPage" Text="Найти на странице"/>
+    <Phrase Key="MatchCase" Text="С учётом регистра"/>
+    <Phrase Key="FindPrevious" Text="Предыдущее"/>
+    <Phrase Key="FindNext" Text="Следующее"/>
+    <Phrase Key="CloseFind" Text="Закрыть поиск"/>
+    <Phrase Key="Matches" Text="{active} из {count}"/>
 </Language>

@@ -193,6 +193,23 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
         return TakesDownloads;
     }
 
+    /// <summary>The matches the page's search found, as last told.</summary>
+    public int FindCount { get; private set; }
+
+    /// <summary>The current match, counted from 1, as last told.</summary>
+    public int FindActive { get; private set; }
+
+    /// <summary>Whether the last search told was counted to its end; cleared by a test before it searches again.
+    /// </summary>
+    public bool FindFinal { get; set; }
+
+    public void FindResult(WebViewBrowser browser, int count, int activeMatch, bool final)
+    {
+        FindCount = count;
+        FindActive = activeMatch;
+        FindFinal = final;
+    }
+
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 
     public void TitleChanged(WebViewBrowser browser, string title) => Title = title;

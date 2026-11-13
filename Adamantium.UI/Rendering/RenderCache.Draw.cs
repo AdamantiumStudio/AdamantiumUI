@@ -849,7 +849,7 @@ public partial class RenderCache
         // ExecuteOps redraws batch segments from last frame's baked positions, so a MOVE would leave batched fills stale
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && GroupsFollow()
+            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null
             && TryPartialReplay(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
@@ -858,7 +858,7 @@ public partial class RenderCache
         // surgery (excise its old run, its re-baked items append as a new segment spliced into the op stream at the same
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && GroupsFollow()
+            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null
             && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
@@ -2607,6 +2607,7 @@ public partial class RenderCache
         // ...then the ordinary movers, so the re-bakes below compose from the new worlds.
         if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent" + _moverRefusal);
         RefreshMovedPlacements(device);
+        if (!GroupsFollow()) return SpliceRefused("groupsMoved");
         RefreshMovedScissors(fullScissor);
 
         _opacityChain.Clear();   // a paint-only opacity change may have re-frozen the dirty subtree's snapshot; recompose it
@@ -3182,6 +3183,7 @@ public partial class RenderCache
         if (!RefreshMovedNodes(device)) return SpliceRefused("movedNode");
         if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent" + _moverRefusal);
         RefreshMovedPlacements(device);
+        if (!GroupsFollow()) return SpliceRefused("groupsMoved");
         RefreshMovedScissors(fullScissor);
 
         // Op stream grown too long from accumulated splices -> recompact with a full walk before it mis-replays. Grown

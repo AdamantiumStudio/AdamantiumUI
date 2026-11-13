@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- A `WebView`'s page is searched as in a browser: `IsFindOpen`, `FindText` (sought as it is typed), `FindMatchCase`,
+  and from the page `FindMatchCount` and `FindActiveMatch` (the first match made current at once); `OpenFindCommand`,
+  `CloseFindCommand`, `FindNextCommand`, `FindPreviousCommand`. The theme's `WebViewFindBar` (`PART_FindBar`) shows
+  the search over the page's top right while it is open. Ctrl+F opens it, or puts the keyboard back into its text;
+  Enter and F3 step to the next match, with Shift to the previous; Esc closes it, the current match left selected -
+  unless the window binds those keys itself. The page going elsewhere counts its matches again. The sandbox's Web tab
+  keeps the search in its view model, so it outlives the view made again on another theme.
+
 - `ContentPresenter.ParkShown()`: parks the content it shows when that is kept between visits (`x:KeepAlive`), for the
   next template's presenter to take up. A control of its own whose template holds a presenter calls it from its
   `OnTemplateRemoving` when another template follows; `TabControl` and `ContentControl` do, a `ContentControl` through
@@ -106,11 +114,14 @@ All packages share one version.
   puts down what lies between `q` and `Q`: cut to a path by its own fill rule, to glyphs (`PlacedGlyphRun`), let
   through a soft mask read by its alpha or by its luminosity over a backdrop color (`MaskKind`), faded as a whole and
   laid down by any of the sixteen PDF blend modes (`BlendMode`). A group is drawn apart into a target the size of what
-  it shows and laid down at its end; one that only cuts to a rectangle along the axes is cut by a scissor, with no
-  target. Groups nest; one left open ends with its element's drawing; a group's masks are drawn at full strength, the
-  element's opacity reaching the group itself. A move - a scroll, a placement, a composited animation - replays the
-  frame with each group placed again where it now stands; the window is drawn again only when a group left out of
-  sight comes into view or one cut to a rectangle turns.
+  it shows and laid down at its end; one that only cuts to a rectangle along the axes - moved, scaled, mirrored or
+  turned by a quarter - is cut by a scissor, with no target. The clip can be given in a placement's units
+  (`DrawingGroupOptions.ClipPlacement`) and moves with it: marks on a sheet that rides a camera stay on the sheet as the
+  camera moves, with no record. Groups nest; one left open ends with its element's drawing; a group's masks are drawn
+  at full strength, the element's opacity reaching the group itself. A move - a scroll, a placement, a composited
+  animation - replays the frame with each group placed again where it now stands, placed draws inside it found where
+  their placement is now; the window is drawn again only when a group left out of sight comes into view or one cut to
+  a rectangle turns off the axes.
 - `IDrawingSession.DrawGlyphs` and `GlyphRun`: glyphs the caller placed, by index and pen position, drawn where one
   matrix puts the run - filled through the glyph atlas, outlined as paths (`GlyphRun.Outline`).
 - The sandbox has a "PDF drawing" tab: clips by a path, a rectangle and letters, both soft masks, a group in a group and
@@ -123,9 +134,10 @@ All packages share one version.
   sandbox's "PDF page" tab shows the page of a sample written there or of a file of one's own.
 - `RadialGradientBrush.GradientOriginRadius`: the gradient between two circles - the origin's of this radius, as a
   fraction of the end ellipse's, and the end one - as Canvas 2D's `createRadialGradient` and SVG 2's `fr` draw it;
-  where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
-  shadings are drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked
-  out point by point into a picture where it is not. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
+  where no circle passes nothing is painted - a fill drawn from its curves or as a soft mask too - and that edge is
+  smooth, covered as a shape's is. 0, the default, is the radial gradient as before. A PDF page's radial shadings are
+  drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked out point by
+  point into a picture where it is not, the texels its edge crosses covered by how much of them it paints. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
   and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
 - `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
   triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
@@ -395,6 +407,8 @@ All packages share one version.
 
 ### Fixed
 
+- An `{Ancestor Logical=True}` binding below a part torn down, parked or pooled (a closed tab's page, which keeps its
+  own parents inside) is no longer reported as having found no ancestor: it is out of the tree with that part.
 - A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
   a lookup from an element always did: a key both declare had one value from an element and another without one.
 - A page kept between visits (`x:KeepAlive`) stays the same page when its `ContentControl` or `ScrollViewer` takes

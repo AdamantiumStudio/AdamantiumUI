@@ -68,10 +68,18 @@ public partial class WebView
 
     void IWebViewBrowserView.NavigationCompleted(WebViewBrowser from, string address, WebViewLoadError error)
     {
-        if (ReferenceEquals(browser, from))
+        if (!ReferenceEquals(browser, from))
         {
-            Bridge?.OnNavigationCompleted(address, error);
+            return;
         }
+
+        // A search still open searches the document the main frame loaded - not on a frame's load inside it.
+        if (IsFindOpen)
+        {
+            FindAnew();
+        }
+
+        Bridge?.OnNavigationCompleted(address, error);
     }
 
     void IWebViewBrowserView.MessageReceived(WebViewBrowser from, string json)
