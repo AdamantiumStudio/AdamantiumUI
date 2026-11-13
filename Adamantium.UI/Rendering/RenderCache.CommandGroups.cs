@@ -539,7 +539,6 @@ public partial class RenderCache
         options.Clip == null && options.TextClip is not { Count: > 0 } && options.Mask == null
         && options.BlendMode == BlendMode.Normal && options.Opacity >= 1;
 
-    // Where the group's begin mark stands among its units now; -1 once it is gone.
     private static int IndexOfBegin(CommandGroup state)
     {
         var units = state.Units;
@@ -548,8 +547,6 @@ public partial class RenderCache
             : units.IndexOf(state.Begin);
     }
 
-    // What takes the group's clip to the window: the element's world, after the clip's placement as this frame shows it
-    // when it has one - as the placed draws' slots hold it.
     private Matrix4x4F ClipWorld(CommandGroup state, int begin, in Matrix4x4F world)
     {
         if (state.Options.ClipPlacement is not { } placement)
@@ -561,8 +558,6 @@ public partial class RenderCache
         return Shown(placement) * world;
     }
 
-    // The clip is drawn with its placement in the group's first mask; a scissor passes that mask over, so the matrix it
-    // was recorded with is learned here, as a walk learns it from any placed unit it draws.
     private void CatchUpClip(List<IRenderUnit> units, int begin, Placement placement)
     {
         for (var i = begin + 1; i < units.Count; i++)

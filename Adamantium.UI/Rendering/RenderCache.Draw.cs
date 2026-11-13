@@ -2607,7 +2607,6 @@ public partial class RenderCache
         // ...then the ordinary movers, so the re-bakes below compose from the new worlds.
         if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent" + _moverRefusal);
         RefreshMovedPlacements(device);
-        // Once the placements show where they are now: a group cut along them may have turned off the axes.
         if (!GroupsFollow()) return SpliceRefused("groupsMoved");
         RefreshMovedScissors(fullScissor);
 

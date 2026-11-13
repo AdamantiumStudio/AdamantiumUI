@@ -740,8 +740,6 @@ public partial class RenderCache
     private Rect Placed(IPlacedPayload payload, Rect box) =>
         payload.Placement != null ? box.TransformToAABB(PlacedNow(payload)) : box;
 
-    // Where a draw sits on its element's world now. A placed draw's own matrix is its placement's as recorded, so a newer
-    // one heard since stands in its place - never on top of it.
     private Matrix4x4F PlacedNow(IPlacedPayload payload) =>
         payload.Placement is { } placement && _placementLatest.TryGetValue(placement, out var latest)
             ? latest.Matrix

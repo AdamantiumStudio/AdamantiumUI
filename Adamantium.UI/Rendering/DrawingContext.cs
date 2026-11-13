@@ -435,7 +435,6 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          if (options.Clip != null)
          {
             CreateCommand(GroupMarkPayload.MaskBegin(MaskKind.Alpha, default));
-            // Drawn with its placement even when a scissor cuts instead: the walk learns the placement's matrix from it.
             if (options.ClipPlacement != null)
             {
                session.DrawGeometry(Brushes.Black, options.Clip, null, options.ClipPlacement);

@@ -21,8 +21,9 @@ public class ClipPlacementRenderTests
     private const int Width = 160;
     private const int Height = 96;
 
-    // The sheet and the mark on it, in the camera's units: the mark runs past the sheet's right edge.
     private static readonly Rect Sheet = new(0, 0, 40, 30);
+    private static readonly Matrix4x4F TurnedAnyAngle =
+        Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6)) * At(40, 10);
     private static readonly Rect Mark = new(20, 10, 60, 10);
 
     public enum MarkShape
@@ -38,11 +39,9 @@ public class ClipPlacementRenderTests
         public MarkShape Shape = MarkShape.Rectangle;
         public CornerRadius Corners = CornerRadius.Empty;
 
-        // The sheet's clip given in the element's units instead of the camera's.
         public Rect? ElementClip;
         public Rect? OuterClip;
 
-        // The content filling the element in its own units: only the clip rides the camera.
         public bool ContentStays;
 
         protected override void OnRender(IDrawingContext context)
@@ -81,7 +80,6 @@ public class ClipPlacementRenderTests
         }
     }
 
-    // Something else in the window that draws again on its own, dim enough not to count as lit.
     private sealed class Neighbour : MeasurableUIComponent
     {
         public Color Shade = new(40, 40, 40);
@@ -158,7 +156,6 @@ public class ClipPlacementRenderTests
 
     private bool LitAt(int at) => _pixels[at] >= 128 || _pixels[at + 1] >= 128 || _pixels[at + 2] >= 128;
 
-    // Whether the last frame shows the point the camera takes the sheet's (`sheetX`, `sheetY`) to.
     private bool LitThrough(Matrix4x4F camera, double sheetX, double sheetY)
     {
         var column = (int)(sheetX * camera.M11 + sheetY * camera.M21 + camera.M41);
@@ -166,7 +163,6 @@ public class ClipPlacementRenderTests
         return LitAt((row * Width + column) * 4);
     }
 
-    // What of the mark the sheet lets through under `camera`, in window pixels, cut by `outer` when given.
     private static Rect Expected(Matrix4x4F camera, Rect? outer = null)
     {
         var shown = Sheet.TransformToAABB(camera).Intersect(Mark.TransformToAABB(camera));
@@ -255,10 +251,6 @@ public class ClipPlacementRenderTests
         });
     }
 
-    // A twelfth of a turn about the sheet's corner: the mark leaves the sheet across its right edge, turned. Off the
-    // sheet but inside its bounding box nothing is drawn - a scissor by that box would draw there.
-    private static readonly Matrix4x4F TurnedAnyAngle =
-        Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6)) * At(40, 10);
 
     private void AssertCutAlongTheTurnedSheet(string where)
     {
@@ -376,7 +368,6 @@ public class ClipPlacementRenderTests
         var replayed = _renderer.Cache.LastFrameReplayed;
         var rendersAfter = _sheet.Renders;
 
-        // Recorded again where the camera stands: the group is found there, not where a stale matrix would put it.
         _sheet.InvalidateRender(false);
         var recorded = Draw();
 
