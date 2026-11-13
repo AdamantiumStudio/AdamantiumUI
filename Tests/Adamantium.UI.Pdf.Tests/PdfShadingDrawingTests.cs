@@ -210,7 +210,6 @@ public class PdfShadingDrawingTests
             new byte[] { 0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255 });
         var (_, session) = Draw(pdf, "/S sh");
         var mesh = session.All<DrawnMesh>().Single();
-        // A border strip along each side first, reaching past the outline it is cut back to; the triangle last, on top.
         var vertices = mesh.Mesh.Vertices;
         Assert.That(vertices, Has.Count.EqualTo(3 * 6 + 3));
         Assert.That(vertices.Skip(vertices.Count - 3).Select(vertex => vertex.Color), Is.EqualTo(new[]
@@ -357,7 +356,6 @@ public class PdfShadingDrawingTests
         Assert.That(corner.Color, Is.EqualTo(new Color(255, 0, 0, 255)), "c00 at p00");
         var far = mesh.Vertices.First(v => v.Position == new Vector2<double>(60, 60));
         Assert.That(far.Color, Is.EqualTo(new Color(0, 0, 255, 255)), "c33 at p33");
-        // The grid runs a cell past each side - the border, drawn first; the patch's own cells follow it.
         var cuts = (int)System.Math.Round(System.Math.Sqrt(mesh.Vertices.Count / 6.0)) - 2;
         var body = mesh.Vertices.Count - cuts * cuts * 6;
         Assert.That(mesh.Vertices[body].Position, Is.EqualTo(new Vector2<double>(0, 0)), "the body starts at p00");
