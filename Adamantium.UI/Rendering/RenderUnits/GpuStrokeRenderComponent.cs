@@ -25,10 +25,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     private const float RefitTolerance = 1e-4f;
 
-    private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
-                                                              ColorComponentFlagBits.GBit |
-                                                              ColorComponentFlagBits.BBit |
-                                                              ColorComponentFlagBits.ABit;
 
 
     private const MemoryPropertyFlags StrokeMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
@@ -753,25 +749,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             return;
         }
 
-        // Depth is SCRATCH here, and it is shared with everything else in the frame, so this stroke starts by putting
-        // its own bounds back to 1.0 rather than assuming what is there. Depth only - the stencil in that rectangle
-        // carries the instanced fills' coverage marks and must survive.
-        _device.ClearDepthInRect(bounds);
-
         // Pass 1: settle the union's coverage into that depth, no color. Pass 2: the one fragment that survived blends.
         // Both passes must be draws of the SAME ribbon so their depths agree bit for bit.
-        _device.ColorComponentFlags = 0;
-        _device.DepthCompareFunction = CompareOp.Less;
-        _device.DepthWriteEnable = true;
+        DepthUnion.Settle(_device, bounds);
         DrawContours(_effect.StrokeUnionDepthPass);
-
-        _device.ColorComponentFlags = AllColorComponents;
-        _device.DepthCompareFunction = CompareOp.Equal;
-        _device.DepthWriteEnable = false;
+        DepthUnion.Lay(_device);
         DrawContours(unionDraw);
-
-        _device.DepthCompareFunction = CompareOp.Always;
-        _device.DepthWriteEnable = true;
+        DepthUnion.Finish(_device);
     }
 
     /// <summary>Whether a <see cref="StrokeBatchCollector"/> can draw this stroke: a brush of one color - a gradient, a
@@ -989,8 +973,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private bool TryDeviceBounds(out Rect2D bounds)
     {
         bounds = default;
-        var viewports = _device.CurrentViewports;
-        if (viewports is not { Length: > 0 }) return false;
 
         // The miter clamp lets a corner reach 4x the WIDENED half-extent (half + Fringe/2): 2 thicknesses + 2 fringes.
         var pad = 4.0f * HalfThickness() + 2.0f * ComputeFringe() + 1.0f;
@@ -1013,42 +995,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         if (minX > maxX) return false;
 
         minX -= pad; minY -= pad; maxX += pad; maxY += pad;
-
-        // Local -> clip, row-vector convention (the same product StrokeVS uses). A rotation or a flip can send any
-        // corner anywhere, so all four are transformed and the extent taken from the result.
-        var m = RenderData.TransformMatrix * RenderData.ProjectionMatrix;
-        float clipMinX = float.MaxValue, clipMinY = float.MaxValue, clipMaxX = float.MinValue, clipMaxY = float.MinValue;
-        foreach (var (x, y) in new[] { (minX, minY), (maxX, minY), (minX, maxY), (maxX, maxY) })
-        {
-            // A perspective puts depth in w; a corner behind the eye leaves no bounds to trust.
-            var w = x * m.M14 + y * m.M24 + m.M44;
-            if (!(w > 1e-6f)) return false;
-            var cx = (x * m.M11 + y * m.M21 + m.M41) / w;
-            var cy = (x * m.M12 + y * m.M22 + m.M42) / w;
-            if (cx < clipMinX) clipMinX = cx;
-            if (cx > clipMaxX) clipMaxX = cx;
-            if (cy < clipMinY) clipMinY = cy;
-            if (cy > clipMaxY) clipMaxY = cy;
-        }
-
-        var vp = viewports[0];
-        var left = (int)Math.Floor((clipMinX * 0.5f + 0.5f) * vp.Width + vp.X);
-        var top = (int)Math.Floor((clipMinY * 0.5f + 0.5f) * vp.Height + vp.Y);
-        var right = (int)Math.Ceiling((clipMaxX * 0.5f + 0.5f) * vp.Width + vp.X);
-        var bottom = (int)Math.Ceiling((clipMaxY * 0.5f + 0.5f) * vp.Height + vp.Y);
-
-        left = Math.Clamp(left, (int)vp.X, (int)(vp.X + vp.Width));
-        top = Math.Clamp(top, (int)vp.Y, (int)(vp.Y + vp.Height));
-        right = Math.Clamp(right, left, (int)(vp.X + vp.Width));
-        bottom = Math.Clamp(bottom, top, (int)(vp.Y + vp.Height));
-        if (right == left || bottom == top) return false;
-
-        bounds = new Rect2D
-        {
-            Offset = new Offset2D { X = left, Y = top },
-            Extent = new Extent2D { Width = (uint)(right - left), Height = (uint)(bottom - top) }
-        };
-        return true;
+        return TryDeviceBounds(minX, minY, maxX, maxY, out bounds);
     }
 
     // A contour's buffers are read by address, set before its pass is applied.

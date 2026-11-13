@@ -17,6 +17,7 @@
 #include "Includes/ColorMath.fxh"
 #include "Includes/CurveMath.fxh"
 #include "Includes/CurveTiles.fxh"
+#include "Includes/CurveQuad.fxh"
 
 // The draw's instances, by the kind it draws.
 GradientRectData* GradientRects;

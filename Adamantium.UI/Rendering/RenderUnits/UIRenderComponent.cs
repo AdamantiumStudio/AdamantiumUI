@@ -148,6 +148,64 @@ public abstract class UIRenderComponent : DeferredDisposableObject
     /// <summary>Out-of-render-pass work, recorded before BeginRendering. Base is a no-op.</summary>
     public virtual void PreRender() { }
 
+    /// <summary>The device pixels a box in this component's own units covers, clamped to the viewport: what it may use
+    /// of the shared depth as scratch. False when it covers none, or a corner lies behind the eye.</summary>
+    protected bool TryDeviceBounds(float minX, float minY, float maxX, float maxY, out Rect2D bounds)
+    {
+        bounds = default;
+        var viewports = GraphicsDevice.CurrentViewports;
+        if (viewports is not { Length: > 0 })
+        {
+            return false;
+        }
+
+        var toClip = RenderData.TransformMatrix * RenderData.ProjectionMatrix;
+        float clipMinX = float.MaxValue, clipMinY = float.MaxValue, clipMaxX = float.MinValue, clipMaxY = float.MinValue;
+        for (var corner = 0; corner < 4; corner++)
+        {
+            var cornerX = (corner & 1) == 0 ? minX : maxX;
+            var cornerY = (corner & 2) == 0 ? minY : maxY;
+            var depth = cornerX * toClip.M14 + cornerY * toClip.M24 + toClip.M44;
+            if (!(depth > 1e-6f))
+            {
+                return false;
+            }
+
+            var clipX = (cornerX * toClip.M11 + cornerY * toClip.M21 + toClip.M41) / depth;
+            var clipY = (cornerX * toClip.M12 + cornerY * toClip.M22 + toClip.M42) / depth;
+            if (!float.IsFinite(clipX) || !float.IsFinite(clipY))
+            {
+                return false;
+            }
+
+            clipMinX = Math.Min(clipMinX, clipX);
+            clipMaxX = Math.Max(clipMaxX, clipX);
+            clipMinY = Math.Min(clipMinY, clipY);
+            clipMaxY = Math.Max(clipMaxY, clipY);
+        }
+
+        var viewport = viewports[0];
+        var left = (int)Math.Floor((clipMinX * 0.5f + 0.5f) * viewport.Width + viewport.X);
+        var top = (int)Math.Floor((clipMinY * 0.5f + 0.5f) * viewport.Height + viewport.Y);
+        var right = (int)Math.Ceiling((clipMaxX * 0.5f + 0.5f) * viewport.Width + viewport.X);
+        var bottom = (int)Math.Ceiling((clipMaxY * 0.5f + 0.5f) * viewport.Height + viewport.Y);
+        left = Math.Clamp(left, (int)viewport.X, (int)(viewport.X + viewport.Width));
+        top = Math.Clamp(top, (int)viewport.Y, (int)(viewport.Y + viewport.Height));
+        right = Math.Clamp(right, left, (int)(viewport.X + viewport.Width));
+        bottom = Math.Clamp(bottom, top, (int)(viewport.Y + viewport.Height));
+        if (right == left || bottom == top)
+        {
+            return false;
+        }
+
+        bounds = new Rect2D
+        {
+            Offset = new Offset2D { X = left, Y = top },
+            Extent = new Extent2D { Width = (uint)(right - left), Height = (uint)(bottom - top) }
+        };
+        return true;
+    }
+
     /// <summary>A frame of what it shows was submitted elsewhere and has not been taken in yet.</summary>
     public virtual bool AwaitsFrame => false;
 

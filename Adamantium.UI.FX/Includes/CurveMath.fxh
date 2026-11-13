@@ -3,7 +3,7 @@
 // pixel it falls in - exact at any zoom, with no mesh and no fringe. The curves are quadratic pieces running one way in
 // x and in y. A fill takes its coverage from its own tiles (CurveTiles.fxh); the walk over every piece here is what the
 // tiles are checked against. Every brush that fills a shape this way takes its coverage from these and its color from
-// its own maths. Include after ShapeMath.fxh.
+// its own maths. The quad itself is CurveQuad.fxh's.
 
 static const uint CurveHeaderWords = 8u;
 static const uint CurvePieceWords = 6u;
@@ -20,15 +20,6 @@ float CurveWord(uint index)
 float2 CurvePoint(uint index)
 {
     return float2(CurveWord(index), CurveWord(index + 1u));
-}
-
-// One corner of the quad an instance draws, in the fill's local space - the space its mesh's vertices are in: the
-// pieces' box, a pixel past it on every side so its edge's soft half lands inside. toSlot takes that space to the slot's.
-float2 CurveQuadCorner(uint vertexId, float4x4 toSlot)
-{
-    float2 pixelsPerUnit = SlotPixelScale(toSlot);
-    float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    return CurvePoint(0u) + corner * CurvePoint(2u) + (corner * 2.0 - 1.0) / pixelsPerUnit;
 }
 
 // Where along a piece running one way its coordinate - given by its start, control and end - reaches value.
