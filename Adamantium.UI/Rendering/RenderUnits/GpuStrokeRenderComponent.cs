@@ -25,10 +25,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     private const float RefitTolerance = 1e-4f;
 
-    private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
-                                                              ColorComponentFlagBits.GBit |
-                                                              ColorComponentFlagBits.BBit |
-                                                              ColorComponentFlagBits.ABit;
 
 
     private const MemoryPropertyFlags StrokeMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
@@ -753,25 +749,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             return;
         }
 
-        // Depth is SCRATCH here, and it is shared with everything else in the frame, so this stroke starts by putting
-        // its own bounds back to 1.0 rather than assuming what is there. Depth only - the stencil in that rectangle
-        // carries the instanced fills' coverage marks and must survive.
-        _device.ClearDepthInRect(bounds);
-
         // Pass 1: settle the union's coverage into that depth, no color. Pass 2: the one fragment that survived blends.
         // Both passes must be draws of the SAME ribbon so their depths agree bit for bit.
-        _device.ColorComponentFlags = 0;
-        _device.DepthCompareFunction = CompareOp.Less;
-        _device.DepthWriteEnable = true;
+        DepthUnion.Settle(_device, bounds);
         DrawContours(_effect.StrokeUnionDepthPass);
-
-        _device.ColorComponentFlags = AllColorComponents;
-        _device.DepthCompareFunction = CompareOp.Equal;
-        _device.DepthWriteEnable = false;
+        DepthUnion.Lay(_device);
         DrawContours(unionDraw);
-
-        _device.DepthCompareFunction = CompareOp.Always;
-        _device.DepthWriteEnable = true;
+        DepthUnion.Finish(_device);
     }
 
     /// <summary>Whether a <see cref="StrokeBatchCollector"/> can draw this stroke: a brush of one color - a gradient, a

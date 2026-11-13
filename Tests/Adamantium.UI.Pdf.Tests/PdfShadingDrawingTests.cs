@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Media;
@@ -163,7 +165,7 @@ public class PdfShadingDrawingTests
                     partial++;
                 }
 
-                if (System.Math.Min(alpha, before) == 0 && System.Math.Max(alpha, before) == 255)
+                if (Math.Min(alpha, before) == 0 && Math.Max(alpha, before) == 255)
                 {
                     steps++;
                 }
@@ -293,7 +295,7 @@ public class PdfShadingDrawingTests
             50, 50, 50, 30, 50, 10,
             0, 10, 160, 10,
         ];
-        var data = new System.Collections.Generic.List<byte> { 0 };
+        var data = new List<byte> { 0 };
         foreach (var coordinate in coordinates)
         {
             data.Add((byte)coordinate);
@@ -312,6 +314,156 @@ public class PdfShadingDrawingTests
             Assert.That(CountWinding(outline, 35, 40), Is.Not.Zero, "the patch between its sides");
             Assert.That(CountWinding(outline, 95, 40), Is.Zero, "past the fold nothing");
         });
+    }
+
+    [Test]
+    public void APatchFoldedInHalf_IsPainted()
+    {
+        var outline = DrawPatches(
+        [
+            20, 10, 20, 30, 20, 50, 20, 70,
+            100, 70, 100, 70, 20, 70,
+            20, 50, 20, 30, 20, 10,
+            100, 10, 100, 10,
+        ]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountWinding(outline, 50, 40), Is.Not.Zero, "between the sides and the fold");
+            Assert.That(CountWinding(outline, 90, 40), Is.Zero, "past the fold at 80");
+        });
+    }
+
+    [Test]
+    public void AFoldedPatchsBentSide_IsCutIntoPiecesOfItsCurve()
+    {
+        var outline = DrawPatches(
+        [
+            20, 10, 20, 30, 20, 50, 20, 70,
+            160, 70, 0, 70, 50, 70,
+            50, 50, 50, 30, 50, 10,
+            0, 20, 160, 0,
+        ]);
+        var side = new Vector2<double>[2001];
+        for (var step = 0; step < side.Length; step++)
+        {
+            var along = (double)step / (side.Length - 1);
+            side[step] = new Vector2<double>(CubicAt(20, 160, 0, 50, along), CubicAt(10, 0, 20, 10, along));
+        }
+
+        var pieces = 0;
+        var farthest = 0.0;
+        foreach (var figure in outline.Figures)
+        {
+            var current = figure.StartPoint;
+            foreach (var segment in figure.Segments)
+            {
+                if (segment is CubicBezierSegment cubic && DistanceTo(side, current) < 1e-6 &&
+                    DistanceTo(side, cubic.Point) < 1e-6)
+                {
+                    pieces++;
+                    var middle = PointOnCubic(current, cubic.ControlPoint1, cubic.ControlPoint2, cubic.Point, 0.5);
+                    farthest = Math.Max(farthest, DistanceTo(side, middle));
+                }
+
+                current = segment is CubicBezierSegment curve ? curve.Point : ((LineSegment)segment).Point;
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pieces, Is.GreaterThan(1), "the side the fold crosses is given in pieces");
+            Assert.That(farthest, Is.LessThan(0.01), "each piece lies on the side's own curve");
+        });
+    }
+
+    private static double DistanceTo(Vector2<double>[] curve, Vector2<double> point)
+    {
+        var nearest = double.MaxValue;
+        for (var step = 0; step < curve.Length; step++)
+        {
+            var alongX = curve[step].X - point.X;
+            var alongY = curve[step].Y - point.Y;
+            nearest = Math.Min(nearest, alongX * alongX + alongY * alongY);
+        }
+
+        for (var step = 1; step < curve.Length; step++)
+        {
+            nearest = Math.Min(nearest, DistanceToSegmentSquared(curve[step - 1], curve[step], point));
+        }
+
+        return Math.Sqrt(nearest);
+    }
+
+    private static double DistanceToSegmentSquared(Vector2<double> start, Vector2<double> end, Vector2<double> point)
+    {
+        var alongX = end.X - start.X;
+        var alongY = end.Y - start.Y;
+        var length = alongX * alongX + alongY * alongY;
+        var share = length > 0
+            ? Math.Clamp(((point.X - start.X) * alongX + (point.Y - start.Y) * alongY) / length, 0, 1)
+            : 0;
+        var offX = start.X + share * alongX - point.X;
+        var offY = start.Y + share * alongY - point.Y;
+        return offX * offX + offY * offY;
+    }
+
+    [Test]
+    public void AFoldedPatchsNeighbour_SharesItsSideExactly()
+    {
+        var outline = DrawPatches(
+        [
+            20, 10, 20, 30, 20, 50, 20, 70,
+            160, 70, 0, 70, 50, 70,
+            50, 50, 50, 30, 50, 10,
+            0, 10, 160, 10,
+        ],
+        [
+            0, 10, 0, 30, 0, 50, 0, 70,
+            7, 70, 13, 70, 20, 70,
+            20, 50, 20, 30, 20, 10,
+            13, 10, 7, 10,
+        ]);
+
+        var onShared = 0;
+        foreach (var figure in outline.Figures)
+        {
+            foreach (var segment in figure.Segments)
+            {
+                var end = segment is CubicBezierSegment cubic ? cubic.Point : ((LineSegment)segment).Point;
+                onShared += end.X == 20 && end.Y > 10 && end.Y < 70 ? 1 : 0;
+            }
+        }
+
+        Assert.That(onShared, Is.Zero, "the shared side gone from the outline, not left as pieces");
+    }
+
+    private static StreamGeometry DrawPatches(params int[][] patches)
+    {
+        var data = new List<byte>();
+        foreach (var coordinates in patches)
+        {
+            data.Add(0);
+            foreach (var coordinate in coordinates)
+            {
+                data.Add((byte)coordinate);
+            }
+
+            data.AddRange([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0]);
+        }
+
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]", data.ToArray());
+        var (_, session) = Draw(pdf, "/S sh");
+        return (StreamGeometry)session.All<DrawnMesh>().Single().Mesh.Outline;
+    }
+
+    private static double CubicAt(double start, double control, double otherControl, double end, double along)
+    {
+        var rest = 1 - along;
+        return start * rest * rest * rest + 3 * control * rest * rest * along + 3 * otherControl * rest * along * along +
+               end * along * along * along;
     }
 
     private static int CountWinding(StreamGeometry outline, double pointX, double pointY)
@@ -403,7 +555,7 @@ public class PdfShadingDrawingTests
     public void ALargeLatticeOfStraightColors_IsDrawnWhole()
     {
         const int side = 300;
-        var data = new System.Collections.Generic.List<byte>(side * side * 7);
+        var data = new List<byte>(side * side * 7);
         for (var row = 0; row < side; row++)
         {
             for (var column = 0; column < side; column++)
@@ -489,7 +641,7 @@ public class PdfShadingDrawingTests
         Assert.That(corner.Color, Is.EqualTo(new Color(255, 0, 0, 255)), "c00 at p00");
         var far = mesh.Vertices.First(v => v.Position == new Vector2<double>(60, 60));
         Assert.That(far.Color, Is.EqualTo(new Color(0, 0, 255, 255)), "c33 at p33");
-        var cuts = (int)System.Math.Round(System.Math.Sqrt(mesh.Vertices.Count / 6.0)) - 2;
+        var cuts = (int)Math.Round(Math.Sqrt(mesh.Vertices.Count / 6.0)) - 2;
         var body = mesh.Vertices.Count - cuts * cuts * 6;
         Assert.That(mesh.Vertices[body].Position, Is.EqualTo(new Vector2<double>(0, 0)), "the body starts at p00");
         // Rows of v first: the second piece is the next one along u, still on the row v = 0.

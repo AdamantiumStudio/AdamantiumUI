@@ -16,10 +16,6 @@ namespace Adamantium.UI.Rendering.RenderUnits;
 public sealed class ColoredMeshRenderComponent : UIRenderComponent
 {
     private const MemoryPropertyFlags MeshMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
-    private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
-                                                              ColorComponentFlagBits.GBit |
-                                                              ColorComponentFlagBits.BBit |
-                                                              ColorComponentFlagBits.ABit;
 
     private readonly Rect _bounds;
     private readonly ReusableBuffer _buffer;
@@ -129,18 +125,10 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
 
     private void DrawTopmostOnce(Rect2D scratch)
     {
-        GraphicsDevice.ClearDepthInRect(scratch);
-        GraphicsDevice.ColorComponentFlags = 0;
-        GraphicsDevice.DepthCompareFunction = CompareOp.Less;
-        GraphicsDevice.DepthWriteEnable = true;
+        DepthUnion.Settle(GraphicsDevice, scratch);
         GraphicsDevice.Draw((uint)_vertices.Length, 1);
-
-        GraphicsDevice.ColorComponentFlags = AllColorComponents;
-        GraphicsDevice.DepthCompareFunction = CompareOp.Equal;
-        GraphicsDevice.DepthWriteEnable = false;
+        DepthUnion.Lay(GraphicsDevice);
         GraphicsDevice.Draw((uint)_vertices.Length, 1);
-
-        GraphicsDevice.DepthCompareFunction = CompareOp.Always;
-        GraphicsDevice.DepthWriteEnable = true;
+        DepthUnion.Finish(GraphicsDevice);
     }
 }

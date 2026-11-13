@@ -173,6 +173,11 @@ public abstract class UIRenderComponent : DeferredDisposableObject
 
             var clipX = (cornerX * toClip.M11 + cornerY * toClip.M21 + toClip.M41) / depth;
             var clipY = (cornerX * toClip.M12 + cornerY * toClip.M22 + toClip.M42) / depth;
+            if (!float.IsFinite(clipX) || !float.IsFinite(clipY))
+            {
+                return false;
+            }
+
             clipMinX = Math.Min(clipMinX, clipX);
             clipMaxX = Math.Max(clipMaxX, clipX);
             clipMinY = Math.Min(clipMinY, clipY);

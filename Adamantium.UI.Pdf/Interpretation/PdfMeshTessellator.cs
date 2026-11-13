@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 using Adamantium.Pdf.ColorSpaces;
 using Adamantium.Pdf.Document;
@@ -13,9 +14,10 @@ namespace Adamantium.UI.Pdf.Interpretation;
 /// its corners is the shading's, not a straight run in sRGB. A patch is its tensor surface sampled on a grid, as fine as
 /// the patch is large on the page, its color bilinear in the patch's parameters, and drawn row by row of v, so where it
 /// folds over itself the larger v lies on top. The mesh is cut to its outline - the sum of its pieces' boundaries, the
-/// patches' sides as their curves and the triangles' as lines - so its edge is exact and smooth at any zoom; along that
-/// outline a border under the triangles reaches past it for it to cut back. Every mesh keeps under
-/// <see cref="MaxTriangles"/>: past that it is cut coarser, and what still does not fit is left out.</summary>
+/// patches' sides as their curves and the triangles' as lines; a folded patch gives its cells', so the fold is in it -
+/// and its edge is exact and smooth at any zoom; along that outline a border under the triangles reaches past it for it
+/// to cut back. Every mesh keeps under <see cref="MaxTriangles"/>, but for the border along folds: past that it is cut
+/// coarser, and what still does not fit is left out.</summary>
 internal static class PdfMeshTessellator
 {
     public const int MaxTriangles = 1_000_000;
@@ -41,26 +43,20 @@ internal static class PdfMeshTessellator
         var everyPiece = CountNetSides(shading, shading.Triangles.Count, shading.Patches.Count);
         cut = DecideCuts(shading, everyPiece, scale, straight, budget, triangleCuts, patchCuts);
 
-        var grids = new ColoredVertex[patchCuts.Count][];
-        var folded = new bool[patchCuts.Count];
-        var patchPieces = new List<PdfMeshSide>[patchCuts.Count];
         var sideUse = new Dictionary<PdfMeshSide, int>();
         for (var index = 0; index < patchCuts.Count; index++)
         {
-            var patch = shading.Patches[index];
-            grids[index] = SampleGrid(shading, patch, patchCuts[index]);
-            folded[index] = IsFolded(grids[index], patchCuts[index]);
-            patchPieces[index] = folded[index]
-                ? GetCellPieces(patch, grids[index], patchCuts[index])
-                : GetPatchPieces(patch);
             for (var side = 0; side < 4; side++)
             {
-                var key = GetPatchSide(patch, side);
-                sideUse[key] = sideUse.GetValueOrDefault(key) + 1;
+                var key = GetPatchSide(shading.Patches[index], side);
+                if (!IsPoint(key))
+                {
+                    sideUse[key] = sideUse.GetValueOrDefault(key) + 1;
+                }
             }
         }
 
-        var net = CountNetSides(shading, triangleCuts.Count, patchPieces);
+        var net = CountNetSides(shading, triangleCuts.Count, 0);
         var body = new List<ColoredVertex>();
         var border = new List<ColoredVertex>();
         var reach = PieceLength / Math.Max(scale, 1e-9);
@@ -83,19 +79,24 @@ internal static class PdfMeshTessellator
         for (var index = 0; index < patchCuts.Count; index++)
         {
             var patch = shading.Patches[index];
+            var cuts = patchCuts[index];
+            var grid = SampleGrid(shading, patch, cuts);
+            var folded = IsFolded(grid, cuts);
+            var pieces = folded ? GetCellPieces(patch, grid, cuts, true) : GetPatchPieces(patch, grid, cuts);
+            AddNetSides(net, CollectionsMarshal.AsSpan(pieces));
             for (var side = 0; side < 4; side++)
             {
-                outer[side] = sideUse[GetPatchSide(patch, side)] == 1;
+                outer[side] = sideUse.GetValueOrDefault(GetPatchSide(patch, side)) == 1;
             }
 
-            AddPatch(body, border, grids[index], patchCuts[index], outer, folded[index], reach);
+            AddPatch(body, border, grid, cuts, outer, folded, reach);
         }
 
         var outline = new StreamGeometry { FillRule = FillRule.NonZero };
         var figures = outline.Open();
         if (!AddLoops(figures, CollectOuterPieces(net)))
         {
-            AddFigures(figures, shading, triangleCuts.Count, patchPieces);
+            AddFigures(figures, shading, triangleCuts.Count, patchCuts);
         }
 
         outline.RecalculateBounds();
@@ -227,12 +228,12 @@ internal static class PdfMeshTessellator
         sides[2] = new PdfMeshSide(cornerC, cornerC, cornerA, cornerA);
     }
 
-    private static void GetPatchSides(PdfMeshPatch patch, Span<PdfMeshSide> sides)
+    private static void GetPatchSides(PdfMeshPatch patch, Span<PdfMeshSide> sides, int turnSign = 0)
     {
         var count = PatchSides.Length;
         Span<int> order = stackalloc int[count];
-        var turn = 0.0;
-        for (var index = 0; index < count; index++)
+        var turn = (double)turnSign;
+        for (var index = 0; turnSign == 0 && index < count; index++)
         {
             var here = patch.Points[PatchSides[index]];
             var next = patch.Points[PatchSides[(index + 1) % count]];
@@ -251,9 +252,11 @@ internal static class PdfMeshTessellator
         }
     }
 
-    private static PdfMeshSide GetPatchSide(PdfMeshPatch patch, int side) =>
-        PdfMeshSide.Of(patch.Points[PatchSides[side * 3]], patch.Points[PatchSides[side * 3 + 1]],
-            patch.Points[PatchSides[side * 3 + 2]], patch.Points[PatchSides[(side * 3 + 3) % PatchSides.Length]]);
+    private static PdfMeshSide GetPatchSide(PdfMeshPatch patch, int side)
+    {
+        var forward = GetForwardSide(patch, side);
+        return PdfMeshSide.Of(forward.First, forward.Second, forward.Third, forward.Fourth);
+    }
 
     private static void AddNetSides(Dictionary<PdfMeshSide, int> net, ReadOnlySpan<PdfMeshSide> sides)
     {
@@ -363,7 +366,7 @@ internal static class PdfMeshTessellator
     }
 
     private static void AddFigures(StreamGeometryContext figures, PdfMeshShading shading, int triangles,
-        List<PdfMeshSide>[] patchPieces)
+        List<int> patchCuts)
     {
         var sides = new PdfMeshSide[4];
         for (var index = 0; index < triangles; index++)
@@ -372,9 +375,13 @@ internal static class PdfMeshTessellator
             AddFigure(figures, sides.AsSpan(0, 3));
         }
 
-        foreach (var pieces in patchPieces)
+        for (var index = 0; index < patchCuts.Count; index++)
         {
-            var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(pieces);
+            var patch = shading.Patches[index];
+            var cuts = patchCuts[index];
+            var grid = SampleGrid(shading, patch, cuts);
+            var pieces = IsFolded(grid, cuts) ? GetCellPieces(patch, grid, cuts, false) : GetPatchPieces(patch, grid, cuts);
+            var span = CollectionsMarshal.AsSpan(pieces);
             for (var start = 0; start + 4 <= span.Length; start += 4)
             {
                 AddFigure(figures, span.Slice(start, 4));
@@ -382,44 +389,38 @@ internal static class PdfMeshTessellator
         }
     }
 
-    private static Dictionary<PdfMeshSide, int> CountNetSides(PdfMeshShading shading, int triangles,
-        List<PdfMeshSide>[] patchPieces)
-    {
-        var net = new Dictionary<PdfMeshSide, int>();
-        Span<PdfMeshSide> sides = stackalloc PdfMeshSide[3];
-        for (var index = 0; index < triangles; index++)
-        {
-            GetTriangleSides(shading.Triangles[index], sides);
-            AddNetSides(net, sides);
-        }
-
-        foreach (var pieces in patchPieces)
-        {
-            AddNetSides(net, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(pieces));
-        }
-
-        return net;
-    }
-
-    private static List<PdfMeshSide> GetPatchPieces(PdfMeshPatch patch)
+    private static List<PdfMeshSide> GetPatchPieces(PdfMeshPatch patch, ColoredVertex[] grid, int cuts)
     {
         Span<PdfMeshSide> sides = stackalloc PdfMeshSide[4];
-        GetPatchSides(patch, sides);
+        GetPatchSides(patch, sides, Math.Sign(MeasurePatch(grid, cuts)));
         return [sides[0], sides[1], sides[2], sides[3]];
     }
 
-    private static List<PdfMeshSide> GetCellPieces(PdfMeshPatch patch, ColoredVertex[] grid, int cuts)
+    private static List<PdfMeshSide> GetCellPieces(PdfMeshPatch patch, ColoredVertex[] grid, int cuts,
+        bool wholeUniformSides)
     {
         var pieces = new List<PdfMeshSide>(cuts * cuts * 4);
+        var tolerance = MeasureTolerance(grid, cuts);
+        Span<int> uniform = stackalloc int[4];
+        for (var side = 0; side < 4; side++)
+        {
+            uniform[side] = wholeUniformSides ? FindSideTurn(grid, cuts, side, tolerance) : 0;
+        }
+
         Span<PdfMeshSide> cell = stackalloc PdfMeshSide[4];
+        Span<bool> skip = stackalloc bool[4];
         for (var stepV = 0; stepV < cuts; stepV++)
         {
             for (var stepU = 0; stepU < cuts; stepU++)
             {
-                var first = PlaceOf(grid, cuts, stepU, stepV);
-                var nextU = PlaceOf(grid, cuts, stepU + 1, stepV);
-                var both = PlaceOf(grid, cuts, stepU + 1, stepV + 1);
-                var nextV = PlaceOf(grid, cuts, stepU, stepV + 1);
+                skip[0] = stepV == 0 && uniform[0] != 0;
+                skip[1] = stepU == cuts - 1 && uniform[1] != 0;
+                skip[2] = stepV == cuts - 1 && uniform[2] != 0;
+                skip[3] = stepU == 0 && uniform[3] != 0;
+                var first = GetPlace(grid, cuts, stepU, stepV);
+                var nextU = GetPlace(grid, cuts, stepU + 1, stepV);
+                var both = GetPlace(grid, cuts, stepU + 1, stepV + 1);
+                var nextV = GetPlace(grid, cuts, stepU, stepV + 1);
                 var startU = (double)stepU / cuts;
                 var endU = (double)(stepU + 1) / cuts;
                 var startV = (double)stepV / cuts;
@@ -436,23 +437,69 @@ internal static class PdfMeshTessellator
                 cell[3] = stepU == 0
                     ? CutSide(patch[0, 0], patch[0, 1], patch[0, 2], patch[0, 3], endV, startV, nextV, first)
                     : new PdfMeshSide(nextV, nextV, first, first);
-                if (MeasureCell(grid, cuts, stepU, stepV) >= 0)
+                if (ClassifyCell(grid, cuts, stepU, stepV, tolerance) >= 0)
                 {
-                    pieces.Add(cell[0]);
-                    pieces.Add(cell[1]);
-                    pieces.Add(cell[2]);
-                    pieces.Add(cell[3]);
+                    for (var side = 0; side < 4; side++)
+                    {
+                        if (!skip[side])
+                        {
+                            pieces.Add(cell[side]);
+                        }
+                    }
+
                     continue;
                 }
 
                 for (var side = 3; side >= 0; side--)
                 {
-                    pieces.Add(new PdfMeshSide(cell[side].Fourth, cell[side].Third, cell[side].Second, cell[side].First));
+                    if (!skip[side])
+                    {
+                        pieces.Add(Reverse(cell[side]));
+                    }
                 }
             }
         }
 
+        for (var side = 0; side < 4; side++)
+        {
+            if (uniform[side] != 0)
+            {
+                var whole = GetForwardSide(patch, side);
+                pieces.Add(uniform[side] > 0 ? whole : Reverse(whole));
+            }
+        }
+
         return pieces;
+    }
+
+    private static PdfMeshSide Reverse(PdfMeshSide side) => new(side.Fourth, side.Third, side.Second, side.First);
+
+    private static PdfMeshSide GetForwardSide(PdfMeshPatch patch, int side) =>
+        new(patch.Points[PatchSides[side * 3]], patch.Points[PatchSides[side * 3 + 1]],
+            patch.Points[PatchSides[side * 3 + 2]], patch.Points[PatchSides[(side * 3 + 3) % PatchSides.Length]]);
+
+    private static int FindSideTurn(ColoredVertex[] grid, int cuts, int side, double tolerance)
+    {
+        var turn = 0;
+        for (var step = 0; step < cuts; step++)
+        {
+            var stepU = side switch { 0 or 2 => step, 1 => cuts - 1, _ => 0 };
+            var stepV = side switch { 1 or 3 => step, 0 => 0, _ => cuts - 1 };
+            var cellTurn = ClassifyCell(grid, cuts, stepU, stepV, tolerance);
+            if (cellTurn == 0)
+            {
+                continue;
+            }
+
+            if (turn != 0 && cellTurn != turn)
+            {
+                return 0;
+            }
+
+            turn = cellTurn;
+        }
+
+        return turn;
     }
 
     private static PdfMeshSide CutSide(PdfPoint start, PdfPoint control, PdfPoint otherControl, PdfPoint end,
@@ -526,7 +573,7 @@ internal static class PdfMeshTessellator
     private static ColoredVertex GetGridVertex(ColoredVertex[] grid, int cuts, int stepU, int stepV) =>
         grid[(stepU + 1) * (cuts + 3) + stepV + 1];
 
-    private static PdfPoint PlaceOf(ColoredVertex[] grid, int cuts, int stepU, int stepV)
+    private static PdfPoint GetPlace(ColoredVertex[] grid, int cuts, int stepU, int stepV)
     {
         var position = GetGridVertex(grid, cuts, stepU, stepV).Position;
         return new PdfPoint(position.X, position.Y);
@@ -538,37 +585,59 @@ internal static class PdfMeshTessellator
         var nextU = GetGridVertex(grid, cuts, stepU + 1, stepV).Position;
         var both = GetGridVertex(grid, cuts, stepU + 1, stepV + 1).Position;
         var nextV = GetGridVertex(grid, cuts, stepU, stepV + 1).Position;
-        return first.X * nextU.Y - nextU.X * first.Y + nextU.X * both.Y - both.X * nextU.Y +
-               both.X * nextV.Y - nextV.X * both.Y + nextV.X * first.Y - first.X * nextV.Y;
+        return (both.X - first.X) * (nextV.Y - nextU.Y) - (both.Y - first.Y) * (nextV.X - nextU.X);
     }
 
-    private static bool IsFolded(ColoredVertex[] grid, int cuts)
+    private static double MeasurePatch(ColoredVertex[] grid, int cuts)
     {
         var total = 0.0;
+        for (var stepV = 0; stepV < cuts; stepV++)
+        {
+            for (var stepU = 0; stepU < cuts; stepU++)
+            {
+                total += MeasureCell(grid, cuts, stepU, stepV);
+            }
+        }
+
+        return total;
+    }
+
+    private static double MeasureTolerance(ColoredVertex[] grid, int cuts)
+    {
         var largest = 0.0;
         for (var stepV = 0; stepV < cuts; stepV++)
         {
             for (var stepU = 0; stepU < cuts; stepU++)
             {
-                var area = MeasureCell(grid, cuts, stepU, stepV);
-                total += area;
-                largest = Math.Max(largest, Math.Abs(area));
+                largest = Math.Max(largest, Math.Abs(MeasureCell(grid, cuts, stepU, stepV)));
             }
         }
 
-        var tolerance = 1e-9 * largest;
+        return 1e-9 * largest;
+    }
+
+    private static int ClassifyCell(ColoredVertex[] grid, int cuts, int stepU, int stepV, double tolerance)
+    {
+        var area = MeasureCell(grid, cuts, stepU, stepV);
+        return area > tolerance ? 1 : area < -tolerance ? -1 : 0;
+    }
+
+    private static bool IsFolded(ColoredVertex[] grid, int cuts)
+    {
+        var tolerance = MeasureTolerance(grid, cuts);
+        var anyPositive = false;
+        var anyNegative = false;
         for (var stepV = 0; stepV < cuts; stepV++)
         {
             for (var stepU = 0; stepU < cuts; stepU++)
             {
-                if (MeasureCell(grid, cuts, stepU, stepV) * Math.Sign(total) < -tolerance)
-                {
-                    return true;
-                }
+                var turn = ClassifyCell(grid, cuts, stepU, stepV, tolerance);
+                anyPositive |= turn > 0;
+                anyNegative |= turn < 0;
             }
         }
 
-        return false;
+        return anyPositive && anyNegative;
     }
 
     private static void AddFigure(StreamGeometryContext figures, ReadOnlySpan<PdfMeshSide> pieces)
@@ -590,7 +659,7 @@ internal static class PdfMeshTessellator
     }
 
     private static void AddFigure(StreamGeometryContext figures, List<PdfMeshSide> pieces) =>
-        AddFigure(figures, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(pieces));
+        AddFigure(figures, CollectionsMarshal.AsSpan(pieces));
 
     private static void AddTriangle(List<ColoredVertex> vertices, PdfShading shading, PdfMeshTriangle triangle, int cuts)
     {
@@ -736,24 +805,38 @@ internal static class PdfMeshTessellator
 
     private static void AddFoldBorder(List<ColoredVertex> border, ColoredVertex[] grid, int cuts, double reach)
     {
+        var tolerance = MeasureTolerance(grid, cuts);
         for (var stepV = 0; stepV < cuts; stepV++)
         {
             for (var stepU = 0; stepU < cuts; stepU++)
             {
-                var turn = Math.Sign(MeasureCell(grid, cuts, stepU, stepV));
-                if (stepU > 0 && turn != Math.Sign(MeasureCell(grid, cuts, stepU - 1, stepV)))
+                var turn = ClassifyCell(grid, cuts, stepU, stepV, tolerance);
+                if (turn == 0)
                 {
-                    AddSideBorder(border, GetGridVertex(grid, cuts, stepU, stepV),
-                        GetGridVertex(grid, cuts, stepU, stepV + 1), FindCellMiddle(grid, cuts, stepU, stepV), reach);
+                    continue;
                 }
 
-                if (stepV > 0 && turn != Math.Sign(MeasureCell(grid, cuts, stepU, stepV - 1)))
+                if (stepU > 0 && ClassifyCell(grid, cuts, stepU - 1, stepV, tolerance) == -turn)
                 {
-                    AddSideBorder(border, GetGridVertex(grid, cuts, stepU, stepV),
-                        GetGridVertex(grid, cuts, stepU + 1, stepV), FindCellMiddle(grid, cuts, stepU, stepV), reach);
+                    AddFoldEdgeBorder(border, grid, cuts, stepU, stepV, stepU, stepV + 1, reach);
+                }
+
+                if (stepV > 0 && ClassifyCell(grid, cuts, stepU, stepV - 1, tolerance) == -turn)
+                {
+                    AddFoldEdgeBorder(border, grid, cuts, stepU, stepV, stepU + 1, stepV, reach);
                 }
             }
         }
+    }
+
+    private static void AddFoldEdgeBorder(List<ColoredVertex> border, ColoredVertex[] grid, int cuts, int stepU,
+        int stepV, int endU, int endV, double reach)
+    {
+        var start = GetGridVertex(grid, cuts, stepU, stepV);
+        var end = GetGridVertex(grid, cuts, endU, endV);
+        var across = FindCellMiddle(grid, cuts, stepU, stepV);
+        var cellReach = Math.Max(Math.Abs(across.X - start.Position.X), Math.Abs(across.Y - start.Position.Y)) * 2;
+        AddSideBorder(border, start, end, across, Math.Max(reach, cellReach));
     }
 
     private static Vector2<double> FindCellMiddle(ColoredVertex[] grid, int cuts, int stepU, int stepV)

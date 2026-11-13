@@ -24,8 +24,6 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
     /// <summary>Kept in the record's flags for the collector alone: its segment takes the union's two passes.</summary>
     private const uint UnionFlag = 1u << 16;
 
-    private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
-                                                              ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
 
     public static bool Enabled = true;
 
@@ -283,7 +281,7 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
         var union = (Items[firstInstance].Flags & UnionFlag) != 0 && device.HasDepthAttachment;
         if (!union)
         {
-            device.ColorComponentFlags = AllColorComponents;
+            device.ColorComponentFlags = DepthUnion.AllColorComponents;
             device.DepthCompareFunction = CompareOp.Always;
             device.DepthWriteEnable = true;
             DrawRecords(device, _effect.StrokeBatchDrawPass, firstInstance, count);
@@ -292,19 +290,11 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
 
         // The depth under the segment's clip is scratch for its union, as a lone translucent stroke's bounds are for it:
         // every fragment of the segment lies inside the clip, so clearing it is enough.
-        device.ClearDepthInRect(ScissorNow(device));
-        device.ColorComponentFlags = 0;
-        device.DepthCompareFunction = CompareOp.Less;
-        device.DepthWriteEnable = true;
+        DepthUnion.Settle(device, ScissorNow(device));
         DrawRecords(device, _effect.StrokeBatchUnionDepthPass, firstInstance, count);
-
-        device.ColorComponentFlags = AllColorComponents;
-        device.DepthCompareFunction = CompareOp.Equal;
-        device.DepthWriteEnable = false;
+        DepthUnion.Lay(device);
         DrawRecords(device, _effect.StrokeBatchUnionDrawPass, firstInstance, count);
-
-        device.DepthCompareFunction = CompareOp.Always;
-        device.DepthWriteEnable = true;
+        DepthUnion.Finish(device);
     }
 
     // One pass applied, then the segment's records: one indirect command for as many of them as the device takes at once,

@@ -146,6 +146,39 @@ public class ColoredMeshOutlineRenderTests
     }
 
     [Test]
+    public void TrianglesLyingOverEachOther_ShowTheLaterOne_EvenAtTheEdge()
+    {
+        var single = Disc(true);
+        var layered = new List<ColoredVertex>();
+        foreach (var vertex in single.Vertices)
+        {
+            layered.Add(vertex with { Color = Colors.Red });
+        }
+
+        foreach (var vertex in single.Vertices)
+        {
+            layered.Add(vertex with { Color = Colors.Lime });
+        }
+
+        var place = Matrix4x4.CreateScale<float>(8, 8, 1) * Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0);
+        var pixels = Render(new ColoredMesh(layered, single.Outline), place);
+
+        var reddest = 0;
+        var greenest = 0;
+        for (var at = 0; at < pixels.Length; at += 4)
+        {
+            reddest = Math.Max(reddest, pixels[at + 2]);
+            greenest = Math.Max(greenest, pixels[at + 1]);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(greenest, Is.EqualTo(255), "the later triangles on top");
+            Assert.That(reddest, Is.LessThanOrEqualTo(2), "the earlier ones nowhere, not even under the edge");
+        });
+    }
+
+    [Test]
     public void TwoFiguresSharingASide_LeaveNoSeamAlongIt()
     {
         var vertices = new List<ColoredVertex>();
