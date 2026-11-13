@@ -134,9 +134,10 @@ All packages share one version.
   sandbox's "PDF page" tab shows the page of a sample written there or of a file of one's own.
 - `RadialGradientBrush.GradientOriginRadius`: the gradient between two circles - the origin's of this radius, as a
   fraction of the end ellipse's, and the end one - as Canvas 2D's `createRadialGradient` and SVG 2's `fr` draw it;
-  where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
-  shadings are drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked
-  out point by point into a picture where it is not. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
+  where no circle passes nothing is painted - a fill drawn from its curves or as a soft mask too - and that edge is
+  smooth, covered as a shape's is. 0, the default, is the radial gradient as before. A PDF page's radial shadings are
+  drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked out point by
+  point into a picture where it is not, the texels its edge crosses covered by how much of them it paints. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
   and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
 - `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
   triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
