@@ -1142,14 +1142,14 @@ public partial class RenderCache
     {
         if (!InsideWhole(owner))
         {
-            var cut = ToFramebufferScissor(box, fullScissor);
+            var cut = ToClipScissor(box, fullScissor);
             return new Vector4F(cut.Offset.X, cut.Offset.Y, cut.Extent.Width, cut.Extent.Height);
         }
 
-        var left = (float)Math.Floor(box.X * _renderScale);
-        var top = (float)Math.Floor(box.Y * _renderScale);
-        return new Vector4F(left, top, (float)Math.Ceiling(box.Right * _renderScale) - left,
-            (float)Math.Ceiling(box.Bottom * _renderScale) - top);
+        var left = DevicePixels.ToDevicePixel(box.X, _renderScale);
+        var top = DevicePixels.ToDevicePixel(box.Y, _renderScale);
+        return new Vector4F(left, top, DevicePixels.ToDevicePixel(box.Right, _renderScale) - left,
+            DevicePixels.ToDevicePixel(box.Bottom, _renderScale) - top);
     }
 
     private bool InsideWhole(IUIComponent c)

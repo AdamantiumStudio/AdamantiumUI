@@ -200,7 +200,7 @@ public partial class RenderCache
         var (outer, whole) = _offscreenLayers.Closing;
         var fullScissor = DrawIn(outer);
         var scissor = !whole ? ResolveScissor(layer, World(layer), fullScissor, out _, out _)
-            : LaidDownClip(layer) is { } laidDown ? ToFramebufferScissor(laidDown, fullScissor)
+            : LaidDownClip(layer) is { } laidDown ? ToClipScissor(laidDown, fullScissor)
             : fullScissor;
         var alpha = LayerAlpha(layer);
         var mask = MaskOf(layer, fullScissor, ref alpha);
@@ -599,7 +599,7 @@ public partial class RenderCache
                 continue;
             }
 
-            var box = ToFramebufferScissor(new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height)
+            var box = ToClipScissor(new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height)
                 .TransformToAABB(World(owner)), fullScissor);
             Mix(ref print, box.Offset.X);
             Mix(ref print, box.Offset.Y);

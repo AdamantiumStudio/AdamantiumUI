@@ -2480,7 +2480,7 @@ public partial class RenderCache
         {
             if (_ops[i].Clip is not { } owner) continue;
             var op = _ops[i];
-            var rect = CumulativeClip(owner) is { } logical ? ToFramebufferScissor(logical, fullScissor) : fullScissor;
+            var rect = CumulativeClip(owner) is { } logical ? ToClipScissor(logical, fullScissor) : fullScissor;
 
             // THREE things hold a clip, not one, and missing any of them draws half the frame through the old viewport:
             // the Scissor op itself, the batch SEGMENT (which sets its own before drawing), and an instanced-fill FLUSH.

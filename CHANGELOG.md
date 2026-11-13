@@ -410,6 +410,10 @@ All packages share one version.
 
 ### Fixed
 
+- At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
+  `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
+  edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),
+  rather than rounding outward.
 - An `{Ancestor Logical=True}` binding below a part torn down, parked or pooled (a closed tab's page, which keeps its
   own parents inside) is no longer reported as having found no ancestor: it is out of the tree with that part.
 - A resource looked up with no element asking finds the current theme's palette before the theme's dictionaries, as
