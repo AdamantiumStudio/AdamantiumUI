@@ -41,7 +41,7 @@ internal sealed partial class PdfPageInterpreter
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<(PdfRadialShading, Rect, double), ImageSource> _rasterized = [];
-    private readonly Dictionary<(PdfMeshShading, double), ColoredMesh> _meshes = [];
+    private readonly Dictionary<(PdfMeshShading, double), PdfMesh> _meshes = [];
     private Rect _pageBox;
 
     /// <summary>What a pattern may cover in the stream being walked: the page, or the cell being drawn.</summary>
@@ -142,22 +142,23 @@ internal sealed partial class PdfPageInterpreter
                 // Cut as fine as the scale it is shown at asks; see through as one, so triangles that overlap do not
                 // darken where they do.
                 var scale = PdfMatrices.Scale(space);
-                if (!_meshes.TryGetValue((mesh, scale), out var triangles))
+                if (!_meshes.TryGetValue((mesh, scale), out var tessellated))
                 {
-                    triangles = PdfMeshTessellator.Tessellate(mesh, space, out var left);
+                    tessellated = PdfMeshTessellator.Tessellate(mesh, space, out var left);
                     if (left)
                     {
                         Tell($"A mesh shading is drawn with its first {PdfMeshTessellator.MaxTriangles} triangles only.");
                     }
 
-                    _meshes[(mesh, scale)] = triangles;
+                    _meshes[(mesh, scale)] = tessellated;
                 }
 
+                var triangles = tessellated.Mesh;
                 var faded = alpha < 1 && OpenGroup(new PdfPushGroupStep { Opacity = alpha }, output);
                 if (alpha < 1 && !faded)
                 {
                     // No group to be seen through as one: at least each triangle is, its corners carrying the opacity.
-                    triangles = Faded(triangles, alpha);
+                    triangles = Faded(tessellated, alpha);
                 }
 
                 Write(new PdfMeshStep(triangles, PdfMatrices.ToDrawing(space)), output);
@@ -470,16 +471,20 @@ internal sealed partial class PdfPageInterpreter
         return Allowed(low) ? low : null;
     }
 
-    private static ColoredMesh Faded(ColoredMesh mesh, double alpha)
+    private static ColoredMesh Faded(PdfMesh mesh, double alpha)
     {
-        var vertices = new ColoredVertex[mesh.Vertices.Count];
-        for (var i = 0; i < vertices.Length; i++)
+        var all = mesh.Mesh.Vertices;
+        var vertices = new ColoredVertex[all.Count - mesh.BorderVertexCount];
+        for (var index = 0; index < vertices.Length; index++)
         {
-            var v = mesh.Vertices[i];
-            vertices[i] = v with { Color = new Color(v.Color.R, v.Color.G, v.Color.B, Byte(alpha)) };
+            var vertex = all[mesh.BorderVertexCount + index];
+            vertices[index] = vertex with
+            {
+                Color = new Color(vertex.Color.R, vertex.Color.G, vertex.Color.B, Byte(alpha))
+            };
         }
 
-        return new ColoredMesh(vertices);
+        return new ColoredMesh(vertices, mesh.Mesh.Outline);
     }
 
     private static Rect Intersection(Rect a, Rect b)

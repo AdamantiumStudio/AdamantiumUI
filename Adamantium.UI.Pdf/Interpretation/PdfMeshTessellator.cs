@@ -13,67 +13,225 @@ namespace Adamantium.UI.Pdf.Interpretation;
 /// its corners is the shading's, not a straight run in sRGB. A patch is its tensor surface sampled on a grid, as fine as
 /// the patch is large on the page, its color bilinear in the patch's parameters, and drawn row by row of v, so where it
 /// folds over itself the larger v lies on top. The mesh is cut to its outline - the patches' sides as their curves, the
-/// triangles' as lines - so its edge is exact and smooth at any zoom; under the triangles lies a border reaching past
-/// that outline, which the outline cuts back. Every mesh keeps under <see cref="MaxTriangles"/>: past that it is cut
-/// coarser, and what still does not fit is left out.</summary>
+/// triangles' as lines - so its edge is exact and smooth at any zoom; along the sides no other piece shares, a border
+/// under the triangles reaches past that outline for it to cut back. Every mesh keeps under <see cref="MaxTriangles"/>:
+/// past that it is cut coarser, and what still does not fit is left out.</summary>
 internal static class PdfMeshTessellator
 {
     public const int MaxTriangles = 1_000_000;
 
-    // How long a piece of a patch or a cut triangle may be, in the page's points; and how finely one may be cut at most.
     private const double PieceLength = 2.0;
     private const int MaxCuts = 32;
 
+    private static readonly int[] PatchSides = [0, 4, 8, 12, 13, 14, 15, 11, 7, 3, 2, 1];
+
     /// <summary>The mesh as the page shows it at the scale <paramref name="space"/> puts it; <paramref name="cut"/> is
     /// whether pieces were left out to keep it under <see cref="MaxTriangles"/>.</summary>
-    public static ColoredMesh Tessellate(PdfMeshShading shading, PdfMatrix space, out bool cut)
+    public static PdfMesh Tessellate(PdfMeshShading shading, PdfMatrix space, out bool cut)
     {
         var scale = PdfMatrices.Scale(space);
         var body = new List<ColoredVertex>();
         var border = new List<ColoredVertex>();
-        var outline = new StreamGeometry { FillRule = FillRule.NonZero };
-        var figures = outline.Open();
+        var pieces = new List<PdfMeshSide>();
+        var outerPieces = new List<PdfMeshSide>();
+        var sides = CountSides(shading);
         var straight = shading.Function == null &&
                        shading.ColorSpace is PdfDeviceGrayColorSpace or PdfDeviceRgbColorSpace;
         var budget = MaxTriangles / Math.Max(1, shading.Triangles.Count + shading.Patches.Count);
-        // How far the border reaches past a triangle's side, in the shading's units: a piece's length on the page.
         var reach = PieceLength / Math.Max(scale, 1e-9);
+        Span<bool> outer = stackalloc bool[4];
         cut = false;
         foreach (var triangle in shading.Triangles)
         {
-            var cuts = straight ? 1 : Cuts(scale, budget, 1, triangle.A.Position, triangle.B.Position, triangle.C.Position);
-            if ((body.Count + border.Count) / 3 + cuts * cuts + 6 > MaxTriangles)
+            outer[0] = sides[PdfMeshSide.Line(triangle.A.Position, triangle.B.Position)] == 1;
+            outer[1] = sides[PdfMeshSide.Line(triangle.B.Position, triangle.C.Position)] == 1;
+            outer[2] = sides[PdfMeshSide.Line(triangle.C.Position, triangle.A.Position)] == 1;
+            var borderCost = 2 * Count(outer[..3]);
+            var cuts = straight
+                ? 1
+                : Cuts(scale, budget, 1, 0, borderCost, triangle.A.Position, triangle.B.Position, triangle.C.Position);
+            if ((body.Count + border.Count) / 3 + cuts * cuts + borderCost > MaxTriangles)
             {
                 cut = true;
                 break;
             }
 
             AddTriangle(body, shading, triangle, cuts);
-            AddTriangleBorder(border, shading, triangle, reach);
-            AddTriangleOutline(figures, triangle);
+            AddTriangleBorder(border, shading, triangle, outer[..3], reach);
+            AddTriangleSides(pieces, outerPieces, sides, triangle);
         }
 
         foreach (var patch in shading.Patches)
         {
-            var cuts = Cuts(scale, budget, 2, patch.Points);
-            if ((body.Count + border.Count) / 3 + 2 * (cuts + 2) * (cuts + 2) > MaxTriangles)
+            for (var side = 0; side < 4; side++)
+            {
+                outer[side] = sides[PatchSide(patch, side)] == 1;
+            }
+
+            var outerSides = Count(outer);
+            var cuts = Cuts(scale, budget, 2, 2 * outerSides, 8, patch.Points);
+            if ((body.Count + border.Count) / 3 + 2 * cuts * cuts + 2 * outerSides * cuts + 8 > MaxTriangles)
             {
                 cut = true;
                 break;
             }
 
-            AddPatch(body, border, shading, patch, cuts);
-            AddPatchOutline(figures, patch);
+            AddPatch(body, border, shading, patch, cuts, outer);
+            AddPatchSides(pieces, outerPieces, sides, patch);
+        }
+
+        var outline = new StreamGeometry { FillRule = FillRule.NonZero };
+        var figures = outline.Open();
+        var piecesPerFigure = shading.Patches.Count > 0 ? 4 : 3;
+        if (!AddLoops(figures, outerPieces))
+        {
+            AddFigures(figures, pieces, piecesPerFigure);
         }
 
         outline.RecalculateBounds();
-        border.AddRange(body);   // the border first: every triangle of the mesh lies over it
-        return new ColoredMesh(border, outline);
+        var borderVertexCount = border.Count;
+        border.AddRange(body);
+        return new PdfMesh(new ColoredMesh(border, outline), borderVertexCount);
     }
 
-    // As many cuts along a side as keep each piece under PieceLength on the page, within the triangles this one may
-    // have: a piece of a patch is two of them.
-    private static int Cuts(double scale, int budget, int perPiece, params PdfPoint[] points)
+    private static bool AddLoops(StreamGeometryContext figures, List<PdfMeshSide> outerPieces)
+    {
+        var leaving = new Dictionary<PdfPoint, List<int>>();
+        for (var index = 0; index < outerPieces.Count; index++)
+        {
+            var start = outerPieces[index].First;
+            if (!leaving.TryGetValue(start, out var from))
+            {
+                leaving[start] = from = [];
+            }
+
+            from.Add(index);
+        }
+
+        var used = new bool[outerPieces.Count];
+        var loops = new List<List<PdfMeshSide>>();
+        for (var first = 0; first < outerPieces.Count; first++)
+        {
+            if (used[first])
+            {
+                continue;
+            }
+
+            var loop = new List<PdfMeshSide>();
+            var current = first;
+            while (true)
+            {
+                used[current] = true;
+                loop.Add(outerPieces[current]);
+                var end = outerPieces[current].Fourth;
+                if (end == outerPieces[first].First)
+                {
+                    break;
+                }
+
+                current = NextUnused(leaving, used, end);
+                if (current < 0)
+                {
+                    return false;
+                }
+            }
+
+            loops.Add(loop);
+        }
+
+        foreach (var loop in loops)
+        {
+            AddFigure(figures, loop, 0, loop.Count);
+        }
+
+        return loops.Count > 0;
+    }
+
+    private static int NextUnused(Dictionary<PdfPoint, List<int>> leaving, bool[] used, PdfPoint at)
+    {
+        if (!leaving.TryGetValue(at, out var from))
+        {
+            return -1;
+        }
+
+        foreach (var index in from)
+        {
+            if (!used[index])
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static void AddFigures(StreamGeometryContext figures, List<PdfMeshSide> pieces, int piecesPerFigure)
+    {
+        for (var start = 0; start + piecesPerFigure <= pieces.Count; start += piecesPerFigure)
+        {
+            AddFigure(figures, pieces, start, piecesPerFigure);
+        }
+    }
+
+    private static void AddFigure(StreamGeometryContext figures, List<PdfMeshSide> pieces, int start, int count)
+    {
+        var segments = figures.BeginFigure(Point(pieces[start].First), true, true);
+        for (var index = start; index < start + count; index++)
+        {
+            var piece = pieces[index];
+            if (piece.First == piece.Second && piece.Third == piece.Fourth)
+            {
+                segments.LineTo(Point(piece.Fourth));
+            }
+            else
+            {
+                segments.CubicBezierTo(Point(piece.Second), Point(piece.Third), Point(piece.Fourth));
+            }
+        }
+
+        segments.CloseFigure();
+    }
+
+    private static Dictionary<PdfMeshSide, int> CountSides(PdfMeshShading shading)
+    {
+        var sides = new Dictionary<PdfMeshSide, int>();
+        foreach (var triangle in shading.Triangles)
+        {
+            AddSide(sides, PdfMeshSide.Line(triangle.A.Position, triangle.B.Position));
+            AddSide(sides, PdfMeshSide.Line(triangle.B.Position, triangle.C.Position));
+            AddSide(sides, PdfMeshSide.Line(triangle.C.Position, triangle.A.Position));
+        }
+
+        foreach (var patch in shading.Patches)
+        {
+            for (var side = 0; side < 4; side++)
+            {
+                AddSide(sides, PatchSide(patch, side));
+            }
+        }
+
+        return sides;
+    }
+
+    private static void AddSide(Dictionary<PdfMeshSide, int> sides, PdfMeshSide side) =>
+        sides[side] = sides.GetValueOrDefault(side) + 1;
+
+    private static PdfMeshSide PatchSide(PdfMeshPatch patch, int side) =>
+        PdfMeshSide.Of(patch.Points[PatchSides[side * 3]], patch.Points[PatchSides[side * 3 + 1]],
+            patch.Points[PatchSides[side * 3 + 2]], patch.Points[PatchSides[(side * 3 + 3) % PatchSides.Length]]);
+
+    private static int Count(ReadOnlySpan<bool> flags)
+    {
+        var count = 0;
+        foreach (var flag in flags)
+        {
+            count += flag ? 1 : 0;
+        }
+
+        return count;
+    }
+
+    private static int Cuts(double scale, int budget, int perPiece, int perCut, int fixedCost, params PdfPoint[] points)
     {
         double left = double.MaxValue, bottom = double.MaxValue, right = double.MinValue, top = double.MinValue;
         foreach (var point in points)
@@ -86,7 +244,7 @@ internal static class PdfMeshTessellator
 
         var size = Math.Max(right - left, top - bottom) * scale;
         var cuts = Math.Clamp((int)Math.Ceiling(size / PieceLength), 1, MaxCuts);
-        while (cuts > 1 && cuts * cuts * perPiece > budget)
+        while (cuts > 1 && cuts * cuts * perPiece + cuts * perCut + fixedCost > budget)
         {
             cuts--;
         }
@@ -94,8 +252,6 @@ internal static class PdfMeshTessellator
         return cuts;
     }
 
-    // The triangle cut into cuts² smaller ones, the values at each corner taken between the big one's by barycentric
-    // weights, then turned into color.
     private static void AddTriangle(List<ColoredVertex> vertices, PdfShading shading, PdfMeshTriangle triangle, int cuts)
     {
         ColoredVertex At(int towardB, int towardC)
@@ -122,7 +278,6 @@ internal static class PdfMeshTessellator
         }
     }
 
-    // The point of the triangle at barycentric weights, its values taken between the corners'.
     private static ColoredVertex Between(PdfShading shading, PdfMeshTriangle triangle, double weightA, double weightB,
         double weightC)
     {
@@ -139,18 +294,17 @@ internal static class PdfMeshTessellator
         return new ColoredVertex(position, ColorOf(shading, values));
     }
 
-    // A strip along each side, reaching `reach` out from the triangle, in the colors of the side's ends.
     private static void AddTriangleBorder(List<ColoredVertex> border, PdfShading shading, PdfMeshTriangle triangle,
-        double reach)
+        ReadOnlySpan<bool> outer, double reach)
     {
         var cornerA = Between(shading, triangle, 1, 0, 0);
         var cornerB = Between(shading, triangle, 0, 1, 0);
         var cornerC = Between(shading, triangle, 0, 0, 1);
         var middle = new Vector2<double>((cornerA.Position.X + cornerB.Position.X + cornerC.Position.X) / 3,
             (cornerA.Position.Y + cornerB.Position.Y + cornerC.Position.Y) / 3);
-        AddSideBorder(border, cornerA, cornerB, middle, reach);
-        AddSideBorder(border, cornerB, cornerC, middle, reach);
-        AddSideBorder(border, cornerC, cornerA, middle, reach);
+        if (outer[0]) AddSideBorder(border, cornerA, cornerB, middle, reach);
+        if (outer[1]) AddSideBorder(border, cornerB, cornerC, middle, reach);
+        if (outer[2]) AddSideBorder(border, cornerC, cornerA, middle, reach);
     }
 
     private static void AddSideBorder(List<ColoredVertex> border, ColoredVertex start, ColoredVertex end,
@@ -164,7 +318,6 @@ internal static class PdfMeshTessellator
             return;
         }
 
-        // The side's normal, turned away from the triangle's middle.
         var normalX = -alongY / length;
         var normalY = alongX / length;
         if ((start.Position.X - middle.X) * normalX + (start.Position.Y - middle.Y) * normalY < 0)
@@ -185,12 +338,12 @@ internal static class PdfMeshTessellator
         border.Add(startOut);
     }
 
-    private static void AddTriangleOutline(StreamGeometryContext figures, PdfMeshTriangle triangle)
+    private static void AddTriangleSides(List<PdfMeshSide> pieces, List<PdfMeshSide> outerPieces,
+        Dictionary<PdfMeshSide, int> sides, PdfMeshTriangle triangle)
     {
-        var cornerA = Point(triangle.A.Position);
-        var cornerB = Point(triangle.B.Position);
-        var cornerC = Point(triangle.C.Position);
-        // Every figure turns the same way, so where two overlap they add up instead of cancelling.
+        var cornerA = triangle.A.Position;
+        var cornerB = triangle.B.Position;
+        var cornerC = triangle.C.Position;
         var turn = (cornerB.X - cornerA.X) * (cornerC.Y - cornerA.Y) - (cornerB.Y - cornerA.Y) * (cornerC.X - cornerA.X);
         if (turn < 0)
         {
@@ -199,14 +352,23 @@ internal static class PdfMeshTessellator
             cornerC = swapped;
         }
 
-        figures.BeginFigure(cornerA, true, true).LineTo(cornerB).LineTo(cornerC).CloseFigure();
+        AddPiece(pieces, outerPieces, sides, new PdfMeshSide(cornerA, cornerA, cornerB, cornerB));
+        AddPiece(pieces, outerPieces, sides, new PdfMeshSide(cornerB, cornerB, cornerC, cornerC));
+        AddPiece(pieces, outerPieces, sides, new PdfMeshSide(cornerC, cornerC, cornerA, cornerA));
     }
 
-    // S(u, v) = sum of Pij Bi(u) Bj(v) (ISO 32000-2, 8.7.4.5.8), with the corner colors c00, c03, c33, c30 at
-    // (u, v) = (0, 0), (0, 1), (1, 1), (1, 0). The grid runs a cell past each side: those cells, the surface carried on
-    // and the color held at the side's, are the border.
+    private static void AddPiece(List<PdfMeshSide> pieces, List<PdfMeshSide> outerPieces,
+        Dictionary<PdfMeshSide, int> sides, PdfMeshSide piece)
+    {
+        pieces.Add(piece);
+        if (sides[PdfMeshSide.Of(piece.First, piece.Second, piece.Third, piece.Fourth)] == 1)
+        {
+            outerPieces.Add(piece);
+        }
+    }
+
     private static void AddPatch(List<ColoredVertex> body, List<ColoredVertex> border, PdfShading shading,
-        PdfMeshPatch patch, int cuts)
+        PdfMeshPatch patch, int cuts, ReadOnlySpan<bool> outer)
     {
         var side = cuts + 3;
         var grid = new ColoredVertex[side * side];
@@ -247,12 +409,28 @@ internal static class PdfMeshTessellator
             }
         }
 
-        // Rows of v outermost and u within: the triangles drawn later lie on top, as the larger v and then u must.
         for (var stepV = -1; stepV <= cuts; stepV++)
         {
             for (var stepU = -1; stepU <= cuts; stepU++)
             {
-                var into = stepU < 0 || stepU >= cuts || stepV < 0 || stepV >= cuts ? border : body;
+                List<ColoredVertex> into;
+                var beforeU = stepU < 0;
+                var pastU = stepU >= cuts;
+                var beforeV = stepV < 0;
+                var pastV = stepV >= cuts;
+                if (!beforeU && !pastU && !beforeV && !pastV)
+                {
+                    into = body;
+                }
+                else if (BorderCell(outer, beforeU, pastU, beforeV, pastV))
+                {
+                    into = border;
+                }
+                else
+                {
+                    continue;
+                }
+
                 var first = grid[(stepU + 1) * side + stepV + 1];
                 var nextU = grid[(stepU + 2) * side + stepV + 1];
                 var both = grid[(stepU + 2) * side + stepV + 2];
@@ -267,37 +445,45 @@ internal static class PdfMeshTessellator
         }
     }
 
-    // The patch's four sides as the cubic curves they are: v = 0, u = 1, v = 1 and u = 0, turned the way every figure
-    // of the outline turns.
-    private static void AddPatchOutline(StreamGeometryContext figures, PdfMeshPatch patch)
+    private static bool BorderCell(ReadOnlySpan<bool> outer, bool beforeU, bool pastU, bool beforeV, bool pastV)
     {
-        Span<int> order = stackalloc int[12];
-        var around = PatchSides;
+        var alongU = !beforeU && !pastU;
+        var alongV = !beforeV && !pastV;
+        if (beforeV && alongU) return outer[0];
+        if (pastU && alongV) return outer[1];
+        if (pastV && alongU) return outer[2];
+        if (beforeU && alongV) return outer[3];
+        if (beforeV && beforeU) return outer[0] && outer[3];
+        if (beforeV && pastU) return outer[0] && outer[1];
+        if (pastV && pastU) return outer[1] && outer[2];
+        return outer[2] && outer[3];
+    }
+
+    private static void AddPatchSides(List<PdfMeshSide> pieces, List<PdfMeshSide> outerPieces,
+        Dictionary<PdfMeshSide, int> sides, PdfMeshPatch patch)
+    {
+        var count = PatchSides.Length;
+        Span<int> order = stackalloc int[count];
         var turn = 0.0;
-        for (var index = 0; index < around.Length; index++)
+        for (var index = 0; index < count; index++)
         {
-            var here = patch.Points[around[index]];
-            var next = patch.Points[around[(index + 1) % around.Length]];
+            var here = patch.Points[PatchSides[index]];
+            var next = patch.Points[PatchSides[(index + 1) % count]];
             turn += here.X * next.Y - next.X * here.Y;
         }
 
-        for (var index = 0; index < around.Length; index++)
+        for (var index = 0; index < count; index++)
         {
-            order[index] = turn >= 0 ? around[index] : around[(around.Length - index) % around.Length];
+            order[index] = turn >= 0 ? PatchSides[index] : PatchSides[(count - index) % count];
         }
 
-        var segments = figures.BeginFigure(Point(patch.Points[order[0]]), true, true);
-        for (var sideStart = 0; sideStart < 12; sideStart += 3)
+        for (var sideStart = 0; sideStart < count; sideStart += 3)
         {
-            segments.CubicBezierTo(Point(patch.Points[order[sideStart + 1]]), Point(patch.Points[order[sideStart + 2]]),
-                Point(patch.Points[order[(sideStart + 3) % 12]]));
+            AddPiece(pieces, outerPieces, sides, new PdfMeshSide(patch.Points[order[sideStart]],
+                patch.Points[order[sideStart + 1]], patch.Points[order[sideStart + 2]],
+                patch.Points[order[(sideStart + 3) % count]]));
         }
-
-        segments.CloseFigure();
     }
-
-    // A patch's control points round its edge, three a side: P00 P10 P20 P30 P31 P32 P33 P23 P13 P03 P02 P01.
-    private static readonly int[] PatchSides = [0, 4, 8, 12, 13, 14, 15, 11, 7, 3, 2, 1];
 
     private static Vector2<double> Point(PdfPoint point) => new(point.X, point.Y);
 

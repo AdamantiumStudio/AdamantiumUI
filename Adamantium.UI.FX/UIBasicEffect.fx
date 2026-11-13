@@ -46,8 +46,7 @@ struct ColoredMeshVertex
 
 ColoredMeshVertex* MeshVertices;
 
-// 1 when the mesh is cut to an outline - its curves at CurveData, as a curve fill's (CurveTiles.fxh): the edge is the
-// outline's coverage, exact at any zoom; 0 leaves the triangles' own edges.
+// 1: the mesh is cut to the outline at CurveData by its curve coverage; 0: the triangles' own edges.
 uint MeshOutlined;
 
 struct COLORED_OUTPUT
@@ -74,7 +73,7 @@ float4 ColoredMesh_PS(COLORED_OUTPUT input) : SV_TARGET
 {
     float4 color = input.color;
     color.a *= opacity;
-    if (MeshOutlined != 0u)   // the same for the whole draw: the coverage's derivatives stay valid
+    if (MeshOutlined != 0u)
     {
         color.a *= CurveCoverage(input.local);
     }

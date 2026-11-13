@@ -225,6 +225,50 @@ public class PdfShadingDrawingTests
     }
 
     [Test]
+    public void TwoTrianglesSharingASide_HaveABorderOnTheirOuterSidesOnly()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]",
+            new byte[]
+            {
+                0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255,
+                0, 100, 0, 0, 255, 0, 0, 100, 50, 255, 255, 255, 0, 0, 50, 0, 0, 255,
+            });
+        var (_, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single().Mesh;
+
+        Assert.That(mesh.Vertices, Has.Count.EqualTo(4 * 6 + 2 * 3), "a strip on each of the four outer sides, none on the shared one");
+    }
+
+    [Test]
+    public void ALargeLatticeOfStraightColors_IsDrawnWhole()
+    {
+        const int side = 300;
+        var data = new System.Collections.Generic.List<byte>(side * side * 7);
+        for (var row = 0; row < side; row++)
+        {
+            for (var column = 0; column < side; column++)
+            {
+                data.AddRange(new[] { (byte)(column >> 8), (byte)column, (byte)(row >> 8), (byte)row });
+                data.AddRange(new[] { (byte)column, (byte)row, (byte)128 });
+            }
+        }
+
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream($"/ShadingType 5 /ColorSpace /DeviceRGB /BitsPerCoordinate 16 /BitsPerComponent 8 /VerticesPerRow {side} " +
+                      "/Decode [0 65535 0 65535 0 1 0 1 0 1]", data.ToArray());
+        var (page, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single().Mesh;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.Problems, Has.None.Contains("first"), "nothing left out");
+            Assert.That(mesh.Vertices.Count, Is.GreaterThanOrEqualTo(2 * (side - 1) * (side - 1) * 3));
+        });
+    }
+
+    [Test]
     public void ASeeThroughMeshIsSeenThroughAsOne_ItsCornersOpaque()
     {
         var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> /ExtGState << /G 6 0 R >> >>" };

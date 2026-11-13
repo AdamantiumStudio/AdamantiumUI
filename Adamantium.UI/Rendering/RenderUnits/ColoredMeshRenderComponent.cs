@@ -3,37 +3,46 @@ using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Curves;
 using Adamantium.UI.FX;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
 /// <summary>Draws a <see cref="ColoredMesh"/>: its corners are read by address in the vertex stage - no vertex format of
-/// their own - and each triangle's color runs between them.</summary>
+/// their own - and each triangle's color runs between them; a mesh with an outline is cut to it by the curve coverage.
+/// </summary>
 public sealed class ColoredMeshRenderComponent : UIRenderComponent
 {
     private const MemoryPropertyFlags MeshMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
 
     private readonly ReusableBuffer _buffer;
     private readonly ColoredMeshVertexRecord[] _vertices;
-
-    // The outline's packed curves, and where they live on the device; null for a mesh with no outline.
     private readonly uint[] _outlineWords;
     private readonly ReusableBuffer _outlineBuffer;
+    private readonly bool _outlineEnclosesNothing;
 
-    /// <summary>A mesh cut to <paramref name="outline"/> - its packed curves - or left with its triangles' edges.</summary>
+    /// <summary>A mesh cut to <paramref name="outline"/>, or left with its triangles' edges when it is null; an outline
+    /// that encloses nothing leaves nothing drawn.</summary>
     internal ColoredMeshRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, ColoredMesh mesh,
-        Retained.CurveFill outline, GpuBufferManager bufferManager) : this(device, uiBasicEffect, mesh, bufferManager)
+        PathCurves outline, GpuBufferManager bufferManager) : this(device, uiBasicEffect, mesh, bufferManager)
     {
         if (outline == null)
         {
             return;
         }
 
-        _outlineWords = outline.Words;
+        var packed = Retained.CurveFill.From(outline);
+        if (packed == null)
+        {
+            _outlineEnclosesNothing = true;
+            return;
+        }
+
+        _outlineWords = packed.Words;
         _outlineBuffer = ToDispose(BufferManager.CreateBuffer(
             BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, MeshMemory, "colored mesh outline"));
-        _outlineBuffer.Reserve(OutlineBytes);
+        _outlineBuffer.Reserve(OutlineBytes());
         _outlineBuffer.Invalidate();
     }
 
@@ -59,11 +68,11 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
 
     private ulong Bytes => (ulong)(_vertices.Length * Marshal.SizeOf<ColoredMeshVertexRecord>());
 
-    private ulong OutlineBytes => (ulong)(_outlineWords.Length * sizeof(uint));
+    private ulong OutlineBytes() => (ulong)(_outlineWords.Length * sizeof(uint));
 
     public override void Render()
     {
-        if (_vertices.Length == 0)
+        if (_vertices.Length == 0 || _outlineEnclosesNothing)
         {
             return;
         }
@@ -80,7 +89,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         UIBasicEffect.MeshOutlined.SetValue(_outlineBuffer != null ? 1u : 0u);
         if (_outlineBuffer != null)
         {
-            var outline = _outlineBuffer.Acquire(OutlineBytes, out var writeOutline);
+            var outline = _outlineBuffer.Acquire(OutlineBytes(), out var writeOutline);
             if (writeOutline)
             {
                 outline.SetData(_outlineWords, 0, (uint)_outlineWords.Length);
@@ -89,6 +98,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
             UIBasicEffect.CurveData.SetValue(outline.GetDeviceAddress());
             UIBasicEffect.CurveTiled.SetValue(Retained.InstancedFillCollector.CurveTilesEnabled ? 1u : 0u);
         }
+
         UIBasicEffect.BasicColoredMeshPass.Apply();
 
         GraphicsDevice.VertexType = null;   // the corners are read by address

@@ -18,8 +18,6 @@ namespace Adamantium.UITests.Rendering;
 public class ColoredMeshOutlineRenderTests
 {
     private const int Dim = 160;
-
-    // A circle of this radius about the middle, in the mesh's units.
     private const double Radius = 8;
     private const int Sides = 16;
 
@@ -30,7 +28,6 @@ public class ColoredMeshOutlineRenderTests
         protected override void OnRender(IDrawingContext context) => draw(context.ForControl(this));
     }
 
-    // Sixteen triangles round the middle, their outer edge a polygon a little outside the circle - coarse on purpose.
     private static ColoredMesh Disc(bool outlined)
     {
         var reach = (Radius + 1) / Math.Cos(Math.PI / Sides);
@@ -48,14 +45,14 @@ public class ColoredMeshOutlineRenderTests
         return outlined ? new ColoredMesh(vertices, circle) : new ColoredMesh(vertices);
     }
 
-    // The disc drawn `zoom` times its size about the window's middle.
-    private static byte[] Render(bool outlined, float zoom)
+    private static byte[] Render(bool outlined, float zoom) => Render(Disc(outlined),
+        Matrix4x4.CreateScale<float>(zoom, zoom, 1) * Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0));
+
+    private static byte[] Render(ColoredMesh mesh, Matrix4x4F place)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
         using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Transparent };
-        var place = Matrix4x4.CreateScale<float>(zoom, zoom, 1) * Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0);
-        var mesh = Disc(outlined);
         var box = new Rect(0, 0, Dim, Dim);
         var root = new VisualRoot(new DrawnView(session => session.DrawColoredMesh(mesh, place)), Dim, Dim);
         ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
@@ -122,8 +119,68 @@ public class ColoredMeshOutlineRenderTests
         const float zoom = 8;
         var pixels = Render(false, zoom);
 
-        // The polygon reaches past the circle: two pixels outside it is still painted.
         var column = (int)Math.Floor(Dim / 2.0 + (Radius * zoom + 2));
-        Assert.That(AlphaAt(pixels, column, Dim / 2), Is.EqualTo(255));
+        Assert.That(AlphaAt(pixels, column, Dim / 2), Is.EqualTo(255), "the polygon reaches past the circle");
+    }
+
+    [Test]
+    public void TwoFiguresSharingASide_LeaveNoSeamAlongIt()
+    {
+        var vertices = new List<ColoredVertex>();
+        void Square(double left)
+        {
+            var corners = new[]
+            {
+                new Vector2<double>(left, 0), new Vector2<double>(left + 40, 0),
+                new Vector2<double>(left + 40, 40), new Vector2<double>(left, 40)
+            };
+            foreach (var index in new[] { 0, 1, 2, 0, 2, 3 })
+            {
+                vertices.Add(new ColoredVertex(corners[index], Colors.White));
+            }
+        }
+
+        Square(0);
+        Square(40);
+        var outline = new StreamGeometry { FillRule = FillRule.NonZero };
+        var figures = outline.Open();
+        figures.BeginFigure(new Vector2<double>(0, 0), true, true).LineTo(new Vector2<double>(40, 0))
+            .LineTo(new Vector2<double>(40, 40)).LineTo(new Vector2<double>(0, 40)).CloseFigure();
+        figures.BeginFigure(new Vector2<double>(40, 0), true, true).LineTo(new Vector2<double>(80, 0))
+            .LineTo(new Vector2<double>(80, 40)).LineTo(new Vector2<double>(40, 40)).CloseFigure();
+        outline.RecalculateBounds();
+        var place = Matrix4x4.CreateTranslation<float>(40.3f, 60.3f, 0);
+
+        var pixels = Render(new ColoredMesh(vertices, outline), place);
+
+        Assert.Multiple(() =>
+        {
+            for (var row = 64; row < 96; row += 4)
+            {
+                Assert.That(AlphaAt(pixels, 80, row), Is.EqualTo(255), $"on the shared side at row {row}");
+            }
+        });
+    }
+
+    [Test]
+    public void TheEdge_LiesOnTheCurve_TurnedToo()
+    {
+        const float zoom = 6;
+        var turn = Matrix4x4.CreateRotationZ<float>(0.6f);
+        var pixels = Render(Disc(true), Matrix4x4.CreateScale<float>(zoom, zoom, 1) * turn *
+                                        Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0));
+        var radius = Radius * zoom;
+
+        Assert.Multiple(() =>
+        {
+            for (var step = 0; step < 16; step++)
+            {
+                var angle = 2 * Math.PI * (step + 0.21) / 16;
+                Assert.That(AlphaAt(pixels, (int)(Dim / 2.0 + (radius - 2) * Math.Cos(angle)),
+                    (int)(Dim / 2.0 + (radius - 2) * Math.Sin(angle))), Is.EqualTo(255), $"inside at step {step}");
+                Assert.That(AlphaAt(pixels, (int)(Dim / 2.0 + (radius + 2) * Math.Cos(angle)),
+                    (int)(Dim / 2.0 + (radius + 2) * Math.Sin(angle))), Is.Zero, $"outside at step {step}");
+            }
+        });
     }
 }
