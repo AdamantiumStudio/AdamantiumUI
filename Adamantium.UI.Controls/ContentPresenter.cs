@@ -25,10 +25,17 @@ public class ContentPresenter : InputUIComponent
     // presenter was never found again and stayed parked for good.
     private object ParkOwner => TemplatedParent ?? (object)this;
 
+    // Its name in the templated parent's template: the same in the next template, and another part's - a header showing
+    // the same content - is another.
+    private string _part;
+
+    private string Part => _part ??= (TemplatedParent as TemplatedUIComponent)?.PartName(this);
+
     private object _outgoingParkedKey;
 
     private IUIComponent _outgoingRoot;
     private TemplateResult _outgoingTemplateResult;
+    private DataTemplate _outgoingTemplate;
     private bool _outgoingIsContent;
     private bool _isContentChanged;
     private bool _transitionPending;
@@ -38,6 +45,8 @@ public class ContentPresenter : InputUIComponent
     private Size<double> _lastArrangeSize = new(double.NaN, double.NaN);
     // Supersedes a background build whose content has already been replaced.
     private int _deferToken;
+    // Builds up to this token were for a template taken down: what they make is never parked.
+    private int _abandonedThrough;
     private bool _deferInFlight;
 
     // One background build at a time, process-wide: overlapping builds see a circular dependency that does not exist.
@@ -197,6 +206,7 @@ public class ContentPresenter : InputUIComponent
         {
             _outgoingRoot = _currentRoot;
             _outgoingTemplateResult = _currentTemplateResult;
+            _outgoingTemplate = _currentTemplate;
             _outgoingParkedKey = parkedKey;
             _outgoingIsContent = ReferenceEquals(_currentRoot, _builtFor);
         }
@@ -230,35 +240,10 @@ public class ContentPresenter : InputUIComponent
 
     private void BuildCurrent(object newContent)
     {
-        if (ParkedVisuals.TryTake(ParkOwner, newContent, this, out var parkedRoot, out var parkedBuilt, out var parkedTemplate, out var parkedHostSize))
+        if (ParkedVisuals.TryTake(ParkOwner, newContent, Part, this, out var parkedRoot, out var parkedBuilt,
+                out var parkedTemplate, out var parkedHostSize))
         {
-            // Another window or theme: the attach below must revalidate every node the ordinary way.
-            if (!ParkedVisuals.IsUnchanged) ParkedSubtree.Revalidate(parkedRoot);
-
-            if (parkedBuilt?.HostComponent is { } builtBy && !ReferenceEquals(builtBy, this))
-            {
-                parkedBuilt.Rehost(this);
-                ParkedVisuals.MoveOwner(builtBy, this);
-            }
-            _currentRoot = parkedRoot;
-            _currentTemplateResult = parkedBuilt;
-            _currentTemplate = parkedTemplate;
-            _builtFor = newContent;
-            if (parkedTemplate == null && newContent is not IUIComponent && parkedRoot is TextBlock parkedLabel)
-            {
-                _label = parkedLabel;
-                PassLinesTo(parkedLabel);
-            }
-
-            Host(_currentRoot);
-            // Re-measured only in a host of another size: the layout it kept is still right otherwise.
-            ParkedSubtree.Unpark(_currentRoot, remeasure: parkedHostSize != _lastArrangeSize);
-
-            // The re-theming walk missed it while parked. After the attach: a node out of the tree has no queue to
-            // register the restyle with.
-            (_currentRoot as FundamentalUIComponent)?.RestyleIfItMissedASwap();
-
-            SetContentContext(newContent);
+            ShowParked(newContent, parkedRoot, parkedBuilt, parkedTemplate, parkedHostSize);
             return;
         }
 
@@ -323,6 +308,42 @@ public class ContentPresenter : InputUIComponent
         }
     }
 
+    private void ShowParked(object content, IUIComponent root, TemplateResult built, DataTemplate template,
+        Size<double> hostSize)
+    {
+        // Another window or theme: the attach below must revalidate every node the ordinary way.
+        if (!ParkedVisuals.IsUnchanged)
+        {
+            ParkedSubtree.Revalidate(root);
+        }
+
+        if (built?.HostComponent is { } builtBy && !ReferenceEquals(builtBy, this))
+        {
+            built.Rehost(this);
+            ParkedVisuals.MoveOwner(builtBy, this);
+        }
+
+        _currentRoot = root;
+        _currentTemplateResult = built;
+        _currentTemplate = template;
+        _builtFor = content;
+        if (template == null && content is not IUIComponent && root is TextBlock parkedLabel)
+        {
+            _label = parkedLabel;
+            PassLinesTo(parkedLabel);
+        }
+
+        Host(_currentRoot);
+        // Re-measured only in a host of another size: the layout it kept is still right otherwise.
+        ParkedSubtree.Unpark(_currentRoot, remeasure: hostSize != _lastArrangeSize);
+
+        // The re-theming walk missed it while parked. After the attach: a node out of the tree has no queue to register
+        // the restyle with.
+        (_currentRoot as FundamentalUIComponent)?.RestyleIfItMissedASwap();
+
+        SetContentContext(content);
+    }
+
     private void BuildFromTemplate(object content, DataTemplate template)
     {
         _currentTemplateResult = template.Build(this);
@@ -382,20 +403,28 @@ public class ContentPresenter : InputUIComponent
             try
             {
                 // A tab already left is skipped, so the one being waited for starts now.
-                if (token != System.Threading.Volatile.Read(ref _deferToken)) return;
+                if (token != System.Threading.Volatile.Read(ref _deferToken))
+                {
+                    return;
+                }
 
-                built = template.Build(this);
-            }
-            catch (Exception e)
-            {
-                failure = e;
+                try
+                {
+                    built = template.Build(this);
+                }
+                catch (Exception e)
+                {
+                    failure = e;
+                }
+
+                // Posted before the next build may start: one left behind - its tab left and entered again - is adopted
+                // (parked) before the next build for that content is, which then takes the parked one up instead.
+                LoopSignal.Post(() => AdoptDeferred(token, owner, content, template, built, failure));
             }
             finally
             {
                 BuildQueue.Release();
             }
-
-            LoopSignal.Post(() => AdoptDeferred(token, owner, content, template, built, failure));
         });
     }
 
@@ -409,15 +438,19 @@ public class ContentPresenter : InputUIComponent
 
         if (token != _deferToken)
         {
-            // Left before it was ready: a view that asked to be kept is parked like one that was on screen.
-            if (built?.RootComponent is { } finished && ParkedVisuals.ShouldKeep(finished) &&
-                owner is not FundamentalUIComponent { IsDiscarded: true } && OwnerHolds(owner, content))
+            // Left before it was ready: a view that asked to be kept is parked like one that was on screen - unless its
+            // template went (the next one builds its own), or a view for that content is already kept or shown, which
+            // it must not replace.
+            if (built?.RootComponent is { } finished && ParkedVisuals.ShouldKeep(finished) && token > _abandonedThrough &&
+                owner is not FundamentalUIComponent { IsDiscarded: true } && OwnerHolds(owner, content) &&
+                !ParkedVisuals.Holds(owner, content, Part) && !Shows(content))
             {
-                ParkedVisuals.Keep(owner, content, finished, built, template, new Size<double>(Double.NaN, Double.NaN));
+                ParkedVisuals.Keep(owner, content, finished, built, template, new Size<double>(Double.NaN, Double.NaN),
+                    Part);
                 return;
             }
 
-            built?.Destroy();
+            DiscardUnshown(built);
             return;
         }
 
@@ -446,6 +479,18 @@ public class ContentPresenter : InputUIComponent
 
         _deferInFlight = false;
 
+        // Built while an earlier build for the same content was finishing - its tab left and entered again - and parked
+        // when it landed: that one is shown, not a second copy.
+        if (ParkedVisuals.TryTake(owner, content, Part, this, out var waiting, out var waitingBuilt,
+                out var waitingTemplate, out var waitingHostSize))
+        {
+            DiscardUnshown(built);
+            DropCurrent();
+            ShowParked(content, waiting, waitingBuilt, waitingTemplate, waitingHostSize);
+            InvalidateMeasure();
+            return;
+        }
+
         if (built?.RootComponent == null)
         {
             // Nothing came back: build it here, so a broken view throws where it always threw.
@@ -463,6 +508,31 @@ public class ContentPresenter : InputUIComponent
         InvalidateMeasure();
     }
 
+    // Shown here now, built for that content: not the loading visual of a build still under way.
+    private bool Shows(object content) => _currentRoot != null && !_deferInFlight && Equals(_builtFor, content);
+
+    // Never in the tree, so nothing else announces its discard: its own release (a browser's) would never run. A view a
+    // template hands out again and again - one instance for all - may be shown or parked by now, and is left alone.
+    private static void DiscardUnshown(TemplateResult built)
+    {
+        if (built == null)
+        {
+            return;
+        }
+
+        if (built.RootComponent is { VisualParent: not null } or { IsParked: true })
+        {
+            return;
+        }
+
+        if (built.RootComponent != null)
+        {
+            ParkedSubtree.Discard(built.RootComponent);
+        }
+
+        built.Destroy();
+    }
+
     private void RemoveOutgoing()
     {
         if (_outgoingRoot == null)
@@ -470,11 +540,12 @@ public class ContentPresenter : InputUIComponent
 
         // Asked again: the content may have left its owner while the page slid out - a tab closed mid-transition.
         if (_outgoingParkedKey != null && CanComeBack(_outgoingParkedKey))
-            ParkCurrent(_outgoingParkedKey, _outgoingRoot, _outgoingTemplateResult, template: null);
+            ParkCurrent(_outgoingParkedKey, _outgoingRoot, _outgoingTemplateResult, _outgoingTemplate);
         else Release(_outgoingRoot, _outgoingTemplateResult);
 
         _outgoingRoot = null;
         _outgoingTemplateResult = null;
+        _outgoingTemplate = null;
         _outgoingParkedKey = null;
     }
 
@@ -487,16 +558,20 @@ public class ContentPresenter : InputUIComponent
         return false;
     }
 
-    /// <summary>Parks the content it shows when that is kept between visits (<c>x:KeepAlive</c>): its owner is taking
-    /// the template down, and the next template's presenter takes the content up. A slide or a background build under
-    /// way ends here.</summary>
-    internal void ParkShown()
+    /// <summary>Parks the content it shows when that is kept between visits (<c>x:KeepAlive</c>), for the next template's
+    /// presenter to take up. A control whose template holds this presenter calls it from its <c>OnTemplateRemoving</c>
+    /// when another template follows. A slide or a background build under way ends here.</summary>
+    public void ParkShown()
     {
+        _abandonedThrough = _deferToken;
         _deferToken++;
         _deferInFlight = false;
         _transitionPending = false;
         TransitionFinished();
-        if (_currentRoot == null || !ParkedVisuals.ShouldKeep(_currentRoot) || !CanComeBack(_builtFor))
+
+        // An owner thrown away with the template around it - a part of another control's template - takes no one back.
+        if (_currentRoot == null || !ParkedVisuals.ShouldKeep(_currentRoot) || !CanComeBack(_builtFor) ||
+            ParkOwner is FundamentalUIComponent { IsDiscarded: true })
         {
             return;
         }
@@ -511,7 +586,7 @@ public class ContentPresenter : InputUIComponent
 
     private void ParkCurrent(object key, IUIComponent root, TemplateResult built, DataTemplate template)
     {
-        ParkedVisuals.Keep(ParkOwner, key, root, built, template, _lastArrangeSize);
+        ParkedVisuals.Keep(ParkOwner, key, root, built, template, _lastArrangeSize, Part);
         RemoveVisualChild(root);
         Unhost(root);
     }
@@ -605,6 +680,11 @@ public class ContentPresenter : InputUIComponent
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
+
+        // A build still under way lands on no one: what it makes is let go, not hosted here or parked.
+        _abandonedThrough = _deferToken;
+        _deferToken++;
+        _deferInFlight = false;
         DropContentHandles();
     }
 
@@ -632,6 +712,7 @@ public class ContentPresenter : InputUIComponent
 
         _outgoingRoot = null;
         _outgoingTemplateResult = null;
+        _outgoingTemplate = null;
     }
 
     private void DiscardBuilt(IUIComponent root, bool built)
@@ -695,6 +776,7 @@ public class ContentPresenter : InputUIComponent
         {
             _outgoingRoot = null;
             _outgoingTemplateResult = null;
+            _outgoingTemplate = null;
             _outgoingParkedKey = null;
         }
 

@@ -192,28 +192,30 @@ public class TabStripPlacementSwitchTests
         });
     }
 
-    // The strip moved while the page was still being built in the background: the page landing late waits with the tab
-    // control, for whoever comes back to that tab - not with the presenter that went with the old template, where
-    // nothing would ever let it go.
+    // The strip moved while the page was still being built in the background, for the old template: never shown, it is
+    // let go when it lands - the moved strip shows the page built for it, and no second copy waits beside it for as
+    // long as the control lives.
     [Test]
-    public void APageBuiltLate_AfterTheStripMoved_WaitsWithTheTabControl()
+    public void APageBuiltLate_ForATemplateThatWent_IsLetGo()
     {
         using var building = new ManualResetEventSlim(false);
         using var gate = new ManualResetEventSlim(false);
-        var builds = 0;
+        var pages = new System.Collections.Concurrent.ConcurrentQueue<KeptPage>();
         var control = new TabControl
         {
             DeferContent = true,
             ItemsSource = new[] { "One", "Two" },
             ContentTemplate = new DataTemplate(() =>
             {
-                if (Interlocked.Increment(ref builds) == 1)
+                var page = new KeptPage();
+                pages.Enqueue(page);
+                if (pages.Count == 1)
                 {
                     building.Set();
                     gate.Wait(TimeSpan.FromSeconds(10));
                 }
 
-                return new TemplateResult { RootComponent = new KeptPage() };
+                return new TemplateResult { RootComponent = page };
             }),
         };
         control.SelectedIndex = 1;
@@ -226,13 +228,15 @@ public class TabStripPlacementSwitchTests
         var shown = PumpUntil(control, () => ShownPage(control) != null);
         PumpUntil(control, () => false, seconds: 0.3);
 
-        var waited = ParkedVisuals.TryTake(control, "Two", null, out var late, out _, out _, out _);
+        var built = pages.ToArray();
+        var parked = ParkedVisuals.TryTake(control, "Two", null, out _, out _, out _, out _);
         Assert.Multiple(() =>
         {
             Assert.That(shown, Is.True, "the moved strip shows a page");
-            Assert.That(waited, Is.True, "the page built late waits with the tab control");
-            Assert.That(late, Is.Not.SameAs(ShownPage(control)), "it is the late one, not the one shown");
-            Assert.That((late as KeptPage)?.IsDiscarded, Is.False, "and is whole");
+            Assert.That(built, Has.Length.EqualTo(2), "one page built for each template");
+            Assert.That(built[0].IsDiscarded, Is.True, "the one built for the template that went is let go");
+            Assert.That(ShownPage(control), Is.SameAs(built.Last()), "the moved strip shows the page built for it");
+            Assert.That(parked, Is.False, "no second copy waits beside it");
         });
     }
 
@@ -256,11 +260,6 @@ public class TabStripPlacementSwitchTests
 
     private static KeptPage ShownPage(TabControl control) =>
         (control.GetTemplateChild("PART_SelectedContentHost") as IUIComponent)?.VisualChildren.OfType<KeptPage>().FirstOrDefault();
-
-    private sealed class KeptPage : Border
-    {
-        public override NavigationCacheMode KeepAlive => NavigationCacheMode.Required;
-    }
 
     private sealed class DerivedStrip : TabControl
     {

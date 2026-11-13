@@ -14,8 +14,9 @@ public static class ParkedVisuals
     private static int _limit = 20;
 
     // By owner as well as content: a tab's header and body show the same view model, and keyed by content alone the
-    // header was handed the whole page.
-    private readonly record struct Slot(object Owner, object Key);
+    // header was handed the whole page. By the part too, within one owner: a control's header and body presenters show
+    // the same content as well, and each parks and takes only its own.
+    private readonly record struct Slot(object Owner, object Key, string Part);
 
     private static readonly Dictionary<Slot, Entry> _kept = new();
 
@@ -42,9 +43,10 @@ public static class ParkedVisuals
     public static bool ShouldKeep(IUIComponent visual) => ModeOf(visual) != NavigationCacheMode.Disabled;
 
     /// <summary>Parks <paramref name="root"/> under <paramref name="key"/>, letting go of another visual parked there
-    /// before. Call before removing it, so the removal reads as "coming back"; the caller does the removing.</summary>
+    /// before. Call before removing it, so the removal reads as "coming back"; the caller does the removing.
+    /// <paramref name="part"/> names the part of the owner's template that parks it, which alone takes it back.</summary>
     public static void Keep(object owner, object key, IUIComponent root, TemplateResult built = null, DataTemplate template = null,
-        Mathematics.Size<double> hostSize = default)
+        Mathematics.Size<double> hostSize = default, string part = null)
     {
         if (owner == null || key == null || root == null) return;
 
@@ -52,7 +54,7 @@ public static class ParkedVisuals
         var world = new World(root.RootVisual, Core.Resources.ThemeManager.Version,
             Core.Resources.ThemeManager.PaletteVersion);
 
-        var slot = new Slot(owner, key);
+        var slot = new Slot(owner, key, part);
         if (_kept.TryGetValue(slot, out var replaced) && !ReferenceEquals(replaced.Root, root))
         {
             EndPark(replaced);
@@ -69,8 +71,8 @@ public static class ParkedVisuals
         }
     }
 
-    /// <summary>Takes the visual kept under <paramref name="key"/>, if any. Not unparked here: attach it first, then
-    /// <see cref="ParkedSubtree.Unpark"/>.</summary>
+    /// <summary>Takes the visual kept under <paramref name="key"/>, if any, whichever part parked it. Not unparked here:
+    /// attach it first, then <see cref="ParkedSubtree.Unpark"/>.</summary>
     public static bool TryTake(object owner, object key, IUIComponent host, out IUIComponent root, out TemplateResult built,
         out DataTemplate template, out Mathematics.Size<double> hostSize)
     {
@@ -79,10 +81,63 @@ public static class ParkedVisuals
         template = null;
         hostSize = default;
 
-        if (owner == null || key == null) return false;
+        return TryFind(owner, key, out var slot) &&
+               TryTake(slot, host, out root, out built, out template, out hostSize);
+    }
 
-        var slot = new Slot(owner, key);
-        if (!_kept.Remove(slot, out var entry)) return false;
+    /// <summary>Takes the visual <paramref name="part"/> of the owner's template kept under <paramref name="key"/>, if
+    /// any - another part's is left where it waits.</summary>
+    public static bool TryTake(object owner, object key, string part, IUIComponent host, out IUIComponent root,
+        out TemplateResult built, out DataTemplate template, out Mathematics.Size<double> hostSize)
+    {
+        root = null;
+        built = null;
+        template = null;
+        hostSize = default;
+
+        return owner != null && key != null &&
+               TryTake(new Slot(owner, key, part), host, out root, out built, out template, out hostSize);
+    }
+
+    /// <summary>Whether <paramref name="part"/> of the owner's template keeps something under <paramref name="key"/>.</summary>
+    public static bool Holds(object owner, object key, string part) =>
+        owner != null && key != null && _kept.ContainsKey(new Slot(owner, key, part));
+
+    /// <summary>Whether something is kept under <paramref name="key"/> for <paramref name="owner"/>, by any part.</summary>
+    public static bool Holds(object owner, object key) => TryFind(owner, key, out _);
+
+    private static bool TryFind(object owner, object key, out Slot found)
+    {
+        found = default;
+        if (owner == null || key == null)
+        {
+            return false;
+        }
+
+        foreach (var slot in _kept.Keys)
+        {
+            if (ReferenceEquals(slot.Owner, owner) && Equals(slot.Key, key))
+            {
+                found = slot;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryTake(Slot slot, IUIComponent host, out IUIComponent root, out TemplateResult built,
+        out DataTemplate template, out Mathematics.Size<double> hostSize)
+    {
+        root = null;
+        built = null;
+        template = null;
+        hostSize = default;
+
+        if (!_kept.Remove(slot, out var entry))
+        {
+            return false;
+        }
 
         _evictable.Remove(slot);
         root = entry.Root;
@@ -106,6 +161,12 @@ public static class ParkedVisuals
     /// own content element only stops being parked, and goes with that control.</summary>
     public static void ReleaseAbsent(object owner, Predicate<object> holds) =>
         Release(slot => ReferenceEquals(slot.Owner, owner) && !holds(slot.Key));
+
+    /// <summary>Lets go of what <paramref name="owner"/> kept under <paramref name="key"/>, by any part: the owner shows
+    /// that content itself now, and nothing will come back for it there. A built one is discarded; a control's own
+    /// content element only stops being parked.</summary>
+    public static void Release(object owner, object key) =>
+        Release(slot => ReferenceEquals(slot.Owner, owner) && Equals(slot.Key, key));
 
     private static void Release(Predicate<Slot> which)
     {
@@ -202,7 +263,18 @@ public static class ParkedVisuals
         foreach (var slot in moving)
         {
             _kept.Remove(slot, out var entry);
-            var moved = new Slot(to, slot.Key);
+            var moved = new Slot(to, slot.Key, slot.Part);
+
+            // What the new owner parked there itself is let go, as a park over it would.
+            if (_kept.Remove(moved, out var replaced))
+            {
+                _evictable.Remove(moved);
+                if (!ReferenceEquals(replaced.Root, entry.Root))
+                {
+                    EndPark(replaced);
+                }
+            }
+
             _kept[moved] = entry;
 
             var at = _evictable.IndexOf(slot);

@@ -83,6 +83,29 @@ public class ParkedVisualsReleaseTests
         });
     }
 
+    // Views filed under another owner land on a slot that owner filled itself: the one there goes, as a park over it
+    // would, and is not left unreachable and never released.
+    [Test]
+    public void MoveOwner_LetsGoOfTheViewItLandsOn()
+    {
+        var key = new object();
+        var from = new object();
+        var moving = new ParkedView();
+        var there = new ParkedView();
+        ParkedVisuals.Keep(from, key, moving);
+        ParkedVisuals.Keep(Owner, key, there);
+
+        ParkedVisuals.MoveOwner(from, Owner);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(there.IsDiscarded, Is.True, "the view it lands on goes");
+            Assert.That(ParkedVisuals.TryTake(Owner, key, null, out var taken, out _, out _, out _), Is.True);
+            Assert.That(taken, Is.SameAs(moving), "the moved one waits there");
+            Assert.That(ParkedVisuals.Holds(Owner, key), Is.False, "and nothing else");
+        });
+    }
+
     [Test]
     public void Clear_DiscardsWhatWasKept()
     {
