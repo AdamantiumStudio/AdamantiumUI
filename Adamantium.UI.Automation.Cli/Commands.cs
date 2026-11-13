@@ -129,9 +129,7 @@ internal static class Commands
         "resize" => target.ResizeAsync(Double(arguments.At(1)), Double(arguments.At(2))),
         "pan" => target.PanAsync(Double(arguments.At(1)), Double(arguments.At(2))),
         "zoom" => target.ZoomAsync(Double(arguments.At(1))),
-        "wheel" => target.WheelAsync(int.TryParse(arguments.At(1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var notches)
-            ? notches
-            : throw new AutomationException($"'{arguments.At(1)}': expected a whole number of notches.")),
+        "wheel" => WheelAsync(target, arguments),
         "drag" => DragAsync(target.DragAsync, arguments.At(1), arguments.At(2)),
         "drop" => target.DropOntoAsync(session.Find(arguments.At(1)),
             arguments.Flag("before") ? DropSide.Before : arguments.Flag("after") ? DropSide.After : DropSide.Onto),
@@ -255,6 +253,21 @@ internal static class Commands
                 : throw new AutomationException($"'{text}': expected key=value.");
         }).ToList();
         return expected.Count > 0 ? expected : throw new AutomationException("expect <selector> <key>=<value>...");
+    }
+
+    // Over its middle, or over the point --at names in its own units.
+    private static Task WheelAsync(AutomationElement target, ScriptArguments arguments)
+    {
+        var notches = int.TryParse(arguments.At(1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var count)
+            ? count
+            : throw new AutomationException($"'{arguments.At(1)}': expected a whole number of notches.");
+        if (arguments.Option("at") is not { } at)
+        {
+            return target.WheelAsync(notches);
+        }
+
+        var point = Pair(at);
+        return target.WheelAsync(notches, point.X, point.Y);
     }
 
     private static Task DragAsync(Func<double, double, double, double, Task> drag, string from, string to)

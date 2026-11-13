@@ -116,7 +116,9 @@ public static class ScenarioTranslator
             "Resize" => $"{Target(step)}.ResizeAsync({Pair(step, "Size")})",
             "Pan" => $"{Target(step)}.PanAsync({Pair(step, "By")})",
             "Zoom" => $"{Target(step)}.ZoomAsync({Number(step, "Percent")})",
-            "Wheel" => $"{Target(step)}.WheelAsync({Number(step, "Notches")})",
+            "Wheel" => step.Attribute("At") == null
+                ? $"{Target(step)}.WheelAsync({Number(step, "Notches")})"
+                : $"{Target(step)}.WheelAsync({Number(step, "Notches")}, {Pair(step, "At")})",
             "Drag" => $"{Target(step)}.DragAsync({Pair(step, "From")}, {Pair(step, "To")})",
             "Drop" => $"{Target(step)}.DropOntoAsync({Find(step.Attribute("Onto"))}, {Automation}DropSide.{step.Attribute("Side")?.Value ?? "Onto"})",
             "Connect" => $"{Target(step)}.ConnectAsync({Find(step.Attribute("To"))})",
