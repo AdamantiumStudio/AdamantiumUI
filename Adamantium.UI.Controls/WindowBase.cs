@@ -1653,6 +1653,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             _owner = null;
             try
             {
+                AutomationEvents.Raise(this, AutomationEvent.WindowClosed);
                 Closed?.Invoke(this, EventArgs.Empty);
             }
             finally
@@ -1682,8 +1683,12 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public event EventHandler<EventArgs> Hidden;
     public event EventHandler<WindowRendererChangedEventArgs> RendererChanged;
 
-    /// <summary>Tells <see cref="Displayed"/> that the window first showed on screen.</summary>
-    protected void RaiseDisplayed() => Displayed?.Invoke(this, EventArgs.Empty);
+    /// <summary>Tells <see cref="Displayed"/>, and automation, that the window showed on screen.</summary>
+    protected void RaiseDisplayed()
+    {
+        Displayed?.Invoke(this, EventArgs.Empty);
+        AutomationEvents.Raise(this, AutomationEvent.WindowOpened);
+    }
 
     public event EventHandler<EventArgs> SourceInitialized;
 
