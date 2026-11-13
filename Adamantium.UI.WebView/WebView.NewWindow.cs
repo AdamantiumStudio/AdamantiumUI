@@ -9,10 +9,11 @@ namespace Adamantium.UI.WebView;
 public partial class WebView
 {
     public static readonly AdamantiumProperty NewPageProperty = AdamantiumProperty.Register(nameof(NewPage),
-        typeof(WebViewNewPage), typeof(WebView), new PropertyMetadata(null, OnBrowserSettingChanged));
+        typeof(WebViewNewPage), typeof(WebView), new PropertyMetadata(null, OnPageMakerChanged));
 
     /// <summary>A page another one opened, shown here in place of <see cref="Source"/>: as Chromium made it, still the
-    /// opener's <c>window.opener</c>, or made here at its address.</summary>
+    /// opener's <c>window.opener</c>, or made here at its address. Let go of once shown, it is the view's page all the
+    /// same.</summary>
     public WebViewNewPage NewPage
     {
         get => GetValue<WebViewNewPage>(NewPageProperty);
@@ -27,8 +28,7 @@ public partial class WebView
     {
         if (ReferenceEquals(browser, from))
         {
-            StopBrowser();
-            StartBrowser();
+            RestartBrowser();
         }
     }
 
