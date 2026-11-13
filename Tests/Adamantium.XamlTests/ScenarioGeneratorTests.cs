@@ -58,6 +58,20 @@ public class ScenarioGeneratorTests
             Is.EqualTo(new[] { "session.AllowErrors = true;", "await session.Find(global::Adamantium.UI.Automation.By.Id(\"Save\")).InvokeAsync();", "session.AllowErrors = false;" }));
     }
 
+    // Absent checks once; given a timeout, it waits until nothing matches - what goes only once work is done.
+    [Test]
+    public void Absent_ChecksOnce_OrWithATimeout_WaitsForItToGo()
+    {
+        var scenario = Read("  <Absent Target=\"id=Save\" />\n  <Absent Target=\"id=Save\" Timeout=\"5s\" />");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scenario.Problems, Is.Empty);
+            Assert.That(scenario.Steps[0], Does.EndWith(".ExpectAbsentAsync();"));
+            Assert.That(scenario.Steps[1], Does.Contain(".WaitForAbsentAsync(").And.Not.Contain("ExpectAbsentAsync"));
+        });
+    }
+
     [Test]
     public void APenDrawnHarderAlongTheStroke_PressesFromOneToTheOther()
     {
