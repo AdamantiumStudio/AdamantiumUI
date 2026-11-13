@@ -13,7 +13,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>A trail of ink with a width and a color. Points are float offsets from the stroke's origin, precise at any
 /// distance and moved by one field.</summary>
-public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
+public partial class StrokeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 {
     private readonly List<StrokePoint> _points = new();
     private Vector2F _min = new(float.MaxValue, float.MaxValue);
@@ -37,10 +37,24 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     /// copy is put together exactly the way the original was.</summary>
     public ICanvasItem Copy()
     {
-        var copy = new StrokeItem(Origin, Brush?.Copy(), Thickness);
+        var copy = new StrokeItem(Origin, Brush?.Copy(), Thickness) { Transform = Transform };
         foreach (var point in _points) copy.Add(new Vector2<double>(Origin.X + point.At.X, Origin.Y + point.At.Y), point.Pressure);
 
         return copy;
+    }
+
+    /// <summary>How it is turned and leaned, about the middle of its own box. <see cref="Bounds"/> stays the box of the
+    /// stroke unturned, as a shape's does.</summary>
+    public CanvasTransform Transform { get; set; } = CanvasTransform.None;
+
+    /// <summary>The middle of its box, which it is turned about.</summary>
+    public Vector2<double> Pivot
+    {
+        get
+        {
+            var box = Bounds;
+            return new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2);
+        }
     }
 
     /// <summary>Where the stroke's own coordinates start, in the world.</summary>
@@ -174,11 +188,15 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     }
 
     /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
-    /// two).</summary>
+    /// two). The pieces of a turned stroke stand where it was drawn, the turn laid into their points.</summary>
     /// <returns>Whether anything was rubbed out at all.</returns>
     public bool Erase(Vector2<double> center, double radius, List<StrokeItem> pieces)
     {
         if (_points.Count == 0 || radius <= 0) return false;
+
+        var turn = Transform;
+        var pivot = Pivot;
+        if (turn.IsSomething) center = turn.Undo(center, pivot);
 
         // Cut half the ink width further, so the pieces' round caps do not close the hole again.
         var reach = radius + Thickness / 2;
@@ -233,8 +251,9 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
 
         foreach (var kept in runs)
         {
-            var piece = new StrokeItem(kept[0].At, Brush, Thickness);
-            foreach (var point in kept) piece.Add(point.At, point.Pressure);
+            var start = turn.IsSomething ? turn.Apply(kept[0].At, pivot) : kept[0].At;
+            var piece = new StrokeItem(start, Brush, Thickness);
+            foreach (var point in kept) piece.Add(turn.IsSomething ? turn.Apply(point.At, pivot) : point.At, point.Pressure);
 
             pieces.Add(piece);
         }
@@ -460,6 +479,8 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     {
         if (_points.Count == 0) return false;
 
+        if (Transform.IsSomething) world = Transform.Undo(world, Pivot);
+
         var reach = tolerance + Thickness / 2;
         var local = new Vector2<double>(world.X - Origin.X, world.Y - Origin.Y);
 
@@ -474,10 +495,12 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     }
 
     /// <summary>Whether a world rectangle touches the ink itself - a loop drawn round other things touches nothing
-    /// inside it.</summary>
+    /// inside it. A turned stroke is asked with the rectangle turned back onto it.</summary>
     public bool Touches(Rect world)
     {
         if (_points.Count == 0) return false;
+
+        if (Transform.IsSomething) return TouchesTurned(world);
 
         var grown = world.Inflate(Math.Max(Thickness, 0) / 2);
         if (_points.Count == 1) return grown.Contains(World(0));
@@ -485,6 +508,23 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         for (var i = 1; i < _points.Count; i++)
         {
             if (CanvasTouch.SegmentMeets(World(i - 1), World(i), grown)) return true;
+        }
+
+        return false;
+    }
+
+    private bool TouchesTurned(Rect world)
+    {
+        var quad = CanvasTouch.Corners(world);
+        var pivot = Pivot;
+        for (var corner = 0; corner < quad.Length; corner++) quad[corner] = Transform.Undo(quad[corner], pivot);
+
+        var reach = Math.Max(Thickness, 0) / 2;
+        if (_points.Count == 1) return CanvasTouch.CircleOverlap(quad, World(0), reach);
+
+        for (var index = 1; index < _points.Count; index++)
+        {
+            if (CanvasTouch.ConvexOverlap(quad, CanvasTouch.Thick(World(index - 1), World(index), reach))) return true;
         }
 
         return false;

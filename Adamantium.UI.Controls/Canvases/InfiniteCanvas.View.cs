@@ -473,6 +473,11 @@ public partial class InfiniteCanvas
     public CanvasDrawing DrawingOnGlass(IDrawingSession session, object key, Vector2<double> origin) =>
         _front?.Places.For(session, this, key, origin, CanvasTransform.None, default);
 
+    /// <summary>The world rectangle an item is cut to as it is drawn, or <see cref="Rect.Empty"/> - the default - for none:
+    /// a mark kept inside the sheet it was made on. The cut follows the camera without the item being drawn again.
+    /// </summary>
+    protected internal virtual Rect ClipOf(ICanvasItem item) => Rect.Empty;
+
     /// <summary>Whether the frame belongs straight AFTER this item - true for the topmost selected thing that a layer
     /// draws itself. Asked by the layers as they paint.</summary>
     public bool ChromeGoesAfter(ICanvasItem item) => _chromeAfter != null && ReferenceEquals(item, _chromeAfter);
@@ -693,6 +698,12 @@ public partial class InfiniteCanvas
     // piece rides a placement worked out from the camera, so a pan or a zoom carries the frame without drawing it again.
     private void DrawManipulation(CanvasDrawing drawing, Rect bounds)
     {
+        if (!SharesFrame(_selection))
+        {
+            DrawOutlines(drawing);
+            return;
+        }
+
         var session = drawing.Session;
         var pen = PenOf(SelectionBrush, ref _selectionPen, ref _selectionPenBrush);
         var turn = SelectionTurn;
@@ -739,6 +750,25 @@ public partial class InfiniteCanvas
             var which = at;
             session.DrawRectangle(grip, box, ProceduralGeometry.CornerRadius.Empty, pen,
                 drawing.PartBy(() => Pin(GripAt(bounds, turn, which))));
+        }
+    }
+
+    private void DrawOutlines(CanvasDrawing drawing)
+    {
+        foreach (var item in _selection)
+        {
+            if (!item.IsPlaced) continue;
+
+            var box = item.Bounds;
+            CanvasTransform? turn = item is ICanvasTransformed { Transform.IsSomething: true } turned
+                ? turned.Transform
+                : null;
+            for (var edge = 0; edge < 4; edge++)
+            {
+                var side = edge;
+                drawing.Session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
+                    drawing.PartBy(() => Edge(box, turn, side)));
+            }
         }
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Canvases;
 
@@ -104,13 +105,35 @@ public class CanvasDrawLayer : MeasurableUIComponent
         // control in the run below, and straight after the item itself otherwise.
         if (Owner.ChromeGoesBefore(_items[0])) Owner.DrawChrome(session, _places);
 
+        var open = Rect.Empty;
         foreach (var item in _items)
         {
+            var clip = Owner.ClipOf(item);
+            if (clip != open)
+            {
+                if (!open.IsEmpty) session.PopGroup();
+                if (!clip.IsEmpty) Cut(session, clip);
+                open = clip;
+            }
+
             item.Render(_places.For(session, Owner, item));
 
-            if (Owner.ChromeGoesAfter(item)) Owner.DrawChrome(session, _places);
+            if (!Owner.ChromeGoesAfter(item)) continue;
+
+            if (!open.IsEmpty) session.PopGroup();
+            open = Rect.Empty;
+            Owner.DrawChrome(session, _places);
         }
+
+        if (!open.IsEmpty) session.PopGroup();
 
         _places.End();
     }
+
+    private void Cut(IDrawingSession session, Rect clip) =>
+        session.PushGroup(new DrawingGroupOptions
+        {
+            Clip = new RectangleGeometry(new Rect(0, 0, clip.Width, clip.Height)),
+            ClipPlacement = _places.Clip(Owner, clip)
+        });
 }

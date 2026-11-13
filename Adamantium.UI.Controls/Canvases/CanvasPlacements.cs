@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Controls.Canvases;
@@ -52,6 +53,21 @@ internal sealed class CanvasPlacements
 
         _drawing.Begin(session, canvas, placed);
         return _drawing;
+    }
+
+    /// <summary>The placement a world rectangle is stated in, from its top-left corner, on the camera as it is now - what
+    /// a clip cut to it follows. One per rectangle: everything cut to the same one shares it.</summary>
+    public Placement Clip(InfiniteCanvas canvas, Rect world)
+    {
+        if (!_placed.TryGetValue(world, out var placed)) _placed[world] = placed = new CanvasPlaced();
+
+        _seen.Add(world);
+        placed.Origin = new Vector2<double>(world.X, world.Y);
+        placed.Turn = CanvasTransform.None;
+        placed.Pivot = default;
+        placed.Used = 0;
+        placed.Main.Matrix = Main(canvas, placed);
+        return placed.Main;
     }
 
     /// <summary>Ends a record: whatever was not drawn in it gives its placements up.</summary>

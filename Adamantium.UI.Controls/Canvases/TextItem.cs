@@ -15,7 +15,7 @@ namespace Adamantium.UI.Controls.Canvases;
 /// part of the drawing and grows with the zoom, the way a label written on paper does.
 /// <para>Which is why it is shaped at the size it is DRAWN at rather than once: a glyph laid out for one size and then
 /// scaled is a blurred glyph, and the whole reason this engine keeps text as glyphs is not to do that.</para></summary>
-public partial class TextItem : AdamantiumViewModel, ICanvasItem
+public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 {
     // Two layouts: the drawing keeps a reference to its layout, so measuring at world size must not reshape it.
     private TextLayout _draw;
@@ -38,7 +38,21 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
     }
 
     /// <summary>A second piece of text just like this one.</summary>
-    public ICanvasItem Copy() => new TextItem(Origin, Text, Brush?.Copy(), FontSize, FontFamily);
+    public ICanvasItem Copy() => new TextItem(Origin, Text, Brush?.Copy(), FontSize, FontFamily) { Transform = Transform };
+
+    /// <summary>How it is turned and leaned, about the middle of its own box. <see cref="Bounds"/> stays the box of the
+    /// text unturned, as a shape's does.</summary>
+    public CanvasTransform Transform { get; set; } = CanvasTransform.None;
+
+    /// <summary>The middle of its box, which it is turned about.</summary>
+    public Vector2<double> Pivot
+    {
+        get
+        {
+            var box = Bounds;
+            return new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2);
+        }
+    }
 
     /// <summary>Where the text starts, in the world - its top-left corner.</summary>
     [Bindable, Affects(nameof(X), nameof(Y), nameof(Bounds))]
@@ -143,10 +157,24 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
 
     public bool HitTest(Vector2<double> world, double tolerance)
     {
+        if (Transform.IsSomething) world = Transform.Undo(world, Pivot);
+
         var box = Bounds;
 
         return world.X >= box.X - tolerance && world.X <= box.X + box.Width + tolerance &&
                world.Y >= box.Y - tolerance && world.Y <= box.Y + box.Height + tolerance;
+    }
+
+    /// <summary>Whether a world rectangle touches the text's box - turned, the rectangle turned back onto it.</summary>
+    public bool Touches(Rect world)
+    {
+        if (!Transform.IsSomething) return CanvasTouch.Meets(Bounds, world);
+
+        var quad = CanvasTouch.Corners(world);
+        var pivot = Pivot;
+        for (var corner = 0; corner < quad.Length; corner++) quad[corner] = Transform.Undo(quad[corner], pivot);
+
+        return CanvasTouch.ConvexOverlap(quad, CanvasTouch.Corners(Bounds));
     }
 
     public void Render(CanvasDrawing drawing)

@@ -49,7 +49,7 @@ public class CurveTool : ICanvasTool
 
         if (_making == null)
         {
-            if (canvas is not DrawingBoard board) return;   // a curve is part of a drawing
+            if (canvas is not DrawingBoard board || !canvas.CanDrawAt(e.World)) return;   // a curve is part of a drawing
 
             _making = new CurveItem(Kind, null, board.Ink?.Copy(), canvas.ScreenToWorldLength(board.InkThickness));
         }

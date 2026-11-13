@@ -51,6 +51,10 @@ public class TextTool : ICanvasTool
             _editing = found;
             _fresh = false;
         }
+        else if (!canvas.CanDrawAt(e.World))
+        {
+            return;
+        }
         else
         {
             _editing = new TextItem(e.World, string.Empty, board.Ink?.Copy(), canvas.ScreenToWorldLength(board.TextSize));

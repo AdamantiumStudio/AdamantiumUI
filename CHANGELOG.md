@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
+  of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
+  the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same
+  rectangle share it); `CanDrawAt(world)` - whether a tool may start making something there, asked by the shape, pen,
+  curve, text, control and node tools as they begin; `SharesFrame(selection)` - whether what is selected is framed as
+  one, with grips, or each thing by its own outline with none. Each answers as before by default.
+- Ink (`StrokeItem`) and text (`TextItem`) turn as shapes do (`ICanvasTransformed`): about the middle of their box,
+  picked and caught by a band where they are drawn, kept by a copy.
 - `WebViewOptions.ColorScheme` (`WebViewColorScheme`: `System`, `Light`, `Dark`): the color scheme every page is asked
   in - what its `prefers-color-scheme` reads - whatever the system's; the system's by default. In the system's dark one
   Chromium paints an empty page, as about:blank, dark; `Light` makes it white. The sandbox asks its pages in `Light`.

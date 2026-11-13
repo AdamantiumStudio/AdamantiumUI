@@ -165,11 +165,15 @@ public static class CanvasSvg
     private static XElement Ink(StrokeItem ink)
     {
         var points = new StringBuilder();
+        var turn = ink.Transform;
+        var pivot = ink.Pivot;
 
         foreach (var point in ink.Points)
         {
             if (points.Length > 0) points.Append(' ');
-            points.Append(Num(ink.Origin.X + point.At.X)).Append(',').Append(Num(ink.Origin.Y + point.At.Y));
+            var world = new Vector2<double>(ink.Origin.X + point.At.X, ink.Origin.Y + point.At.Y);
+            if (turn.IsSomething) world = turn.Apply(world, pivot);
+            points.Append(Num(world.X)).Append(',').Append(Num(world.Y));
         }
 
         // ROUND caps and joins, because that is what a pen drawing is: a stroke written with the default butt caps
@@ -360,6 +364,7 @@ public static class CanvasSvg
         }
 
         Paint(element, "fill", text.Brush);
+        Turn(element, text.Transform, text.Pivot);
         return element;
     }
 
@@ -948,6 +953,12 @@ public static class CanvasSvg
         if (m[0] == 1 && m[1] == 0 && m[2] == 0 && m[3] == 1 && m[4] == 0 && m[5] == 0) return;
 
         var box = item.Bounds;
+        if (item is ICanvasTransformed held && (m[1] != 0 || m[2] != 0))
+        {
+            Turned(held, item, box, m);
+            return;
+        }
+
         var corners = new[]
         {
             Mapped(m, box.X, box.Y), Mapped(m, box.X + box.Width, box.Y),
@@ -965,13 +976,15 @@ public static class CanvasSvg
         }
 
         item.Resize(new Rect(left, top, Math.Max(1e-9, right - left), Math.Max(1e-9, bottom - top)));
+    }
 
-        if (item is not ICanvasTransformed turned || (m[1] == 0 && m[2] == 0)) return;
-
-        turned.Transform = new CanvasTransform
-        {
-            Angle = Math.Atan2(m[1], m[0]) * 180 / Math.PI
-        };
+    private static void Turned(ICanvasTransformed held, ICanvasItem item, Rect box, double[] m)
+    {
+        var middle = Mapped(m, box.X + box.Width / 2, box.Y + box.Height / 2);
+        var width = box.Width * Math.Sqrt(m[0] * m[0] + m[1] * m[1]);
+        var height = box.Height * Math.Sqrt(m[2] * m[2] + m[3] * m[3]);
+        item.Resize(new Rect(middle.X - width / 2, middle.Y - height / 2, Math.Max(1e-9, width), Math.Max(1e-9, height)));
+        held.Transform = new CanvasTransform { Angle = Math.Atan2(m[1], m[0]) * 180 / Math.PI };
     }
 
     private static Vector2<double> Mapped(double[] m, double x, double y) =>
