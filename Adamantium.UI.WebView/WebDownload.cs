@@ -513,7 +513,8 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
 
         var stem = Path.GetFileNameWithoutExtension(name);
         var extension = Path.GetExtension(name);
-        if (OperatingSystem.IsWindows() && IsDeviceName(stem))
+        // What comes before the first dot is what Windows takes for a device, spaces before the dot aside: NUL.tar.gz too.
+        if (OperatingSystem.IsWindows() && IsDeviceName(name.Split('.')[0].TrimEnd(' ')))
         {
             stem = "_" + stem;
         }
@@ -567,9 +568,9 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
     private bool IsTaken(string path) =>
         File.Exists(path) || Directory.Exists(path) || File.Exists(path + ".crdownload") || pathTaken?.Invoke(path) == true;
 
-    private static bool IsDeviceName(string stem)
+    private static bool IsDeviceName(string beforeDot)
     {
-        var upper = stem.ToUpperInvariant();
+        var upper = beforeDot.ToUpperInvariant();
         return upper is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$" ||
                (upper.Length == 4 && (upper.StartsWith("COM", StringComparison.Ordinal) ||
                                       upper.StartsWith("LPT", StringComparison.Ordinal)) &&
