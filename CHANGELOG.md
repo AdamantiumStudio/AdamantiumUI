@@ -13,6 +13,8 @@ All packages share one version.
   rectangle share it); `CanDrawAt(world)` - whether a tool may start making something there, asked by the shape, pen,
   curve, text, control and node tools as they begin; `SharesFrame(selection)` - whether what is selected is framed as
   one, with grips, or each thing by its own outline with none. Each answers as before by default.
+- Ink (`StrokeItem`) and text (`TextItem`) turn as shapes do (`ICanvasTransformed`): about the middle of their box,
+  picked and caught by a band where they are drawn, kept by a copy.
 
 - A `WebView`'s page is searched as in a browser: `IsFindOpen`, `FindText` (sought as it is typed), `FindMatchCase`,
   and from the page `FindMatchCount` and `FindActiveMatch` (the first match made current at once); `OpenFindCommand`,
