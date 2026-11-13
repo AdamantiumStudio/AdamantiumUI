@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Curves;
 using Adamantium.UI.FX;
@@ -15,7 +16,12 @@ namespace Adamantium.UI.Rendering.RenderUnits;
 public sealed class ColoredMeshRenderComponent : UIRenderComponent
 {
     private const MemoryPropertyFlags MeshMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
+    private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
+                                                              ColorComponentFlagBits.GBit |
+                                                              ColorComponentFlagBits.BBit |
+                                                              ColorComponentFlagBits.ABit;
 
+    private readonly Rect _bounds;
     private readonly ReusableBuffer _buffer;
     private readonly ColoredMeshVertexRecord[] _vertices;
     private readonly uint[] _outlineWords;
@@ -49,6 +55,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
     public ColoredMeshRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, ColoredMesh mesh,
         GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
+        _bounds = mesh.Bounds;
         _vertices = new ColoredMeshVertexRecord[mesh.Vertices.Count];
         for (var index = 0; index < _vertices.Length; index++)
         {
@@ -86,6 +93,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         UIBasicEffect.Wvp.SetValue(RenderData.TransformMatrix * RenderData.ProjectionMatrix);
         UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
         UIBasicEffect.MeshVertices.SetValue(buffer.GetDeviceAddress());
+        UIBasicEffect.MeshTriangleCount.SetValue((uint)(_vertices.Length / 3));
         UIBasicEffect.MeshOutlined.SetValue(_outlineBuffer != null ? 1u : 0u);
         if (_outlineBuffer != null)
         {
@@ -105,9 +113,34 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
         GraphicsDevice.PolygonMode = PolygonMode.Fill;
         GraphicsDevice.PrimitiveTopology = PrimitiveTopology.TriangleList;
         GraphicsDevice.ColorBlendEquation = ColorBlendEquations.AlphaBlend;
-        GraphicsDevice.DepthCompareFunction = CompareOp.Always;
         GraphicsDevice.DepthTestEnabled = true;
+        if (_outlineBuffer != null && GraphicsDevice.HasDepthAttachment &&
+            TryDeviceBounds((float)_bounds.X, (float)_bounds.Y, (float)_bounds.Right, (float)_bounds.Bottom,
+                out var scratch))
+        {
+            DrawTopmostOnce(scratch);
+            return;
+        }
+
+        GraphicsDevice.DepthCompareFunction = CompareOp.Always;
         GraphicsDevice.DepthWriteEnable = true;
         GraphicsDevice.Draw((uint)_vertices.Length, 1);
+    }
+
+    private void DrawTopmostOnce(Rect2D scratch)
+    {
+        GraphicsDevice.ClearDepthInRect(scratch);
+        GraphicsDevice.ColorComponentFlags = 0;
+        GraphicsDevice.DepthCompareFunction = CompareOp.Less;
+        GraphicsDevice.DepthWriteEnable = true;
+        GraphicsDevice.Draw((uint)_vertices.Length, 1);
+
+        GraphicsDevice.ColorComponentFlags = AllColorComponents;
+        GraphicsDevice.DepthCompareFunction = CompareOp.Equal;
+        GraphicsDevice.DepthWriteEnable = false;
+        GraphicsDevice.Draw((uint)_vertices.Length, 1);
+
+        GraphicsDevice.DepthCompareFunction = CompareOp.Always;
+        GraphicsDevice.DepthWriteEnable = true;
     }
 }

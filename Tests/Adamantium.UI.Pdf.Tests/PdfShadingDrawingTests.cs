@@ -246,6 +246,101 @@ public class PdfShadingDrawingTests
     }
 
     [Test]
+    public void APatchFoldedPastItsSides_IsCutToWhatItPaints()
+    {
+        int[] coordinates =
+        [
+            20, 10, 20, 30, 20, 50, 20, 70,
+            160, 70, 0, 70, 50, 70,
+            50, 50, 50, 30, 50, 10,
+            0, 10, 160, 10,
+        ];
+        var data = new System.Collections.Generic.List<byte> { 0 };
+        foreach (var coordinate in coordinates)
+        {
+            data.Add((byte)coordinate);
+        }
+
+        data.AddRange([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0]);
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]", data.ToArray());
+        var (_, session) = Draw(pdf, "/S sh");
+        var outline = (StreamGeometry)session.All<DrawnMesh>().Single().Mesh.Outline;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CountWinding(outline, 65, 40), Is.Not.Zero, "the fold, past the right side at 50, is painted");
+            Assert.That(CountWinding(outline, 35, 40), Is.Not.Zero, "the patch between its sides");
+            Assert.That(CountWinding(outline, 95, 40), Is.Zero, "past the fold nothing");
+        });
+    }
+
+    private static int CountWinding(StreamGeometry outline, double pointX, double pointY)
+    {
+        var winding = 0;
+        foreach (var figure in outline.Figures)
+        {
+            var current = figure.StartPoint;
+            foreach (var segment in figure.Segments)
+            {
+                var end = segment switch
+                {
+                    CubicBezierSegment cubic => cubic.Point,
+                    LineSegment line => line.Point,
+                    _ => current
+                };
+                var steps = segment is CubicBezierSegment ? 64 : 1;
+                var previous = current;
+                for (var step = 1; step <= steps; step++)
+                {
+                    var along = (double)step / steps;
+                    var next = segment is CubicBezierSegment curve
+                        ? PointOnCubic(current, curve.ControlPoint1, curve.ControlPoint2, end, along)
+                        : end;
+                    winding += CountCrossing(previous, next, pointX, pointY);
+                    previous = next;
+                }
+
+                current = end;
+            }
+
+            winding += CountCrossing(current, figure.StartPoint, pointX, pointY);
+        }
+
+        return winding;
+    }
+
+    private static Vector2<double> PointOnCubic(Vector2<double> start, Vector2<double> control,
+        Vector2<double> otherControl, Vector2<double> end, double along)
+    {
+        var rest = 1 - along;
+        var first = rest * rest * rest;
+        var second = 3 * rest * rest * along;
+        var third = 3 * rest * along * along;
+        var fourth = along * along * along;
+        return new Vector2<double>(
+            start.X * first + control.X * second + otherControl.X * third + end.X * fourth,
+            start.Y * first + control.Y * second + otherControl.Y * third + end.Y * fourth);
+    }
+
+    private static int CountCrossing(Vector2<double> from, Vector2<double> to, double pointX, double pointY)
+    {
+        if ((from.Y > pointY) == (to.Y > pointY))
+        {
+            return 0;
+        }
+
+        var crossX = from.X + (pointY - from.Y) * (to.X - from.X) / (to.Y - from.Y);
+        if (crossX <= pointX)
+        {
+            return 0;
+        }
+
+        return to.Y > from.Y ? 1 : -1;
+    }
+
+    [Test]
     public void ATriangleShrunkToALine_LeavesItsNeighboursOutlineWhole()
     {
         var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };

@@ -126,6 +126,26 @@ public class ColoredMeshOutlineRenderTests
     }
 
     [Test]
+    public void TrianglesLyingOverEachOther_CoverTheEdgeOnce()
+    {
+        var single = Disc(true);
+        var doubled = new List<ColoredVertex>(single.Vertices);
+        doubled.AddRange(single.Vertices);
+        var place = Matrix4x4.CreateScale<float>(8, 8, 1) * Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0);
+
+        var once = Render(single, place);
+        var twice = Render(new ColoredMesh(doubled, single.Outline), place);
+
+        var largest = 0;
+        for (var at = 3; at < once.Length; at += 4)
+        {
+            largest = Math.Max(largest, Math.Abs(once[at] - twice[at]));
+        }
+
+        Assert.That(largest, Is.LessThanOrEqualTo(2), "the edge's pixels laid down by the topmost triangle alone");
+    }
+
+    [Test]
     public void TwoFiguresSharingASide_LeaveNoSeamAlongIt()
     {
         var vertices = new List<ColoredVertex>();

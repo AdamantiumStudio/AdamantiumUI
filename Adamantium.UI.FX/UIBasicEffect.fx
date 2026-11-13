@@ -49,6 +49,9 @@ ColoredMeshVertex* MeshVertices;
 // 1: the mesh is cut to the outline at CurveData by its curve coverage; 0: the triangles' own edges.
 uint MeshOutlined;
 
+// How many triangles the mesh has: a later one is drawn nearer, so where they overlap the depth keeps the last.
+uint MeshTriangleCount;
+
 struct COLORED_OUTPUT
 {
     float4 position : SV_POSITION;
@@ -63,6 +66,8 @@ COLORED_OUTPUT ColoredMeshVS(uint vertexId : SV_VertexID)
     ColoredMeshVertex corner = vertices[vertexId];
     COLORED_OUTPUT output;
     output.position = mul(float4(corner.Position, 0, 1), wvp);
+    float order = float(vertexId / 3u) + 1.0;
+    output.position.z = (1.0 - order / (float(MeshTriangleCount) + 2.0)) * output.position.w;
     output.color = corner.Color;
     output.local = corner.Position;
     return output;

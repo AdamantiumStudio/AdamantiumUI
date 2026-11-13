@@ -26,6 +26,7 @@ public static class PdfSampleDocument
         q 330 380 50 140 re W n /Sh2 sh Q
         q 480 520 110 160 re W n /Sh3 sh Q
         /Sh4 sh
+        /Sh5 sh
 
         q /Pattern cs /P1 scn 48 220 250 130 re f Q
         q 0 0 0 RG 1 w 48 220 250 130 re S Q
@@ -60,7 +61,7 @@ public static class PdfSampleDocument
             Latin1("<< /Type /Catalog /Pages 2 0 R >>"),
             Latin1("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
             Latin1("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << " +
-                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R /Sh3 12 0 R /Sh4 13 0 R >> " +
+                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R /Sh3 12 0 R /Sh4 13 0 R /Sh5 14 0 R >> " +
                    "/Pattern << /P1 10 0 R >> " +
                    "/ExtGState << /GA << /ca 0.6 >> /GM << /BM /Multiply >> >> >> >>"),
             Stream("", contents),
@@ -79,6 +80,8 @@ public static class PdfSampleDocument
                    "/Extend [true true] >>"),
             Stream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 16 /BitsPerComponent 8 /BitsPerFlag 8 " +
                    "/Decode [0 65535 0 65535 0 1 0 1 0 1]", CoonsPatch()),
+            Stream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 16 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                   "/Decode [0 65535 0 65535 0 1 0 1 0 1]", FoldedPatch()),
         };
 
         using var output = new MemoryStream();
@@ -106,24 +109,33 @@ public static class PdfSampleDocument
         return output.ToArray();
     }
 
-    // One Coons patch, its edges bowed: the twelve boundary points from p00 round, sixteen bits a coordinate, then the
-    // colors at the corners p00, p03, p33 and p30.
-    private static byte[] CoonsPatch()
-    {
-        (int X, int Y)[] points =
+    private static byte[] CoonsPatch() => EncodePatch(
         [
-            (200, 160), (215, 185), (205, 205), (220, 230),
-            (250, 245), (280, 225), (310, 235),
-            (300, 210), (310, 185), (300, 160),
-            (270, 145), (235, 170),
-        ];
+            200, 160, 215, 185, 205, 205, 220, 230,
+            250, 245, 280, 225, 310, 235,
+            300, 210, 310, 185, 300, 160,
+            270, 145, 235, 170,
+        ],
+        [255, 80, 0, 255, 220, 0, 0, 160, 255, 160, 0, 200]);
+
+    private static byte[] FoldedPatch() => EncodePatch(
+        [
+            420, 700, 420, 720, 420, 740, 420, 760,
+            560, 760, 380, 760, 450, 760,
+            450, 740, 450, 720, 450, 700,
+            380, 700, 560, 700,
+        ],
+        [230, 40, 60, 250, 200, 40, 40, 170, 90, 120, 60, 220]);
+
+    private static byte[] EncodePatch(int[] coordinates, byte[] colors)
+    {
         var data = new List<byte> { 0 };
-        foreach (var (x, y) in points)
+        foreach (var coordinate in coordinates)
         {
-            data.AddRange([(byte)(x >> 8), (byte)x, (byte)(y >> 8), (byte)y]);
+            data.AddRange([(byte)(coordinate >> 8), (byte)coordinate]);
         }
 
-        data.AddRange([255, 80, 0, 255, 220, 0, 0, 160, 255, 160, 0, 200]);
+        data.AddRange(colors);
         return data.ToArray();
     }
 
