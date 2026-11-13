@@ -278,6 +278,9 @@ public class ScrollViewer : ContentControl
         set => SetValue(VerticalScrollBarVisibilityProperty, value);
     }
 
+    /// <summary><c>PART_ScrollContentPresenter</c>.</summary>
+    protected override ContentPresenter ContentHost => _presenter;
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();

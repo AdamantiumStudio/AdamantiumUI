@@ -147,6 +147,20 @@ public class ContentControl : Control, IContentControl
       _contentChanged = true;
    }
 
+   /// <summary>Parks the content kept between visits (<c>x:KeepAlive</c>) for the next template - a theme swapped -
+   /// unless the control is left with no template and shows the content itself.</summary>
+   protected override void OnTemplateRemoving()
+   {
+      base.OnTemplateRemoving();
+      if (Template != null || !HostsContentWithoutTemplate)
+      {
+         ContentHost?.ParkShown();
+      }
+   }
+
+   /// <summary>The part of its template that shows <see cref="Content"/>: <c>PART_ContentPresenter</c> by default.</summary>
+   protected virtual ContentPresenter ContentHost => _contentPresenter;
+
    /// <summary>The template gone, the control shows its content itself on the next measure.</summary>
    public override void OnRemoveTemplate()
    {
@@ -212,6 +226,8 @@ public class ContentControl : Control, IContentControl
 
       if (content != null)
       {
+         // Parked for a template that never came: shown here, it is waited for no more.
+         ParkedVisuals.Release(this, content);
          _currentVisualChild = content as IUIComponent ?? new TextBlock { FontSize = 28, Text = content.ToString() };
          AddVisualChild(_currentVisualChild);
          if (_currentVisualChild.LogicalParent == null) AddLogicalChild(_currentVisualChild);
