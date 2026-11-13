@@ -36,11 +36,16 @@ float4 GradientColorIn(float2 p, float4 box)
         return lerp(lerp(GS0, GS1, c.x), lerp(GS2, GS3, c.x), c.y);
     }
 
-    float t = GradientParam(int(GParams.y), GGeom0, GGeom1, uv);
-    if (t <= GradientNowhere)   // between two circles, where none passes
-        return float4(0.0, 0.0, 0.0, 0.0);
+    if (int(GParams.y) == 5)   // between two circles: faded out across the edge where none passes
+    {
+        float covered;
+        float t = TwoCirclesParam(GGeom0, GGeom1, uv, covered);
+        float4 color = GradientRamp(GradientSpread(t, int(GParams.w)));
+        color.a *= covered;
+        return color;
+    }
 
-    return GradientRamp(GradientSpread(t, int(GParams.w)));
+    return GradientRamp(GradientSpread(GradientParam(int(GParams.y), GGeom0, GGeom1, uv), int(GParams.w)));
 }
 
 // The gradient's color at a point in the shape's local units, over the shape's bounds.
