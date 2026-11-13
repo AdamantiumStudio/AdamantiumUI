@@ -31,7 +31,39 @@ public class GeometryGroup : Geometry, IContainer
             {
                 newCollection.CollectionChanged += group.ChildrenOnCollectionChanged;
             }
+
+            group.WatchChildren();
+            group.InvalidateGeometry();
         }
+    }
+
+    private readonly List<Geometry> _watched = [];
+
+    private void WatchChildren()
+    {
+        foreach (var child in _watched)
+        {
+            child.ComponentUpdated -= ChildOnComponentUpdated;
+        }
+
+        _watched.Clear();
+        foreach (var child in Children ?? [])
+        {
+            if (child == null) continue;
+            child.ComponentUpdated += ChildOnComponentUpdated;
+            _watched.Add(child);
+        }
+    }
+
+    private void ChildOnComponentUpdated(object sender, ComponentUpdatedEventArgs e)
+    {
+        if (RefusesChange)
+        {
+            return;
+        }
+
+        InvalidateGeometry();
+        RaiseComponentUpdated();
     }
 
     public GeometryGroup()
@@ -45,8 +77,22 @@ public class GeometryGroup : Geometry, IContainer
         set => SetValue(FillRuleProperty, value);
     }
 
+    protected internal override FillRule CurveFillRule => FillRule;
+
+    // Each child's curves as it makes them, its own transform applied; the group's goes over them all.
+    private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        foreach (var child in Children)
+        {
+            builder.Append(child.CurvesForDrawing);
+        }
+
+        return true;
+    }
+
     private void ChildrenOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        WatchChildren();
         InvalidateGeometry();
     }
 
@@ -97,7 +143,7 @@ public class GeometryGroup : Geometry, IContainer
                 combined.RecalculateBounds();
             }
             
-            child.ProcessGeometry(GeometryType.Both);
+            child.ProcessGeometry(GeometryType.Outlined);
             foreach (var meshContour in child.Mesh.Contours)
             {
                 points.AddRange(meshContour.Points);
@@ -109,6 +155,7 @@ public class GeometryGroup : Geometry, IContainer
 
     protected internal override void ProcessGeometryCore(GeometryType geometryType)
     {
+        Mesh.Clear();
         if (Children.Count == 0) return;
 
         var polygon = new Polygon(FillRule);
@@ -145,6 +192,8 @@ public class GeometryGroup : Geometry, IContainer
                 }
             }
         }
+
+        if (geometryType == GeometryType.Outlined) return;
 
         var points = polygon.FillIndirect();
         Mesh.SetPoints(points);

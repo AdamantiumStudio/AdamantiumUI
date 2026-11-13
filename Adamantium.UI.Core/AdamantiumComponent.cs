@@ -308,6 +308,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // 4K tile grid that report was allocated ~150 000 times per drag step for no reader at all. The elements that
         // inherit the property are told apart, by the write (see TellInheritors).
         if (PropertyChanged == null
+            && ComponentUpdated == null
             && !property.HasChangedSubscribers
             && !OverridesOnPropertyChanged(GetType()))
         {

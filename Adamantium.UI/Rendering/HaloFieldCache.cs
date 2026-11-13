@@ -23,7 +23,7 @@ internal sealed class HaloFieldCache
         pad = 0;
         if (mesh == null || factory == null) return null;
 
-        if (_fields.TryGetValue(mesh.Key, out var cached))
+        if (_fields.TryGetValue(mesh.ShapeKey, out var cached))
         {
             pad = cached.Pad;
             return cached.Texture;
@@ -31,7 +31,7 @@ internal sealed class HaloFieldCache
 
         if (mesh.Loops is not { Count: > 0 })
         {
-            _fields[mesh.Key] = (null, 0);
+            _fields[mesh.ShapeKey] = (null, 0);
             return null;
         }
 
@@ -53,7 +53,7 @@ internal sealed class HaloFieldCache
         };
 
         var texture = factory.CreateTexture(description, pixels);
-        _fields[mesh.Key] = (texture, pad);
+        _fields[mesh.ShapeKey] = (texture, pad);
         return texture;
     }
 

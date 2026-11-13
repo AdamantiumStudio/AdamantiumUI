@@ -32,4 +32,6 @@ public class QuadraticBezierSegment : BezierSegmentBase
         MathHelper.Curves.AppendQuadraticBezier(currentPoint, ControlPoint, Point, 256, dense);
         return ResampledEvenly(dense);
     }
+
+    internal override void AppendCurves(Curves.PathCurveBuilder builder) => builder.QuadraticTo(ControlPoint, Point);
 }

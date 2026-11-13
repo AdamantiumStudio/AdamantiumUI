@@ -278,6 +278,14 @@ All packages share one version.
 
 ### Changed
 
+- Paths are filled and stroked from their curves on the GPU, exact at any zoom, instead of from triangles and a
+  polyline cut on the CPU. A fill's outline is cut once into quadratic pieces (a cubic within a thousandth of its size)
+  and those into a tree of square tiles of the fill's own space, made on the record thread for each version of the
+  geometry; a pixel walks only the pieces of its tile, and moving, turning, scaling or a perspective re-lay nothing. Every
+  brush a path takes - solid, gradient (a radial between two circles too), pattern, noise, picture, material - and a
+  path clip are drawn this way; a path is no longer cut into triangles where its fill is drawn from its curves (a
+  `MeshGeometry` keeps the triangles it is given). A stroke follows the curves: its ends, joins and dashes are measured
+  along them.
 - `CombinedGeometry` combines its operands through the engine's `GeometryOverlay` and fills the result with
   `RingFill`, the same code `Path` fills with; its properties and markup stay as they were. Its own copy of the overlay
   and its own fill are gone, so the engine's fixes reach it: rings touching at a point, a ring passing one point twice,
@@ -387,11 +395,10 @@ All packages share one version.
 
 ### Fixed
 
-- A page kept between visits (`x:KeepAlive`) stays the same page when its `TabControl`, `ContentControl` or
-  `ScrollViewer` takes another template - a tab strip moved to another side, a theme swapped. It was let go and made
-  again: a browser tab loaded its page from scratch, its history and what was typed in it gone, and showed its address
-  in place of its title until the page came back. A `ContentControl` left with no template shows its content itself,
-  as before, and what was parked for it is let go. A page built in the background (`DeferContent`) is one page: built
+- A page kept between visits (`x:KeepAlive`) stays the same page when its `ContentControl` or `ScrollViewer` takes
+  another template - a theme swapped - as a `TabControl`'s page does; it was let go and made again. A `ContentControl`
+  left with no template shows its content itself, as before, and what was parked for it is let go. A page built in the
+  background (`DeferContent`) is one page: built
   again while its tab was left and entered again, the first one is shown and the second let go; landing late while the
   tab shows one, or for a template taken down, it is let go - before, it was kept beside the page shown for as long as
   the control lived, or took the place of the page parked there, its history gone. A page built in the background and
@@ -399,6 +406,15 @@ All packages share one version.
   away - its window closed - is let go, not hosted there for good. A header showing the same content as its body no
   longer takes the body's parked page, nor parks over it: each part of a template parks and takes only its own.
   `ParkedVisuals.MoveOwner` lets go of a view parked where the moved one lands; it was left there unreachable for good.
+- A tab's page kept between visits (`x:KeepAlive`) stays the same page when the `TabControl` takes another template -
+  its strip moved to another side. It was let go and made again: a browser tab loaded its page from scratch, its history and what
+  was typed in it gone, and showed its address in place of its title until the page came back.
+- A component with a `ComponentUpdated` subscriber and no `PropertyChanged` one was not told its properties changed, so
+  a `GeometryGroup` or `CombinedGeometry` kept drawing a child as it was before the child changed; a group now watches
+  its children as a combined geometry does its operands.
+- An arc ending where it starts is left out and one with no radius is a straight line, as SVG reads them, instead of
+  making the figure's points not numbers.
+- A `PathGeometry` or `GeometryGroup` processed again kept the triangles it was cut into before.
 - A fill's soft fringe keeps the points of the mesh it feathers. They went through `float` on the way, so far from the
   origin - past about 10,000, where a `float` steps by 0.001 - the fringe stood off the fill's edge.
 - A regular polygon with a ring thickness (`RegularPolygonGeometry.Build`) fills its band. It came out empty: its

@@ -7,6 +7,8 @@
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
+#include "Includes/CurveMath.fxh"
+#include "Includes/CurveTiles.fxh"
 
 // The draw's instances, by the kind it draws.
 MaterialRectData* MaterialRects;
@@ -746,8 +748,7 @@ MaterialMeshPSInput MaterialFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     return o;
 }
 
-[shader("fragment")]
-float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
+float4 MaterialFrostedMeshColor(MaterialMeshPSInput input)
 {
     PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
@@ -771,8 +772,7 @@ float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
     return float4(color, input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
-[shader("fragment")]
-float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
+float4 MaterialGlassMeshColor(MaterialMeshPSInput input)
 {
     PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
@@ -814,8 +814,7 @@ float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
 }
 
 
-[shader("fragment")]
-float4 MaterialSheenMeshPS(MaterialMeshPSInput input) : SV_Target
+float4 MaterialSheenMeshColor(MaterialMeshPSInput input)
 {
     PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
@@ -831,8 +830,7 @@ float4 MaterialSheenMeshPS(MaterialMeshPSInput input) : SV_Target
     return float4(saturate(surface.rgb), input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
-[shader("fragment")]
-float4 MaterialMetalMeshPS(MaterialMeshPSInput input) : SV_Target
+float4 MaterialMetalMeshColor(MaterialMeshPSInput input)
 {
     PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
@@ -854,8 +852,7 @@ float4 MaterialMetalMeshPS(MaterialMeshPSInput input) : SV_Target
 }
 
 
-[shader("fragment")]
-float4 MaterialWoodMeshPS(MaterialMeshPSInput input) : SV_Target
+float4 MaterialWoodMeshColor(MaterialMeshPSInput input)
 {
     PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
@@ -885,11 +882,57 @@ float4 MaterialWoodMeshPS(MaterialMeshPSInput input) : SV_Target
     return float4(saturate(surface.rgb), input.Fade * it.Color3.w * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
+[shader("fragment")] float4 MaterialFrostedMeshPS(MaterialMeshPSInput i) : SV_Target { return MaterialFrostedMeshColor(i); }
+[shader("fragment")] float4 MaterialGlassMeshPS(MaterialMeshPSInput i) : SV_Target   { return MaterialGlassMeshColor(i); }
+[shader("fragment")] float4 MaterialSheenMeshPS(MaterialMeshPSInput i) : SV_Target   { return MaterialSheenMeshColor(i); }
+[shader("fragment")] float4 MaterialMetalMeshPS(MaterialMeshPSInput i) : SV_Target   { return MaterialMetalMeshColor(i); }
+[shader("fragment")] float4 MaterialWoodMeshPS(MaterialMeshPSInput i) : SV_Target    { return MaterialWoodMeshColor(i); }
+
+// ---- THE SAME MATERIALS DRAWN FROM THEIR CURVES (see CurveMath.fxh) ------------------------------------------------
+// A quad each over the fill's box, the mesh's local space carried down, the edge's coverage from the curves.
+
+[shader("vertex")]
+MaterialMeshPSInput MaterialCurveVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
+{
+    PatternGeomData* items = MaterialGeometries;
+    PatternGeomData it = items[instanceId];
+    NodeSlot* nodes = Transforms;
+    float4x4 toSlot = mul(it.Local, nodes[(uint)it.Params.w].World);
+    float2 at = CurveQuadCorner(vertexId, toSlot);
+
+    MaterialMeshPSInput o;
+    o.Position = mul(mul(float4(at, 0.0, 1.0), toSlot), Projection);
+    o.Local = at;
+    o.InstId = instanceId;
+    int fadeSlot = int(it.Params.x);
+    o.Fade = lerp(1.0, nodes[max(fadeSlot, 0)].Params.x, step(0.0, float(fadeSlot)));
+    o.ClipBox   = ClipShapeBox(it.Anim.w);
+    o.ClipRadii = ClipShapeRadii(it.Anim.w);
+    return o;
+}
+
+float4 MaterialCurveCovered(float4 color, MaterialMeshPSInput input)
+{
+    float coverage = CurveCoverage(input.Local);
+    if (coverage <= 0.0)
+    {
+        discard;
+    }
+
+    return float4(color.rgb, color.a * coverage);
+}
+
+[shader("fragment")] float4 MaterialFrostedCurvePS(MaterialMeshPSInput i) : SV_Target { return MaterialCurveCovered(MaterialFrostedMeshColor(i), i); }
+[shader("fragment")] float4 MaterialGlassCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialGlassMeshColor(i), i); }
+[shader("fragment")] float4 MaterialSheenCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialSheenMeshColor(i), i); }
+[shader("fragment")] float4 MaterialMetalCurvePS(MaterialMeshPSInput i) : SV_Target   { return MaterialCurveCovered(MaterialMetalMeshColor(i), i); }
+[shader("fragment")] float4 MaterialWoodCurvePS(MaterialMeshPSInput i) : SV_Target    { return MaterialCurveCovered(MaterialWoodMeshColor(i), i); }
+
 
 // =====================================================================================================================
 // TECHNIQUE - one pass per TREATMENT and CARRIER. Frosted serves Acrylic and Mica, which differ in what is CAPTURED and
-// not in what is done with it; Glass bends the same capture; the surfaces read no capture at all. Sdf and Mesh are the
-// carriers: a shape described by a formula, and one that arrives as triangles.
+// not in what is done with it; Glass bends the same capture; the surfaces read no capture at all. Sdf, Mesh and Curve
+// are the carriers: a shape described by a formula, one that arrives as triangles, and one drawn from its curves.
 // =====================================================================================================================
 technique Material
 {
@@ -953,4 +996,33 @@ technique Material
         PixelShader = MaterialWoodMeshPS;
     }
 
+    pass FrostedCurve
+    {
+        VertexShader = MaterialCurveVS;
+        PixelShader = MaterialFrostedCurvePS;
+    }
+
+    pass GlassCurve
+    {
+        VertexShader = MaterialCurveVS;
+        PixelShader = MaterialGlassCurvePS;
+    }
+
+    pass SheenCurve
+    {
+        VertexShader = MaterialCurveVS;
+        PixelShader = MaterialSheenCurvePS;
+    }
+
+    pass MetalCurve
+    {
+        VertexShader = MaterialCurveVS;
+        PixelShader = MaterialMetalCurvePS;
+    }
+
+    pass WoodCurve
+    {
+        VertexShader = MaterialCurveVS;
+        PixelShader = MaterialWoodCurvePS;
+    }
 }

@@ -17,6 +17,16 @@ public abstract class PathSegment : AdamantiumComponent
     
     internal abstract Vector2<double>[] ProcessSegment(Vector2<double> currentPoint);
 
+    /// <summary>Gives the segment to <paramref name="builder"/> as curves, from where its figure has got to. By default
+    /// the points <see cref="ProcessSegment"/> cuts it into, as straight pieces.</summary>
+    internal virtual void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        foreach (var point in ProcessSegment(builder.Current))
+        {
+            builder.LineTo(point);
+        }
+    }
+
     /// <summary>A curve sampled densely along its parameter, resampled evenly along its length - a point about every 3
     /// pixels, 8 to 256 of them - so the stroke neither bunches where the curve is slow nor goes angular where it is fast;
     /// its two ends for a curve of no length, nothing for none.</summary>

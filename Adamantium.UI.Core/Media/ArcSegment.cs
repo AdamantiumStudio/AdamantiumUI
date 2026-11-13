@@ -90,13 +90,86 @@ public class ArcSegment : PathSegment
             tessellationFactor);
     }
 
+    // In the frame where the arc is a circle: whole turns of at most 45 degrees, each one cubic, carried back by the frame's
+    // inverse - an affine map moves a Bezier curve exactly. As SVG reads an arc: one ending where it starts is left out,
+    // one with no radius is a straight line.
+    internal override void AppendCurves(Curves.PathCurveBuilder builder)
+    {
+        if (builder.Current == Point)
+        {
+            return;
+        }
+
+        var radiusX = Math.Abs(Size.Width);
+        var radiusY = Math.Abs(Size.Height);
+        if (!(radiusX > 0) || !(radiusY > 0) || double.IsInfinity(radiusX) || double.IsInfinity(radiusY))
+        {
+            builder.LineTo(Point);
+            return;
+        }
+
+        var frame = Frame(builder.Current, Point, radiusX, radiusY, RotationAngle, IsLargeArc,
+            SweepDirection == SweepDirection.CounterClockwise);
+        var sweep = double.DegreesToRadians(frame.Range) * frame.Sign;
+        var pieces = Math.Max(1, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 4)));
+        var step = sweep / pieces;
+        var reach = 4.0 / 3.0 * Math.Tan(step / 4) * frame.Radius;
+        var angle = double.DegreesToRadians(frame.StartAngle);
+        for (var i = 0; i < pieces; i++)
+        {
+            var next = angle + step;
+            var fromDirection = new Vector2<double>(Math.Cos(angle), Math.Sin(angle));
+            var toDirection = new Vector2<double>(Math.Cos(next), Math.Sin(next));
+            var from = frame.Center + fromDirection * frame.Radius;
+            var to = frame.Center + toDirection * frame.Radius;
+            var control1 = from + new Vector2<double>(-fromDirection.Y, fromDirection.X) * reach;
+            var control2 = to - new Vector2<double>(-toDirection.Y, toDirection.X) * reach;
+            builder.CubicTo(Vector2<double>.Transform(control1, frame.Back), Vector2<double>.Transform(control2, frame.Back),
+                i == pieces - 1 ? Point : Vector2<double>.Transform(to, frame.Back));
+            angle = next;
+        }
+    }
+
     private Vector2<double>[] GetArcPoints(Vector2<double> pt1, Vector2<double> pt2,
         double radiusX, double radiusY, double rotationAngle,
         bool isLargeArc, bool isCounterclockwise,
         int tolerance)
     {
         var points = new List<Vector2<double>>();
+        var frame = Frame(pt1, pt2, radiusX, radiusY, rotationAngle, isLargeArc, isCounterclockwise);
+        var center = frame.Center;
+        var transform = frame.Back;
+        var startAngle = frame.StartAngle;
+        var range = frame.Range;
+        var sign = frame.Sign;
+        radiusX = frame.RadiusX;
+        radiusY = frame.Radius;
 
+        var segmentsCount = (int)((4 * (radiusX + radiusY) * double.DegreesToRadians(range) / (2 * Math.PI)));
+        if (segmentsCount > tolerance) segmentsCount = tolerance;
+
+        var angle = (range / segmentsCount) * sign;
+        var currentAngle = startAngle;
+
+        for (var i = 0; i <= segmentsCount; i++)
+        {
+            var angleItem = double.DegreesToRadians(currentAngle);
+            var x = center.X + (radiusY * Math.Cos(angleItem));
+            var y = center.Y + (radiusY * Math.Sin(angleItem));
+
+            var pt = Vector2<double>.Transform(new Vector2<double>(x, y), transform);
+
+            points.Add(MathHelper.Coordinates.Round(pt));
+
+            currentAngle += angle;
+        }
+
+        return points.ToArray();
+    }
+
+    private static ArcFrame Frame(Vector2<double> pt1, Vector2<double> pt2, double radiusX, double radiusY,
+        double rotationAngle, bool isLargeArc, bool isCounterclockwise)
+    {
         // Adjust for different radii and rotation angle
         var rotation = Matrix3x2.CreateRotation<double>(-double.DegreesToRadians(rotationAngle));
         var scale = Matrix3x2.CreateScale<double>(radiusY / radiusX, 1);
@@ -156,27 +229,7 @@ public class ArcSegment : PathSegment
         {
             sign = -1;
         }
-        
-        var segmentsCount = (int)((4 * (radiusX + radiusY) * double.DegreesToRadians(range) / (2 * Math.PI)));
-        if (segmentsCount > tolerance) segmentsCount = tolerance;
-        
-        var angle = (range / segmentsCount) * sign;
-        var currentAngle = startAngle;
-        
-        for (var i = 0; i <= segmentsCount; i++)
-        {
-            var angleItem = double.DegreesToRadians(currentAngle);
-            var x = center.X + (radiusY * Math.Cos(angleItem));
-            var y = center.Y + (radiusY * Math.Sin(angleItem));
 
-            var pt = Vector2<double>.Transform(new Vector2<double>(x, y), transform);
-            
-            points.Add(MathHelper.Coordinates.Round(pt));
-
-            currentAngle += angle;
-        }
-        
-         
-        return points.ToArray();
+        return new ArcFrame(transform, center, radiusY, radiusX, startAngle, range, sign);
     }
 }
