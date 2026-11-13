@@ -34,6 +34,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDialogHandler dialogHandler;
     private readonly WebViewPermissionHandler permissionHandler;
     private readonly WebViewDownloadHandler downloadHandler;
+    private readonly WebViewFindHandler findHandler;
     private readonly WebViewDevTools devTools;
     private IWebViewBrowserView view;
     private WebViewBrowser opener;
@@ -70,6 +71,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool deviceLost;
     private bool focused;
     private double zoom = 1;
+    private int findCount;
+    private int findActive;
+    private string findSought;
+    private bool findForward;
+    private bool findMatchCase;
+    private bool findFirstOwed;
     private int iconsAsked;
     private Task<System.Text.Json.JsonElement> inspected;
     private string[] iconAddresses = [];
@@ -111,8 +118,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         dialogHandler = new WebViewDialogHandler(this);
         permissionHandler = new WebViewPermissionHandler(this);
         downloadHandler = new WebViewDownloadHandler(this);
+        findHandler = new WebViewFindHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
-            contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler, downloadHandler);
+            contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler, downloadHandler, findHandler);
     }
 
     /// <summary>The download Chromium numbers <paramref name="id"/>, the engine's one for the profile.</summary>
@@ -1032,6 +1040,89 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
+    /// <summary>Finds <paramref name="text"/> on the page and marks its matches, the current one apart: a search
+    /// started anew when <paramref name="findNext"/> is false, else the next match, or the previous one when
+    /// <paramref name="forward"/> is false. Chromium tells how many it found through <see cref="OnFindResult"/>.
+    /// </summary>
+    public void Find(string text, bool forward, bool matchCase, bool findNext)
+    {
+        if (isDevTools || string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        if (!findNext)
+        {
+            findCount = 0;
+            findActive = 0;
+            findSought = text;
+            findForward = forward;
+            findMatchCase = matchCase;
+        }
+
+        // A search begun makes no match current; the first is made so once Chromium has counted them, as a browser
+        // does.
+        findFirstOwed = !findNext;
+        SendFind(text, forward, matchCase, findNext);
+    }
+
+    private void SendFind(string text, bool forward, bool matchCase, bool findNext)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var target = new CefStringUtf16();
+        CefStrings.Set(&target, text);
+        host->find(host, &target, forward ? 1 : 0, matchCase ? 1 : 0, findNext ? 1 : 0);
+        CefStrings.Clear(&target);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Ends the search: the matches are no longer marked, and the current one stays selected unless
+    /// <paramref name="clearSelection"/>.</summary>
+    public void StopFinding(bool clearSelection)
+    {
+        var host = isDevTools ? null : LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        findFirstOwed = false;
+        host->stop_finding(host, clearSelection ? 1 : 0);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    // Chromium tells -1 for what has not changed since its last word on the search.
+    internal void OnFindResult(int count, int activeMatch, bool final)
+    {
+        if (count >= 0)
+        {
+            findCount = count;
+        }
+
+        if (activeMatch >= 0)
+        {
+            findActive = activeMatch;
+        }
+
+        var stepping = false;
+        if (final && findFirstOwed)
+        {
+            findFirstOwed = false;
+            if (findCount > 0 && findActive == 0)
+            {
+                stepping = true;
+                SendFind(findSought, findForward, findMatchCase, true);
+            }
+        }
+
+        view.FindResult(this, findCount, findActive, final && !stepping);
+    }
+
     /// <summary>Goes back a page in the browser's history.</summary>
     public void GoBack()
     {
@@ -1749,6 +1840,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         dialogHandler.Release();
         permissionHandler.Release();
         downloadHandler.Release();
+        findHandler.Release();
     }
 
     /// <summary>Whether the view listens to the page's requests: each is asked of it then, else none is - read on

@@ -14,41 +14,85 @@ float GradientSpread(float t, int spread)
 // What GradientParam answers where a gradient between two circles has no circle passing: nothing is painted there.
 static const float GradientNowhere = -1e30;
 
+// How much of the pixel lies where `measure` >= 0: half on the line, the rest by its slope across the pixel.
+float CoverageOf(float measure)
+{
+    return saturate(0.5 + measure / max(fwidth(measure), 1e-20));
+}
+
+// Between two circles (Canvas 2D createRadialGradient): the largest t whose circle, r(t) >= 0, passes through the point.
+// A circle passes where `edge` >= 0 and `passes` is 1; `edge` changes sign smoothly across the cone's side. Any stage.
+float TwoCirclesRoot(float4 geom0, float4 geom1, float2 uv, out float edge, out float passes)
+{
+    float2 center = geom0.xy;
+    float2 extent = max(geom0.zw, float2(1e-4, 1e-4));
+    float2 focal = (geom1.xy - center) / extent;
+    float startRadius = geom1.z;
+    float2 place = (uv - center) / extent - focal;
+    float2 toEnd = -focal;
+    float growth = 1.0 - startRadius;
+    float leading = dot(toEnd, toEnd) - growth * growth;
+    float middle = dot(place, toEnd) + startRadius * growth;
+    float trailing = dot(place, place) - startRadius * startRadius;
+    if (abs(leading) < 1e-6)
+    {
+        float side = middle >= 0.0 ? 1.0 : -1.0;
+        float only = trailing / (2.0 * side * max(abs(middle), 1e-9));
+        edge = startRadius + only * growth;
+        passes = 1.0;
+        return only;
+    }
+
+    float reach = middle * middle - leading * trailing;
+    if (reach < 0.0)
+    {
+        float meeting = middle / leading;
+        edge = reach;
+        passes = startRadius + meeting * growth >= 0.0 ? 1.0 : 0.0;
+        return meeting;
+    }
+
+    float stable = middle + (middle >= 0.0 ? 1.0 : -1.0) * sqrt(reach);
+    if (abs(stable) < 1e-12)
+    {
+        edge = 1.0;
+        passes = 1.0;
+        return 0.0;
+    }
+
+    float high = max(stable / leading, trailing / stable);
+    float low = min(stable / leading, trailing / stable);
+    float highRadius = startRadius + high * growth;
+    float lowRadius = startRadius + low * growth;
+    edge = leading < 0.0 ? 1.0 : reach;
+    passes = highRadius >= 0.0 || lowRadius >= 0.0 ? 1.0 : 0.0;
+    return highRadius >= 0.0 ? high : low;
+}
+
+// How much of the pixel the circles reach; fragment stages, in flow the whole quad shares.
+float TwoCirclesCoverage(float edge, float passes)
+{
+    return CoverageOf(edge) * passes;
+}
+
+// The parameter and the pixel's coverage of a gradient between two circles, for a fragment stage.
+float TwoCirclesParam(float4 geom0, float4 geom1, float2 uv, out float covered)
+{
+    float edge;
+    float passes;
+    float t = TwoCirclesRoot(geom0, geom1, uv, edge, passes);
+    covered = TwoCirclesCoverage(edge, passes);
+    return t;
+}
+
 float GradientParam(int type, float4 geom0, float4 geom1, float2 uv)
 {
-    // Between two circles (Canvas 2D createRadialGradient): in the end ellipse's unit space the start circle stands at
-    // the origin point with radius geom1.z, the end circle at 0 with radius 1, and t is the largest at which the circle
-    // c(t), r(t) >= 0, passes through the point.
     if (type == 5)
     {
-        float2 center = geom0.xy;
-        float2 radius = max(geom0.zw, float2(1e-4, 1e-4));
-        float2 focal = (geom1.xy - center) / radius;
-        float r0 = geom1.z;
-        float2 p = (uv - center) / radius - focal;
-        float2 cd = -focal;
-        float dr = 1.0 - r0;
-        float a = dot(cd, cd) - dr * dr;
-        float b = dot(p, cd) + r0 * dr;
-        float c = dot(p, p) - r0 * r0;
-        if (abs(a) < 1e-6)
-        {
-            if (abs(b) < 1e-9) return GradientNowhere;
-            float t = c / (2.0 * b);
-            return r0 + t * dr >= 0.0 ? t : GradientNowhere;
-        }
-
-        float disc = b * b - a * c;
-        if (disc < 0.0) return GradientNowhere;
-        // q / a and c / q: neither root is a difference of near-equal numbers, so a near 0 loses nothing.
-        float q = b + (b >= 0.0 ? 1.0 : -1.0) * sqrt(disc);
-        if (abs(q) < 1e-12) return 0.0;
-        float t1 = q / a;
-        float t2 = c / q;
-        float hi = max(t1, t2);
-        float lo = min(t1, t2);
-        if (r0 + hi * dr >= 0.0) return hi;
-        return r0 + lo * dr >= 0.0 ? lo : GradientNowhere;
+        float edge;
+        float passes;
+        float t = TwoCirclesRoot(geom0, geom1, uv, edge, passes);
+        return edge >= 0.0 && passes > 0.0 ? t : GradientNowhere;
     }
 
     if (type == 2)

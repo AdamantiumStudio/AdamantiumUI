@@ -205,4 +205,9 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
 
     public bool DownloadRequested(WebViewBrowser browser, WebDownload download) => openersDownloads(download);
+
+    // Nobody searches a page before a view adopts it.
+    public void FindResult(WebViewBrowser browser, int count, int activeMatch, bool final)
+    {
+    }
 }

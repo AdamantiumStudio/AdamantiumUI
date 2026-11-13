@@ -141,6 +141,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             statusBar.SetCurrentValue(WebViewStatusBar.ViewProperty, this);
         }
 
+        TakeFindBar(GetTemplateChild("PART_FindBar") as WebViewFindBar);
         StartBrowser();
     }
 
@@ -159,6 +160,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         surface = null;
         TakePopupSurface(null);
         TakeScriptDialog(null);
+        TakeFindBar(null);
         base.OnRemoveTemplate();
     }
 

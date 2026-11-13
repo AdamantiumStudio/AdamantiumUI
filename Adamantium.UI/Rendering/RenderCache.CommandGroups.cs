@@ -59,7 +59,8 @@ public partial class RenderCache
 
         foreach (var state in _groupsCut)
         {
-            if (!AlongTheAxes(World(state.Begin.Component)))
+            var begin = IndexOfBegin(state);
+            if (begin < 0 || !AlongTheAxes(ClipWorld(state, begin, World(state.Begin.Component))))
             {
                 return false;
             }
@@ -237,9 +238,7 @@ public partial class RenderCache
     {
         area = default;
         var units = state.Units;
-        var begin = state.BeginAt < units.Count && ReferenceEquals(units[state.BeginAt], state.Begin)
-            ? state.BeginAt
-            : units.IndexOf(state.Begin);
+        var begin = IndexOfBegin(state);
         if (begin < 0)
         {
             contentAt = -1;
@@ -263,10 +262,16 @@ public partial class RenderCache
 
         var world = World(state.Begin.Component);
         if (_cloneMatrix.HasValue) world *= _cloneMatrix.Value;
-        if (cutAllowed && state.Begin.Payload.ClipRect is { } rect && AlongTheAxes(world))
+        if (cutAllowed && state.Begin.Payload.ClipRect is { } rect)
         {
-            area = Intersect(ToFramebufferScissor(rect.TransformToAABB(world), fullScissor), bounds);
-            return area.Extent.Width == 0 || area.Extent.Height == 0 ? CommandGroupMode.Skipped : CommandGroupMode.Scissor;
+            var clipWorld = ClipWorld(state, begin, world);
+            if (AlongTheAxes(clipWorld))
+            {
+                area = Intersect(ToFramebufferScissor(rect.TransformToAABB(clipWorld), fullScissor), bounds);
+                return area.Extent.Width == 0 || area.Extent.Height == 0
+                    ? CommandGroupMode.Skipped
+                    : CommandGroupMode.Scissor;
+            }
         }
 
         // The fringe grows the ink before the window cuts it: ink wholly past an edge leaves nothing, not a strip along it.
@@ -534,9 +539,58 @@ public partial class RenderCache
         options.Clip == null && options.TextClip is not { Count: > 0 } && options.Mask == null
         && options.BlendMode == BlendMode.Normal && options.Opacity >= 1;
 
-    private static bool AlongTheAxes(in Matrix4x4F world) =>
-        MathF.Abs(world.M12) < 1e-6f && MathF.Abs(world.M21) < 1e-6f && world.M14 == 0f && world.M24 == 0f
-        && world.M34 == 0f && world.M44 == 1f;
+    private static int IndexOfBegin(CommandGroup state)
+    {
+        var units = state.Units;
+        return state.BeginAt < units.Count && ReferenceEquals(units[state.BeginAt], state.Begin)
+            ? state.BeginAt
+            : units.IndexOf(state.Begin);
+    }
+
+    private Matrix4x4F ClipWorld(CommandGroup state, int begin, in Matrix4x4F world)
+    {
+        if (state.Options.ClipPlacement is not { } placement)
+        {
+            return world;
+        }
+
+        CatchUpClip(state.Units, begin, placement);
+        return Shown(placement) * world;
+    }
+
+    private void CatchUpClip(List<IRenderUnit> units, int begin, Placement placement)
+    {
+        for (var i = begin + 1; i < units.Count; i++)
+        {
+            var unit = units[i];
+            if (unit is GroupMarkRenderUnit { Kind: GroupMarkKind.MaskEnd or GroupMarkKind.ContentBegin })
+            {
+                return;
+            }
+
+            if (unit is IPlacedRenderUnit { Placed.Placement: { } placed } && ReferenceEquals(placed, placement))
+            {
+                CatchUp(unit);
+                return;
+            }
+        }
+    }
+
+    /// <summary>Whether a rectangle stays one on the window under <paramref name="world"/>: moved, scaled, mirrored or
+    /// turned by a quarter. What is left of a turn is weighed against the scale, so a deep zoom keeps its answer.
+    /// </summary>
+    internal static bool AlongTheAxes(in Matrix4x4F world)
+    {
+        if (world.M14 != 0f || world.M24 != 0f || world.M34 != 0f || world.M44 != 1f)
+        {
+            return false;
+        }
+
+        var straight = MathF.Max(MathF.Abs(world.M11), MathF.Abs(world.M22));
+        var turned = MathF.Max(MathF.Abs(world.M12), MathF.Abs(world.M21));
+        var tolerance = 1e-6f * MathF.Max(straight, turned);
+        return turned <= tolerance || straight <= tolerance;
+    }
 
     // Walks the group whose begin mark is at `begin`: where its content starts, where it ends (past the last unit when
     // its element left it open), what its content covers, and what its masks that cut by coverage leave of it, in window
