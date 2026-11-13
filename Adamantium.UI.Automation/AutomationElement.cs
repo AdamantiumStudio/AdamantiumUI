@@ -290,6 +290,11 @@ public sealed class AutomationElement
     public Task WheelAsync(int notches) =>
         RunAsync(AutomationCommand.Wheel, notches.ToString(CultureInfo.InvariantCulture));
 
+    /// <summary>Turns the mouse wheel by <paramref name="notches"/> over a point of it, in its own units from its top
+    /// left - what zooms to the pointer zooms there.</summary>
+    public Task WheelAsync(int notches, double x, double y) =>
+        RunAsync(AutomationCommand.Wheel, FormattableString.Invariant($"{notches} {x},{y}"));
+
     /// <summary>Opens its context menu - its own, or the nearest one above it - as the menu key would, without the mouse.</summary>
     public Task ShowContextMenuAsync() => RunAsync(AutomationCommand.ShowContextMenu);
 

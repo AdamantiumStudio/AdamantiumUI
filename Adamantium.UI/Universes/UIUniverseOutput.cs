@@ -575,9 +575,13 @@ namespace Adamantium.UI.Universes
                 return;
             }
 
+            // Where it was turned, in the surface's pixels as PointToSurface gives them: the universe reads the pointer a
+            // frame later, by when it may be elsewhere - or, under automation, never moved there at all.
+            var at = e.GetPosition(InputComponent);
             var mouseInput = new MouseInput();
             mouseInput.InputType = InputType.Wheel;
             mouseInput.WheelDelta = e.Delta;
+            mouseInput.Position = new Vector2F((float)at.X, (float)at.Y) * PixelsPerPoint;
             OnMouseInput(mouseInput);
         }
 

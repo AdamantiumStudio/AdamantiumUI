@@ -666,7 +666,10 @@ public sealed class AutomationExecutor
                 Zoom(peer, request.Value);
                 break;
             case AutomationCommand.Wheel:
-                InputSimulator.Wheel(OwnerOf(peer), Label(peer), Notches(request.Value));
+                // "notches", or "notches x,y" over a point of it.
+                var wheel = (request.Value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                InputSimulator.Wheel(OwnerOf(peer), Label(peer), Notches(wheel.FirstOrDefault()),
+                    wheel.Length > 1 ? Point(wheel[1]) : null);
                 break;
             case AutomationCommand.Pan:
                 var offset = Point(request.Value);

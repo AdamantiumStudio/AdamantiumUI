@@ -344,6 +344,8 @@
     <xs:complexContent>
       <xs:extension base="TargetStep">
         <xs:attribute name="Notches" type="xs:int" use="required" />
+        <!-- Over this point of it, in its own units from its top left; its middle when left out. -->
+        <xs:attribute name="At" type="Pair" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
