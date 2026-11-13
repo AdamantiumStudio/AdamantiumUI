@@ -246,10 +246,12 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             case NotifyCollectionChangedAction.Remove:
                 // Recycle the removed slots' containers FIRST (unmap + pool), THEN reindex survivors down - reindexing
                 // before recycling would collide a removed key with the survivor shifting onto it. The pooled containers
-                // are re-drawn as donors by the next SetWindow, or parked by the arrange's HideUnmappedContainers.
+                // are parked at once, as the arrange would park them: until then a window would show containers that
+                // stand for no item; the next SetWindow re-draws them as donors.
                 for (var i = e.OldItems.Count - 1; i >= 0; i--)
                     generator.Recycle(e.OldStartingIndex + i);
                 generator.OnItemsRemoved(e.OldStartingIndex, e.OldItems.Count);
+                HideUnmappedContainers();
                 InvalidateMeasure();
                 break;
 

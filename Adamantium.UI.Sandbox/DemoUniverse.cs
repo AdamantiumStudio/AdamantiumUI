@@ -51,10 +51,8 @@ namespace Adamantium.UI.Sandbox
         protected override void Initialize()
         {
             base.Initialize();
-            Satellites.Add(new Selection());
             Satellites.Add(new Observatory(this, EntityWorld));
             _lights = new LightManager(this, EntityWorld.MainScene);
-            Satellites.Add(_lights);
             InitializeScene();
         }
 
@@ -72,7 +70,7 @@ namespace Adamantium.UI.Sandbox
         }
 
         /// <summary>The light the tools have selected, or null.</summary>
-        public Light SelectedLight => Satellites.Get<Selection>().Current?.GetComponent<Light>();
+        public Light SelectedLight => EntityWorld.MainScene.Selection.Current?.GetComponent<Light>();
 
         /// <summary>Adds a light a little ahead of the camera and selects it, so the tools take it at once.</summary>
         public Entity AddLight(LightType type)
@@ -100,14 +98,14 @@ namespace Adamantium.UI.Sandbox
             }
 
             _lights.AddLight(entity);
-            Satellites.Get<Selection>().Current = entity;
+            EntityWorld.MainScene.Selection.Current = entity;
             return entity;
         }
 
         /// <summary>Takes the selected light out of the scene; does nothing when what is selected is not a light.</summary>
         public void RemoveSelectedLight()
         {
-            var selection = Satellites.Get<Selection>();
+            var selection = EntityWorld.MainScene.Selection;
             if (selection.Current?.GetComponent<Light>() == null)
             {
                 return;

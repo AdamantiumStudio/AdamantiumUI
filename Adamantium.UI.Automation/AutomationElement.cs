@@ -153,6 +153,33 @@ public sealed class AutomationElement
         }
     }
 
+    /// <summary>Waits until nothing matches the element's selector - a tab closing once its file is saved - checking each
+    /// time the application settles, for <paramref name="timeout"/> at most (ten seconds).</summary>
+    /// <exception cref="AutomationException">Something still did then; the message lists where.</exception>
+    public async Task WaitForAbsentAsync(TimeSpan? timeout = null)
+    {
+        var limit = timeout ?? DefaultWait;
+        var clock = Stopwatch.StartNew();
+        while (true)
+        {
+            var found = await RunAsync(AutomationCommand.Find);
+            if (found.Elements.Count == 0)
+            {
+                return;
+            }
+
+            if (clock.Elapsed > limit)
+            {
+                throw new AutomationException($"'{Selector}' still matches after {limit.TotalSeconds:0.#} s:" +
+                                              Environment.NewLine +
+                                              string.Join(Environment.NewLine, found.Elements.Select(element => $"  {element.Path}")));
+            }
+
+            await _session.WaitForIdleAsync();
+            await Task.Delay(WaitStep);
+        }
+    }
+
     /// <summary>Checks that nothing matches the element's selector.</summary>
     /// <exception cref="AutomationException">Something does; the message lists where.</exception>
     public async Task ExpectAbsentAsync()

@@ -86,4 +86,16 @@ public class ExpectationTests
 
         Assert.That(failure.Message, Does.Contain("'id=Save' should match nothing"));
     }
+
+    [Test]
+    public async Task WaitingForAbsent_ReturnsOnceNothingMatches_AndListsWhatStillDoes()
+    {
+        await using var session = await FormAsync();
+
+        await session.Find("id=Load").WaitForAbsentAsync(TimeSpan.FromMilliseconds(200));
+        var failure = Assert.ThrowsAsync<AutomationException>(() =>
+            session.Find("id=Save").WaitForAbsentAsync(TimeSpan.FromMilliseconds(200)));
+
+        Assert.That(failure.Message, Does.Contain("'id=Save' still matches after"));
+    }
 }

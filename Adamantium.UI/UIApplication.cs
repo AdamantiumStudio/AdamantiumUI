@@ -1446,6 +1446,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         Dispatcher.UIThread = Thread.CurrentThread;
         LoopSignal.Claim();
+        // What follows an await on the loop goes on on the loop, where the tree is - not on the thread pool.
+        SynchronizationContext.SetSynchronizationContext(new LoopSynchronizationContext());
 
         while (!cancellationTokenSource.IsCancellationRequested)
         {
