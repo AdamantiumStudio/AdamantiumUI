@@ -90,6 +90,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private const double StallAnimationStep = 0.004;
     private const int DiscardReleasesPerFrame = 128;
     private long _loopFrameDue;
+    private double _lastWaitSeconds;   // how long the last WaitForWork waited
+    private double _waitedSeconds;     // how much of the frame time the app time carries was waiting, not working
+    private double _accumulatedWaitSeconds;
     private IVisualRenderer _visualRenderer;
     private bool _recordedThisFrame;
     private const int LoopExitWaitMs = 2000;
@@ -1462,6 +1465,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 if (IsFixedTimeStep)
                 {
                     accumulatedFrameTime += frameTime;
+                    _accumulatedWaitSeconds += _lastWaitSeconds;
 
                     if (accumulatedFrameTime >= TimeStep)
                     {
@@ -1470,7 +1474,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                         _loadsAtRecord = BitmapImage.LoadsFinished;
                         RecordIfOwed(appTime);
                         UpdateAppTime(accumulatedFrameTime);
+                        _waitedSeconds = _accumulatedWaitSeconds;
                         accumulatedFrameTime = 0;
+                        _accumulatedWaitSeconds = 0;
                     }
                 }
                 else
@@ -1480,6 +1486,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     _loadsAtRecord = BitmapImage.LoadsFinished;
                     RecordIfOwed(appTime);
                     UpdateAppTime(frameTime);
+                    _waitedSeconds = _lastWaitSeconds;
                 }
 
                 OnCycleFinishedInternal();
@@ -1573,6 +1580,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private void WaitForWork()
     {
         LoopRate = ResolveLoopRate();
+        var waitStart = Stopwatch.GetTimestamp();
 
         var period = (long)Math.Round(Stopwatch.Frequency / LoopRate);
         var due = _loopFrameDue + period;
@@ -1592,6 +1600,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         var start = Stopwatch.GetTimestamp();
         _loopFrameDue = Math.Abs(start - due) < period ? due : start;
+        _lastWaitSeconds = Stopwatch.GetElapsedTime(waitStart, start).TotalSeconds;
     }
 
     private double ResolveLoopRate()
@@ -2148,7 +2157,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         EntityWorld.ServiceManager.Update(frameTime);
 
         // Teardowns are paid here, a bounded number per frame and never on a stall, not in the frame that caused them.
-        if (frameTime.FrameTime < StallFrameSeconds) DiscardedVisuals.Drain(DiscardReleasesPerFrame);
+        // A long frame spent WAITING is no stall: an idle window wakes a few times a second, and taking those wakes for
+        // stalls left whatever it had let go - a removed panel and all it showed - unreleased until something moved.
+        if (frameTime.FrameTime - _waitedSeconds < StallFrameSeconds) DiscardedVisuals.Drain(DiscardReleasesPerFrame);
     }
 
     /// <summary>Draws every window due a frame; true when one did.</summary>

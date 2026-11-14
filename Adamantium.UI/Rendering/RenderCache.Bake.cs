@@ -995,7 +995,22 @@ public partial class RenderCache
     // Why the last move could not be carried, for the frame trace.
     private string _moverRefusal;
 
+    // The subtree lists are this pass's scratch and are emptied however it ends: left filled, they kept whatever moved
+    // last alive until something moved again - in an idle window, a removed inspector's rows and what they showed.
     private bool RefreshMovedComponents(IGraphicsDevice device, Adamantium.Vulkan.Core.Rect2D fullScissor)
+    {
+        try
+        {
+            return RefreshMovedSubtrees(device, fullScissor);
+        }
+        finally
+        {
+            _movedSubtree.Clear();
+            _movedNodesInSubtree.Clear();
+        }
+    }
+
+    private bool RefreshMovedSubtrees(IGraphicsDevice device, Adamantium.Vulkan.Core.Rect2D fullScissor)
     {
         _cullScissor = fullScissor;
 

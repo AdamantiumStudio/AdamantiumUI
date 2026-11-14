@@ -728,11 +728,13 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         }
     }
 
-    // Its own: set on it, or made by the very template instance that made it. A template value may also be another's -
-    // a TemplateBinding hands down the templated parent's menu - and a style's may be shared among many.
+    // Its own: set on it, made by the very template instance that made it, or made for it alone by a style. A template
+    // value may also be another's - a TemplateBinding hands down the templated parent's menu - and a style's may be
+    // shared among many.
     internal bool OwnsMenu(FundamentalUIComponent menu, ValuePriority priority) =>
         priority == ValuePriority.Local
-        || priority == ValuePriority.Template && OwningTemplateId != Guid.Empty && menu.OwningTemplateId == OwningTemplateId;
+        || priority == ValuePriority.Template && OwningTemplateId != Guid.Empty && menu.OwningTemplateId == OwningTemplateId
+        || ReferenceEquals(menu.MadeFor, this);
 
     public IWindow GetWindow()
     {

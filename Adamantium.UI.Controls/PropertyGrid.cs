@@ -118,7 +118,8 @@ public class PropertyGrid : Control
     /// <summary>With <see cref="SectionsSource"/>: picks, for an item no written section claims, a template whose root is
     /// a <see cref="PropertySection"/>, and the item gets a section of its own made from it - one an item, where a
     /// section written for a <see cref="PropertySection.DataType"/> serves all of them together. For things that are
-    /// never edited together: each of a game's components the code does not load, say.</summary>
+    /// never edited together: each of a game's components the code does not load, say. As with any data template, the
+    /// item is the section's DataContext as well as its <see cref="PropertySection.Target"/>.</summary>
     public static readonly AdamantiumProperty SectionTemplateSelectorProperty = AdamantiumProperty.Register(
         nameof(SectionTemplateSelector), typeof(DataTemplateSelector), typeof(PropertyGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSectionTemplateSelectorChanged));
@@ -890,6 +891,7 @@ public class PropertyGrid : Control
         section = template.Build(null).RootComponent as PropertySection ??
                   throw new InvalidOperationException(
                       $"The section template for {item.GetType().Name} must make a {nameof(PropertySection)}.");
+        section.DataContext = item;
         section.Target = item;
         section.Targets = [item];
         _built.Add(item, section);

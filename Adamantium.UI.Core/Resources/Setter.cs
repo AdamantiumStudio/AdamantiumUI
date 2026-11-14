@@ -72,7 +72,13 @@ public class Setter : ISetter, IEquatable<Setter>
             // x:Shared="False": build this element its OWN value. Everything else in this switch hands out one object to
             // every target, which is right for a brush and wrong for anything that belongs to the element it sits on.
             case PerTargetValue perTarget:
-                component.SetStyleValue(property, perTarget.Create(), style);
+                var own = perTarget.Create();
+                if (own is FundamentalUIComponent made)
+                {
+                    made.MadeFor = component;
+                }
+
+                component.SetStyleValue(property, own, style);
                 break;
             default:
                 component.SetStyleValue(property, TypeCastFactory.CastFromString(Value, property.PropertyType), style);

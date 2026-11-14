@@ -232,6 +232,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     // Replace still rebuild.
     internal void OnItemsChanged(NotifyCollectionChangedEventArgs e)
     {
+        ForgetPlacesOfItemsGone(e);
         if (Owner?.ItemContainerGenerator is not { } generator) return;
 
         switch (e.Action)
@@ -625,8 +626,15 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         m.Arrange(slot.rect);
     }
 
-    // Where each item last sat, keyed by the data item: containers are recycled onto other items.
+    // Where each item last sat, keyed by the data item: containers are recycled onto other items. Only the items shown
+    // in the last pass: an item that left - or scrolled away, which animates nothing anyway - is let go, not kept alive
+    // by the panel for good.
     private readonly Dictionary<object, Vector2<double>> _lastItemPos = new();
+    private readonly HashSet<object> _shownItems = new();
+    private readonly List<object> _goneItems = new();
+
+    /// <summary>Whether the panel remembers where <paramref name="item"/> last stood.</summary>
+    internal bool RemembersPlaceOf(object item) => _lastItemPos.ContainsKey(item);
     private int _animatedGap = -1;   // the gap the last animated pass ran for
 
     // Rows promoted for the duration of an open gap. A promotion costs a transform slot, so it is not left behind: the
@@ -653,13 +661,68 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         // truth rather than from a position two layouts old.
         var animate = DropGapIndex != _animatedGap;
         _animatedGap = DropGapIndex;
+        _shownItems.Clear();
+        try
+        {
+            AnimateShownItems(items, slotRect, animate);
+        }
+        finally
+        {
+            ForgetItemsNotShown();
+        }
+    }
 
+    // An item that leaves the list is let go at once: a panel that is not arranged again soon - in a closed popup - would
+    // otherwise keep it until it is.
+    private void ForgetPlacesOfItemsGone(NotifyCollectionChangedEventArgs e)
+    {
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Reset:
+                _lastItemPos.Clear();
+                break;
+            case NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace:
+                foreach (var item in e.OldItems ?? Array.Empty<object>())
+                {
+                    if (item != null)
+                    {
+                        _lastItemPos.Remove(item);
+                    }
+                }
+
+                break;
+        }
+    }
+
+    private void ForgetItemsNotShown()
+    {
+        _goneItems.Clear();
+        foreach (var item in _lastItemPos.Keys)
+        {
+            if (!_shownItems.Contains(item))
+            {
+                _goneItems.Add(item);
+            }
+        }
+
+        foreach (var item in _goneItems)
+        {
+            _lastItemPos.Remove(item);
+        }
+
+        _goneItems.Clear();
+        _shownItems.Clear();
+    }
+
+    private void AnimateShownItems(ItemCollection items, Func<int, Rect> slotRect, bool animate)
+    {
         foreach (var index in Owner.ItemContainerGenerator.RealizedIndices)
         {
             if (index < 0 || index >= items.Count) continue;
             var item = items[index];
             if (item == null) continue;
 
+            _shownItems.Add(item);
             var now = slotRect(SlotOf(index)).Location;
             var moved = _lastItemPos.TryGetValue(item, out var before) && before != now;
             _lastItemPos[item] = now;
