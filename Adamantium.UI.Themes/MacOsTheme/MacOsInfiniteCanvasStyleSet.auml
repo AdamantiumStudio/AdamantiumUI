@@ -57,7 +57,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -132,7 +132,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -241,10 +241,14 @@
                                                       ContentTemplate="{TemplateBinding ContentTemplate}"/>
                                     <!-- The tool rail, filled by the canvas - see Fluent's set. Roomier buttons, like
                                          everything in this theme. -->
-                                    <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
-                                                    Canvas="{TemplateBinding Canvas}"
-                                                    Orientation="{TemplateBinding Orientation}"
-                                                    ButtonWidth="32" ButtonHeight="30" IconSize="14" ButtonGap="5"/>
+                                    <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
+                                                  VerticalScrollBarVisibility="Hidden"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <CanvasToolRail x:Name="PART_Rail"
+                                                        Canvas="{TemplateBinding Canvas}"
+                                                        Orientation="{TemplateBinding Orientation}"
+                                                        ButtonWidth="32" ButtonHeight="30" IconSize="14" ButtonGap="5"/>
+                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
 
@@ -288,9 +292,14 @@
                             <Setter TargetName="PART_Body" Property="Background" Value="Transparent"/>
                             <Setter TargetName="PART_Body" Property="BorderThickness" Value="0"/>
                             <Setter TargetName="PART_Body" Property="Padding" Value="0"/>
-                            <Setter TargetName="PART_Rail" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+
+                        <PropertyTrigger Property="Orientation" Value="Horizontal">
+                            <Setter TargetName="PART_RailScroll" Property="VerticalScrollBarVisibility" Value="Disabled"/>
+                            <Setter TargetName="PART_RailScroll" Property="HorizontalScrollBarVisibility" Value="Hidden"/>
                         </PropertyTrigger>
 
                         <MultiTrigger>

@@ -1,6 +1,7 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using NUnit.Framework;
@@ -96,6 +97,71 @@ public class CanvasChromeTests
 
         Assert.That(first.Bounds.Y, Is.EqualTo(Room - 10 - 40));
         Assert.That(second.Bounds.Y, Is.EqualTo(Room - 10 - 40 - 8 - 25));
+    }
+
+    // A tall rail up the left side and the map in the bottom-left corner of a short canvas: the rail is given only the
+    // height above the map, and scrolls what does not fit, rather than running over the map.
+    [Test]
+    public void ATopPaneIsGivenOnlyTheHeightAboveTheBottomCorner()
+    {
+        var rail = new CanvasPane { Placement = CanvasPanePlacement.TopLeft, Content = new Border { Width = 50, Height = 300 } };
+        var map = Pane(CanvasPanePlacement.BottomLeft, width: 120, height: 100);
+        var inspector = new CanvasPane { Placement = CanvasPanePlacement.TopRight, Content = new Border { Width = 90, Height = 340 } };
+        var corner = Pane(CanvasPanePlacement.BottomRight, width: 60, height: 40);
+        Laid(rail, map, inspector, corner);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rail.Bounds.Bottom, Is.LessThanOrEqualTo(map.Bounds.Y - 8));
+            Assert.That(map.Bounds.X, Is.EqualTo(10), "the map keeps its corner");
+            Assert.That(inspector.Bounds.Bottom, Is.LessThanOrEqualTo(corner.Bounds.Y - 8));
+        });
+    }
+
+    [Test]
+    public void ATopPaneWithRoomToSpare_KeepsItsOwnHeight()
+    {
+        var rail = new CanvasPane { Placement = CanvasPanePlacement.TopLeft, Content = new Border { Width = 50, Height = 200 } };
+        var map = Pane(CanvasPanePlacement.BottomLeft, width: 120, height: 100);
+        Laid(rail, map);
+
+        Assert.That(rail.Bounds.Height, Is.EqualTo(200));
+    }
+
+    // The map carried off its corner and back: the rail's room is measured again each way, or it stays cut short with
+    // the map gone, or runs over it once it is back.
+    [Test]
+    public void APaneLeavingItsCorner_MeasuresTheTopStackAgain()
+    {
+        var rail = new CanvasPane { Placement = CanvasPanePlacement.TopLeft, Content = new Border { Width = 50, Height = 300 } };
+        var map = Pane(CanvasPanePlacement.BottomLeft, width: 120, height: 100);
+        var layer = Laid(rail, map);
+
+        map.Placement = CanvasPanePlacement.Free;
+        Assert.That(layer.IsMeasureValid, Is.False, "a pane changing corner changes what the others are given");
+
+        layer.Measure(new Size<double>(Room, Room));
+        layer.Arrange(new Rect(0, 0, Room, Room));
+        Assert.That(rail.Bounds.Height, Is.EqualTo(300), "the whole height once the map is away");
+
+        map.Placement = CanvasPanePlacement.BottomLeft;
+        layer.Measure(new Size<double>(Room, Room));
+        layer.Arrange(new Rect(0, 0, Room, Room));
+        Assert.That(rail.Bounds.Bottom, Is.LessThanOrEqualTo(map.Bounds.Y - 8), "and above it again once it is back");
+    }
+
+    // A canvas too short for the map and the rail both: the rail keeps its grip's height, to be taken hold of.
+    [Test]
+    public void ATopPaneIsNeverShorterThanItsFloor()
+    {
+        var rail = new CanvasPane
+        {
+            Placement = CanvasPanePlacement.TopLeft, MinHeight = 24, Content = new Border { Width = 50, Height = 300 }
+        };
+        var map = Pane(CanvasPanePlacement.BottomLeft, width: 120, height: 390);
+        Laid(rail, map);
+
+        Assert.That(rail.Bounds.Height, Is.EqualTo(24));
     }
 
     [Test]

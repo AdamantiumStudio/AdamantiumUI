@@ -11,8 +11,9 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Canvases;
 
-/// <summary>A wrapping rail with a button per tool, built from <see cref="InfiniteCanvas.Tools"/>, marking
-/// <see cref="InfiniteCanvas.Tool"/>; an application can put its own content in the pane instead.</summary>
+/// <summary>A rail with a button per tool, built from <see cref="InfiniteCanvas.Tools"/>, marking
+/// <see cref="InfiniteCanvas.Tool"/>; an application can put its own content in the pane instead. It wraps where it is
+/// given a bound along its direction; the themes give it none and scroll it in one line.</summary>
 public class CanvasToolRail : WrapPanel, ICanvasPart
 {
     private readonly List<ToggleButton> _buttons = new();

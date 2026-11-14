@@ -427,6 +427,10 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas's tool rail no longer runs over the map on a short canvas. `CanvasChromeLayer` measures a pane in a top
+  corner with the height left above the panes in the bottom corner under it, and the themes' rail scrolls what does
+  not fit - one line of tools, along its own direction, by the wheel or a finger, with no bar (`PART_RailScroll`). It
+  used to wrap into a second column measured against the whole height, which reached the map anyway.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),
