@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Packed as buildTransitive/Adamantium.UI.WebView.Runtime.<rid>.targets: the platform is the end of this file's name.
+       CEF and the helper go into the application's cef folder, where the WebView looks for them, when the application
+       builds for that platform - its RuntimeIdentifier, or with none the platform it is built on, as it runs there. An
+       application referencing the packages of several platforms takes each into its own build. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))' or ('$(RuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))')">
+    <None Include="$(MSBuildThisFileDirectory)..\cef\**" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+</Project>

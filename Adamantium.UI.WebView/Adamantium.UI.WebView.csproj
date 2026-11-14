@@ -6,6 +6,9 @@
         <Platforms>AnyCPU</Platforms>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
+        <IsPackable>true</IsPackable>
+        <Description>Web pages in Adamantium UI scenes, drawn by Chromium Embedded Framework off screen. CEF comes with Adamantium.UI.WebView.Runtime.&lt;rid&gt;, a package for each platform the application runs on.</Description>
+        <PackageTags>adamantium;ui;webview;browser;cef;chromium</PackageTags>
         <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
         <!-- CEF itself, downloaded and staged by native/fetch-cef: not part of the project. An application takes it with
