@@ -57,14 +57,9 @@ public static class CanvasSvg
 
         foreach (var item in ordered)
         {
-            Write(root, item, defs);
+            var written = Write(root, item, defs);
 
-            // What Write just put down, which is one element or none - asked of the end of the document rather than by
-            // counting, so writing out a big drawing does not cost a walk per item.
-            if (root.LastNode is XElement written)
-            {
-                written.SetAttributeValue("data-adm-order", item.Order.ToString(CultureInfo.InvariantCulture));
-            }
+            written?.SetAttributeValue("data-adm-order", item.Order.ToString(CultureInfo.InvariantCulture));
         }
 
         if (defs.HasElements) root.AddFirst(defs);
@@ -128,45 +123,49 @@ public static class CanvasSvg
 
     // ---------------------------------------------------------------- writing
 
-    private static void Write(XElement into, ICanvasItem item, XElement defs)
+    private static XElement Write(XElement into, ICanvasItem item, XElement defs)
     {
+        XElement written = null;
         switch (item)
         {
             case StrokeItem ink:
-                into.Add(Ink(ink));
+                written = Ink(ink);
                 break;
 
             case ShapeItem shape:
-                into.Add(Shape(shape, defs));
+                written = Shape(shape, defs);
                 break;
 
             case TextItem text:
-                into.Add(Words(text));
+                written = Words(text);
                 break;
 
             case CurveItem curve:
-                into.Add(Curve(curve));
+                written = Curve(curve);
                 break;
 
             case PathItem path:
-                into.Add(Contour(path));
+                written = Contour(path);
                 break;
 
             case GroupItem group:
             {
-                var g = new XElement(Svg + "g", new XAttribute("data-adm", "group"));
+                written = new XElement(Svg + "g", new XAttribute("data-adm", "group"));
 
-                foreach (var child in group.Children) Write(g, child, defs);
+                foreach (var child in group.Children) Write(written, child, defs);
 
-                into.Add(g);
                 break;
             }
         }
 
-        if (into.LastNode is XElement written) Named(written, item);
+        if (written == null) return null;
+
+        Labelled(written, item);
+        into.Add(written);
+        return written;
     }
 
-    private static void Named(XElement element, ICanvasItem item)
+    private static void Labelled(XElement element, ICanvasItem item)
     {
         var words = element.Name.LocalName == "text";
         if (!string.IsNullOrEmpty(item.Comment))
@@ -760,7 +759,7 @@ public static class CanvasSvg
 
     private static ICanvasItem Say(XElement element)
     {
-        var words = element.Value;
+        var words = string.Concat(element.DescendantNodes().OfType<XText>().Where(text => !Describes(text.Parent)));
 
         if (String.IsNullOrEmpty(words)) return null;
 

@@ -30,6 +30,11 @@ public interface ICanvasItem : INotifyPropertyChanged
         set { }
     }
 
+    /// <summary>Whether a <see cref="Name"/> of its own means anything here - what the inspector offers the name line by.
+    /// False for a wire, named by what it joins, and for something standing for an object of the application's, which
+    /// carries its own name and would then have two.</summary>
+    bool TakesName => IsPlaced;
+
     /// <summary>A longer note about it, shown apart from its <see cref="Name"/>; empty for none.</summary>
     string Comment
     {

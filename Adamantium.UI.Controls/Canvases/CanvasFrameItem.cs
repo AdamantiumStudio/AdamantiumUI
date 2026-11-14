@@ -40,7 +40,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     public string Name
     {
         get => Title;
-        set => Title = value;
+        set => Title = value ?? string.Empty;
     }
 
     /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>

@@ -111,6 +111,10 @@ public partial class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTran
     /// own name would have to be told about the next one too.</para></summary>
     public bool HasLabel => Model == null;
 
+    /// <summary>A node standing for the application's object is called by that object's title, not by a name of its own.
+    /// See <see cref="ICanvasItem.TakesName"/>.</summary>
+    public bool TakesName => Model == null;
+
     public Rect Bounds => World;
 
     /// <summary>The least it may be resized to, in world units: measured for content-sized items, otherwise zero unless the

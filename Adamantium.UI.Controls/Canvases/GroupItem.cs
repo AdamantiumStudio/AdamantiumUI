@@ -93,7 +93,6 @@ public partial class GroupItem : AdamantiumViewModel, ICanvasItem
     /// <summary>Its name, for a list of what is on the plane.</summary>
     public string Title => Name ?? string.Empty;
 
-
     /// <summary>Where it stands in paint order - stamped by the scene. See ICanvasItem.Order.</summary>
     public int Order { get; set; }
 
