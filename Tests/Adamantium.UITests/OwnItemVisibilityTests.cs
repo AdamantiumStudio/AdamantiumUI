@@ -40,6 +40,24 @@ public class OwnItemVisibilityTests
         });
     }
 
+    // An item the panel hid out of its window and that then leaves the list goes as its author left it - not hidden
+    // wherever it goes next, and not held by the list.
+    [Test]
+    public void AnItemThePanelHid_LeavesTheListShown()
+    {
+        var item = new Border { Height = 20 };
+        var list = new ItemsControl { Template = ItemsPresenterTemplate() };
+        list.Items.Add(item);
+        list.Measure(new Size<double>(100, 300));
+        list.Arrange(new Rect(0, 0, 100, 300));
+        item.Visibility = Visibility.Collapsed;
+        list.ItemContainerGenerator.NoteParked(item);
+
+        list.Items.Remove(item);
+
+        Assert.That(item.Visibility, Is.EqualTo(Visibility.Visible));
+    }
+
     // ...while the containers a list makes for its data are its own to show.
     [Test]
     public void TheContainersAListMakes_AreShown()

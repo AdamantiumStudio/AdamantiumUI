@@ -466,6 +466,8 @@ public class PropertyGrid : Control
         base.OnDiscarded();
         _dropped.AddRange(_built.Values);
         _dropped.AddRange(_generated);
+        _built.Clear();
+        _generated = [];
         DiscardDropped();
     }
 
@@ -475,6 +477,7 @@ public class PropertyGrid : Control
         {
             _openedBySearch.Remove(section);
             _foldingHeldBySearch.Remove(section);
+            _templated.Remove(section);
             if (section.VisualParent == null)
             {
                 DiscardedVisuals.PublishSubtree(section);
@@ -876,6 +879,9 @@ public class PropertyGrid : Control
         return section;
     }
 
+    /// <summary>Whether the grid keeps <paramref name="section"/> as one made from a section template.</summary>
+    internal bool KeepsTemplatedSection(PropertySection section) => _templated.Contains(section);
+
     private PropertySection TemplatedSectionFor(object item)
     {
         if (_built.TryGetValue(item, out var section))
@@ -901,14 +907,10 @@ public class PropertyGrid : Control
 
     private static void OnSectionTemplateSelectorChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
+        // Every section made for an item goes: one the grid built may now have a template picked for it, and the other way.
         var grid = (PropertyGrid)d;
-        foreach (var built in grid._built.Where(pair => grid._templated.Contains(pair.Value)).ToList())
-        {
-            grid._dropped.Add(built.Value);
-            grid._built.Remove(built.Key);
-        }
-
-        grid._templated.Clear();
+        grid._dropped.AddRange(grid._built.Values);
+        grid._built.Clear();
         grid.Rebuild();
     }
 
@@ -930,7 +932,7 @@ public class PropertyGrid : Control
         var grid = (PropertyGrid)d;
         var old = e.OldValue as Style;
         var style = e.NewValue as Style;
-        foreach (var section in grid._built.Values.Concat(grid._generated))
+        foreach (var section in grid._built.Values.Where(section => !grid._templated.Contains(section)).Concat(grid._generated))
         {
             Restyle(section, old, style);
         }

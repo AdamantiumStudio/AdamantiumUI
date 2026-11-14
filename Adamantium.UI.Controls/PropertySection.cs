@@ -162,6 +162,17 @@ public class PropertySection : Expander
         HasMenu = ContextMenu != null;
     }
 
+    // A menu a style shares outlives the section: left hooked, it would keep every section that ever had it.
+    protected override void OnDiscarded()
+    {
+        if (ContextMenu is { } menu)
+        {
+            menu.Opening -= OnMenuOpening;
+        }
+
+        base.OnDiscarded();
+    }
+
     // Opened from the button, a second press on it shuts the menu; opened by a right click on the section, a press
     // anywhere on the section must put it away.
     private void OnMenuOpening(object sender, ContextMenuOpeningEventArgs e)

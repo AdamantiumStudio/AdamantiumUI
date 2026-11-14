@@ -358,6 +358,38 @@ public class PropertyGridTests
         });
     }
 
+    // A section made from a template for an item goes with the item: released, and no longer kept by the grid - kept, it
+    // held the item, and whatever the item holds.
+    [Test]
+    public void ASectionMadeFromATemplate_GoesWithItsItem()
+    {
+        var item = new Target { Name = "first" };
+        var source = new ObservableCollection<object> { item };
+        var templates = new Adamantium.UI.Core.Templates.DataTemplateSet();
+        templates.Templates.Add(new Adamantium.UI.Core.Templates.DataTemplate(() =>
+            new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = new PropertySection { Header = "Templated" } })
+        {
+            DataType = typeof(Target)
+        });
+        var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source, SectionTemplateSelector = templates };
+        Settle(grid);
+        var section = grid.Displayed.Single();
+        var keptBefore = grid.KeepsTemplatedSection(section);
+
+        source.Remove(item);
+        Settle(grid);
+        while (DiscardedVisuals.Drain(64) > 0)
+        {
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(keptBefore, Is.True, "kept while shown");
+            Assert.That(grid.KeepsTemplatedSection(section), Is.False, "let go once its item left");
+            Assert.That(section.IsDiscarded, Is.True, "released");
+        });
+    }
+
     // A section offers its menu once it has one, and an item of that menu reaches the object of its section through
     // the logical tree - which is how a "Remove component" knows which component.
     [Test]

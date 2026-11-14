@@ -401,6 +401,40 @@ public class ItemContainerGenerator
         }
     }
 
+    /// <summary>Lets go of an item that is its own container as it leaves the list: shown again if the panel had hid
+    /// it, so it does not stay hidden wherever it goes next.</summary>
+    internal void LetGoOfParked(IUIComponent item)
+    {
+        if (_parkedOwnItems.Remove(item))
+        {
+            item.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>Lets go, as <see cref="LetGoOfParked"/> does, of every hidden item no longer among
+    /// <paramref name="items"/>.</summary>
+    internal void LetGoOfParkedNotAmong(IList<object> items)
+    {
+        if (_parkedOwnItems.Count == 0)
+        {
+            return;
+        }
+
+        var gone = new List<IUIComponent>();
+        foreach (var parked in _parkedOwnItems)
+        {
+            if (!items.Contains(parked))
+            {
+                gone.Add(parked);
+            }
+        }
+
+        foreach (var item in gone)
+        {
+            LetGoOfParked(item);
+        }
+    }
+
     /// <summary>Shows <paramref name="container"/> back in the window: one this generator made, or an item the panel hid
     /// itself - never one its author hid.</summary>
     internal void ShowInWindow(IUIComponent container)
@@ -452,6 +486,15 @@ public class ItemContainerGenerator
     public void Clear()
     {
         _held = null;
+
+        // Items that are their own containers are shown again if the panel had hid them: what the list shows next, or
+        // wherever they go, starts from what their author gave them.
+        foreach (var parked in _parkedOwnItems)
+        {
+            parked.Visibility = Visibility.Visible;
+        }
+
+        _parkedOwnItems.Clear();
 
         // Every generated container is CLEARED first, exactly as recycling one clears it: a container may hold a
         // subscription to the item it was showing, and the ITEM is the long-lived end - dropping the container without
