@@ -528,7 +528,9 @@ public static class CommandManager
 
                 foreach (var binding in bindings)
                 {
-                    if (!binding.Gesture.Matches(e.Key, e.Modifiers) || !CanRun(binding, host))
+                    // One kept to the focus being in its element is no key of the window's: elsewhere it runs nothing.
+                    if (!binding.Gesture.Matches(e.Key, e.Modifiers) || !CanRun(binding, host) ||
+                        (binding.Reach == KeyBindingReach.FocusWithin && !focusChain.Contains(host)))
                     {
                         continue;
                     }
