@@ -103,7 +103,7 @@ public class HaloTogglePatchRenderTests
             "and must be GONE when it is switched off - it stayed on screen until an unrelated frame walked");
     }
 
-    // A shadow falls on fills drawn before it: overlapping pending fills flush first (OverlapsHigherLayer, layer -1).
+    // A shadow falls on fills drawn before it: overlapping pending fills flush first (OverlapsLaterLayer, BatchLayer.HaloUnder).
     [Test]
     public void AShadowFallsOnWhatWasDrawnBeforeIt()
     {

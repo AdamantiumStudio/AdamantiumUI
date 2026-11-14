@@ -70,7 +70,7 @@ public class SegmentStateTests
         var device = GpuTestDevice.Device;
         using var presenter = GraphicsPresenter.Create(device,
             new PresentationParameters(PresenterType.RenderTarget, 64, 64, IntPtr.Zero), "segment_state");
-        var collector = new Tagged();
+        var collector = new Tagged { Layer = BatchLayer.Rect };
         try
         {
             device.SetRenderTargets(presenter.RenderTarget);
@@ -114,7 +114,7 @@ public class SegmentStateTests
         var device = GpuTestDevice.Device;
         using var presenter = GraphicsPresenter.Create(device,
             new PresentationParameters(PresenterType.RenderTarget, 64, 64, IntPtr.Zero), "segment_release");
-        var collector = new Tagged();
+        var collector = new Tagged { Layer = BatchLayer.Rect };
         int walked;
         try
         {
