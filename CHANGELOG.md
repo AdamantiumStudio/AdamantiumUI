@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
+  go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
+  `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
+  domain, path, secure, HttpOnly, `SameSite` (`WebCookieSameSite`), when it expires, and when Chromium made it and last
+  sent it.
 - What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
   of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
   the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same

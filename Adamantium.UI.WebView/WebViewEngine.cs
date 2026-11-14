@@ -14,7 +14,7 @@ namespace Adamantium.UI.WebView;
 /// (<see cref="WebViewRegistration.AddWebView"/>); a view model takes it from there and a WebView's
 /// <see cref="WebView.Engine"/> is bound to it.
 /// </summary>
-public sealed unsafe class WebViewEngine : IDisposable
+public sealed unsafe partial class WebViewEngine : IDisposable
 {
     private const long MaxPumpDelayMs = 1000 / 30;
     private const int CloseTurns = 100;
@@ -483,8 +483,13 @@ public sealed unsafe class WebViewEngine : IDisposable
     public static string HelperFile => Path.Combine(CefLibrary.ApplicationFolder,
         OperatingSystem.IsWindows() ? "Adamantium.UI.WebView.Helper.exe" : "Adamantium.UI.WebView.Helper");
 
+    /// <summary>Whether CEF is initialized, or can be now: on Windows it is started on the main graphics device's adapter,
+    /// so not before that device is made - asked before, it is not tried and not given up on.</summary>
+    internal bool CanInitialize => initialized || !OperatingSystem.IsWindows() || devices.MainGraphicsDevice != null;
+
     /// <summary>Initializes CEF on the UI loop, once; throws when CEF or its helper is missing or refuses, and CEF is not
-    /// tried again - it allows one initialization a process.</summary>
+    /// tried again - it allows one initialization a process. Before the main graphics device it throws and may be tried
+    /// again (<see cref="CanInitialize"/>).</summary>
     internal void EnsureInitialized()
     {
         if (initialized)
@@ -495,6 +500,11 @@ public sealed unsafe class WebViewEngine : IDisposable
         if (failed || shutDown)
         {
             throw new InvalidOperationException("CEF is shut down or refused to start.");
+        }
+
+        if (!CanInitialize)
+        {
+            throw new InvalidOperationException("CEF waits for the main graphics device, whose adapter it is started on.");
         }
 
         try
@@ -530,10 +540,11 @@ public sealed unsafe class WebViewEngine : IDisposable
     /// <summary>Starts Chromium ahead of the first page: CEF, and its processes - the GPU's, the network's, a page's -
     /// kept up by a blank page shown nowhere until the first browser is made. That page then shows without waiting for
     /// them; until it does, they hold their memory - the blank page draws nothing and takes no device. On the UI loop;
-    /// nothing while a browser is open, or with no CEF beside the application.</summary>
+    /// nothing while a browser is open, before the main graphics device is made, or with no CEF beside the application.
+    /// </summary>
     public void StartAhead()
     {
-        if (!IsAvailable || warmUp != null || browsers.Count > 0)
+        if (!IsAvailable || !CanInitialize || warmUp != null || browsers.Count > 0)
         {
             return;
         }
@@ -541,7 +552,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         try
         {
             EnsureInitialized();
-            warmUp = new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewUnseenView());
+            warmUp =new WebViewBrowser(this, null, WebViewFramePath.PixelBuffer, new WebViewUnseenView());
             browsers.Add(warmUp);
             ArmPumpTimer(MaxPumpDelayMs);
             warmUp.SetHidden(true);
