@@ -79,7 +79,8 @@ if (-not (Test-Path $extract)) {
     $partial = Join-Path $work "unpacking"
     if (Test-Path $partial) { Remove-Item $partial -Recurse -Force }
     New-Item -ItemType Directory -Force $partial | Out-Null
-    tar -xjf $archive -C $partial
+    # Windows' own tar: Git's, first on the path in Git Bash, takes "D:" in a path for a remote host.
+    & "$env:SystemRoot\System32\tar.exe" -xjf $archive -C $partial
     if ($LASTEXITCODE) { throw "tar failed" }
     Move-Item (Join-Path $partial $name) $extract
     Remove-Item $partial -Recurse -Force
@@ -93,8 +94,12 @@ if (Test-Path "$extract\Resources") { Copy-Item "$extract\Resources\*" $stage -R
 Copy-Item "$extract\LICENSE.txt" $stage
 if (Test-Path "$extract\CREDITS.html") { Copy-Item "$extract\CREDITS.html" $stage }
 if (Test-Path "$extract\FFMPEG.txt") { Copy-Item "$extract\FFMPEG.txt" $stage }
+# Beside the cef folder, not in it, so no application takes it: the runtime package refuses to pack this FFmpeg.
+$codecsMark = Join-Path $project "runtimes\$Rid\native\ffmpeg-with-codecs.txt"
+if (Test-Path $codecsMark) { Remove-Item $codecsMark }
 if ($Codecs) {
     Copy-Item $Codecs (Join-Path $stage $build.FFmpeg)
+    Set-Content -Path $codecsMark -Value $Codecs -Encoding utf8
     Write-Host "FFmpeg with H.264 and AAC from $Codecs"
 }
 Write-Host "OK: CEF $version -> $stage" -ForegroundColor Green

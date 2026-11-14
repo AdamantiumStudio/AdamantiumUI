@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- CEF and the WebView helper for one platform, as Adamantium.UI.WebView.Runtime.<rid>. Packed per platform with
+         -p:CefRid=<rid> -p:HelperFolder=<the helper published for it> -p:UseEngineSource=false, after native/fetch-cef
+         staged that platform's CEF. CEF goes to the package's cef folder: NuGet would copy runtimes/<rid>/native into
+         the application a second time. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <PackageId>Adamantium.UI.WebView.Runtime.$(CefRid)</PackageId>
+        <IsPackable Condition="'$(CefRid)' != ''">true</IsPackable>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <NoWarn>$(NoWarn);NU5100;NU5128</NoWarn>
+        <Description>Chromium Embedded Framework and the Adamantium UI WebView helper for $(CefRid), copied into the application's cef folder when it builds for that platform. Take the version of Adamantium.UI.WebView.</Description>
+        <PackageTags>adamantium;ui;webview;cef;chromium</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <StagedCef>..\Adamantium.UI.WebView\runtimes\$(CefRid)\native\</StagedCef>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(CefRid)' != ''">
+        <None Include="$(StagedCef)cef\**" Pack="true" PackagePath="cef" Visible="false" />
+        <None Include="$(HelperFolder)\Adamantium.UI.WebView.Helper*" Exclude="$(HelperFolder)\*.pdb;$(HelperFolder)\*.dbg" Pack="true" PackagePath="cef" Visible="false" Condition="'$(HelperFolder)' != ''" />
+        <None Include="Adamantium.UI.WebView.Runtime.targets" Pack="true" PackagePath="buildTransitive\$(PackageId).targets" />
+    </ItemGroup>
+
+    <Target Name="RequireStagedCef" BeforeTargets="GenerateNuspec" Condition="'$(CefRid)' != ''">
+        <Error Condition="!Exists('$(StagedCef)cef\LICENSE.txt')" Text="CEF for $(CefRid) is not staged: run native/fetch-cef for it first." />
+        <Error Condition="Exists('$(StagedCef)ffmpeg-with-codecs.txt')" Text="The staged CEF for $(CefRid) has the FFmpeg with H.264 and AAC, which is not published: run native/fetch-cef again without codecs." />
+        <Error Condition="'$(HelperFolder)' == '' or (!Exists('$(HelperFolder)\Adamantium.UI.WebView.Helper') and !Exists('$(HelperFolder)\Adamantium.UI.WebView.Helper.exe'))" Text="No helper published for $(CefRid) in '$(HelperFolder)': publish Adamantium.UI.WebView.Helper for it and pass -p:HelperFolder." />
+    </Target>
+
+</Project>
