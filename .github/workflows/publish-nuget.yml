@@ -25,7 +25,74 @@ on:
         default: true
 
 jobs:
+  # CEF and the WebView helper for each platform, as Adamantium.UI.WebView.Runtime.<rid>: CEF from this repository's
+  # release (native/fetch-cef, checked against its SHA-256), the helper published ahead of time - on a runner of that
+  # platform, as NativeAOT does not build for another system.
+  cef-runtime:
+    strategy:
+      matrix:
+        include:
+          - rid: win-x64
+            os: windows-latest
+          - rid: linux-x64
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: CEF
+        shell: bash
+        run: |
+          if [ "${{ matrix.rid }}" = win-x64 ]; then
+            powershell -NoProfile -File Adamantium.UI.WebView/native/fetch-cef.ps1 -Rid win-x64
+          else
+            bash Adamantium.UI.WebView/native/fetch-cef.sh linux-x64
+          fi
+
+      - name: Helper (Windows)
+        if: matrix.rid == 'win-x64'
+        run: dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r win-x64 -o artifacts/helper
+
+      # In .NET's cross-build image, against its old root file system: built on the runner the helper would ask the
+      # runner's glibc, newer than CEF's. The runner's .NET is mounted in; the runner's user owns what it writes.
+      - name: Helper (Linux)
+        if: matrix.rid == 'linux-x64'
+        run: >
+          docker run --rm --user "$(id -u):$(id -g)" -v "$GITHUB_WORKSPACE:/src" -v "$DOTNET_ROOT:/dotnet" -w /src -e HOME=/tmp -e DOTNET_CLI_HOME=/tmp
+          -e NUGET_PACKAGES=/tmp/nuget mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-amd64
+          /dotnet/dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r linux-x64
+          -p:SysRoot=/crossrootfs/x64 -p:LinkerFlavor=lld -o artifacts/helper
+
+      - name: The helper asks no newer glibc than CEF
+        if: matrix.rid == 'linux-x64'
+        run: |
+          newest() { objdump -T "$1" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1; }
+          helper=$(newest artifacts/helper/Adamantium.UI.WebView.Helper)
+          cef=$(newest Adamantium.UI.WebView/runtimes/linux-x64/native/cef/libcef.so)
+          echo "helper $helper, libcef $cef"
+          [ "$(printf '%s\n%s\n' "$helper" "$cef" | sort -V | tail -1)" = "$cef" ]
+
+      - name: Pack
+        shell: bash
+        run: >
+          dotnet pack Adamantium.UI.WebView.Runtime/Adamantium.UI.WebView.Runtime.csproj -c Release
+          -p:CefRid=${{ matrix.rid }} -p:HelperFolder="$GITHUB_WORKSPACE/artifacts/helper" -o artifacts/nupkg
+
+      - name: Upload the package as an artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: cef-runtime-${{ matrix.rid }}
+          path: artifacts/nupkg/*.nupkg
+
   publish:
+    needs: cef-runtime
     # Windows: the effects generator compiles the UI's shaders during the build and loads Slang through kernel32.
     runs-on: windows-latest
     permissions:
@@ -58,6 +125,14 @@ jobs:
 
       - name: Pack
         run: dotnet pack AdamantiumUI.sln -c Release --no-build -o artifacts/nupkg
+
+      # The runtime packages the cef-runtime jobs made, beside the others: shown, uploaded and pushed with them.
+      - name: CEF runtime packages
+        uses: actions/download-artifact@v7
+        with:
+          pattern: cef-runtime-*
+          path: artifacts/nupkg
+          merge-multiple: true
 
       # Printed, because the things worth checking before an irreversible push are all in here: the version, the
       # licence, the dependencies, and that analyzers, build files and content landed where a consumer looks for them.

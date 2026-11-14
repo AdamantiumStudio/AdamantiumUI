@@ -85,8 +85,12 @@ rm -f "$stage"/*.lib "$stage"/bootstrap*.exe
 if [ -f "$work/$name/FFMPEG.txt" ]; then
   cp "$work/$name/FFMPEG.txt" "$stage/"
 fi
+# Beside the cef folder, not in it, so no application takes it: the runtime package refuses to pack this FFmpeg.
+codecs_mark="$project/runtimes/$rid/native/ffmpeg-with-codecs.txt"
+rm -f "$codecs_mark"
 if [ -n "$codecs" ]; then
   cp "$codecs" "$stage/$ffmpeg"
+  echo "$codecs" > "$codecs_mark"
   echo "FFmpeg with H.264 and AAC from $codecs"
 fi
 echo "OK: CEF $version -> $stage"
