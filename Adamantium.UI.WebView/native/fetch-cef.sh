@@ -3,7 +3,7 @@
 # Windows and Linux: our build (native/cef-build) from AdamantiumUI's releases, checked against the SHA-256 written
 # here - H.264 and AAC behind the ProprietaryCodecs feature, FFmpeg without them. A second argument puts an FFmpeg with
 # them (libffmpeg.so or ffmpeg.dll of our build) in its place; WebView then turns the feature on. macOS: CEF's own
-# build from cef-builds.spotifycdn.com, checked against its SHA-1. Its licence and Chromium's credits are staged beside.
+# build from cef-builds.spotifycdn.com, checked against its SHA-1. Its license and Chromium's credits are staged beside.
 # Usage:  native/fetch-cef.sh [linux-x64|osx-arm64|win-x64] [FFmpeg with codecs]
 set -euo pipefail
 
@@ -12,8 +12,8 @@ release="cef-156.0.26-1"
 rid="${1:-linux-x64}"
 codecs="${2:-}"
 case "$rid" in
-  win-x64) platform=windows64; sha256=c044612f98253f9fc072c281e4495910b5ecc8b7ecffea1f5748c60dcc93c15e; ffmpeg=ffmpeg.dll ;;
-  linux-x64) platform=linux64; sha256=2e366cf6b5c75c83cab40398c0c69fd83494222452364926067b0eaf4a453b42; ffmpeg=libffmpeg.so ;;
+  win-x64) platform=windows64; sha256=e9cf5c307a9149d10aa1a781acd73fd77c01dd1fb142393607b6d0c9358dda18; ffmpeg=ffmpeg.dll ;;
+  linux-x64) platform=linux64; sha256=6cd72d1c42d5edd18a5041aa211342cfcd1f4cf6c024fb845eabcb4f919b59ad; ffmpeg=libffmpeg.so ;;
   osx-arm64) platform=macosarm64; sha256= ;;
   *) echo "Unknown runtime identifier '$rid'." >&2; exit 1 ;;
 esac
@@ -60,7 +60,7 @@ else
 fi
 actual="${actual%% *}"
 if [ "$actual" != "$expected" ]; then
-  rm -f "$archive" "$archive.sha1"
+  rm -rf "$archive" "$archive.sha1" "$work/$name"
   echo "The checksum of $name is $actual, $source $expected - removed it, run again." >&2
   exit 1
 fi
@@ -82,10 +82,11 @@ cp -R "$work/$name/Release/." "$stage/"
 cp "$work/$name/LICENSE.txt" "$stage/"
 [ -f "$work/$name/CREDITS.html" ] && cp "$work/$name/CREDITS.html" "$stage/"
 rm -f "$stage"/*.lib "$stage"/bootstrap*.exe
+if [ -f "$work/$name/FFMPEG.txt" ]; then
+  cp "$work/$name/FFMPEG.txt" "$stage/"
+fi
 if [ -n "$codecs" ]; then
   cp "$codecs" "$stage/$ffmpeg"
   echo "FFmpeg with H.264 and AAC from $codecs"
-elif [ -f "$work/$name/FFMPEG.txt" ]; then
-  cp "$work/$name/FFMPEG.txt" "$stage/"
 fi
 echo "OK: CEF $version -> $stage"

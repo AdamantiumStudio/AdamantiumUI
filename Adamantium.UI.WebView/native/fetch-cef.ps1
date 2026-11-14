@@ -6,7 +6,7 @@
   here - H.264 and AAC behind the ProprietaryCodecs feature, FFmpeg without them. -Codecs puts an FFmpeg with them
   (ffmpeg.dll or libffmpeg.so of our build) in its place; WebView then turns the feature on. macOS: CEF's own build
   from cef-builds.spotifycdn.com, checked against its SHA-1. CEF goes to a folder of its own because it carries a
-  vulkan-1.dll of its own, which next to the application would stand in for the system's loader. Its licence and
+  vulkan-1.dll of its own, which next to the application would stand in for the system's loader. Its license and
   Chromium's credits are staged beside it.
   Usage:  powershell -File native\fetch-cef.ps1 [-Rid win-x64|linux-x64|osx-arm64] [-Codecs <FFmpeg with codecs>]
 #>
@@ -22,8 +22,8 @@ $version = "156.0.26+g8ea0c73+chromium-156.0.8078.88"
 $release = "cef-156.0.26-1"
 $releases = "https://github.com/AdamantiumStudio/AdamantiumUI/releases/download/$release"
 $ours = @{
-    "win-x64" = @{ Platform = "windows64"; Sha256 = "c044612f98253f9fc072c281e4495910b5ecc8b7ecffea1f5748c60dcc93c15e"; FFmpeg = "ffmpeg.dll" }
-    "linux-x64" = @{ Platform = "linux64"; Sha256 = "2e366cf6b5c75c83cab40398c0c69fd83494222452364926067b0eaf4a453b42"; FFmpeg = "libffmpeg.so" }
+    "win-x64" = @{ Platform = "windows64"; Sha256 = "e9cf5c307a9149d10aa1a781acd73fd77c01dd1fb142393607b6d0c9358dda18"; FFmpeg = "ffmpeg.dll" }
+    "linux-x64" = @{ Platform = "linux64"; Sha256 = "6cd72d1c42d5edd18a5041aa211342cfcd1f4cf6c024fb845eabcb4f919b59ad"; FFmpeg = "libffmpeg.so" }
 }
 $build = $ours[$Rid]
 if ($build) {
@@ -69,6 +69,7 @@ else {
 }
 if ($actual -ne $expected) {
     Remove-Item "$archive*"
+    if (Test-Path (Join-Path $work $name)) { Remove-Item (Join-Path $work $name) -Recurse -Force }
     throw "The checksum of $name is $actual, $source $expected - removed it, run again."
 }
 
@@ -91,7 +92,7 @@ Copy-Item "$extract\Release\*" $stage -Recurse -Exclude "*.lib", "bootstrap*.exe
 if (Test-Path "$extract\Resources") { Copy-Item "$extract\Resources\*" $stage -Recurse }
 Copy-Item "$extract\LICENSE.txt" $stage
 if (Test-Path "$extract\CREDITS.html") { Copy-Item "$extract\CREDITS.html" $stage }
-if ((Test-Path "$extract\FFMPEG.txt") -and -not $Codecs) { Copy-Item "$extract\FFMPEG.txt" $stage }
+if (Test-Path "$extract\FFMPEG.txt") { Copy-Item "$extract\FFMPEG.txt" $stage }
 if ($Codecs) {
     Copy-Item $Codecs (Join-Path $stage $build.FFmpeg)
     Write-Host "FFmpeg with H.264 and AAC from $Codecs"
