@@ -449,6 +449,9 @@ All packages share one version.
 
 ### Fixed
 
+- Turned or sheared text is drawn after what is still waiting to be drawn under it. Such text is not batched but drawn
+  by itself, and it went ahead of the batches still pending - strokes drawn before it landed on top: a PDF sheet turned
+  a quarter showed its hairline grid over the page number.
 - A canvas's tool rail no longer runs over the map on a short canvas. `CanvasChromeLayer` measures a pane in a top
   corner with the height left above the panes in the bottom corner under it, and the themes' rail scrolls what does
   not fit - one line of tools, along its own direction, by the wheel or a finger, with no bar (`PART_RailScroll`). It

@@ -239,7 +239,7 @@ public partial class RenderCache
         ref var batch = ref inner ? ref _haloLivingOver : ref _haloLivingUnder;
         if (batch == null)
         {
-            batch = new HaloLivingCollector { BatchId = (byte)(inner ? 11 : 10), TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+            batch = Listed(new HaloLivingCollector { BatchId = (byte)(inner ? 11 : 10), TransformsAddress = _transformTable?.DeviceAddress ?? 0 });
             batch.BeginFrame(device);
         }
 
@@ -284,7 +284,7 @@ public partial class RenderCache
         ref var batch = ref inner ? ref _haloOver : ref _haloUnder;
         if (batch == null)
         {
-            batch = new HaloRectCollector { BatchId = (byte)(inner ? 9 : 8), TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+            batch = Listed(new HaloRectCollector { BatchId = (byte)(inner ? 9 : 8), TransformsAddress = _transformTable?.DeviceAddress ?? 0 });
             batch.BeginFrame(device);
         }
 

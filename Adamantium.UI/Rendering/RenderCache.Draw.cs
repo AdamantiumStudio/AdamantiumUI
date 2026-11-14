@@ -94,6 +94,8 @@ public partial class RenderCache
     // General instanced fills (arbitrary tessellated geometry sharing a mesh), flushed in PAINT ORDER via FlushBatches.
     private InstancedFillCollector _instancedFill;
 
+    private readonly List<IPendingBatch> _batches = new();
+
     internal InstancedFillCollector InstancedFill => _instancedFill;
 
     // --- Retained draw (clean-frame op replay) ---
@@ -933,18 +935,18 @@ public partial class RenderCache
         {
             // The BatchId is how a recorded op finds its way back to the arena that drew it (see ArenaOf) - the same
             // numbers ExecuteOps switches on, said once, here.
-            _textBatch ??= new TextBatchCollector { BatchId = 2 };
-            _rectBatch ??= new RectBatchCollector { BatchId = 0 };
-            _ellipseBatch ??= new EllipseBatchCollector { BatchId = 1 };
-            _polygonBatch ??= new RegularPolygonCollector { BatchId = 12 };
-            _gradientRectBatch ??= new GradientRectCollector { BatchId = 3 };
-            _gradientEllipseBatch ??= new GradientEllipseCollector { BatchId = 4 };
-            _patternBatch ??= new PatternRectCollector { BatchId = 5 };
-            _fractalBatch ??= new FractalRectCollector { BatchId = 6 };
-            _canvasGridBatch ??= new CanvasGridCollector { BatchId = 14 };
-            _inkBatch ??= new InkCollector { BatchId = 15 };
-            _arrowBatch ??= new CanvasArrowCollector { BatchId = 16 };
-            _strokeBatch ??= new StrokeBatchCollector { BatchId = 18, OnStale = StrokesStale };   // 17 is the instanced fill's
+            _textBatch ??= Listed(new TextBatchCollector { BatchId = 2 });
+            _rectBatch ??= Listed(new RectBatchCollector { BatchId = 0 });
+            _ellipseBatch ??= Listed(new EllipseBatchCollector { BatchId = 1 });
+            _polygonBatch ??= Listed(new RegularPolygonCollector { BatchId = 12 });
+            _gradientRectBatch ??= Listed(new GradientRectCollector { BatchId = 3 });
+            _gradientEllipseBatch ??= Listed(new GradientEllipseCollector { BatchId = 4 });
+            _patternBatch ??= Listed(new PatternRectCollector { BatchId = 5 });
+            _fractalBatch ??= Listed(new FractalRectCollector { BatchId = 6 });
+            _canvasGridBatch ??= Listed(new CanvasGridCollector { BatchId = 14 });
+            _inkBatch ??= Listed(new InkCollector { BatchId = 15 });
+            _arrowBatch ??= Listed(new CanvasArrowCollector { BatchId = 16 });
+            _strokeBatch ??= Listed(new StrokeBatchCollector { BatchId = 18, OnStale = StrokesStale });   // 17 is the instanced fill's
             _strokeBatch.RenderScale = (float)_renderScale;
             // Lazy, like the textured batch: a material owns a capture texture, and a tree without one should not pay
             // for it.
@@ -976,7 +978,7 @@ public partial class RenderCache
             // skips the redundant upload (zero bytes move on an idle frame).
             if (InstancedFillCollector.Enabled)
             {
-                _instancedFill ??= new InstancedFillCollector(device, AskForFrame) { PrepareOverlay = PrepareOverlayForDraw };
+                _instancedFill ??= Listed(new InstancedFillCollector(device, AskForFrame) { PrepareOverlay = PrepareOverlayForDraw });
                 _instancedFill.TransformsAddress = _transformTable.DeviceAddress;   // instance VS fetches its slot matrix
                 _instancedFill.Backdrop = _materialBatch;   // may be null: the material batch is made on first sight of one
                 _instancedFill.BeginFrame();
@@ -1425,7 +1427,7 @@ public partial class RenderCache
                 if (texPolyTexture == null) continue;
                 if (_texRectBatch == null)
                 {
-                    _texRectBatch = new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+                    _texRectBatch = Listed(new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 });
                     _texRectBatch.BeginFrame(device);
                 }
                 var texPolyBounds = LogicalBounds(unit.Component, wt);
@@ -1679,7 +1681,7 @@ public partial class RenderCache
                 // device out of memory.
                 if (_texRectBatch == null)
                 {
-                    _texRectBatch = new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+                    _texRectBatch = Listed(new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 });
                     _texRectBatch.BeginFrame(device);
                 }
                 var texBounds = LogicalBounds(unit.Component, wt);
@@ -1723,7 +1725,7 @@ public partial class RenderCache
                 }
                 if (_texRectBatch == null)
                 {
-                    _texRectBatch = new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+                    _texRectBatch = Listed(new TextureBatchCollector { BatchId = 7, TransformsAddress = _transformTable?.DeviceAddress ?? 0 });
                     _texRectBatch.BeginFrame(device);
                 }
                 var texEllBounds = LogicalBounds(unit.Component, wt);
@@ -1964,15 +1966,6 @@ public partial class RenderCache
                 if (strokeAdd == StrokeBatchCollector.Added.NoRoom && _recording) _deferredForRoom = true;
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
             }
-            else if (device != null && (_rectBatch.Active || _ellipseBatch.Active || _gradientRectBatch.Active || _gradientEllipseBatch.Active || _patternBatch.Active || _fractalBatch.Active || _textBatch.Active || (_instancedFill?.Active ?? false) || (_materialBatch?.Active ?? false) || (_canvasGridBatch?.Active ?? false) || (_strokeBatch?.Active ?? false)))
-            {
-                // A non-batchable unit that overlaps any pending batch: flush them first so this unit paints OVER them, as
-                // its later source order requires. Spatially disjoint units (a list's items) don't flush.
-                var lb = LogicalBounds(unit.Component, wt);
-                if (_rectBatch.OverlapsPending(lb) || _ellipseBatch.OverlapsPending(lb) || _gradientRectBatch.OverlapsPending(lb) || _gradientEllipseBatch.OverlapsPending(lb) || _patternBatch.OverlapsPending(lb) || _fractalBatch.OverlapsPending(lb) || _textBatch.OverlapsPending(lb) || (_instancedFill?.OverlapsPending(lb) ?? false)
-                    || (_materialBatch?.OverlapsPending(lb) ?? false) || (_canvasGridBatch?.OverlapsPending(lb) ?? false) || (_strokeBatch?.OverlapsPending(lb) ?? false))
-                    FlushBatches(device, fullScissor, ref scissorNarrowed);
-            }
             else if (device == null && unit is RectangleRenderUnit rruNoDev)
             {
                 // No device = the overlay (popup / tooltip) path: each unit draws individually via unit.Render() below,
@@ -2002,6 +1995,11 @@ public partial class RenderCache
                 case RegularPolygonRenderUnit polygon:
                     polygon.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
                     break;
+            }
+
+            if (device != null && OverlapsAnyPending(DirectBounds(unit, wt), unit.Component))
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
             }
 
             if (device != null)
@@ -2130,6 +2128,32 @@ public partial class RenderCache
         _deferredForRoom = true;
         return false;
     }
+
+    private T Listed<T>(T batch) where T : IPendingBatch
+    {
+        _batches.Add(batch);
+        return batch;
+    }
+
+    private bool OverlapsAnyPending(Rect bounds, IUIComponent owner)
+    {
+        foreach (var batch in _batches)
+        {
+            if (IsOwnInnerBand(batch, owner)) continue;
+
+            if (batch.OverlapsPending(bounds)) return true;
+        }
+
+        return false;
+    }
+
+    private bool IsOwnInnerBand(IPendingBatch batch, IUIComponent owner) =>
+        ReferenceEquals(owner, _haloOverOwner) &&
+        (ReferenceEquals(batch, _haloOver) || ReferenceEquals(batch, _haloLivingOver));
+
+    private Rect DirectBounds(IRenderUnit unit, Matrix4x4F world) => DrawnInk(unit, false, out var grow) is { } ink
+        ? ink.Inflate(grow).TransformToAABB(world)
+        : LogicalBounds(unit.Component, world);
 
     // The batches FlushBatches draws after the strokes: anything pending in them was painted earlier, so a stroke over it
     // has to flush them first - but not its own element's inner band, which belongs over it.
@@ -3489,12 +3513,12 @@ public partial class RenderCache
     {
         if (_materialBatch != null) return;
 
-        _materialBatch = new MaterialRectCollector
+        _materialBatch = Listed(new MaterialRectCollector
         {
             BatchId = 13,
             TransformsAddress = _transformTable?.DeviceAddress ?? 0,
             WindowBoundsProvider = WindowOnDesktop
-        };
+        });
 
         // ONLY on the frame it is created, because the frame's own BeginFrame pass has already gone by. Calling it
         // per material - which is what this used to do - resets Count and DISCARDS the segments recorded so far: an

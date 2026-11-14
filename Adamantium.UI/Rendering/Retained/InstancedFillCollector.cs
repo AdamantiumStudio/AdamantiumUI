@@ -24,7 +24,7 @@ namespace Adamantium.UI.Rendering.Retained;
 
 // Instanced fills of tessellated meshes shared per GeometryKey, collected during the walk and flushed in paint order.
 // Each flush draws one instanced call per key, then the deferred per-unit fringes and strokes on top. Render thread only.
-internal sealed class InstancedFillCollector : DeferredDisposableObject
+internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendingBatch
 {
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
     public static bool Enabled = true;
