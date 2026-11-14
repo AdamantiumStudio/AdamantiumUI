@@ -675,6 +675,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
         _coast = new PanInertia(() => _travel, Travel, RememberLayout);
         _glide = new PanInertia(() => Offset, to => SetCurrentValue(OffsetProperty, to), RememberLayout);
+        _flight = new TimedEase(StepFlight, RememberLayout);
         _edgeCoast = new PanInertia(() => Offset, StretchTo, RememberLayout)
         {
             Edges = offset => ClampToPlane(offset, Scale),
@@ -1621,6 +1622,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private static void OnCameraChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         if (component is not InfiniteCanvas canvas) return;
+
+        if (canvas._flight.IsActive && !canvas._flying) canvas._flight.Stop();
 
         canvas.CameraChanged?.Invoke(canvas, EventArgs.Empty);
 
