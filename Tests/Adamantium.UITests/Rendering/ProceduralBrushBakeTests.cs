@@ -35,7 +35,7 @@ public class ProceduralBrushBakeTests
     [Test]
     public void PatternAndNoise_CanBatch_ButSolidGradientAndNullDoNot()
     {
-        var collector = new PatternRectCollector();
+        var collector = new PatternRectCollector { Layer = BatchLayer.Pattern };
         Assert.Multiple(() =>
         {
             Assert.That(collector.CanBatch(Payload(new PatternBrush())), Is.True, "a pattern fill batches into the pattern pass");
@@ -51,7 +51,7 @@ public class ProceduralBrushBakeTests
     [Test]
     public void TexturedFills_CanBatch_ButProceduralOnesDoNot()
     {
-        var collector = new TextureBatchCollector();
+        var collector = new TextureBatchCollector { Layer = BatchLayer.Texture };
         Assert.Multiple(() =>
         {
             Assert.That(collector.CanBatch(Payload(new ImageBrush())), Is.True, "an image fill batches into the textured pass");
