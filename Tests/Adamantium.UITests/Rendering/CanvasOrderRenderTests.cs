@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
@@ -7,6 +9,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Rendering;
+using Adamantium.UI.Rendering.Verification;
 using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
@@ -384,6 +387,85 @@ public class CanvasOrderRenderTests
 
         Assert.That(after.G, Is.GreaterThan(120),
             $"the picture went dark in the frame after it was gathered: {after}");
+    }
+
+    // TEXT PANNED with the plane: its placement moves and the frame is patched. The frame verifier compares where each
+    // glyph is drawn with where the tree has it, and has to find the two the same - it used to read the tree's place
+    // from a copy on the text's unit that a batched glyph never refreshes, and raised an alarm on every pan.
+    [Test]
+    public void TextPannedWithThePlane_IsCheckedClean()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "verify-tests", Guid.NewGuid().ToString("N"));
+        var settings = new FrameVerification { Folder = folder, IsEnabled = true };
+        try
+        {
+            var canvas = Canvas();
+            canvas.Scene.Add(new TextItem(new Vector2<double>(-40, -10), "HHHH", new SolidColorBrush(Colors.White), 24));
+            Lay(canvas);
+            var root = new VisualRoot(canvas, Dim, Dim);
+            Frame(root);
+
+            var verifier = new FrameVerifier(settings, root);
+            _renderer.Cache.Observer = verifier;
+            for (var pan = 0; pan < 3; pan++)
+            {
+                canvas.PanBy(new Vector2<double>(-30, 10));
+                Lay(canvas);
+                Frame(root);
+                verifier.FrameDrawn(_renderer.Cache);
+            }
+
+            var log = File.Exists(settings.LogPath) ? File.ReadAllText(settings.LogPath) : string.Empty;
+            Assert.That(settings.VerifiedFrames, Is.EqualTo(3), "every panned frame must be checked");
+            Assert.That(settings.MismatchedFrames, Is.Zero, log);
+        }
+        finally
+        {
+            settings.IsEnabled = false;
+            _renderer.Cache.Observer = null;
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, true);
+            }
+        }
+    }
+
+    // A TEXT LONG ENOUGH TO BE KEPT IN A BAND - only the glyphs round what is shown - panned along past the band. The
+    // band was fitted with where the text stood at the last walk, so panned frames went on asking whether the old place
+    // was still covered, and the glyphs ran out on the screen.
+    [Test]
+    public void ALongTextPannedPastItsBand_StillShowsItsGlyphs()
+    {
+        var canvas = Canvas();
+        canvas.Scene.Add(new TextItem(new Vector2<double>(-40, -10), new string('H', 3000), new SolidColorBrush(Colors.White),
+            24));
+        Lay(canvas);
+        var root = new VisualRoot(canvas, Dim, Dim);
+        Frame(root);
+
+        for (var pan = 0; pan < 4; pan++)
+        {
+            canvas.PanBy(new Vector2<double>(-400, 0));
+            Lay(canvas);
+            Frame(root);
+        }
+
+        Assert.That(LitPixels(), Is.GreaterThan(100), "the glyphs ran out once the text was panned past its band");
+    }
+
+    private static int LitPixels()
+    {
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
+        var pixels = new byte[(int)img.TotalSizeInBytes];
+        Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
+
+        var lit = 0;
+        for (var at = 0; at < pixels.Length; at += 4)
+        {
+            if (pixels[at] > 128 && pixels[at + 1] > 128 && pixels[at + 2] > 128) lit++;
+        }
+
+        return lit;
     }
 
     private static void Lay(InfiniteCanvas canvas)
