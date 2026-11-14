@@ -376,6 +376,10 @@ public partial class RenderCache
         CloseLayer();
         scissorNarrowed = false;
         _batchOpen = false;
+
+        // No batch is open, so no clip owner is asked about: held on, the last one - a closed popup's list, drawn no
+        // more - would stay alive with everything it showed until the next frame, which a closed popup never has.
+        _batchClip = null;
     }
 
     private void AimMaterialCapture(Rect2D fullScissor)

@@ -474,6 +474,11 @@ All packages share one version.
 
 ### Fixed
 
+- A closed popup no longer keeps alive the lists it showed and their items, once its source changed: the render cache
+  let go of the last clip owner only at its next frame, which a closed popup never draws; a scroll viewer's presenter
+  held the panel it scrolled for after that panel left its content, until it was measured again; and a list's panel
+  that left the tree kept where every item stood. A game's code shown in the editor's Add component list could not be
+  unloaded.
 - A `TreeView` follows the member its `HierarchicalDataTemplate.ItemsSource` binding names: a node that gives another
   children collection - a folder's list read again from disk - is read again. A leaf that gained children shows its
   expander, and opens at once when it was asked open; an open branch shows the new children. The member was read once,

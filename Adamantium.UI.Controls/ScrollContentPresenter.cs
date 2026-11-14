@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
@@ -608,13 +609,42 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     }
 
     // Find the inner virtualizing panel (first IScrollableContent in the content subtree) and track its metrics.
+    /// <summary>The panel scrolled for, as found at the last measure; null for none.</summary>
+    internal IScrollableContent Inner => _inner;
+
     private void ResolveInner()
     {
         var found = FindInner(this);
         if (ReferenceEquals(found, _inner)) return;
-        if (_inner != null) _inner.ScrollMetricsChanged -= OnInnerMetricsChanged;
-        _inner = found;
-        if (_inner != null) _inner.ScrollMetricsChanged += OnInnerMetricsChanged;
+        Follow(found);
+    }
+
+    private void Follow(IScrollableContent inner)
+    {
+        if (_inner != null)
+        {
+            _inner.ScrollMetricsChanged -= OnInnerMetricsChanged;
+            if (_inner is IUIComponent left) left.DetachedFromVisualTreeEvent -= OnInnerDetached;
+        }
+
+        _inner = inner;
+        if (_inner != null)
+        {
+            _inner.ScrollMetricsChanged += OnInnerMetricsChanged;
+            if (_inner is IUIComponent followed) followed.DetachedFromVisualTreeEvent += OnInnerDetached;
+        }
+    }
+
+    // The panel found left the content - its item's container went with a source replaced - while nothing measures this
+    // presenter again soon, in a closed popup: let go of it at once, or it keeps what it showed, and through it the
+    // items, alive. The next measure finds the panel there is.
+    private void OnInnerDetached(object sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (ReferenceEquals(sender, _inner))
+        {
+            Follow(null);
+            InvalidateMeasure();
+        }
     }
 
     private static IScrollableContent FindInner(IUIComponent root) => ScrollableContent.FindIn(root);
