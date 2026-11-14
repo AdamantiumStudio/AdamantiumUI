@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Codec probe</title>
+<script>
+const samples = [
+  { file: "h264_aac.mp4", type: 'video/mp4; codecs="avc1.4d401e, mp4a.40.2"', video: { contentType: 'video/mp4; codecs="avc1.4d401e"' }, audio: { contentType: 'audio/mp4; codecs="mp4a.40.2"' } },
+  { file: "h264.mp4", type: 'video/mp4; codecs="avc1.4d401e"', video: { contentType: 'video/mp4; codecs="avc1.4d401e"' } },
+  { file: "hevc.mp4", type: 'video/mp4; codecs="hvc1.1.6.L93.B0"', video: { contentType: 'video/mp4; codecs="hvc1.1.6.L93.B0"' } },
+  { file: "vp9_opus.webm", type: 'video/webm; codecs="vp9, opus"', video: { contentType: 'video/webm; codecs="vp09.00.10.08"' }, audio: { contentType: 'audio/webm; codecs="opus"' } },
+  { file: "av1.mp4", type: 'video/mp4; codecs="av01.0.04M.08"', video: { contentType: 'video/mp4; codecs="av01.0.04M.08"' } },
+  { file: "aac.m4a", type: 'audio/mp4; codecs="mp4a.40.2"', audio: { contentType: 'audio/mp4; codecs="mp4a.40.2"' } },
+  { file: "mp3.mp3", type: "audio/mpeg", audio: { contentType: "audio/mpeg" } },
+];
+
+function play(sample) {
+  return new Promise(resolve => {
+    const media = document.createElement(sample.video ? "video" : "audio");
+    media.muted = true;
+    const timer = setTimeout(() => finish("timeout"), 6000);
+    function finish(outcome) {
+      clearTimeout(timer);
+      const result = { outcome, width: media.videoWidth || 0, time: media.currentTime };
+      if (media.error) {
+        result.error = `${media.error.code} ${media.error.message}`;
+      }
+      media.remove();
+      resolve(result);
+    }
+    media.onerror = () => finish("error");
+    media.ontimeupdate = () => {
+      if (media.currentTime > 0.2) {
+        finish("played");
+      }
+    };
+    media.src = sample.file;
+    document.body.append(media);
+    media.play().catch(() => {});
+  });
+}
+
+async function decodeAudio(sample) {
+  const bytes = await (await fetch(sample.file)).arrayBuffer();
+  try {
+    const buffer = await new OfflineAudioContext(1, 1, 48000).decodeAudioData(bytes);
+    return `decoded ${buffer.duration.toFixed(2)}s`;
+  } catch (error) {
+    return `failed ${error.name}`;
+  }
+}
+
+async function run() {
+  const results = [];
+  for (const sample of samples) {
+    const configuration = { type: "file" };
+    if (sample.video) {
+      configuration.video = { ...sample.video, width: 320, height: 240, bitrate: 200000, framerate: 30 };
+    }
+    if (sample.audio) {
+      configuration.audio = { ...sample.audio, channels: "1", bitrate: 64000, samplerate: 48000 };
+    }
+    const capabilities = await navigator.mediaCapabilities.decodingInfo(configuration);
+    const result = {
+      file: sample.file,
+      canPlayType: document.createElement("video").canPlayType(sample.type),
+      mediaCapabilities: capabilities.supported,
+      powerEfficient: capabilities.powerEfficient,
+      playback: await play(sample),
+    };
+    if (!sample.video) {
+      result.decodeAudioData = await decodeAudio(sample);
+    }
+    results.push(result);
+  }
+  results.push({ userAgent: navigator.userAgent });
+  await fetch("/results", { method: "POST", body: JSON.stringify(results, null, 1) });
+  document.title = "done";
+}
+
+window.onload = run;
+</script>
+<body></body>

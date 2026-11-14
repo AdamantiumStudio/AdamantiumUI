@@ -1,0 +1,370 @@
+diff --git a/media/base/media_switches.cc b/media/base/media_switches.cc
+index 9e219d53cad36..07431205685b1 100644
+--- a/media/base/media_switches.cc
++++ b/media/base/media_switches.cc
+@@ -918,6 +918,11 @@ BASE_FEATURE(kPreloadMediaEngagementData,
+ #endif
+ );
+ 
++// Enables patent-encumbered codecs (H.264, HEVC, AAC, ...) in builds that have
++// them. When disabled they are neither reported as supported nor decoded or
++// encoded. See media::IsCodecAllowed().
++BASE_FEATURE(kProprietaryCodecs, base::FEATURE_DISABLED_BY_DEFAULT);
++
+ // Enables Media Engagement Index recording. This data will be used to determine
+ // when to bypass autoplay policies. This is recorded on all platforms.
+ BASE_FEATURE(kRecordMediaEngagementScores, base::FEATURE_ENABLED_BY_DEFAULT);
+diff --git a/media/base/media_switches.h b/media/base/media_switches.h
+index 5f3c3bdb4725c..6c69990c099a2 100644
+--- a/media/base/media_switches.h
++++ b/media/base/media_switches.h
+@@ -281,6 +281,7 @@ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPlaybackSpeedButton);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreemptiveSodaDownload);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMediaEngagementData);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kPreloadMetadataSuspend);
++MEDIA_EXPORT BASE_DECLARE_FEATURE(kProprietaryCodecs);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kRecordMediaEngagementScores);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kRecordWebAudioEngagement);
+ MEDIA_EXPORT BASE_DECLARE_FEATURE(kRenderMutedAudio);
+diff --git a/media/base/supported_types.cc b/media/base/supported_types.cc
+index efc7246c8cd3e..6fb63228cfb70 100644
+--- a/media/base/supported_types.cc
++++ b/media/base/supported_types.cc
+@@ -177,7 +177,6 @@ bool IsColorSpaceSupported(const VideoColorSpace& color_space) {
+   return true;
+ }
+ 
+-#if !BUILDFLAG(USE_PROPRIETARY_CODECS)
+ bool IsVideoCodecProprietary(VideoCodec codec) {
+   switch (codec) {
+     case VideoCodec::kVC1:
+@@ -226,7 +225,14 @@ bool IsAudioCodecProprietary(AudioCodec codec) {
+       return false;
+   }
+ }
+-#endif  // !BUILDFLAG(USE_PROPRIETARY_CODECS)
++
++bool AreProprietaryCodecsEnabled() {
++#if BUILDFLAG(USE_PROPRIETARY_CODECS)
++  return base::FeatureList::IsEnabled(kProprietaryCodecs);
++#else
++  return false;
++#endif
++}
+ 
+ bool IsDecoderHevcProfileSupported(const VideoType& type) {
+   if (!IsColorSpaceSupported(type.color_space)) {
+@@ -412,6 +418,14 @@ bool IsEncoderAv1BuiltInVideoType(const VideoType& type) {
+ 
+ }  // namespace
+ 
++bool IsCodecAllowed(VideoCodec codec) {
++  return !IsVideoCodecProprietary(codec) || AreProprietaryCodecsEnabled();
++}
++
++bool IsCodecAllowed(AudioCodec codec) {
++  return !IsAudioCodecProprietary(codec) || AreProprietaryCodecsEnabled();
++}
++
+ bool IsDecoderSupportedAudioType(const AudioType& type) {
+   if (auto* media_client = GetMediaClient())
+     return media_client->IsDecoderSupportedAudioType(type);
+@@ -438,10 +452,9 @@ bool IsDefaultDecoderSupportedVideoType(const VideoType& type) {
+     return false;
+   }
+ 
+-#if !BUILDFLAG(USE_PROPRIETARY_CODECS)
+-  if (IsVideoCodecProprietary(type.codec))
++  if (!IsCodecAllowed(type.codec)) {
+     return false;
+-#endif
++  }
+ 
+   switch (type.codec) {
+     case VideoCodec::kTheora:
+@@ -473,10 +486,9 @@ bool IsDefaultDecoderSupportedAudioType(const AudioType& type) {
+   if (type.spatial_rendering)
+     return false;
+ 
+-#if !BUILDFLAG(USE_PROPRIETARY_CODECS)
+-  if (IsAudioCodecProprietary(type.codec))
++  if (!IsCodecAllowed(type.codec)) {
+     return false;
+-#endif
++  }
+ 
+   switch (type.codec) {
+     case AudioCodec::kAAC:
+@@ -513,11 +525,9 @@ bool IsDefaultDecoderSupportedAudioType(const AudioType& type) {
+ }
+ 
+ bool IsDefaultEncoderSupportedVideoType(const VideoType& type) {
+-#if !BUILDFLAG(USE_PROPRIETARY_CODECS)
+-  if (IsVideoCodecProprietary(type.codec)) {
++  if (!IsCodecAllowed(type.codec)) {
+     return false;
+   }
+-#endif
+ 
+   if (IsEncoderBuiltInVideoType(type)) {
+     return true;
+@@ -581,7 +591,7 @@ bool IsEncoderOptionalVideoType(const media::VideoType& type) {
+ bool IsDecoderBuiltInVideoCodec(VideoCodec codec) {
+ #if BUILDFLAG(ENABLE_FFMPEG_VIDEO_DECODERS) && BUILDFLAG(USE_PROPRIETARY_CODECS)
+   if (codec == VideoCodec::kH264) {
+-    return true;
++    return IsCodecAllowed(codec);
+   }
+ #endif  // BUILDFLAG(ENABLE_FFMPEG_VIDEO_DECODERS) &&
+         // BUILDFLAG(USE_PROPRIETARY_CODECS)
+@@ -598,6 +608,10 @@ bool IsDecoderBuiltInVideoCodec(VideoCodec codec) {
+ }
+ 
+ bool MayHaveAndAllowSelectOSSoftwareEncoder(VideoCodec codec) {
++  if (!IsCodecAllowed(codec)) {
++    return false;
++  }
++
+   // Allow OS software encoding when we don't have an equivalent
+   // software encoder.
+   const bool kHasBundledH264Encoder = IsOpenH264SoftwareEncoderEnabled();
+diff --git a/media/base/supported_types.h b/media/base/supported_types.h
+index 1b81a1524494f..ef79fc1d83a27 100644
+--- a/media/base/supported_types.h
++++ b/media/base/supported_types.h
+@@ -32,6 +32,13 @@ MEDIA_EXPORT bool IsEncoderBuiltInVideoType(const VideoType& type);
+ // video encoder but may have platform optional encoder support.
+ MEDIA_EXPORT bool IsEncoderOptionalVideoType(const VideoType& type);
+ 
++// Returns false for patent-encumbered codecs (H.264, HEVC, AAC, ...) unless the
++// build has proprietary codecs and `kProprietaryCodecs` is enabled. Every
++// decode and encode path checks this, so a disallowed codec is neither
++// reported as supported nor actually decoded or encoded.
++MEDIA_EXPORT bool IsCodecAllowed(VideoCodec codec);
++MEDIA_EXPORT bool IsCodecAllowed(AudioCodec codec);
++
+ // This function describe if the specific video decoder codec is a built into
+ // the binary or not.
+ MEDIA_EXPORT bool IsDecoderBuiltInVideoCodec(VideoCodec codec);
+diff --git a/media/ffmpeg/ffmpeg_common.cc b/media/ffmpeg/ffmpeg_common.cc
+index 1eeaafafaf779..8e6c04d1823a0 100644
+--- a/media/ffmpeg/ffmpeg_common.cc
++++ b/media/ffmpeg/ffmpeg_common.cc
+@@ -65,7 +65,7 @@ VideoColorSpace GetGuessedColorSpace(const VideoColorSpace& color_space) {
+ const char* GetAllowedVideoDecoders() {
+   // This should match the configured lists in //third_party/ffmpeg.
+ #if BUILDFLAG(USE_PROPRIETARY_CODECS) && BUILDFLAG(ENABLE_FFMPEG_VIDEO_DECODERS)
+-  return "h264";
++  return IsCodecAllowed(VideoCodec::kH264) ? "h264" : "";
+ #else
+   return "";
+ #endif
+@@ -1112,17 +1112,19 @@ int32_t HashCodecName(const char* codec_name) {
+ }
+ 
+ const char* GetAllowedAudioDecoders() {
++  // This should match the configured lists in //third_party/ffmpeg.
++#define FREE_CODECS                                                     \
++  "vorbis,libopus,flac,pcm_u8,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le," \
++  "mp3,pcm_s16be,pcm_s24be,pcm_mulaw,pcm_alaw"
++  static constexpr std::string_view kAllowedAudioCodecs = FREE_CODECS;
+ #if BUILDFLAG(USE_PROPRIETARY_CODECS)
+-#define EXTRA_CODECS ",aac"
+-#else
+-#define EXTRA_CODECS
++  static constexpr std::string_view kAllowedAudioCodecsWithAac =
++      FREE_CODECS ",aac";
++  if (IsCodecAllowed(AudioCodec::kAAC)) {
++    return kAllowedAudioCodecsWithAac.data();
++  }
+ #endif
+-
+-  // This should match the configured lists in //third_party/ffmpeg.
+-  static constexpr std::string_view kAllowedAudioCodecs =
+-      "vorbis,libopus,flac,pcm_u8,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,"
+-      "mp3,pcm_s16be,pcm_s24be,pcm_mulaw,pcm_alaw" EXTRA_CODECS;
+-#undef EXTRA_CODECS
++#undef FREE_CODECS
+ 
+   return kAllowedAudioCodecs.data();
+ }
+diff --git a/media/gpu/gpu_video_encode_accelerator_factory.cc b/media/gpu/gpu_video_encode_accelerator_factory.cc
+index f66ccc9020c2a..3100e5226cd24 100644
+--- a/media/gpu/gpu_video_encode_accelerator_factory.cc
++++ b/media/gpu/gpu_video_encode_accelerator_factory.cc
+@@ -27,6 +27,8 @@
+ #include "media/base/media_log.h"
+ #include "media/base/media_switches.h"
+ #include "media/base/media_util.h"
++#include "media/base/supported_types.h"
++#include "media/base/video_codecs.h"
+ #include "media/gpu/buildflags.h"
+ #include "media/gpu/gpu_video_accelerator_util.h"
+ #include "media/gpu/macros.h"
+@@ -247,6 +249,10 @@ VideoEncodeAccelerator::SupportedProfiles GetSupportedProfilesInternal(
+                                                         &profiles);
+   }
+ 
++  std::erase_if(profiles, [](const auto& vea_profile) {
++    return !IsCodecAllowed(VideoCodecProfileToVideoCodec(vea_profile.profile));
++  });
++
+   if (gpu_workarounds.disable_accelerated_av1_encode) {
+     std::erase_if(profiles, [](const auto& vea_profile) {
+       return vea_profile.profile >= AV1PROFILE_PROFILE_MAIN &&
+@@ -290,6 +296,10 @@ GpuVideoEncodeAcceleratorFactory::CreateVEA(
+     std::unique_ptr<MediaLog> media_log,
+     GetCommandBufferHelperCB get_command_buffer_helper_cb,
+     scoped_refptr<base::SingleThreadTaskRunner> gpu_task_runner) {
++  if (!IsCodecAllowed(VideoCodecProfileToVideoCodec(config.output_profile))) {
++    return EncoderStatus(EncoderStatus::Codes::kEncoderUnsupportedCodec);
++  }
++
+   // NullMediaLog silently and safely does nothing.
+   if (!media_log)
+     media_log = std::make_unique<media::NullMediaLog>();
+diff --git a/media/mojo/clients/mojo_audio_encoder.cc b/media/mojo/clients/mojo_audio_encoder.cc
+index bd5b2f84008fa..23866512a5b19 100644
+--- a/media/mojo/clients/mojo_audio_encoder.cc
++++ b/media/mojo/clients/mojo_audio_encoder.cc
+@@ -9,6 +9,7 @@
+ #include "build/build_config.h"
+ #include "media/base/audio_buffer.h"
+ #include "media/base/media_switches.h"
++#include "media/base/supported_types.h"
+ #include "media/mojo/common/media_type_converters.h"
+ 
+ #if BUILDFLAG(IS_ANDROID)
+@@ -23,6 +24,10 @@ namespace media {
+ 
+ // static
+ bool MojoAudioEncoder::IsSupported(AudioCodec codec) {
++  if (!IsCodecAllowed(codec)) {
++    return false;
++  }
++
+   switch (codec) {
+     case AudioCodec::kAAC:
+ #if BUILDFLAG(IS_ANDROID)
+diff --git a/media/mojo/services/gpu_mojo_media_client.cc b/media/mojo/services/gpu_mojo_media_client.cc
+index a7cbaccc9f35d..a0802cdaf196a 100644
+--- a/media/mojo/services/gpu_mojo_media_client.cc
++++ b/media/mojo/services/gpu_mojo_media_client.cc
+@@ -22,6 +22,8 @@
+ #include "media/base/media_log.h"
+ #include "media/base/media_switches.h"
+ #include "media/base/media_util.h"
++#include "media/base/supported_types.h"
++#include "media/base/video_codecs.h"
+ #include "media/base/video_decoder.h"
+ #include "media/gpu/gpu_video_accelerator_util.h"
+ #include "media/gpu/gpu_video_decode_accelerator_helpers.h"
+@@ -162,6 +164,13 @@ GpuMojoMediaClient::GetSupportedVideoDecoderConfigs() {
+       supported_config_cache_ = GetPlatformSupportedVideoDecoderConfigs();
+     }
+ 
++    if (supported_config_cache_) {
++      std::erase_if(*supported_config_cache_, [](const auto& config) {
++        return !IsCodecAllowed(
++            VideoCodecProfileToVideoCodec(config.profile_min));
++      });
++    }
++
+     // Once per GPU process record accelerator information. Profile support is
+     // often just manufactured and not tested, so just record the base codec.
+     bool has_accelerated_h264 = false;
+diff --git a/media/mojo/services/mojo_audio_decoder_service.cc b/media/mojo/services/mojo_audio_decoder_service.cc
+index 64db3f0fe9435..77bf39d9fcb3c 100644
+--- a/media/mojo/services/mojo_audio_decoder_service.cc
++++ b/media/mojo/services/mojo_audio_decoder_service.cc
+@@ -16,6 +16,7 @@
+ #include "base/trace_event/trace_event.h"
+ #include "base/types/optional_util.h"
+ #include "media/base/content_decryption_module.h"
++#include "media/base/supported_types.h"
+ #include "media/mojo/common/media_type_converters.h"
+ #include "media/mojo/common/mojo_decoder_buffer_converter.h"
+ #include "media/mojo/services/mojo_cdm_service_context.h"
+@@ -85,6 +86,12 @@ void MojoAudioDecoderService::Initialize(
+     return;
+   }
+ 
++  if (!IsCodecAllowed(config.codec())) {
++    std::move(callback).Run(DecoderStatus::Codes::kUnsupportedCodec, false,
++                            decoder_->GetDecoderType());
++    return;
++  }
++
+   // |cdm_context_ref_| must be kept as long as |cdm_context| is used by the
+   // |decoder_|. We do NOT support resetting |cdm_context_ref_| because in
+   // general we don't support resetting CDM in the media pipeline.
+diff --git a/media/mojo/services/mojo_audio_encoder_service.cc b/media/mojo/services/mojo_audio_encoder_service.cc
+index ac3babbccaf7b..0f7cd36ec51ea 100644
+--- a/media/mojo/services/mojo_audio_encoder_service.cc
++++ b/media/mojo/services/mojo_audio_encoder_service.cc
+@@ -10,6 +10,7 @@
+ #include "base/functional/bind.h"
+ #include "base/functional/callback_helpers.h"
+ #include "base/logging.h"
++#include "media/base/supported_types.h"
+ #include "media/mojo/common/media_type_converters.h"
+ #include "mojo/public/cpp/bindings/message.h"
+ 
+@@ -33,6 +34,11 @@ void MojoAudioEncoderService::Initialize(
+     return;
+   }
+ 
++  if (!IsCodecAllowed(config.codec)) {
++    std::move(callback).Run(EncoderStatus::Codes::kEncoderUnsupportedCodec);
++    return;
++  }
++
+   client_.Bind(std::move(client));
+   encoder_->Initialize(
+       config,
+diff --git a/media/mojo/services/mojo_video_decoder_service.cc b/media/mojo/services/mojo_video_decoder_service.cc
+index 910a051dfb997..8d6ba9943a72b 100644
+--- a/media/mojo/services/mojo_video_decoder_service.cc
++++ b/media/mojo/services/mojo_video_decoder_service.cc
+@@ -21,6 +21,7 @@
+ #include "media/base/decoder_buffer.h"
+ #include "media/base/media_util.h"
+ #include "media/base/simple_sync_token_client.h"
++#include "media/base/supported_types.h"
+ #include "media/base/video_decoder.h"
+ #include "media/base/video_decoder_config.h"
+ #include "media/base/video_frame.h"
+@@ -274,6 +275,11 @@ void MojoVideoDecoderService::Initialize(const VideoDecoderConfig& config,
+ 
+   init_cb_ = std::move(callback);
+ 
++  if (!IsCodecAllowed(config.codec())) {
++    OnDecoderInitialized(DecoderStatus::Codes::kUnsupportedCodec);
++    return;
++  }
++
+   // Prevent creation of too many hardware decoding instances since it may lead
+   // to system instability. Note: This will break decoding entirely for codecs
+   // which don't have software fallback, so we use a conservative limit. Most
+diff --git a/third_party/blink/renderer/modules/mediasource/media_source.cc b/third_party/blink/renderer/modules/mediasource/media_source.cc
+index d87d072e75f37..30a932cfb1c54 100644
+--- a/third_party/blink/renderer/modules/mediasource/media_source.cc
++++ b/third_party/blink/renderer/modules/mediasource/media_source.cc
+@@ -71,7 +71,7 @@ bool IsMp2tCodecSupported(std::string_view codec_id) {
+     if (result->codec != media::VideoCodec::kH264) {
+       return false;
+     }
+-    return true;
++    return media::IsCodecAllowed(result->codec);
+   }
+ 
+   if (auto audio_type = media::ParseAudioCodecString(
+@@ -81,7 +81,7 @@ bool IsMp2tCodecSupported(std::string_view codec_id) {
+         audio_codec != media::AudioCodec::kMP3) {
+       return false;
+     }
+-    return true;
++    return media::IsCodecAllowed(audio_codec);
+   }
+ 
+   return false;
