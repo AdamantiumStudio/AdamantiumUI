@@ -292,17 +292,22 @@ public class TreeView : ItemsControl
         var expandPath = MemberPath(nameof(TreeViewItem.IsExpanded));
         var selectPath = MemberPath(nameof(TreeViewItem.IsSelected));
         // Without a member to read it from, a row built again - its branch closed and opened - knows itself by SelectedItem.
+        // The node's own member the path starts at: a node giving another collection there is read again.
+        var childrenMember = childPath?.Split('.')[0];
         _flattener = new TreeFlattener(TreeChildResolver.ForPath(childPath),
             TreeChildResolver.ForBoolPath(expandPath),
-            selectPath != null ? TreeChildResolver.ForBoolPath(selectPath) : _isChosen ??= IsChosen);
+            selectPath != null ? TreeChildResolver.ForBoolPath(selectPath) : _isChosen ??= IsChosen,
+            childrenMember: childrenMember);
         _setNodeExpanded = TreeChildResolver.SetterForBoolPath(expandPath);
         _setNodeSelected = TreeChildResolver.SetterForBoolPath(selectPath);
         _flattener.SetRoots(_roots);
         var flattener = _flattener;
         flattener.Rows.CollectionChanged += OnRowsChanged;
+        flattener.RowReread += OnRowReread;
         Follow(nameof(_flattener), () =>
         {
             flattener.Rows.CollectionChanged -= OnRowsChanged;
+            flattener.RowReread -= OnRowReread;
             flattener.Clear();
         });
         Items.SetSource(_flattener.Rows);   // the flat rows are now the effective item list -> virtualized directly
@@ -1121,6 +1126,31 @@ public class TreeView : ItemsControl
         }
 
         _selectedRows.Clear();
+    }
+
+    // A row read again - its node gave other children: the container showing it, if one does, shows the expander or not;
+    // a row asked open while it was a leaf - by its container or its node - opens now that it has children.
+    private void OnRowReread(TreeRow row)
+    {
+        TreeViewItem shown = null;
+        if (ItemsHostPanel is { } panel)
+        {
+            foreach (var child in panel.VisualChildren)
+            {
+                if (child is TreeViewItem item && ReferenceEquals(item.Row, row))
+                {
+                    shown = item;
+                    break;
+                }
+            }
+        }
+
+        shown?.SyncHasItems();
+        var wanted = shown?.IsExpanded ?? (_expandMember != null && _isNodeExpanded(row.Node));
+        if (wanted && row.HasChildren && !row.IsExpanded)
+        {
+            SetRowExpanded(row, true);
+        }
     }
 
     // Push each realized container's row selection onto the container (its IsSelected trigger paints the highlight).
