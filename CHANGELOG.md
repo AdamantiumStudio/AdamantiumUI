@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.FlyTo(world)`: the camera flies, over `FlightSeconds` (0.4 by default; 0 puts it there at once),
+  until a piece of world is wholly in view - not at all when it is, just far enough when part of it is, its middle to
+  the middle when none of it is; the zoom only goes down, for a piece too big to be seen whole. The middle and the zoom
+  move together, the plane's edges hold, and a hand, the wheel or the camera placed by code ends the flight.
+  `TimedEase` (Core): a move of a set length on the animation heartbeat, eased, that the owner writes at each step.
 - `CanvasPicture.Draw(items, session)`: items of a plane drawn into any `IDrawingSession` away from a canvas - through
   the same `ICanvasItem.Render`, groups opened out as a canvas opens them, each item by a copy so what it keeps for its
   canvas is untouched, one world unit to one unit of the session, nothing put on whole pixels. `CanvasDrawing` says
