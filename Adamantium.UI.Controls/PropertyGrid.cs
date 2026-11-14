@@ -8,7 +8,9 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -106,6 +108,21 @@ public class PropertyGrid : Control
         nameof(AutoGenerateSectionsFor), typeof(Type), typeof(PropertyGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
 
+    /// <summary>A style given to every section the grid builds itself - from <see cref="AutoGenerateSections"/> or
+    /// <see cref="AutoGenerateSectionsFor"/> - as an items control gives its containers theirs: no markup writes those
+    /// sections, so this is where their accent or menu is said.</summary>
+    public static readonly AdamantiumProperty GeneratedSectionStyleProperty = AdamantiumProperty.Register(
+        nameof(GeneratedSectionStyle), typeof(Style), typeof(PropertyGrid),
+        new PropertyMetadata(null, OnGeneratedSectionStyleChanged));
+
+    /// <summary>With <see cref="SectionsSource"/>: picks, for an item no written section claims, a template whose root is
+    /// a <see cref="PropertySection"/>, and the item gets a section of its own made from it - one an item, where a
+    /// section written for a <see cref="PropertySection.DataType"/> serves all of them together. For things that are
+    /// never edited together: each of a game's components the code does not load, say.</summary>
+    public static readonly AdamantiumProperty SectionTemplateSelectorProperty = AdamantiumProperty.Register(
+        nameof(SectionTemplateSelector), typeof(DataTemplateSelector), typeof(PropertyGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSectionTemplateSelectorChanged));
+
     /// <summary>Shows only properties whose name contains this, ignoring case; a matching section keeps all its lines.
     /// Folded parts holding matches open while searching.</summary>
     public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
@@ -130,6 +147,7 @@ public class PropertyGrid : Control
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<PropertySection> _templated = new(ReferenceEqualityComparer.Instance);
     private readonly List<PropertySection> _dropped = [];
     private readonly List<object> _sourceItems = [];
     private readonly HashSet<object> _claimed = new(ReferenceEqualityComparer.Instance);
@@ -179,6 +197,18 @@ public class PropertyGrid : Control
     {
         get => GetValue<Type>(AutoGenerateSectionsForProperty);
         set => SetValue(AutoGenerateSectionsForProperty, value);
+    }
+
+    public Style GeneratedSectionStyle
+    {
+        get => GetValue<Style>(GeneratedSectionStyleProperty);
+        set => SetValue(GeneratedSectionStyleProperty, value);
+    }
+
+    public DataTemplateSelector SectionTemplateSelector
+    {
+        get => GetValue<DataTemplateSelector>(SectionTemplateSelectorProperty);
+        set => SetValue(SectionTemplateSelectorProperty, value);
     }
 
     /// <summary>The object being inspected. A section may name its own <see cref="PropertySection.Target"/>; the rest
@@ -778,6 +808,11 @@ public class PropertyGrid : Control
             {
                 if (!typed) many.Add(section);
             }
+            else if (item != null && !_claimed.Contains(item) && TemplatedSectionFor(item) is { } templated)
+            {
+                many.Add(templated);
+                seen.Add(item);
+            }
             else if (item != null && !_claimed.Contains(item) &&
                      (!typed || AutoGenerateSections || AutoGenerateSectionsFor?.IsInstanceOfType(item) == true))
             {
@@ -833,10 +868,70 @@ public class PropertyGrid : Control
         {
             _builder ??= new PropertyDefinitionBuilder();
             section = _builder.BuildSections([item])[0];
+            Restyle(section, null, GeneratedSectionStyle);
             _built.Add(item, section);
         }
 
         return section;
+    }
+
+    private PropertySection TemplatedSectionFor(object item)
+    {
+        if (_built.TryGetValue(item, out var section))
+        {
+            return _templated.Contains(section) ? section : null;
+        }
+
+        if (SectionTemplateSelector?.SelectTemplate(item, this) is not { } template)
+        {
+            return null;
+        }
+
+        section = template.Build(null).RootComponent as PropertySection ??
+                  throw new InvalidOperationException(
+                      $"The section template for {item.GetType().Name} must make a {nameof(PropertySection)}.");
+        section.Target = item;
+        section.Targets = [item];
+        _built.Add(item, section);
+        _templated.Add(section);
+        return section;
+    }
+
+    private static void OnSectionTemplateSelectorChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        var grid = (PropertyGrid)d;
+        foreach (var built in grid._built.Where(pair => grid._templated.Contains(pair.Value)).ToList())
+        {
+            grid._dropped.Add(built.Value);
+            grid._built.Remove(built.Key);
+        }
+
+        grid._templated.Clear();
+        grid.Rebuild();
+    }
+
+    private static void Restyle(PropertySection section, Style old, Style style)
+    {
+        if (old != null)
+        {
+            section.Styles.Remove(old);
+        }
+
+        if (style != null)
+        {
+            section.Styles.Add(style);
+        }
+    }
+
+    private static void OnGeneratedSectionStyleChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        var grid = (PropertyGrid)d;
+        var old = e.OldValue as Style;
+        var style = e.NewValue as Style;
+        foreach (var section in grid._built.Values.Concat(grid._generated))
+        {
+            Restyle(section, old, style);
+        }
     }
 
     private IReadOnlyList<PropertySection> GeneratedSections()
@@ -848,6 +943,10 @@ public class PropertyGrid : Control
             _dropped.AddRange(_generated);
             _builder ??= new PropertyDefinitionBuilder();
             _generated = type == null ? [] : _builder.BuildSections(type);
+            foreach (var section in _generated)
+            {
+                Restyle(section, null, GeneratedSectionStyle);
+            }
         }
 
         return _generated;

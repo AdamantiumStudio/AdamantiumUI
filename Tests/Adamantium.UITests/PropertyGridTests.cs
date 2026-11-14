@@ -16,6 +16,7 @@ using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.Localization;
 using NUnit.Framework;
 
@@ -285,6 +286,106 @@ public class PropertyGridTests
             Assert.That(shown, Has.Count.EqualTo(3));
             Assert.That(shown[0].Header, Is.EqualTo("Folding"));
             Assert.That(shown.Skip(1).Select(section => section.Target), Is.EqualTo(new object[] { first, second }));
+        });
+    }
+
+    // The sections the grid builds itself take the style it is given for them - set before or after they are built -
+    // and the sections written in markup do not.
+    [Test]
+    public void SectionsTheGridBuilds_TakeTheGeneratedSectionStyle_WrittenOnesDoNot()
+    {
+        var target = new Target { Name = "first" };
+        var source = new ObservableCollection<object> { new Folding(), target };
+        var grid = new PropertyGrid
+        {
+            Template = Chrome(),
+            SectionsSource = source,
+            AutoGenerateSectionsFor = typeof(Target)
+        };
+        var written = new PropertySection { DataType = typeof(Folding), Header = "Folding" };
+        grid.Sections.Add(written);
+        Settle(grid);
+        var built = grid.Displayed.Single(section => ReferenceEquals(section.Target, target));
+
+        var accent = new SolidColorBrush(Colors.Orange);
+        var style = new Style();
+        style.Selector.Types.Add(typeof(PropertySection));
+        style.Setters.Add(new Setter(nameof(PropertySection.Accent), accent));
+        grid.GeneratedSectionStyle = style;
+        source.Add(new Target { Name = "second" });
+        Settle(grid);
+        var later = grid.Displayed.Last();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(built.Accent, Is.SameAs(accent));
+            Assert.That(later, Is.Not.SameAs(built));
+            Assert.That(later.Accent, Is.SameAs(accent));
+            Assert.That(written.Accent, Is.Null);
+        });
+    }
+
+    // Items a section template is picked for get a section each, made from it - never one section for all of them, as a
+    // section written for their type would be - and lose it with leaving the source; a written section claims first.
+    [Test]
+    public void ItemsWithASectionTemplate_GetASectionEach_MadeFromIt()
+    {
+        var first = new Target { Name = "first" };
+        var second = new Target { Name = "second" };
+        var source = new ObservableCollection<object> { new Folding(), first, second };
+        var templates = new Adamantium.UI.Core.Templates.DataTemplateSet();
+        templates.Templates.Add(new Adamantium.UI.Core.Templates.DataTemplate(() =>
+            new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = new PropertySection { Header = "Templated" } })
+        {
+            DataType = typeof(Target)
+        });
+        var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source, SectionTemplateSelector = templates };
+        grid.Sections.Add(new PropertySection { DataType = typeof(Folding), Header = "Folding" });
+        Settle(grid);
+        var shown = grid.Displayed.ToList();
+
+        source.Remove(first);
+        Settle(grid);
+        var after = grid.Displayed.ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Select(section => section.Header), Is.EqualTo(new object[] { "Folding", "Templated", "Templated" }));
+            Assert.That(shown.Skip(1).Select(section => section.Target), Is.EqualTo(new object[] { first, second }));
+            Assert.That(shown[1].Targets, Is.EqualTo(new object[] { first }));
+            Assert.That(after, Has.Count.EqualTo(2));
+            Assert.That(after[1], Is.SameAs(shown[2]), "the section of an item that stays is kept, not made again");
+        });
+    }
+
+    // A section offers its menu once it has one, and an item of that menu reaches the object of its section through
+    // the logical tree - which is how a "Remove component" knows which component.
+    [Test]
+    public void ASectionWithAMenu_SaysSo_AndItsItemsReachTheSectionsTarget()
+    {
+        var target = new Target { Name = "first" };
+        var section = new PropertySection { Header = "First", Target = target };
+        var before = section.HasMenu;
+
+        var item = new MenuItem { Header = "Remove" };
+        new Ancestor { AncestorType = typeof(PropertySection), Path = nameof(PropertySection.Target), Logical = true }
+            .Apply(item, nameof(MenuItem.CommandParameter));
+        var menu = new ContextMenu();
+        menu.Items.Add(item);
+        section.ContextMenu = menu;
+        var offered = section.HasMenu;
+
+        // What the menu's panel does with a row it shows: the menu takes it. A popup is not built without a screen.
+        menu.HoldShownItem(item);
+        var parameter = item.CommandParameter;
+        section.ContextMenu = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.False);
+            Assert.That(offered, Is.True);
+            Assert.That(parameter, Is.SameAs(target));
+            Assert.That(section.HasMenu, Is.False);
         });
     }
 
