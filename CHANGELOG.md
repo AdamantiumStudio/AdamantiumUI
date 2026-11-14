@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
+  go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
+  `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
+  domain, path, secure, HttpOnly, `SameSite` (`WebCookieSameSite`), when it expires, and when Chromium made it and last
+  sent it.
 - A name and a comment on every canvas item: `ICanvasItem.Name` (short - what the list of everything on the plane
   calls it and what a search finds) and `ICanvasItem.Comment` (longer, shown apart in the inspector's own multi-line
   field), both kept by a copy and in SVG (`data-adm-name`, `data-adm-comment`, and `<title>`/`<desc>` that other editors
@@ -447,6 +452,10 @@ All packages share one version.
 - Turned or sheared text is drawn after what is still waiting to be drawn under it. Such text is not batched but drawn
   by itself, and it went ahead of the batches still pending - strokes drawn before it landed on top: a PDF sheet turned
   a quarter showed its hairline grid over the page number.
+- A canvas's tool rail no longer runs over the map on a short canvas. `CanvasChromeLayer` measures a pane in a top
+  corner with the height left above the panes in the bottom corner under it, and the themes' rail scrolls what does
+  not fit - one line of tools, along its own direction, by the wheel or a finger, with no bar (`PART_RailScroll`). It
+  used to wrap into a second column measured against the whole height, which reached the map anyway.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),
