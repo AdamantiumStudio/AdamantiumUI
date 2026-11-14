@@ -39,8 +39,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
-    private int awaitedCalls;
-    private long timerDue;
+    private int timerArmed;
     private long? adapterLuid;
     private bool sharedTextureRefused;
     private bool changingDevice;
@@ -60,7 +59,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             downloads.Add(WebDownload.Restore(kept, _ => KeepDownloads()));
         }
 
-        pumpTimer = new Timer(_ => PostPumpWork());
+        pumpTimer = new Timer(_ => OnPumpTimer());
         if (application != null)
         {
             application.UIThreadExiting += OnUIThreadExiting;
@@ -777,7 +776,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
     private void ArmPumpTimer(long delayMs)
     {
-        Volatile.Write(ref timerDue, Environment.TickCount64 + delayMs);
+        Volatile.Write(ref timerArmed, 1);
         try
         {
             pumpTimer.Change(delayMs, Timeout.Infinite);
@@ -812,24 +811,16 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             browser.FollowSecurity(now);
         }
 
-        var awaited = browsers.Count > 0 || Volatile.Read(ref awaitedCalls) > 0;
-        if (awaited && Volatile.Read(ref timerDue) <= Environment.TickCount64)
+        if (Volatile.Read(ref timerArmed) == 0)
         {
             ArmPumpTimer(MaxPumpDelayMs);
         }
     }
 
-    private Task<T> PumpUntilAnswered<T>(Task<T> answer)
+    private void OnPumpTimer()
     {
-        if (answer.IsCompleted)
-        {
-            return answer;
-        }
-
-        Interlocked.Increment(ref awaitedCalls);
-        ArmPumpTimer(MaxPumpDelayMs);
-        answer.ContinueWith(_ => Interlocked.Decrement(ref awaitedCalls), TaskContinuationOptions.ExecuteSynchronously);
-        return answer;
+        Volatile.Write(ref timerArmed, 0);
+        PostPumpWork();
     }
 
     private static string DefaultProfileFolder() => Path.Combine(ApplicationData.Folder, "WebView");

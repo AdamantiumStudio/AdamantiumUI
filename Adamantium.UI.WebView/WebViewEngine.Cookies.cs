@@ -44,7 +44,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return PumpUntilAnswered(visitor.Cookies);
+        return visitor.Cookies;
     }
 
     /// <summary>Sets <paramref name="cookie"/> for <paramref name="address"/>, as a page there would: true once set,
@@ -80,7 +80,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return PumpUntilAnswered(callback.Set);
+        return callback.Set;
     }
 
     /// <summary>Deletes cookies, and answers how many: with <paramref name="address"/> and <paramref name="name"/>
@@ -130,7 +130,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return PumpUntilAnswered(callback.Deleted);
+        return callback.Deleted;
     }
 
     private CefCookieManager* TakeCookieManager()
