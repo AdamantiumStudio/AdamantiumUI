@@ -39,7 +39,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
-    private long timerDue;
+    private int timerArmed;
     private long? adapterLuid;
     private bool sharedTextureRefused;
     private bool changingDevice;
@@ -59,7 +59,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             downloads.Add(WebDownload.Restore(kept, _ => KeepDownloads()));
         }
 
-        pumpTimer = new Timer(_ => PostPumpWork());
+        pumpTimer = new Timer(_ => OnPumpTimer());
         if (application != null)
         {
             application.UIThreadExiting += OnUIThreadExiting;
@@ -741,6 +741,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             switches.Add(new("no-zygote", null));
         }
 
+        if (ProprietaryCodecs.IsInstalled(CefLibrary.ApplicationFolder))
+        {
+            switches.Add(new(WebViewApp.EnableFeaturesSwitch, ProprietaryCodecs.Feature));
+        }
+
         return switches;
     }
 
@@ -776,7 +781,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
     private void ArmPumpTimer(long delayMs)
     {
-        Volatile.Write(ref timerDue, Environment.TickCount64 + delayMs);
+        Volatile.Write(ref timerArmed, 1);
         try
         {
             pumpTimer.Change(delayMs, Timeout.Infinite);
@@ -811,10 +816,16 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             browser.FollowSecurity(now);
         }
 
-        if (browsers.Count > 0 && Volatile.Read(ref timerDue) <= Environment.TickCount64)
+        if (Volatile.Read(ref timerArmed) == 0)
         {
             ArmPumpTimer(MaxPumpDelayMs);
         }
+    }
+
+    private void OnPumpTimer()
+    {
+        Volatile.Write(ref timerArmed, 0);
+        PostPumpWork();
     }
 
     private static string DefaultProfileFolder() => Path.Combine(ApplicationData.Folder, "WebView");

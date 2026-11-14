@@ -32,8 +32,10 @@ public partial class WebViewFrameTests
         bool set = false;
         IReadOnlyList<WebCookie> forSite = null, all = null, afterwards = null;
         var deleted = 0;
+        var browsersOpen = -1;
         loop.Run(() =>
         {
+            browsersOpen = engine.BrowserCount;
             set = Finish(engine.SetCookieAsync(CookieSite, cookie));
             forSite = Finish(engine.GetCookiesAsync(CookieSite));
             all = Finish(engine.GetCookiesAsync());
@@ -44,6 +46,7 @@ public partial class WebViewFrameTests
         var read = forSite?.SingleOrDefault(found => found.Name == "kept");
         Assert.Multiple(() =>
         {
+            Assert.That(browsersOpen, Is.Zero, "asked with no browser open, nothing but the engine keeps CEF working");
             Assert.That(set, Is.True);
             Assert.That(read, Is.Not.Null, "read back for its site");
             Assert.That(read?.Value, Is.EqualTo("one"));
@@ -134,9 +137,10 @@ public partial class WebViewFrameTests
         Assert.Throws<ArgumentException>(() => engine.DeleteCookiesAsync(name: "kept"));
     }
 
-    // Before the main graphics device is made CEF is not started for cookies - it starts on that device's adapter -
-    // and the engine is not given up on.
+    // On Windows, before the main graphics device is made, CEF is not started for cookies - it starts on that device's
+    // adapter - and the engine is not given up on. Elsewhere CEF waits for no device, so there is no such time.
     [Test]
+    [Platform("Win")]
     public void CookiesAskedBeforeTheMainDevice_AreNone_AndTheEngineStaysUsable()
     {
         using var early = new WebViewEngine(new NoDevices(), null, new WebViewOptions { ProfileFolder = profile });

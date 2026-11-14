@@ -450,7 +450,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         var text = unit.TextComponent;
         var glyphs = text.GlyphRun.Glyphs;
         var area = text.RenderingParameters.TextArea;
-        var tree = unit.Place(fact.World);
+        var tree = unit.Payload is { } payload ? live.PlacedNow(payload) * fact.World : fact.World;
         for (var i = 0; i < count; i++)
         {
             var glyph = live.GlyphAt(first + i);

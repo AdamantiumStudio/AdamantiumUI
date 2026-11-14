@@ -7,14 +7,39 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Canvases;
 
 // HOW THE PLANE IS LOOKED AT: the camera, the stack of layers the scene is cut into, what the canvas itself draws, and
 // the chrome standing over it.
-public partial class InfiniteCanvas
+public partial class InfiniteCanvas : ICanvasCamera
 {
+    /// <summary>How long <see cref="FlyTo"/> takes, in seconds; 0 puts the camera there at once.</summary>
+    public static readonly AdamantiumProperty FlightSecondsProperty = AdamantiumProperty.Register(nameof(FlightSeconds),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.4, null,
+            static (_, value) => value is Double seconds && Double.IsFinite(seconds) ? Math.Max(0, seconds) : 0.4));
+
+    private static readonly IEasingFunction EaseInOutFlight = new CubicEasing();
+    private static readonly IEasingFunction EaseOutFlight = new CubicEasing { Mode = EasingMode.Out };
+
+    private readonly TimedEase _flight;
+    private Vector2<double> _flightFrom;
+    private Vector2<double> _flightTo;
+    private Double _flightFromScale;
+    private Double _flightToScale;
+    private int _flightRun;
+    private bool _flying;
+
+    bool ICanvasCamera.SnapsToPixels => true;
+
+    public Double FlightSeconds
+    {
+        get => GetValue<Double>(FlightSecondsProperty);
+        set => SetValue(FlightSecondsProperty, value);
+    }
+
     /// <summary>The world step actually being drawn - <see cref="GridSpacing"/> coarsened to whatever the camera makes
     /// readable. What a ruler or a snap has to agree with, so it is asked for rather than recomputed.</summary>
     public Double EffectiveGridSpacing => Coarsened(GridSpacing);
@@ -122,6 +147,98 @@ public partial class InfiniteCanvas
         var dy = Shift(topLeft.Y, bottomRight.Y, size.Height);
 
         if (dx != 0 || dy != 0) PanBy(new Vector2<double>(dx, dy));
+    }
+
+    /// <summary>Flies the camera, over <see cref="FlightSeconds"/>, until a piece of world is wholly in the usable
+    /// viewport: not at all when it already is, just far enough when it is partly, its middle to the middle when it is
+    /// not in view. The zoom only goes down, for a piece too big to be seen whole - a small one stays small. The plane's
+    /// edges hold; a hand on the camera, the wheel, or the camera placed by code ends the flight where it is.</summary>
+    public void FlyTo(Rect world)
+    {
+        if (RenderSize.Width <= 0 || RenderSize.Height <= 0 || !Double.IsFinite(world.X) || !Double.IsFinite(world.Y) ||
+            !Double.IsFinite(world.Width) || !Double.IsFinite(world.Height))
+        {
+            return;
+        }
+
+        var restarted = _flight.IsActive;
+        StopZoom();
+
+        var room = HasPlaneBounds ? Room(Scale, out _, out _) : UsableBounds;
+        var margin = Math.Clamp(FitMargin, 0, 0.45);
+        var scale = Scale;
+        if (world.Width > 1e-9) scale = Math.Min(scale, room.Width * (1 - margin * 2) / world.Width);
+        if (world.Height > 1e-9) scale = Math.Min(scale, room.Height * (1 - margin * 2) / world.Height);
+        scale = Math.Min(Math.Clamp(scale, MinScale, MaxScale), Scale);
+        if (scale < Scale && HasPlaneBounds) room = Room(scale, out _, out _);
+
+        var roomMiddle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
+        var offset = scale < Scale
+            ? roomMiddle - new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2) * scale
+            : Offset + IntoView(world, room);
+        offset = ClampToPlane(offset, scale);
+        if (scale == Scale && (offset - Offset).Length() < 0.01) return;
+
+        var usable = UsableBounds;
+        var middle = new Vector2<double>(usable.X + usable.Width / 2, usable.Y + usable.Height / 2);
+        _flightFrom = ScreenToWorld(middle);
+        _flightTo = (middle - offset) * (1.0 / scale);
+        _flightFromScale = Scale;
+        _flightToScale = scale;
+        _flightRun++;
+        _flight.Easing = restarted ? EaseOutFlight : EaseInOutFlight;
+        _flight.Start(FlightSeconds);
+    }
+
+    private Vector2<double> IntoView(Rect world, Rect room)
+    {
+        var topLeft = WorldToScreen(new Vector2<double>(world.X, world.Y));
+        var bottomRight = WorldToScreen(new Vector2<double>(world.X + world.Width, world.Y + world.Height));
+        if (bottomRight.X <= room.X || topLeft.X >= room.Right || bottomRight.Y <= room.Y || topLeft.Y >= room.Bottom)
+        {
+            var middle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
+            return middle - (topLeft + bottomRight) * 0.5;
+        }
+
+        return new Vector2<double>(Shift(topLeft.X - room.X, bottomRight.X - room.X, room.Width),
+            Shift(topLeft.Y - room.Y, bottomRight.Y - room.Y, room.Height));
+    }
+
+    private void StepFlight(Double along)
+    {
+        var run = _flightRun;
+        var room = UsableBounds;
+        var middle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
+        var looking = _flightFrom + (_flightTo - _flightFrom) * along;
+        _flying = true;
+
+        try
+        {
+            if (_flightFromScale != _flightToScale)
+            {
+                var scale = along >= 1
+                    ? _flightToScale
+                    : Math.Exp(Math.Log(_flightFromScale) + (Math.Log(_flightToScale) - Math.Log(_flightFromScale)) * along);
+                _holdingPoint = true;
+
+                try
+                {
+                    SetCurrentValue(ScaleProperty, Math.Clamp(scale, MinScale, MaxScale));
+                }
+                finally
+                {
+                    _holdingPoint = false;
+                }
+
+                if (run != _flightRun) return;
+            }
+
+            SetCurrentValue(OffsetProperty, middle - looking * Scale);
+        }
+        finally
+        {
+            _flying = false;
+        }
     }
 
     /// <summary>The world point in the middle of the usable viewport - the one thing about the camera that means the
@@ -345,6 +462,7 @@ public partial class InfiniteCanvas
         _zoomCoast.Stop();
         _glide.Stop();
         _edgeCoast.Stop();
+        _flight.Stop();
         Reclamp();
     }
 
@@ -359,7 +477,8 @@ public partial class InfiniteCanvas
 
     private void CatchCamera()
     {
-        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _edgeCoast.IsActive;
+        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _edgeCoast.IsActive ||
+                     _flight.IsActive;
 
         StopZoom();
         if (moving) RememberLayout();
@@ -1093,10 +1212,9 @@ public partial class InfiniteCanvas
 
     private void SyncElements() => SyncElements(RenderSize);
 
-    // Every GROUP OPENED OUT, in place. A group holds things - it is moved, resized and selected as one - but it is
-    // not a way of DRAWING them: left folded, a picture gathered into a group simply vanished. The group is still one
-    // item to the scene, to picking and to whoever moves it; this is only about which layer each thing is laid in.
-    private static IEnumerable<ICanvasItem> Laid(IEnumerable<ICanvasItem> items)
+    /// <summary>Every group opened out, in place. A group holds things - it is moved, resized and selected as one - but
+    /// it is not a way of drawing them: each thing draws through its own placement, with its own turn.</summary>
+    internal static IEnumerable<ICanvasItem> Laid(IEnumerable<ICanvasItem> items)
     {
         foreach (var item in items)
         {

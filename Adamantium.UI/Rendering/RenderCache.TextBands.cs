@@ -41,7 +41,10 @@ public partial class RenderCache
 
             var shown = CumulativeClip(text.Component) is { } clip ? clip.Intersect(window) : window;
             var band = shown.Inflate(new Thickness(window.Width, window.Height));
-            rebuilt |= text.FitBand(World(text.Component), shown, band);
+            var place = text.Payload is { } payload
+                ? PlacedNow(payload) * World(text.Component)
+                : World(text.Component);
+            rebuilt |= text.FitBand(place, shown, band);
         }
 
         foreach (var text in _bandsDropped)

@@ -740,7 +740,9 @@ public partial class RenderCache
     private Rect Placed(IPlacedPayload payload, Rect box) =>
         payload.Placement != null ? box.TransformToAABB(PlacedNow(payload)) : box;
 
-    private Matrix4x4F PlacedNow(IPlacedPayload payload) =>
+    /// <summary>Where a placed draw sits on top of its element's world as of the newest matrix this cache has heard for
+    /// its placement - what the frame shows once moved placements are written - or its own local transform.</summary>
+    internal Matrix4x4F PlacedNow(IPlacedPayload payload) =>
         payload.Placement is { } placement && _placementLatest.TryGetValue(placement, out var latest)
             ? latest.Matrix
             : payload.LocalTransform;

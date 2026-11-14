@@ -385,6 +385,7 @@ public partial class InfiniteCanvas
         _coast.Stop();
         _zoomCoast.Stop();
         _edgeCoast.Stop();
+        _flight.Stop();
         _glide.GlideTo(ClampToPlane(_glide.Target + by, Scale));
     }
 }
