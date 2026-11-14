@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPicture.Draw(items, session)`: items of a plane drawn into any `IDrawingSession` away from a canvas - through
+  the same `ICanvasItem.Render`, groups opened out as a canvas opens them, each item by a copy so what it keeps for its
+  canvas is untouched, one world unit to one unit of the session, nothing put on whole pixels. `CanvasDrawing` says
+  what it is drawn through: `Scale`, `WorldToScreen` and `SnapsToPixels`; its `Canvas` is null in a picture, and a
+  wire, whose route is worked out on a canvas, is not drawn there.
+- `PdfContentSession` (UI.Pdf): an `IDrawingSession` that writes what is drawn into a PDF content stream as paths,
+  keeping the box of what it drew. Geometry is written from the curves the GPU draws it by (`CurvesForDrawing`, with
+  its own fill rule), in its own units under the matrix it is drawn with; ink and arrows are filled as their passes
+  shape them, each in one piece; text by its glyphs' outlines (`GlyphRun.Outline`). Solid brushes only; a group's
+  clip cuts, its opacity fades each thing in it rather than the group as one. `PdfPageSpace.ToSheet(page)` is the
+  matrix a page is drawn with, public: its inverse writes a sheet back into the page.
 - The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
   go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
   `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,

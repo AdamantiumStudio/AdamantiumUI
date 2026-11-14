@@ -162,7 +162,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     public void Render(CanvasDrawing drawing)
     {
-        if (!Ends(out var from, out var to)) return;
+        if (drawing.Canvas == null || !Ends(out var from, out var to)) return;
 
         // WORKED OUT HERE and remembered: drawing is the one moment a wire has a canvas to look at, and the box and the
         // hit test have to agree with the line that was actually put on the screen.
