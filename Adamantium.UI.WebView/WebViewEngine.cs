@@ -39,6 +39,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
+    private int awaitedCalls;
     private long timerDue;
     private long? adapterLuid;
     private bool sharedTextureRefused;
@@ -811,10 +812,24 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             browser.FollowSecurity(now);
         }
 
-        if (browsers.Count > 0 && Volatile.Read(ref timerDue) <= Environment.TickCount64)
+        var awaited = browsers.Count > 0 || Volatile.Read(ref awaitedCalls) > 0;
+        if (awaited && Volatile.Read(ref timerDue) <= Environment.TickCount64)
         {
             ArmPumpTimer(MaxPumpDelayMs);
         }
+    }
+
+    private Task<T> PumpUntilAnswered<T>(Task<T> answer)
+    {
+        if (answer.IsCompleted)
+        {
+            return answer;
+        }
+
+        Interlocked.Increment(ref awaitedCalls);
+        ArmPumpTimer(MaxPumpDelayMs);
+        answer.ContinueWith(_ => Interlocked.Decrement(ref awaitedCalls), TaskContinuationOptions.ExecuteSynchronously);
+        return answer;
     }
 
     private static string DefaultProfileFolder() => Path.Combine(ApplicationData.Folder, "WebView");

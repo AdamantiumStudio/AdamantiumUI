@@ -134,9 +134,10 @@ public partial class WebViewFrameTests
         Assert.Throws<ArgumentException>(() => engine.DeleteCookiesAsync(name: "kept"));
     }
 
-    // Before the main graphics device is made CEF is not started for cookies - it starts on that device's adapter -
-    // and the engine is not given up on.
+    // On Windows, before the main graphics device is made, CEF is not started for cookies - it starts on that device's
+    // adapter - and the engine is not given up on. Elsewhere CEF waits for no device, so there is no such time.
     [Test]
+    [Platform("Win")]
     public void CookiesAskedBeforeTheMainDevice_AreNone_AndTheEngineStaysUsable()
     {
         using var early = new WebViewEngine(new NoDevices(), null, new WebViewOptions { ProfileFolder = profile });

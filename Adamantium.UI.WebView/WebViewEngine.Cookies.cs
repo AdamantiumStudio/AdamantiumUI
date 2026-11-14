@@ -7,8 +7,8 @@ public sealed unsafe partial class WebViewEngine
 {
     /// <summary>The profile's cookies: those that go to <paramref name="address"/>, script-hidden (HttpOnly) ones too,
     /// or, with no address, all of them - the longest path first, then the oldest. On the UI loop; none with no CEF
-    /// beside the application or before the main graphics device is made (CEF is started on its adapter) - as with
-    /// <see cref="SetCookieAsync"/> and <see cref="DeleteCookiesAsync"/>.</summary>
+    /// beside the application or, on Windows, before the main graphics device is made (CEF is started on its adapter) -
+    /// as with <see cref="SetCookieAsync"/> and <see cref="DeleteCookiesAsync"/>.</summary>
     public Task<IReadOnlyList<WebCookie>> GetCookiesAsync(Uri address = null)
     {
         var manager = TakeCookieManager();
@@ -44,7 +44,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return visitor.Cookies;
+        return PumpUntilAnswered(visitor.Cookies);
     }
 
     /// <summary>Sets <paramref name="cookie"/> for <paramref name="address"/>, as a page there would: true once set,
@@ -80,7 +80,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return callback.Set;
+        return PumpUntilAnswered(callback.Set);
     }
 
     /// <summary>Deletes cookies, and answers how many: with <paramref name="address"/> and <paramref name="name"/>
@@ -130,7 +130,7 @@ public sealed unsafe partial class WebViewEngine
             CefRefCounting.ReleaseCef(manager);
         }
 
-        return callback.Deleted;
+        return PumpUntilAnswered(callback.Deleted);
     }
 
     private CefCookieManager* TakeCookieManager()
