@@ -300,7 +300,31 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         MoveKeyboardWith(e);
         _presenter?.OnItemsChanged(e);
         LetGoOfRemovedItems(e);
+        LetGoOfParkedItems(e);
         OnItemsChanged(e);
+    }
+
+    // An item that is its own container leaving the list goes as its author left it, not hidden by the panel.
+    private void LetGoOfParkedItems(NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Move)
+        {
+            return;
+        }
+
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            ItemContainerGenerator.LetGoOfParkedNotAmong(Items);
+            return;
+        }
+
+        foreach (var old in e.OldItems?.OfType<IUIComponent>() ?? [])
+        {
+            if (e.NewItems?.Contains(old) != true)
+            {
+                ItemContainerGenerator.LetGoOfParked(old);
+            }
+        }
     }
 
     private void LetGoOfRemovedItems(NotifyCollectionChangedEventArgs e)

@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `PropertyGrid.AutoGenerateSectionsFor`: beside the sections written for a `DataType`, the items of the source of this
+  type get a section each, built from their own type - the components of a game's code, whose types no markup knows;
+  other items no section is written for stay unshown. `PropertyGrid.GeneratedSectionStyle`: a style for the sections
+  the grid builds itself, as an items control's container style. `PropertyGrid.SectionTemplateSelector`: an item no
+  written section claims gets a section of its own made from the template picked for it - one an item, where a section
+  written for a `DataType` serves all of them together; the item is the section's DataContext and target.
+- `PropertySection.Accent`: a color the header is marked with along its leading edge. A section with a `ContextMenu`
+  offers it on a "⋯" button in its header (`HasMenu`, `OpenMenu()`) as well as on a right click, in every theme.
+- `FundamentalUIComponent.MadeFor`: the element a style's `x:Shared="False"` setter built a value for.
 - `InfiniteCanvas.FlyTo(world)`: the camera flies, over `FlightSeconds` (0.4 by default; 0 puts it there at once),
   until a piece of world is wholly in view - not at all when it is, just far enough when part of it is, its middle to
   the middle when none of it is; the zoom only goes down, for a piece too big to be seen whole. The middle and the zoom
@@ -465,6 +474,23 @@ All packages share one version.
 
 ### Fixed
 
+- A `TreeView` follows the member its `HierarchicalDataTemplate.ItemsSource` binding names: a node that gives another
+  children collection - a folder's list read again from disk - is read again. A leaf that gained children shows its
+  expander, and opens at once when it was asked open; an open branch shows the new children. The member was read once,
+  as the row was built, so a folder that was empty stayed a leaf.
+- `PropertyDefinitionBuilder` no longer keeps the types it built definitions for alive: a type of code loaded to be
+  unloaded again (a collectible load context) goes once nothing else holds it.
+- An idle window releases what it let go of: its wakes, a few times a second, were taken for stalls, so discarded
+  elements - a removed panel and everything it showed - stayed alive until something moved.
+- The render cache no longer keeps the last moved subtree alive between frames.
+- A list's panel no longer remembers the place of every item it ever showed: an item that leaves the list, or a source
+  replaced, is let go at once, also in a closed popup.
+- A context menu a style builds for each element (`x:Shared="False"`) goes with its element; before, only menus set
+  on the element or made by its template did.
+- `DataTemplateSet` and the index style selectors name types by no longer keep a type or an assembly that can be
+  unloaded.
+- An item that is its own container - a menu row written in markup - keeps the visibility its author gave it: a list
+  showed every such item it laid out, a row bound to hide itself too, and only shows again one it hid itself.
 - The frame verifier no longer raises an alarm on every pan of a canvas with text. It read where the tree has a glyph
   from a copy of the placement's matrix kept on the text's unit, which a batched glyph never refreshes - only its
   transform slot is written when the placement moves. It now reads the newest matrix the cache holds for the placement
