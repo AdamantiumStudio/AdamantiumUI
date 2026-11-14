@@ -474,6 +474,10 @@ All packages share one version.
 
 ### Fixed
 
+- A `TreeView` follows the member its `HierarchicalDataTemplate.ItemsSource` binding names: a node that gives another
+  children collection - a folder's list read again from disk - is read again. A leaf that gained children shows its
+  expander, and opens at once when it was asked open; an open branch shows the new children. The member was read once,
+  as the row was built, so a folder that was empty stayed a leaf.
 - `PropertyDefinitionBuilder` no longer keeps the types it built definitions for alive: a type of code loaded to be
   unloaded again (a collectible load context) goes once nothing else holds it.
 - An idle window releases what it let go of: its wakes, a few times a second, were taken for stalls, so discarded
