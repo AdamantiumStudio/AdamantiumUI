@@ -37,11 +37,25 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem, ICanvasTrans
     /// copy is put together exactly the way the original was.</summary>
     public ICanvasItem Copy()
     {
-        var copy = new StrokeItem(Origin, Brush?.Copy(), Thickness) { Transform = Transform };
+        var copy = new StrokeItem(Origin, Brush?.Copy(), Thickness)
+        {
+            Transform = Transform, Name = Name, Comment = Comment
+        };
         foreach (var point in _points) copy.Add(new Vector2<double>(Origin.X + point.At.X, Origin.Y + point.At.Y), point.Pressure);
 
         return copy;
     }
+
+    /// <summary>The short name a person gave it; empty for none. See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
+    /// <summary>Its name, for a list of what is on the plane.</summary>
+    public string Title => Name ?? string.Empty;
 
     /// <summary>How it is turned and leaned, about the middle of its own box. <see cref="Bounds"/> stays the box of the
     /// stroke unturned, as a shape's does.</summary>

@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>Several items treated as one item, so groups nest. The children leave the scene while grouped, keeping the drawn
 /// list flat.</summary>
-public class GroupItem : AdamantiumViewModel, ICanvasItem
+public partial class GroupItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<ICanvasItem> _children = new();
 
@@ -79,9 +79,19 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
             if (child.Copy() is { } made) copies.Add(made);
         }
 
-        return copies.Count == 0 ? null : new GroupItem(copies);
+        return copies.Count == 0 ? null : new GroupItem(copies) { Name = Name, Comment = Comment };
     }
 
+    /// <summary>The short name a person gave it; empty for none. See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
+    /// <summary>Its name, for a list of what is on the plane.</summary>
+    public string Title => Name ?? string.Empty;
 
     /// <summary>Where it stands in paint order - stamped by the scene. See ICanvasItem.Order.</summary>
     public int Order { get; set; }

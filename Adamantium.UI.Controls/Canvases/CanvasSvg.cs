@@ -57,14 +57,9 @@ public static class CanvasSvg
 
         foreach (var item in ordered)
         {
-            Write(root, item, defs);
+            var written = Write(root, item, defs);
 
-            // What Write just put down, which is one element or none - asked of the end of the document rather than by
-            // counting, so writing out a big drawing does not cost a walk per item.
-            if (root.LastNode is XElement written)
-            {
-                written.SetAttributeValue("data-adm-order", item.Order.ToString(CultureInfo.InvariantCulture));
-            }
+            written?.SetAttributeValue("data-adm-order", item.Order.ToString(CultureInfo.InvariantCulture));
         }
 
         if (defs.HasElements) root.AddFirst(defs);
@@ -100,6 +95,8 @@ public static class CanvasSvg
         var at = 0;
         foreach (var child in document.Root.Elements())
         {
+            if (Describes(child)) continue;
+
             var item = Read(child, ref count);
 
             if (item == null) continue;
@@ -126,41 +123,65 @@ public static class CanvasSvg
 
     // ---------------------------------------------------------------- writing
 
-    private static void Write(XElement into, ICanvasItem item, XElement defs)
+    private static XElement Write(XElement into, ICanvasItem item, XElement defs)
     {
+        XElement written = null;
         switch (item)
         {
             case StrokeItem ink:
-                into.Add(Ink(ink));
+                written = Ink(ink);
                 break;
 
             case ShapeItem shape:
-                into.Add(Shape(shape, defs));
+                written = Shape(shape, defs);
                 break;
 
             case TextItem text:
-                into.Add(Words(text));
+                written = Words(text);
                 break;
 
             case CurveItem curve:
-                into.Add(Curve(curve));
+                written = Curve(curve);
                 break;
 
             case PathItem path:
-                into.Add(Contour(path));
+                written = Contour(path);
                 break;
 
             case GroupItem group:
             {
-                var g = new XElement(Svg + "g", new XAttribute("data-adm", "group"));
+                written = new XElement(Svg + "g", new XAttribute("data-adm", "group"));
 
-                foreach (var child in group.Children) Write(g, child, defs);
+                foreach (var child in group.Children) Write(written, child, defs);
 
-                into.Add(g);
                 break;
             }
         }
+
+        if (written == null) return null;
+
+        Labelled(written, item);
+        into.Add(written);
+        return written;
     }
+
+    private static void Labelled(XElement element, ICanvasItem item)
+    {
+        var words = element.Name.LocalName == "text";
+        if (!string.IsNullOrEmpty(item.Comment))
+        {
+            element.SetAttributeValue("data-adm-comment", item.Comment);
+            if (!words) element.AddFirst(new XElement(Svg + "desc", item.Comment));
+        }
+
+        if (!string.IsNullOrEmpty(item.Name))
+        {
+            element.SetAttributeValue("data-adm-name", item.Name);
+            if (!words) element.AddFirst(new XElement(Svg + "title", item.Name));
+        }
+    }
+
+    private static bool Describes(XElement element) => element.Name.LocalName is "title" or "desc";
 
     private static XElement Ink(StrokeItem ink)
     {
@@ -516,8 +537,17 @@ public static class CanvasSvg
         // theirs (see Inherit), and applying it again here would move everything twice.
         if (element.Name.LocalName != "g") Place(element, made);
 
+        if (made != null)
+        {
+            made.Name = (string)element.Attribute("data-adm-name") ?? Said(element, "title");
+            made.Comment = (string)element.Attribute("data-adm-comment") ?? Said(element, "desc");
+        }
+
         return made;
     }
+
+    private static string Said(XElement element, string what) =>
+        element.Elements().FirstOrDefault(child => child.Name.LocalName == what)?.Value;
 
     private static ICanvasItem Made(XElement element, ref int skipped)
     {
@@ -532,6 +562,8 @@ public static class CanvasSvg
 
                 foreach (var child in element.Elements())
                 {
+                    if (Describes(child)) continue;
+
                     // WHAT THE GROUP SAYS, said to whoever has not said it themselves. Paint in SVG is INHERITED, and
                     // an icon states it once on the group round everything - read without this, every shape inside
                     // fell back on the defaults and the drawing came in black and hollow.
@@ -727,7 +759,7 @@ public static class CanvasSvg
 
     private static ICanvasItem Say(XElement element)
     {
-        var words = element.Value;
+        var words = string.Concat(element.DescendantNodes().OfType<XText>().Where(text => !Describes(text.Parent)));
 
         if (String.IsNullOrEmpty(words)) return null;
 

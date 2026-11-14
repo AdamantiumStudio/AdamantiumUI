@@ -13,7 +13,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>A rectangle, ellipse, line, arrow or regular polygon: a world-unit box with a fill and an outline. The shape is
 /// its box, so a resize is one field.</summary>
-public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, ICanvasPoints
+public partial class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, ICanvasPoints
 {
     private CanvasArrowBrush _paint;
 
@@ -56,8 +56,21 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
         EndHead = EndHead,
         HeadLength = HeadLength,
         HeadWidth = HeadWidth,
-        Corner = Corner
+        Corner = Corner,
+        Name = Name,
+        Comment = Comment
     };
+
+    /// <summary>The short name a person gave it; empty for none. See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
+    /// <summary>Its name, for a list of what is on the plane.</summary>
+    public string Title => Name ?? string.Empty;
 
     /// <summary>WHAT THIS STANDS FOR, when the canvas made it for an object of the application's own drawing - null for
     /// a shape drawn by hand on the plane.</summary>
