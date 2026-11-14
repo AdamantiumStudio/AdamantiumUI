@@ -13,7 +13,7 @@ namespace Adamantium.UI.Rendering;
 
 // Base for CPU-baked instanced batches: an append-only CPU array mirrored into a BDA storage buffer, drawn as segments
 // (runs sharing one scissor). Derived types bake items (TryAdd + MarkPending) and draw segments; RenderCache groups them.
-internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
+internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where TItem : struct
 {
     // Size of ONE instance as SetData copies it - byte for byte. Static readonly, so it is computed once per closed type.
     protected static readonly int Stride = Unsafe.SizeOf<TItem>();

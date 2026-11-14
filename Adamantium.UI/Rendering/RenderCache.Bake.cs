@@ -408,6 +408,7 @@ public partial class RenderCache
         _arrowBatch = null;
         _strokeBatch = null;
         _instancedFill = null;
+        _batches.Clear();
         _transformTable = null;
         _offscreenLayers = null;
     }
