@@ -27,20 +27,29 @@ internal sealed class CanvasPlacements
     /// <summary>Starts a record: what is not drawn again before <see cref="End"/> lets its placements go.</summary>
     public void Start() => _seen.Clear();
 
-    /// <summary>The drawing for an item, its placements on the camera as it is now.</summary>
-    public CanvasDrawing For(IDrawingSession session, InfiniteCanvas canvas, ICanvasItem item)
+    /// <summary>The drawing for an item, its placements on the canvas's camera as it is now.</summary>
+    public CanvasDrawing For(IDrawingSession session, InfiniteCanvas canvas, ICanvasItem item) =>
+        For(session, canvas, canvas, item);
+
+    /// <summary>The drawing for an item through <paramref name="camera"/>; <paramref name="canvas"/> is null when the
+    /// item is drawn away from one.</summary>
+    public CanvasDrawing For(IDrawingSession session, InfiniteCanvas canvas, ICanvasCamera camera, ICanvasItem item)
     {
         var bounds = item.Bounds;
         var turned = item as ICanvasTransformed;
 
-        return For(session, canvas, item, new Vector2<double>(bounds.X, bounds.Y),
+        return For(session, canvas, camera, item, new Vector2<double>(bounds.X, bounds.Y),
             turned?.Transform ?? CanvasTransform.None, turned?.Pivot ?? default);
     }
 
     /// <summary>The drawing for anything else on the plane - the frame round a selection - stated from
     /// <paramref name="origin"/> and turned about <paramref name="pivot"/>, both in world units.</summary>
     public CanvasDrawing For(IDrawingSession session, InfiniteCanvas canvas, object key, Vector2<double> origin,
-        CanvasTransform turn, Vector2<double> pivot)
+        CanvasTransform turn, Vector2<double> pivot) =>
+        For(session, canvas, canvas, key, origin, turn, pivot);
+
+    private CanvasDrawing For(IDrawingSession session, InfiniteCanvas canvas, ICanvasCamera camera, object key,
+        Vector2<double> origin, CanvasTransform turn, Vector2<double> pivot)
     {
         if (!_placed.TryGetValue(key, out var placed)) _placed[key] = placed = new CanvasPlaced();
 
@@ -49,15 +58,15 @@ internal sealed class CanvasPlacements
         placed.Turn = turn;
         placed.Pivot = pivot;
         placed.Used = 0;
-        placed.Main.Matrix = Main(canvas, placed);
+        placed.Main.Matrix = Main(camera, placed);
 
-        _drawing.Begin(session, canvas, placed);
+        _drawing.Begin(session, canvas, camera, placed);
         return _drawing;
     }
 
     /// <summary>The placement a world rectangle is stated in, from its top-left corner, on the camera as it is now - what
     /// a clip cut to it follows. One per rectangle: everything cut to the same one shares it.</summary>
-    public Placement Clip(InfiniteCanvas canvas, Rect world)
+    public Placement Clip(ICanvasCamera camera, Rect world)
     {
         if (!_placed.TryGetValue(world, out var placed)) _placed[world] = placed = new CanvasPlaced();
 
@@ -66,7 +75,7 @@ internal sealed class CanvasPlacements
         placed.Turn = CanvasTransform.None;
         placed.Pivot = default;
         placed.Used = 0;
-        placed.Main.Matrix = Main(canvas, placed);
+        placed.Main.Matrix = Main(camera, placed);
         return placed.Main;
     }
 
@@ -84,11 +93,11 @@ internal sealed class CanvasPlacements
     }
 
     /// <summary>Puts every placement where the camera shows it now - the whole of what a pan or a zoom costs.</summary>
-    public void Place(InfiniteCanvas canvas)
+    public void Place(ICanvasCamera camera)
     {
         foreach (var placed in _placed.Values)
         {
-            var main = Main(canvas, placed);
+            var main = Main(camera, placed);
             placed.Main.Matrix = main;
 
             foreach (var part in placed.Parts) part.Placement.Matrix = part.Where();
@@ -111,13 +120,13 @@ internal sealed class CanvasPlacements
         return part.Placement;
     }
 
-    private static Matrix4x4F Main(InfiniteCanvas canvas, CanvasPlaced placed)
+    private static Matrix4x4F Main(ICanvasCamera camera, CanvasPlaced placed)
     {
-        var scale = (float)canvas.Scale;
-        var at = canvas.WorldToScreen(placed.Origin);
-        var camera = Matrix4x4.CreateScale<float>(scale, scale, 1) *
-                     Matrix4x4.CreateTranslation<float>((float)at.X, (float)at.Y, 0);
+        var scale = (float)camera.Scale;
+        var at = camera.WorldToScreen(placed.Origin);
+        var view = Matrix4x4.CreateScale<float>(scale, scale, 1) *
+                   Matrix4x4.CreateTranslation<float>((float)at.X, (float)at.Y, 0);
 
-        return placed.Turn.IsSomething ? placed.Turn.Matrix(placed.Pivot - placed.Origin) * camera : camera;
+        return placed.Turn.IsSomething ? placed.Turn.Matrix(placed.Pivot - placed.Origin) * view : view;
     }
 }

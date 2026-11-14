@@ -196,7 +196,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
         // Shaped at the size it is on screen as it is DRAWN - see the note at the top - and scaled back to its size on
         // the plane by its placement, so it is pixel for pixel now and rides the camera after. Below a pixel there is
         // nothing to read, and shaping it would be work thrown away.
-        var scale = drawing.Canvas.Scale;
+        var scale = drawing.Scale;
         var onScreen = FontSize * scale;
         if (onScreen < 1) return;
 
@@ -204,9 +204,11 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
         if (size.Width <= 0 || size.Height <= 0) return;
 
         // On a WHOLE pixel as it is drawn, which is where shaped text reads sharp: the camera moves it by whole pixels
-        // after, the way a hand drags it, and keeps it there.
-        var screen = drawing.Canvas.WorldToScreen(Origin);
-        var snap = new Vector2<double>(Math.Round(screen.X) - screen.X, Math.Round(screen.Y) - screen.Y);
+        // after, the way a hand drags it, and keeps it there. A picture has no pixels, and keeps the text where it is.
+        var screen = drawing.WorldToScreen(Origin);
+        var snap = drawing.SnapsToPixels
+            ? new Vector2<double>(Math.Round(screen.X) - screen.X, Math.Round(screen.Y) - screen.Y)
+            : default;
         var at = drawing.Local(Origin) + snap * (1 / scale);
         var back = (float)(1 / scale);
         var placement = drawing.PartWith(Matrix4x4.CreateScale<float>(back, back, 1)

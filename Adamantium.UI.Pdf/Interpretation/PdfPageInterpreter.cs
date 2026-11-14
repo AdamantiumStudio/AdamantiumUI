@@ -69,7 +69,7 @@ internal sealed partial class PdfPageInterpreter
     public List<PdfDrawStep> Draw(PdfPage page)
     {
         var output = new List<PdfDrawStep>();
-        var pageMatrix = PageMatrix(page);
+        var pageMatrix = PdfPageSpace.ToSheet(page);
         _pageBox = new Rect(0, 0, page.Width, page.Height);
         _state = InitialState(pageMatrix);
         var resources = new PdfResources(page.Resources, _document);
@@ -98,24 +98,6 @@ internal sealed partial class PdfPageInterpreter
 
         CloseGroupsDownTo(0, output);
         return output;
-    }
-
-    // Default user space - y up, from the crop box's corner - to the page's units: y down from its top left, turned by
-    // /Rotate, scaled by /UserUnit.
-    private static PdfMatrix PageMatrix(PdfPage page)
-    {
-        var box = page.CropBox;
-        var (w, h) = (box.Width, box.Height);
-        var upright = new PdfMatrix(1, 0, 0, -1, -Math.Min(box.Left, box.Right), Math.Max(box.Top, box.Bottom));
-        var turned = (((page.Rotation % 360) + 360) % 360) switch
-        {
-            90 => new PdfMatrix(0, 1, -1, 0, h, 0),
-            180 => new PdfMatrix(-1, 0, 0, -1, w, h),
-            270 => new PdfMatrix(0, -1, 1, 0, 0, w),
-            _ => PdfMatrix.Identity,
-        };
-        var unit = page.UserUnit > 0 ? page.UserUnit : 1;
-        return upright.Then(turned).Then(new PdfMatrix(unit, 0, 0, unit, 0, 0));
     }
 
     private static PdfGraphicsState InitialState(PdfMatrix ctm)

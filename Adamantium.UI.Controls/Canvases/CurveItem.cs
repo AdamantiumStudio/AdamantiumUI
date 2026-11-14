@@ -208,7 +208,7 @@ public partial class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
         for (var i = 0; i < _points.Count; i++) control.Add(drawing.Local(_points[i]));
         if (extra.HasValue) control.Add(drawing.Local(extra.Value));
 
-        var along = Walk(control, Kind, Degree, IsUniform, StepsFor(control, drawing.Canvas.Scale));
+        var along = Walk(control, Kind, Degree, IsUniform, StepsFor(control, drawing.Scale));
         if (along.Count < 2) return;
 
         // Drawn as ink, not geometry: the pass places the line from its points, and rides the placement with them.

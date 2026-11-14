@@ -13,8 +13,10 @@ namespace Adamantium.UI.Controls.Canvases;
 
 // HOW THE PLANE IS LOOKED AT: the camera, the stack of layers the scene is cut into, what the canvas itself draws, and
 // the chrome standing over it.
-public partial class InfiniteCanvas
+public partial class InfiniteCanvas : ICanvasCamera
 {
+    bool ICanvasCamera.SnapsToPixels => true;
+
     /// <summary>The world step actually being drawn - <see cref="GridSpacing"/> coarsened to whatever the camera makes
     /// readable. What a ruler or a snap has to agree with, so it is asked for rather than recomputed.</summary>
     public Double EffectiveGridSpacing => Coarsened(GridSpacing);
@@ -1093,10 +1095,9 @@ public partial class InfiniteCanvas
 
     private void SyncElements() => SyncElements(RenderSize);
 
-    // Every GROUP OPENED OUT, in place. A group holds things - it is moved, resized and selected as one - but it is
-    // not a way of DRAWING them: left folded, a picture gathered into a group simply vanished. The group is still one
-    // item to the scene, to picking and to whoever moves it; this is only about which layer each thing is laid in.
-    private static IEnumerable<ICanvasItem> Laid(IEnumerable<ICanvasItem> items)
+    /// <summary>Every group opened out, in place. A group holds things - it is moved, resized and selected as one - but
+    /// it is not a way of drawing them: each thing draws through its own placement, with its own turn.</summary>
+    internal static IEnumerable<ICanvasItem> Laid(IEnumerable<ICanvasItem> items)
     {
         foreach (var item in items)
         {
