@@ -423,6 +423,7 @@
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0"
                                     ToolTip="{Localize CanvasStrings.ClearCanvas}"
+                                    Visibility="{TemplateBinding ClearAction}"
                                     Command="{Ancestor CanvasInspector, Canvas.ClearCommand}">
                                 <Image Source="{ObservableResource CanvasBinIcon}" Width="14" Height="14"/>
                             </Button>
@@ -461,12 +462,18 @@
                             <!-- HOW MUCH IS ON THE PLANE - see Fluent's set: the list is where that is asked. -->
                             <DockPanel Visibility="{TemplateBinding StructureFace}" LastChildFill="True">
                                 <TextBlock x:Name="ItemCountLabel" DockPanel.Dock="Top" MarginBottom="6"
-                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding ItemCount}}"
+                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding FoundCount}}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                                 <TextBlock x:Name="NothingDrawnLabel" DockPanel.Dock="Top" MarginBottom="6"
                                            Visibility="Collapsed"
                                            Text="{Localize CanvasStrings.NothingDrawn}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                <!-- The plane searched by name - see Fluent's set. -->
+                                <TextBox x:Name="PART_Find" DockPanel.Dock="Top" MarginBottom="6" Height="26"
+                                         Padding="6 0 5 0" ShowsClearButton="True"
+                                         ClearButtonToolTip="{Localize CanvasStrings.ClearFind}"
+                                         Placeholder="{Localize CanvasStrings.FindOnPlane}"
+                                         AutomationProperties.Name="{Localize CanvasStrings.FindOnPlane}"/>
                                 <TreeView MaxHeight="300" MinWidth="0"
                                           AutomationProperties.Name="{Localize CanvasStrings.Layers}"
                                           ItemsSource="{TemplateBinding Structure}"

@@ -17,10 +17,30 @@ public interface ICanvasItem : INotifyPropertyChanged
     /// this is what makes the cost of a frame depend on what is visible rather than on what exists.</summary>
     Rect Bounds { get; }
 
-    /// <summary>What it is called by the person who made it, for a list of what is on the plane: what a text says, the
-    /// title a frame or a node was given. Empty by default - WHAT it is, the theme says by <see cref="Sort"/>, in the
-    /// application's language.</summary>
+    /// <summary>What it is called by the person who made it, for a list of what is on the plane: its
+    /// <see cref="Name"/> when it has one, else what a text says, the title a frame or a node was given. Empty by
+    /// default - WHAT it is, the theme says by <see cref="Sort"/>, in the application's language.</summary>
     string Title => string.Empty;
+
+    /// <summary>A short name a person gave it - what a list of the plane calls it and what a search on the plane finds;
+    /// empty for none. A kind that keeps no name answers empty and lets a write go.</summary>
+    string Name
+    {
+        get => string.Empty;
+        set { }
+    }
+
+    /// <summary>Whether a <see cref="Name"/> of its own means anything here - what the inspector offers the name line by.
+    /// False for a wire, named by what it joins, and for something standing for an object of the application's, which
+    /// carries its own name and would then have two.</summary>
+    bool TakesName => IsPlaced;
+
+    /// <summary>A longer note about it, shown apart from its <see cref="Name"/>; empty for none.</summary>
+    string Comment
+    {
+        get => string.Empty;
+        set { }
+    }
 
     /// <summary>How many parts it is made of - a group's members, a stroke's points - which is what tells one from
     /// another in a list at a glance. Null for a thing not made of parts.</summary>

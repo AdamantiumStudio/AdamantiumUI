@@ -38,7 +38,19 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
     }
 
     /// <summary>A second piece of text just like this one.</summary>
-    public ICanvasItem Copy() => new TextItem(Origin, Text, Brush?.Copy(), FontSize, FontFamily) { Transform = Transform };
+    public ICanvasItem Copy() => new TextItem(Origin, Text, Brush?.Copy(), FontSize, FontFamily)
+    {
+        Transform = Transform, Name = Name, Comment = Comment
+    };
+
+    /// <summary>The short name a person gave it; empty for none, when the list calls it by what it says. See
+    /// <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
 
     /// <summary>How it is turned and leaned, about the middle of its own box. <see cref="Bounds"/> stays the box of the
     /// text unturned, as a shape's does.</summary>
@@ -119,8 +131,8 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
 
     /// <summary>What it says, cut short. A list of pieces of text where every row reads "Text" is a list of nothing.
     /// </summary>
-    public string Title => string.IsNullOrWhiteSpace(Text)
-        ? string.Empty
+    public string Title => !string.IsNullOrEmpty(Name) ? Name
+        : string.IsNullOrWhiteSpace(Text) ? string.Empty
         : Text.Length <= 24 ? Text : Text[..24] + "...";
 
 

@@ -12,6 +12,23 @@ All packages share one version.
   `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
   domain, path, secure, HttpOnly, `SameSite` (`WebCookieSameSite`), when it expires, and when Chromium made it and last
   sent it.
+- A name and a comment on every canvas item: `ICanvasItem.Name` (short - what the list of everything on the plane
+  calls it and what a search finds) and `ICanvasItem.Comment` (longer, shown apart in the inspector's own multi-line
+  field), both kept by a copy and in SVG (`data-adm-name`, `data-adm-comment`, and `<title>`/`<desc>` that other editors
+  show and that are read back from theirs). The inspector edits both for one selected item; `ICanvasItem.TakesName` says
+  whether the name line is offered - not for a wire, nor for a node standing for an application's object, which is
+  called by its own title. A frame's name is what it says along the top: its Title line is now the name line.
+- The canvas is searched by name: `InfiniteCanvas.SearchText` and `Matches(item)` (a group matches through what it
+  holds), `SearchTextChanged`, and Ctrl+F (`SearchAsked`, taken only while something listens). The inspector's search
+  field over the list of everything on the plane (`PART_Find`) filters that list as it is typed, the count over it says
+  how many are left (`FoundCount`), Esc shows everything again; picking one in the list brings the camera to it, as
+  before.
+- `InfiniteCanvas.PlaceOf(item)`: where an item stands, for the inspector's header (`"Title · place"`) - a document's
+  sheet, say; nothing by default.
+- `CanvasInspector.ShowsDrawingActions`: leaves out the plane's own actions - SVG in and out, and clearing the whole
+  plane (`ClearAction`) - for an application that keeps the plane's contents itself.
+- `StringProperty.IsMultiline`: a field of several wrapped lines that takes Enter; `PropertyRow` leaves its height to
+  the text.
 - What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
   of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
   the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same

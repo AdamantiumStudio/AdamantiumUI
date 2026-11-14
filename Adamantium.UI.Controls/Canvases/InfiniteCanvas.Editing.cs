@@ -983,6 +983,54 @@ public partial class InfiniteCanvas
         return -1;
     }
 
+    /// <summary>What the plane is searched for: the inspector's list of what is on the plane keeps what is called so - by
+    /// its name, what a text says, a frame's title - ignoring case, a group kept when something in it is. Empty keeps
+    /// everything.</summary>
+    public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
+        typeof(String), typeof(InfiniteCanvas), new PropertyMetadata(string.Empty,
+            PropertyMetadataOptions.BindsTwoWayByDefault,
+            static (component, _) => ((InfiniteCanvas)component).SearchTextChanged?.Invoke(component, EventArgs.Empty)));
+
+    public String SearchText
+    {
+        get => GetValue<String>(SearchTextProperty);
+        set => SetValue(SearchTextProperty, value);
+    }
+
+    /// <summary>Raised when what the plane is searched for changes.</summary>
+    public event EventHandler SearchTextChanged;
+
+    /// <summary>Raised when a person asks to search the plane (Ctrl+F): whatever lists the plane opens its list with the
+    /// caret in its search.</summary>
+    public event EventHandler SearchAsked;
+
+    /// <summary>Whether an item is called what <see cref="SearchText"/> asks for, or holds something that is; everything
+    /// is, while nothing is asked.</summary>
+    public bool Matches(ICanvasItem item)
+    {
+        var sought = SearchText;
+        if (string.IsNullOrWhiteSpace(sought) || item == null) return true;
+
+        return Called(item, sought.Trim());
+    }
+
+    private static bool Called(ICanvasItem item, string sought)
+    {
+        if (item.Title?.Contains(sought, StringComparison.CurrentCultureIgnoreCase) == true) return true;
+        if (item is not GroupItem group) return false;
+
+        foreach (var child in group.Children)
+        {
+            if (Called(child, sought)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Where an item stands in the words of what the plane holds - the sheet of a document a mark is on - or null
+    /// for nothing to say, the default. The inspector says it over a single selected item, after its name.</summary>
+    public virtual string PlaceOf(ICanvasItem item) => null;
+
     /// <summary>Whether a tool may start making something at a world point; anywhere by default. A tool that makes things
     /// asks before it begins - a viewer whose marks belong to its sheets says no between them.</summary>
     public virtual bool CanDrawAt(Vector2<double> world) => true;
@@ -1744,6 +1792,15 @@ public partial class InfiniteCanvas
             else if (e.Key == Key.V) Paste();
             else Duplicate();
 
+            e.Handled = true;
+            return;
+        }
+
+        if (control && e.Key == Key.F)
+        {
+            if (SearchAsked == null) return;
+
+            SearchAsked.Invoke(this, EventArgs.Empty);
             e.Handled = true;
             return;
         }

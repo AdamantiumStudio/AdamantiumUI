@@ -100,7 +100,21 @@ public partial class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
     }
 
     public ICanvasItem Copy() =>
-        new PathItem(Data, Fill, Stroke, Thickness) { World = World, Transform = Transform, FillRule = FillRule };
+        new PathItem(Data, Fill, Stroke, Thickness)
+        {
+            World = World, Transform = Transform, FillRule = FillRule, Name = Name, Comment = Comment
+        };
+
+    /// <summary>The short name a person gave it; empty for none. See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
+    /// <summary>Its name, for a list of what is on the plane.</summary>
+    public string Title => Name ?? string.Empty;
 
     public void Move(Vector2<double> worldDelta) =>
         World = new Rect(World.X + worldDelta.X, World.Y + worldDelta.Y, World.Width, World.Height);

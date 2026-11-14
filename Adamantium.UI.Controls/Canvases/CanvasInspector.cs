@@ -2,7 +2,9 @@ using System.Collections;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -38,6 +40,28 @@ public class CanvasInspector : Control, ICanvasPart
     /// needs no explaining.</summary>
     public static readonly AdamantiumProperty StructureProperty = AdamantiumProperty.Register(nameof(Structure),
         typeof(IEnumerable), typeof(CanvasInspector), new PropertyMetadata(null));
+
+    /// <summary>How many of what is on the plane the list shows - all of it, or what the plane's search found.</summary>
+    public static readonly AdamantiumProperty FoundCountProperty = AdamantiumProperty.Register(nameof(FoundCount),
+        typeof(int), typeof(CanvasInspector), new PropertyMetadata(0));
+
+    /// <summary>Whether a drawing's own actions are offered - writing it out as SVG, reading one in, clearing it. On by
+    /// default; off where the plane is not the drawing itself, as marks on the sheets of a document.</summary>
+    public static readonly AdamantiumProperty ShowsDrawingActionsProperty = AdamantiumProperty.Register(
+        nameof(ShowsDrawingActions), typeof(bool), typeof(CanvasInspector),
+        new PropertyMetadata(true, static (component, _) => ((CanvasInspector)component).ReadKind()));
+
+    public int FoundCount
+    {
+        get => GetValue<int>(FoundCountProperty);
+        private set => SetCurrentValue(FoundCountProperty, value);
+    }
+
+    public bool ShowsDrawingActions
+    {
+        get => GetValue<bool>(ShowsDrawingActionsProperty);
+        set => SetValue(ShowsDrawingActionsProperty, value);
+    }
 
     /// <summary>How much is on the plane - the theme says it over the list, where what is on the plane is being looked
     /// at anyway. Counted here rather than left to the application: a panel that lists everything and cannot say how
@@ -100,6 +124,10 @@ public class CanvasInspector : Control, ICanvasPart
     /// from. A drawing is written as SVG because other people's tools have a claim on it; a graph means something only
     /// here and is kept as JSON, which is why these two are not one pair of buttons.</summary>
     public static readonly AdamantiumProperty DrawingActionsProperty = Face(nameof(DrawingActions));
+
+    /// <summary>Shown when clearing the whole plane is offered - everywhere, unless the plane's own actions are left out
+    /// (<see cref="ShowsDrawingActions"/>).</summary>
+    public static readonly AdamantiumProperty ClearActionProperty = Face(nameof(ClearAction));
 
     /// <summary>Whether the canvas is a <see cref="DrawingBoard"/> - which the rows that only mean something to a drawing
     /// are shown by.</summary>
@@ -171,6 +199,8 @@ public class CanvasInspector : Control, ICanvasPart
 
     public Visibility GraphActions => GetValue<Visibility>(GraphActionsProperty);
     public Visibility DrawingActions => GetValue<Visibility>(DrawingActionsProperty);
+
+    public Visibility ClearAction => GetValue<Visibility>(ClearActionProperty);
 
     // EVERY ROW THE TEMPLATE READS IS A REGISTERED PROPERTY, including the fixed lists and the two commands.
     // {TemplateBinding} resolves an AdamantiumProperty on the templated parent and nothing else: pointed at a plain
@@ -320,6 +350,7 @@ public class CanvasInspector : Control, ICanvasPart
 
     private PropertyGrid _grid;
     private PropertyGrid _tools;
+    private TextBox _find;
 
     /// <summary>Hands the canvas the grid that shows what is selected, so that a number typed into a row becomes a step
     /// in the canvas's memory and a repaint of the plane. The canvas does the listening because it is the specialized
@@ -329,9 +360,17 @@ public class CanvasInspector : Control, ICanvasPart
         base.OnApplyTemplate();
 
         if (_grid != null) _grid.ValueChanged -= OnRowWritten;
+        UnhookFind();
 
         _grid = GetTemplateChild("PART_Selected") as PropertyGrid;
         _tools = GetTemplateChild("PART_Tool") as PropertyGrid;
+        _find = GetTemplateChild("PART_Find") as TextBox;
+        ReadFind();
+        if (_find != null)
+        {
+            _find.PropertyChanged += OnFindTyped;
+            _find.KeyDown += OnFindKey;
+        }
 
         // An EDIT can change which sections apply - a picture painted onto a surface brings a texture's lines with it -
         // and nothing else would ever say so: the selection has not changed, and the scene's own signal is about what
@@ -359,9 +398,24 @@ public class CanvasInspector : Control, ICanvasPart
         base.OnRemoveTemplate();
 
         if (_grid != null) _grid.ValueChanged -= OnRowWritten;
+        UnhookFind();
 
         _grid = null;
         _tools = null;
+        _find = null;
+    }
+
+    private void UnhookFind()
+    {
+        if (_find == null) return;
+
+        _find.PropertyChanged -= OnFindTyped;
+        _find.KeyDown -= OnFindKey;
+    }
+
+    private void OnFindTyped(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == TextBox.TextProperty && Canvas is { } canvas) canvas.SearchText = _find?.Text ?? string.Empty;
     }
 
     /// <summary>Also discards the sections the theme made for it that it was not showing: they are its own, and the
@@ -397,7 +451,11 @@ public class CanvasInspector : Control, ICanvasPart
         }
     }
 
-    private void OnRowWritten(object sender, PropertyValuesChangedEventArgs e) => ReadSections();
+    private void OnRowWritten(object sender, PropertyValuesChangedEventArgs e)
+    {
+        ReadSections();
+        ReadHeader();
+    }
 
     private void Wire()
     {
@@ -415,6 +473,8 @@ public class CanvasInspector : Control, ICanvasPart
             was.SelectionChanged -= inspector.OnSelectionChanged;
             was.ToolChanged -= inspector.OnToolChanged;
             was.PlaneChanged -= inspector.OnPlaneChanged;
+            was.SearchTextChanged -= inspector.OnSearched;
+            was.SearchAsked -= inspector.OnSearchAsked;
         }
 
         if (e.OldValue is NodeGraph wasGraph)
@@ -428,6 +488,8 @@ public class CanvasInspector : Control, ICanvasPart
             now.SelectionChanged += inspector.OnSelectionChanged;
             now.ToolChanged += inspector.OnToolChanged;
             now.PlaneChanged += inspector.OnPlaneChanged;
+            now.SearchTextChanged += inspector.OnSearched;
+            now.SearchAsked += inspector.OnSearchAsked;
         }
 
         if (e.NewValue is NodeGraph nowGraph)
@@ -448,7 +510,38 @@ public class CanvasInspector : Control, ICanvasPart
         Read();
     }
 
-    private void OnPlaneChanged(object sender, EventArgs e) => ReadStructure();
+    private void OnPlaneChanged(object sender, EventArgs e)
+    {
+        ReadStructure();
+        ReadHeader();
+    }
+
+    private void OnSearched(object sender, EventArgs e)
+    {
+        ReadFind();
+        ReadStructure();
+    }
+
+    private void ReadFind()
+    {
+        var wanted = Canvas?.SearchText ?? string.Empty;
+        if (_find != null && _find.Text != wanted) _find.Text = wanted;
+    }
+
+    private void OnSearchAsked(object sender, EventArgs e)
+    {
+        ShowsStructure = true;
+        _find?.Focus();
+        _find?.SelectAll();
+    }
+
+    private void OnFindKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || Canvas is not { } canvas || string.IsNullOrEmpty(canvas.SearchText)) return;
+
+        canvas.SearchText = string.Empty;
+        e.Handled = true;
+    }
 
     private void OnToolChanged(object sender, EventArgs e)
     {
@@ -482,6 +575,7 @@ public class CanvasInspector : Control, ICanvasPart
         Read();
         ReadTool();
         ReadKind();
+        ReadFind();
         ReadStructure();
     }
 
@@ -514,7 +608,8 @@ public class CanvasInspector : Control, ICanvasPart
         IsDrawing = Canvas is DrawingBoard;
         IsGraph = Canvas is NodeGraph;
         SetCurrentValue(GraphActionsProperty, Shown(IsGraph));
-        SetCurrentValue(DrawingActionsProperty, Shown(IsDrawing));
+        SetCurrentValue(DrawingActionsProperty, Shown(IsDrawing && ShowsDrawingActions));
+        SetCurrentValue(ClearActionProperty, Shown(ShowsDrawingActions));
 
         var board = Canvas as DrawingBoard;
         SetCurrentValue(FrameCommandProperty, (Canvas as NodeGraph)?.FrameCommand);
@@ -539,9 +634,11 @@ public class CanvasInspector : Control, ICanvasPart
         // edited in place and tells a binding nothing.
         var listed = new List<ICanvasItem>(canvas.ItemsHere());
         listed.Reverse();
+        ItemCount = listed.Count;
+        listed.RemoveAll(item => !canvas.Matches(item));
 
         Structure = listed;
-        ItemCount = listed.Count;
+        FoundCount = listed.Count;
     }
 
     private static void OnListedChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -555,7 +652,6 @@ public class CanvasInspector : Control, ICanvasPart
     private void Read()
     {
         var chosen = Canvas?.Selection;
-        var many = chosen?.Count ?? 0;
 
         // THE LINES BEFORE WHAT THEY SHOW. The lines standing are those of what was selected before, and handed the new
         // selection first they read it as that: a wire picked after a node was asked for the node's kind and title.
@@ -573,7 +669,25 @@ public class CanvasInspector : Control, ICanvasPart
         // showing what was selected when they were last built. Which is a panel full of blank lines beside a node that
         // plainly has a kind and a title.
         Selection = chosen == null ? null : new List<ICanvasItem>(chosen);
-        Header = ShowsProperties && many > 1 ? $"{many} objects selected" : null;
+        ReadHeader();
+    }
+
+    private void ReadHeader()
+    {
+        var chosen = Canvas?.Selection;
+        var many = chosen?.Count ?? 0;
+        Header = !ShowsProperties ? null
+            : many > 1 ? $"{many} objects selected"
+            : many == 1 ? Placed(chosen[0])
+            : null;
+    }
+
+    private string Placed(ICanvasItem item)
+    {
+        var place = Canvas?.PlaceOf(item);
+        if (string.IsNullOrEmpty(place)) return null;
+
+        return string.IsNullOrEmpty(item.Title) ? place : $"{item.Title} · {place}";
     }
 
     // Which sections apply, re-asked after edits that change the answer; the selection is not republished, which would
