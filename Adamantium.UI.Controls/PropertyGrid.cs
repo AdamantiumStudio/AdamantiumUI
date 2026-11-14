@@ -98,6 +98,14 @@ public class PropertyGrid : Control
         nameof(AutoGenerateSections), typeof(Boolean), typeof(PropertyGrid),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
 
+    /// <summary>With <see cref="SectionsSource"/> and sections written for a <see cref="PropertySection.DataType"/>: the
+    /// items of the source of this type that no section is written for get a section built from their own type, one an
+    /// item - the components of a game's code, say, whose types no markup knows. Other such items stay unshown, as
+    /// without <see cref="AutoGenerateSections"/>.</summary>
+    public static readonly AdamantiumProperty AutoGenerateSectionsForProperty = AdamantiumProperty.Register(
+        nameof(AutoGenerateSectionsFor), typeof(Type), typeof(PropertyGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
+
     /// <summary>Shows only properties whose name contains this, ignoring case; a matching section keeps all its lines.
     /// Folded parts holding matches open while searching.</summary>
     public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
@@ -165,6 +173,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<Boolean>(AutoGenerateSectionsProperty);
         set => SetValue(AutoGenerateSectionsProperty, value);
+    }
+
+    public Type AutoGenerateSectionsFor
+    {
+        get => GetValue<Type>(AutoGenerateSectionsForProperty);
+        set => SetValue(AutoGenerateSectionsForProperty, value);
     }
 
     /// <summary>The object being inspected. A section may name its own <see cref="PropertySection.Target"/>; the rest
@@ -764,7 +778,8 @@ public class PropertyGrid : Control
             {
                 if (!typed) many.Add(section);
             }
-            else if (item != null && !_claimed.Contains(item) && (!typed || AutoGenerateSections))
+            else if (item != null && !_claimed.Contains(item) &&
+                     (!typed || AutoGenerateSections || AutoGenerateSectionsFor?.IsInstanceOfType(item) == true))
             {
                 many.Add(SectionFor(item));
                 seen.Add(item);

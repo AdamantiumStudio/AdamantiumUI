@@ -261,6 +261,33 @@ public class PropertyGridTests
         });
     }
 
+    // Beside the sections written for a type, the items of the type the grid is told to build sections for get one each,
+    // from their own type; any other item no section is written for stays unshown.
+    [Test]
+    public void ItemsOfTheTypeToBuildSectionsFor_GetSectionsOfTheirOwn_OthersStayUnshown()
+    {
+        var first = new Target { Name = "first" };
+        var second = new Target { Name = "second" };
+        var source = new ObservableCollection<object> { new Folding(), first, new Uri("https://example.com"), second };
+        var grid = new PropertyGrid
+        {
+            Template = Chrome(),
+            SectionsSource = source,
+            AutoGenerateSectionsFor = typeof(Target)
+        };
+        grid.Sections.Add(new PropertySection { DataType = typeof(Folding), Header = "Folding" });
+        Settle(grid);
+
+        var shown = grid.Displayed.ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Has.Count.EqualTo(3));
+            Assert.That(shown[0].Header, Is.EqualTo("Folding"));
+            Assert.That(shown.Skip(1).Select(section => section.Target), Is.EqualTo(new object[] { first, second }));
+        });
+    }
+
     // A search opens what it needs without telling the object the section is bound to, and the section reads the
     // object's folding again when it ends - the object it shows by then, if another was picked meanwhile.
     [Test]

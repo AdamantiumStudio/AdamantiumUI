@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Controls;
@@ -11,7 +12,7 @@ namespace Adamantium.UI.Controls;
 /// same definitions markup would declare; separate from the grid so it can be replaced.</summary>
 public class PropertyDefinitionBuilder
 {
-    private readonly Dictionary<Type, object> _pristine = new();
+    private readonly ConditionalWeakTable<Type, StrongBox<object>> _pristine = new();
 
     /// <summary>How deep a nested object is opened into properties of its own. One level by default: a transform inside
     /// a component is worth showing, a whole object graph is not - and a cycle would never end.</summary>
@@ -122,20 +123,23 @@ public class PropertyDefinitionBuilder
     {
         if (property.DeclaringType is not { } owner) return;
 
-        if (!_pristine.TryGetValue(owner, out var sample))
+        if (!_pristine.TryGetValue(owner, out var kept))
         {
+            object made;
             try
             {
-                sample = owner.GetConstructor(Type.EmptyTypes) != null ? Activator.CreateInstance(owner) : null;
+                made = owner.GetConstructor(Type.EmptyTypes) != null ? Activator.CreateInstance(owner) : null;
             }
             catch
             {
-                sample = null;   // a constructor that needs the world is not a source of defaults
+                made = null;   // a constructor that needs the world is not a source of defaults
             }
 
-            _pristine[owner] = sample;
+            kept = new StrongBox<object>(made);
+            _pristine.AddOrUpdate(owner, kept);
         }
 
+        var sample = kept.Value;
         if (sample == null) return;
 
         try
