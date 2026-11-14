@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.OnEmptyPlaneClick(world)`: a click of the select tool on empty plane, told to a derived canvas after
+  the selection is cleared - what it picks by a click on something of its own that is not an item, as a PDF viewer its
+  sheets.
 - `InfiniteCanvas.FlyTo(world)`: the camera flies, over `FlightSeconds` (0.4 by default; 0 puts it there at once),
   until a piece of world is wholly in view - not at all when it is, just far enough when part of it is, its middle to
   the middle when none of it is; the zoom only goes down, for a piece too big to be seen whole. The middle and the zoom
@@ -342,6 +345,9 @@ All packages share one version.
 
 ### Changed
 
+- A canvas's panes stand on one solid plate each, lifted by a shadow as a map's plates are - their handles, content
+  and a rail's tools, the chosen one too, all on it - so they are seen over whatever is drawn under them, a white
+  page included. A lone grip on the plane stands on a plate of its own (`Button.CanvasChrome`).
 - A `WebView`'s `PageBackground` shows under the page's frames: before the first one too, where the theme's background
   under the view showed.
 - `LaunchOptions.VirtualDisplay` (and `adam-auto start --virtual`) works on Windows too: the application runs on a
@@ -465,6 +471,9 @@ All packages share one version.
 
 ### Fixed
 
+- A folded canvas pane carried to an edge stands against it: stuck to a right-hand slot it stood a whole open width
+  away from the edge, in the middle of the page. Folded where it stands, it still keeps its grip there; the layout
+  remembers which of the two it is.
 - The frame verifier no longer raises an alarm on every pan of a canvas with text. It read where the tree has a glyph
   from a copy of the placement's matrix kept on the text's unit, which a batched glyph never refreshes - only its
   transform slot is written when the placement moves. It now reads the newest matrix the cache holds for the placement

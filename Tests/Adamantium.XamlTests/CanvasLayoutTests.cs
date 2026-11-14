@@ -110,6 +110,34 @@ public class CanvasLayoutTests
         Assert.That(back.Width, Is.EqualTo(360).Within(0.5), "the width it was pulled to was lost");
     }
 
+    // A panel carried folded to an edge comes back against that edge, not a whole open width away from it; one folded
+    // where it stood comes back with its grip where it stood.
+    [Test]
+    public void AFoldedPanelComesBackStandingWhereItWasCarried()
+    {
+        var canvas = Built();
+        var inspector = Named(canvas, "PART_Inspector");
+        var map = Named(canvas, "PART_MiniMap");
+
+        inspector.IsOpen = false;
+        inspector.Placement = CanvasPanePlacement.Right;
+        inspector.KeepsOpenRoom = false;
+        map.IsOpen = false;
+        Settle(canvas);
+
+        var said = CanvasLayoutSerializer.Save(canvas);
+
+        var other = Built();
+        Assert.That(CanvasLayoutSerializer.Load(other, said), Is.True, "the text was refused");
+        Settle(other);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Named(other, "PART_Inspector").KeepsOpenRoom, Is.False, "carried to the edge, it came back away from it");
+            Assert.That(Named(other, "PART_MiniMap").KeepsOpenRoom, Is.True, "folded where it stood, it lost its place");
+        });
+    }
+
     // A WIDTH IS IN PIXELS, and a window that cannot show it holds it down - a panel wider than the canvas covers the
     // drawing it is about.
     [Test]

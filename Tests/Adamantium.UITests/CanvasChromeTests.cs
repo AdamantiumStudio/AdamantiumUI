@@ -164,6 +164,54 @@ public class CanvasChromeTests
         Assert.That(rail.Bounds.Height, Is.EqualTo(24));
     }
 
+    private static void Relaid(CanvasChromeLayer layer)
+    {
+        layer.Measure(new Size<double>(Room, Room), force: true);
+        layer.Arrange(new Rect(0, 0, Room, Room));
+    }
+
+    // Folded in its corner, a pane keeps the room it had open: its grip stays where it stood, and a press there opens it
+    // again.
+    [Test]
+    public void AFoldedRightHandPane_KeepsItsGripWhereItStood()
+    {
+        var pane = Pane(CanvasPanePlacement.TopRight, width: 120);
+        var layer = Laid(pane);
+
+        pane.IsOpen = false;
+        Relaid(layer);
+
+        Assert.That(pane.Bounds.X, Is.EqualTo(Room - 10 - 120).Within(0.5));
+    }
+
+    // ...but CARRIED folded to an edge, it stands against that edge, where the hand put it - not a whole open width
+    // away from it, in the middle of the page.
+    [Test]
+    public void AFoldedPaneCarriedToTheRightEdge_StandsAgainstIt()
+    {
+        var pane = Pane(CanvasPanePlacement.TopRight, width: 120);
+        pane.SnapsToEdges = true;
+        var layer = Laid(pane);
+        pane.IsOpen = false;
+        Relaid(layer);
+
+        pane.MoveBy(new Vector2<double>(-200, 150));
+        Relaid(layer);
+        pane.MoveBy(new Vector2<double>(Room, 0));
+        Relaid(layer);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pane.Placement, Is.EqualTo(CanvasPanePlacement.Right), "it did not stick to the edge");
+            Assert.That(pane.Bounds.X + pane.Bounds.Width, Is.EqualTo(Room - 10).Within(0.5), "not against the edge");
+        });
+
+        pane.IsOpen = true;
+        Relaid(layer);
+
+        Assert.That(pane.Bounds.X, Is.EqualTo(Room - 10 - 120).Within(0.5), "opened, it takes its room again");
+    }
+
     [Test]
     public void AFreePaneSitsWhereItWasPut()
     {

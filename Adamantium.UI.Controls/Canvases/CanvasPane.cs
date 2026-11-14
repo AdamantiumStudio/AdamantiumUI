@@ -28,6 +28,7 @@ public class CanvasPane : ContentControl
     private bool _sizing;
     private bool _moved;
     private bool _captured;
+    private bool _keepsOpenRoom = true;
     private double _wide;
     private PointerPressedEventHandler _onPressed;
     private PointerEventHandler _onMoved;
@@ -233,6 +234,21 @@ public class CanvasPane : ContentControl
         (component as CanvasPane)?.Settle();
     }
 
+    /// <summary>Whether a folded pane in an edge slot still takes the room it had open, so its grip stays where it stood
+    /// when it was folded. Not once it has been carried folded: then it stands where the hand put it, against the edge
+    /// it was dropped at. Opening it takes the room back.</summary>
+    internal bool KeepsOpenRoom
+    {
+        get => _keepsOpenRoom;
+        set
+        {
+            if (_keepsOpenRoom == value) return;
+
+            _keepsOpenRoom = value;
+            Layer?.InvalidateArrange();
+        }
+    }
+
     /// <summary>How near an edge a dropped pane has to be to stick to it, in screen pixels.</summary>
     public Double SnapDistance
     {
@@ -351,6 +367,8 @@ public class CanvasPane : ContentControl
             return;
         }
 
+        if (pane.IsOpen) pane.KeepsOpenRoom = true;
+
         pane.CoerceValue(WidthProperty);
         pane.SyncSizer();
     }
@@ -410,7 +428,7 @@ public class CanvasPane : ContentControl
         get
         {
             var asked = GetBaseValue<Double>(WidthProperty);
-            if (IsOpen || Double.IsNaN(asked))
+            if (IsOpen || !KeepsOpenRoom || Double.IsNaN(asked))
             {
                 return DesiredSize.Width;
             }
@@ -562,6 +580,8 @@ public class CanvasPane : ContentControl
     // plane itself to find it by.
     private void MoveTo(Vector2<double> wanted, Size<double> room, Size<double> size)
     {
+        if (!IsOpen) KeepsOpenRoom = false;
+
         SetCurrentValue(PlacementProperty, CanvasPanePlacement.Free);
         SetCurrentValue(AnchorProperty, AnchorFor(new Vector2<double>(
             Math.Clamp(wanted.X, 0, Math.Max(0, room.Width - size.Width)),

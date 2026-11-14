@@ -46,7 +46,7 @@
                         <CanvasFrontLayer x:Name="PART_Front"/>
 
                         <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="12">
-                            <Button x:Name="PART_OverlayGrip" Width="30" Height="24"
+                            <Button x:Name="PART_OverlayGrip" Classes="CanvasChrome" Width="30" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
@@ -74,7 +74,7 @@
                             <!-- The tool rail, built from the canvas's Tools; anchored top-left and given only the height
                                  above the map in the bottom corner, scrolling what does not fit; never shorter than
                                  its grip, so it can always be taken hold of. -->
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="34"/>
 
                             <!-- The MAP, in the corner nothing else wants: the rail is up the left side, the inspector
                                  down the right, the view bar along the bottom middle. -->
@@ -147,7 +147,7 @@
                         <CanvasFrontLayer x:Name="PART_Front"/>
 
                         <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="12">
-                            <Button x:Name="PART_OverlayGrip" Width="30" Height="24"
+                            <Button x:Name="PART_OverlayGrip" Classes="CanvasChrome" Width="30" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
@@ -161,7 +161,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="34"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -217,6 +217,18 @@
     </Style>
 
 
+    <!-- A lone button of the canvas's chrome standing on the plane itself - the overlay's grip, which has no pane under
+         it: on a solid plate of its own, as the map's buttons are, so it is seen over whatever is drawn under it, a
+         white page included. The control fills are translucent and vanish there. -->
+    <Style Selector="Button.CanvasChrome">
+        <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
+        <Setter Property="BorderBrush" Value="{ObservableResource ControlStrokeColorDefault}"/>
+        <Setter Property="BackgroundPointerOver" Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
+        <Setter Property="BackgroundPressed" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
+        <Setter Property="BackgroundDisabled" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
+    </Style>
+
+
     <!-- CanvasPane: a chrome panel on the glass with its own ground and border. Its grip drags and folds it, so a folded
          pane is just its grip. -->
     <Style Selector="CanvasPane">
@@ -234,6 +246,19 @@
                          with INFINITE height, and a rail that is never told how much room there is can never know it
                          has to scroll - it just runs off the bottom of the canvas, or over the map, taking its last
                          tools with it. A dock hands the fill child what is actually left. -->
+                    <!-- ONE PLATE for the whole pane, handles and all, solid and lifted by a shadow as the map's plates
+                         are: a pane stands on whatever is drawn under it, a white page included, and buttons left
+                         standing on the glass beside it vanish there. -->
+                    <Grid>
+                    <Border x:Name="PART_Plate"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Border.Shadow>
+                            <Shadow OffsetY="2" BlurRadius="8" Opacity="1" Color="#50000000"/>
+                        </Border.Shadow>
                     <DockPanel LastChildFill="True">
                         <!-- The grip carries and folds; the turn button is beside it and does the one other thing a
                              panel can be asked about itself. Both above the body, so a folded pane is its handles. -->
@@ -259,17 +284,8 @@
                             </Button>
                         </StackPanel>
 
-                        <!-- Resize strips, one per side facing into the canvas (see CanvasPane.SyncSizer). Invisible, so
-                             they lie OVER the plate's edge: beside it they were a strip of nothing catching the mouse,
-                             and they stood the handles aside whenever they were shown. Over the plate only, so a strip
-                             never takes a press meant for the grip. -->
                         <Grid VerticalAlignment="Top">
-                            <Border x:Name="PART_Body"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="{TemplateBinding CornerRadius}"
-                                    Padding="{TemplateBinding Padding}">
+                            <Border x:Name="PART_Body">
                                 <DockPanel LastChildFill="True">
                                     <!-- The caption names what the panel is about. Quieter than the rows and colored
                                          OUTRIGHT: a presenter handed a bare string does not carry the pane's foreground
@@ -298,56 +314,58 @@
                                     </ScrollViewer>
                                 </DockPanel>
                             </Border>
-
-                            <!-- Three dots mark each strip: an edge nobody can see is an edge nobody finds. -->
-                            <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeWE"
-                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeWE">
-                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeWE"
-                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeWE">
-                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Border>
                         </Grid>
                     </DockPanel>
+                    </Border>
+
+                    <!-- Resize strips, one per side facing into the canvas (see CanvasPane.SyncSizer), over the plate's
+                         OUTER edge - its border and padding, wider than a strip in every theme, so a strip never lies
+                         over the content and never takes a press meant for the grip. Invisible: beside the plate they
+                         were a strip of nothing catching the mouse. Three dots mark each: an edge nobody can see is an
+                         edge nobody finds. -->
+                    <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
+                            Background="Transparent" Cursor="SizeWE"
+                            ToolTip="{Localize CanvasStrings.ResizePanel}">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Cursor="SizeWE">
+                            <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
+                            Background="Transparent" Cursor="SizeWE"
+                            ToolTip="{Localize CanvasStrings.ResizePanel}">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Cursor="SizeWE">
+                            <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                    </Grid>
 
                     <ControlTemplate.Triggers>
                         <!-- Collapsed and not merely hidden: hidden it would still take its place, and the grip would
                              sit exactly where it sat when the pane was open, having got nothing out of the way. -->
                         <PropertyTrigger Property="IsOpen" Value="false">
                             <Setter TargetName="PART_Body" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PART_Handles" Property="MarginBottom" Value="0"/>
                         </PropertyTrigger>
 
                         <!-- A BAR is all content and no chrome: it is read at a glance beside the thing it acts on, and
                              a grip over it would be bigger than the bar. It is moved by its own background instead. -->
                         <PropertyTrigger Property="Kind" Value="Bar">
                             <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Body" Property="Padding" Value="4"/>
+                            <Setter TargetName="PART_Plate" Property="Padding" Value="4"/>
                         </PropertyTrigger>
 
                         <!-- Only a RAIL offers the turn button: it is the one kind whose contents have a direction of
-                             their own to argue about. -->
-                        <!-- A RAIL has no plate. The buttons already have their own chrome, so a frame around them adds
-                             nothing but width - and width here is not only ink: a pane catches the mouse across its
-                             whole box, so an empty margin is canvas that cannot be drawn on. Transparent AND no
-                             padding, so the box is the buttons and nothing more. -->
+                             their own to argue about. Its plate is a narrow one: a pane catches the mouse across its
+                             whole box, so a wide margin is canvas that cannot be drawn on. -->
                         <PropertyTrigger Property="Kind" Value="Rail">
-                            <Setter TargetName="PART_Body" Property="Background" Value="Transparent"/>
-                            <Setter TargetName="PART_Body" Property="BorderThickness" Value="0"/>
-                            <Setter TargetName="PART_Body" Property="Padding" Value="0"/>
+                            <Setter TargetName="PART_Plate" Property="Padding" Value="4"/>
                             <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
