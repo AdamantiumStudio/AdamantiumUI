@@ -26,7 +26,14 @@ public class DataTemplateSet : DataTemplateSelector
             return Fallback();
         }
 
+        // A type that can be unloaded - a game's code, a plugin - is not remembered: the set would hold it, and with it
+        // everything its code loaded, for as long as the set lives.
         var type = item.GetType();
+        if (type.IsCollectible)
+        {
+            return Choose(type);
+        }
+
         if (!_chosen.TryGetValue(type, out var chosen))
         {
             chosen = Choose(type);

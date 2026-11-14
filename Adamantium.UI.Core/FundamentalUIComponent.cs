@@ -630,6 +630,10 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// take the presenter's live panel for one of its own parts - and did, marking a live panel discarded.</summary>
     public Guid OwningTemplateId { get; internal set; }
 
+    /// <summary>The element a style's <c>x:Shared="False"</c> setter built this one for, as its own: a value no other
+    /// element shares, so it goes with that element - where a value a style hands out to many does not.</summary>
+    public IAdamantiumComponent MadeFor { get; internal set; }
+
     public void MarkDiscarded()
     {
         if (IsDiscarded || IsAwaitingReturn) return;

@@ -85,10 +85,17 @@ public class SelectorParser : ITypeParser<StyleSelector>
         }
     }
 
+    // An assembly that can be unloaded - a game's code, a plugin - is not taken: the index is static and would hold it,
+    // and everything it loaded, for good.
     private static void IndexNewAssemblies(Assembly[] assemblies)
     {
         foreach (var assembly in assemblies)
         {
+            if (assembly.IsCollectible)
+            {
+                continue;
+            }
+
             if (SeenAssemblies.Add(assembly))
             {
                 WaitingAssemblies.Add((assembly, ReferencesOf(assembly)));

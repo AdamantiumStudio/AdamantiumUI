@@ -101,6 +101,43 @@ public class OrphanReleaseTests
         Assert.That(menu.IsDiscarded, Is.False);
     }
 
+    // A style's menu written x:Shared="False" is built for each element alone, so it is that element's own and goes with
+    // it: an inspector's section menus kept every removed section, and what it showed, alive.
+    [Test]
+    public void AContextMenuAStyleBuiltForTheElementAlone_GoesWithIt()
+    {
+        var element = new Border();
+        var style = new Style();
+        style.Selector.Types.Add(typeof(Border));
+        style.Setters.Add(new Setter("ContextMenu", new PerTargetValue(() => new ContextMenu())));
+        element.Styles.Add(style);
+        var menu = element.ContextMenu;
+        Assume.That(menu, Is.Not.Null, "the style gave the element its menu");
+
+        Discard(element);
+
+        Assert.That(menu.IsDiscarded, Is.True);
+    }
+
+    // ...while one menu a style hands to many stays: the next element of the style still shows it.
+    [Test]
+    public void AContextMenuAStyleSharesAmongElements_Stays()
+    {
+        var shared = new ContextMenu();
+        var style = new Style();
+        style.Selector.Types.Add(typeof(Border));
+        style.Setters.Add(new Setter("ContextMenu", shared));
+        var element = new Border();
+        element.Styles.Add(style);
+        var other = new Border();
+        other.Styles.Add(style);
+        Assume.That(element.ContextMenu, Is.SameAs(shared));
+
+        Discard(element);
+
+        Assert.That(shared.IsDiscarded, Is.False);
+    }
+
     [Test]
     public void ADropDownButtonsMenu_GoesWithIt()
     {

@@ -1,6 +1,10 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
@@ -17,6 +21,16 @@ public class PropertySection : Expander
 
     public static readonly AdamantiumProperty TargetsProperty = AdamantiumProperty.Register(nameof(Targets),
         typeof(IReadOnlyList<object>), typeof(PropertySection), new PropertyMetadata(null));
+
+    /// <summary>A color the header is marked with along its leading edge - what kind of thing the section is, or that
+    /// something is wrong with it. None by default.</summary>
+    public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
+        typeof(Brush), typeof(PropertySection), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty HasMenuProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasMenu),
+        typeof(bool), typeof(PropertySection), new PropertyMetadata(false));
+
+    private ButtonBase _menuButton;
 
     public PropertySection()
     {
@@ -63,6 +77,115 @@ public class PropertySection : Expander
     {
         get => GetValue<String>(CategoryProperty);
         set => SetValue(CategoryProperty, value);
+    }
+
+    public Brush Accent
+    {
+        get => GetValue<Brush>(AccentProperty);
+        set => SetValue(AccentProperty, value);
+    }
+
+    /// <summary>Whether the section has a <see cref="Base.InputUIComponent.ContextMenu"/>: its header then offers it on
+    /// a "⋯" button as well as on a right click, as an editor's component headers do.</summary>
+    public bool HasMenu
+    {
+        get => GetValue<bool>(HasMenuProperty);
+        private set => SetValue(HasMenuProperty, value);
+    }
+
+    /// <summary>Opens the section's menu under its "⋯" button - under the header when the template has none - or shuts
+    /// it when it is open. False when the section has no menu.</summary>
+    public bool OpenMenu()
+    {
+        if (ContextMenu is not { } menu)
+        {
+            return false;
+        }
+
+        if (menu.IsOpen)
+        {
+            menu.IsOpen = false;
+            return true;
+        }
+
+        menu.Placement = PlacementMode.Bottom;
+        menu.HorizontalOffset = 0;
+        menu.VerticalOffset = 0;
+        menu.Open(_menuButton ?? (UIComponent)this);
+        return true;
+    }
+
+    public override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        if (_menuButton != null)
+        {
+            _menuButton.Click -= OnMenuButtonClick;
+        }
+
+        _menuButton = GetTemplateChild("PART_Menu") as ButtonBase;
+        if (_menuButton != null)
+        {
+            _menuButton.Click += OnMenuButtonClick;
+        }
+    }
+
+    public override void OnRemoveTemplate()
+    {
+        base.OnRemoveTemplate();
+        if (_menuButton != null)
+        {
+            _menuButton.Click -= OnMenuButtonClick;
+        }
+
+        _menuButton = null;
+    }
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property != ContextMenuProperty)
+        {
+            return;
+        }
+
+        if (e.OldValue is ContextMenu old)
+        {
+            old.Opening -= OnMenuOpening;
+        }
+
+        if (e.NewValue is ContextMenu menu)
+        {
+            menu.Opening += OnMenuOpening;
+        }
+
+        HasMenu = ContextMenu != null;
+    }
+
+    // A menu a style shares outlives the section: left hooked, it would keep every section that ever had it.
+    protected override void OnDiscarded()
+    {
+        if (ContextMenu is { } menu)
+        {
+            menu.Opening -= OnMenuOpening;
+        }
+
+        base.OnDiscarded();
+    }
+
+    // Opened from the button, a second press on it shuts the menu; opened by a right click on the section, a press
+    // anywhere on the section must put it away.
+    private void OnMenuOpening(object sender, ContextMenuOpeningEventArgs e)
+    {
+        ((ContextMenu)sender).IgnoreTargetPress = _menuButton != null && ReferenceEquals(e.Target, _menuButton);
+    }
+
+    private void OnMenuButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (OpenMenu())
+        {
+            e.Handled = true;
+        }
     }
 
     private void OnPropertiesChanged(object sender, NotifyCollectionChangedEventArgs e)

@@ -1,37 +1,53 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace Adamantium.UI.Controls;
 
 // Projects a tree into the flat, display-ordered Rows list a virtualizing panel consumes. Expand and collapse splice as
-// one range edit; expanded children collections are observed.
+// one range edit; expanded children collections are observed, and so is the member each row's node gives its children
+// by: a node that gives another collection is read again - a leaf that gained children gets its expander.
 internal sealed class TreeFlattener
 {
     private readonly Func<object, IEnumerable> _childrenOf;
     private readonly Func<object, bool> _isExpanded;
     private readonly Func<object, bool> _isSelected;
     private readonly Func<object, object> _detailsOf;
+    private readonly string _childrenMember;
     private readonly Dictionary<TreeRow, Subscription> _subs = new();
+    private readonly Dictionary<INotifyPropertyChanged, TreeRow> _nodes = new(ReferenceEqualityComparer.Instance);
     private IEnumerable _roots;
     private Subscription _rootsSub;
 
     // isExpanded/isSelected restore a node's persisted state on (re)build; detailsOf yields an optional details row
-    // after a node. Null means none.
+    // after a node; childrenMember names the node's member childrenOf reads, whose change reads the row again. Null
+    // means none.
     public TreeFlattener(Func<object, IEnumerable> childrenOf, Func<object, bool> isExpanded = null,
-        Func<object, bool> isSelected = null, Func<object, object> detailsOf = null)
+        Func<object, bool> isSelected = null, Func<object, object> detailsOf = null, string childrenMember = null)
     {
         _childrenOf = childrenOf;
         _isExpanded = isExpanded ?? (static _ => false);
         _isSelected = isSelected ?? (static _ => false);
         _detailsOf = detailsOf ?? (static _ => null);
+        _childrenMember = childrenMember;
         _changes = new CrossThreadChanges<(Subscription, NotifyCollectionChangedEventArgs)>(ApplyChildrenChange);
+        _rereads = new CrossThreadChanges<object>(Reread);
+        if (_childrenMember != null)
+        {
+            Rows.CollectionChanged += OnRowsChanged;
+        }
     }
 
     private readonly CrossThreadChanges<(Subscription From, NotifyCollectionChangedEventArgs Change)> _changes;
+    private readonly CrossThreadChanges<object> _rereads;
 
     /// <summary>The visible rows in display order - the virtualized list binds to this.</summary>
     public FlatRowCollection Rows { get; } = [];
+
+    /// <summary>Raised when a row's node gave its children anew and the row was read again: whether it has children may
+    /// have changed, for its container to show.</summary>
+    public event Action<TreeRow> RowReread;
 
     /// <summary>Rebuild the flat list from these roots (all collapsed), observing the roots collection for live changes.</summary>
     public void SetRoots(IEnumerable roots)
@@ -40,6 +56,8 @@ internal sealed class TreeFlattener
         Unsubscribe(null);
         _changes.Clear();
         _changes.TakeThisThread();
+        _rereads.Clear();
+        _rereads.TakeThisThread();
         _roots = roots;
         Rows.ResetTo(FollowAndBuild(null, roots, 0));
     }
@@ -51,7 +69,110 @@ internal sealed class TreeFlattener
         UnsubscribeAllNodes();
         Unsubscribe(null);
         _changes.Clear();
+        _rereads.Clear();
+        UnwatchAllNodes();
+        if (_childrenMember != null)
+        {
+            Rows.CollectionChanged -= OnRowsChanged;
+        }
+
         _roots = null;
+    }
+
+    // ---- Nodes giving their children anew -----------------------------------------------------------------------
+
+    // The rows shown changed: follow the nodes of those that came, let go of those of the rows that went.
+    private void OnRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            UnwatchAllNodes();
+            foreach (var row in Rows)
+            {
+                Watch(row);
+            }
+
+            return;
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (TreeRow row in e.OldItems)
+            {
+                if (row.Node is INotifyPropertyChanged node && _nodes.TryGetValue(node, out var watched) &&
+                    ReferenceEquals(watched, row))
+                {
+                    _nodes.Remove(node);
+                    node.PropertyChanged -= OnNodePropertyChanged;
+                }
+            }
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (TreeRow row in e.NewItems)
+            {
+                Watch(row);
+            }
+        }
+    }
+
+    private void Watch(TreeRow row)
+    {
+        if (row.IsDetails || row.Node is not INotifyPropertyChanged node)
+        {
+            return;
+        }
+
+        if (!_nodes.ContainsKey(node))
+        {
+            node.PropertyChanged += OnNodePropertyChanged;
+        }
+
+        _nodes[node] = row;
+    }
+
+    private void UnwatchAllNodes()
+    {
+        foreach (var node in _nodes.Keys)
+        {
+            node.PropertyChanged -= OnNodePropertyChanged;
+        }
+
+        _nodes.Clear();
+    }
+
+    private void OnNodePropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _childrenMember)
+        {
+            return;
+        }
+
+        if (!_rereads.Defer(sender))
+        {
+            Reread(sender);
+        }
+    }
+
+    // The node gave another children collection: the row knows again whether it has children, and an open branch shows
+    // and follows the new ones.
+    private void Reread(object node)
+    {
+        if (node is not INotifyPropertyChanged observed || !_nodes.TryGetValue(observed, out var row) ||
+            Rows.IndexOf(row) < 0)
+        {
+            return;
+        }
+
+        var children = _childrenOf(row.Node);
+        row.HasChildren = HasAny(children);
+        if (row.IsExpanded)
+        {
+            RebuildChildrenRegion(row);
+        }
+
+        RowReread?.Invoke(row);
     }
 
     public void Toggle(TreeRow row)

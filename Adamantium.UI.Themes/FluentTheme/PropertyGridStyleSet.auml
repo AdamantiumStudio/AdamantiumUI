@@ -68,6 +68,89 @@
         <Setter Property="BorderThickness" Value="0 0 0 1"/>
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="Padding" Value="10 6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <!-- The expander's own parts, opening downwards only, with two more on the header: the accent laid OVER
+                     its leading edge, so a marked section's title lines up with the others, and the "⋯" of its menu. -->
+                <ControlTemplate TargetType="PropertySection">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <DockPanel LastChildFill="True">
+                            <Grid DockPanel.Dock="Top">
+                                <Border x:Name="PART_Header"
+                                        TextBlock.IsTextSelectionEnabled="False"
+                                        Background="Transparent"
+                                        Padding="{TemplateBinding Padding}"
+                                        Cursor="Hand">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Image Grid.Column="0" x:Name="Glyph"
+                                               Source="{ResourceReference ChevronRightIcon}"
+                                               Width="10" Height="10" Margin="0 0 8 0"
+                                               VerticalAlignment="Center"
+                                               RenderTransformOrigin="0.5,0.5">
+                                            <Image.RenderTransform>
+                                                <Transform x:Name="PART_GlyphTurn"/>
+                                            </Image.RenderTransform>
+                                        </Image>
+                                        <ContentPresenter Grid.Column="1"
+                                                x:Name="PART_HeaderPresenter"
+                                                VerticalAlignment="Center"
+                                                TextTrimming="CharEllipses"
+                                                Foreground="{TemplateBinding Foreground}"
+                                                FontSize="{TemplateBinding FontSize}"
+                                                Content="{TemplateBinding Header}"
+                                                ContentTemplate="{TemplateBinding HeaderTemplate}"/>
+                                        <Button Grid.Column="2" x:Name="PART_Menu"
+                                                Width="24" Height="20" MinWidth="0" MinHeight="0"
+                                                Padding="0" Margin="6 -2 -4 -2"
+                                                Content="⋯"
+                                                Cursor="Arrow"
+                                                ToolTipService.ToolTip="{Localize PropertyGridStrings.SectionMenu}"
+                                                AutomationProperties.Name="{Localize PropertyGridStrings.SectionMenu}"
+                                                Visibility="Collapsed"/>
+                                    </Grid>
+                                </Border>
+                                <Border x:Name="PART_Accent"
+                                        Width="3"
+                                        HorizontalAlignment="Left"
+                                        IsHitTestVisible="False"
+                                        Background="{TemplateBinding Accent}"/>
+                            </Grid>
+
+                            <RevealDecorator x:Name="PART_Reveal"
+                                             Visibility="Collapsed"
+                                             Direction="Down">
+                                <Border x:Name="PART_Content"
+                                        Padding="{TemplateBinding Padding}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="0 1 0 0">
+                                    <ContentPresenter
+                                            x:Name="PART_ContentPresenter"
+                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                            Content="{TemplateBinding Content}"
+                                            ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                </Border>
+                            </RevealDecorator>
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="HasMenu" Value="true">
+                            <Setter TargetName="PART_Menu" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsPointerOver" Value="true">
+                            <Setter TargetName="PART_Header" Property="Background"
+                                    Value="{ResourceReference SubtleFillColorSecondary}"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsEnabled" Value="false">
+                            <Setter TargetName="PART_HeaderPresenter" Property="Foreground"
+                                    Value="{ObservableResource TextFillColorDisabled}"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style Selector="PropertyRow">
