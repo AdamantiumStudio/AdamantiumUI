@@ -5,12 +5,16 @@ namespace Adamantium.UI.Core.Input;
 
 /// <summary>A key that runs a command. The element it is set on and the elements around the focus have the key first;
 /// when nothing on the way up from the focus took it, it runs from anywhere in the element's window, the binding nearest
-/// to the focus winning (<see cref="CommandManager"/>). It joins the element's logical tree, so its command and parameter
-/// can be bound to the element's data: <c>&lt;KeyBinding Gesture="Escape" Command="{Binding Cancel}"/&gt;</c>.</summary>
+/// to the focus winning (<see cref="CommandManager"/>) - unless its <see cref="Reach"/> keeps it to the focus being in
+/// its element. It joins the element's logical tree, so its command and parameter can be bound to the element's data:
+/// <c>&lt;KeyBinding Gesture="Escape" Command="{Binding Cancel}"/&gt;</c>.</summary>
 public class KeyBinding : FundamentalUIComponent, IAttachedObject
 {
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(KeyBinding), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty ReachProperty = AdamantiumProperty.Register(nameof(Reach),
+        typeof(KeyBindingReach), typeof(KeyBinding), new PropertyMetadata(KeyBindingReach.Window));
 
     public static readonly AdamantiumProperty CommandParameterProperty = AdamantiumProperty.Register(
         nameof(CommandParameter), typeof(object), typeof(KeyBinding), new PropertyMetadata(null));
@@ -45,6 +49,15 @@ public class KeyBinding : FundamentalUIComponent, IAttachedObject
     {
         get => GetValue<KeyGesture>(GestureProperty);
         set => SetValue(GestureProperty, value);
+    }
+
+    /// <summary>Where the key runs from: anywhere in the window once nothing nearer took it (the default), or only while
+    /// the focus is in the element it is set on - a list's Delete, which must not take away what the list has chosen
+    /// while the user works elsewhere.</summary>
+    public KeyBindingReach Reach
+    {
+        get => GetValue<KeyBindingReach>(ReachProperty);
+        set => SetValue(ReachProperty, value);
     }
 
     public void AttachTo(IAdamantiumComponent adamantiumComponent)
