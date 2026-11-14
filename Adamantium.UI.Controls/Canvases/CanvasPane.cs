@@ -47,7 +47,8 @@ public class CanvasPane : ContentControl
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(CanvasPanePlacement), typeof(CanvasPane),
         new PropertyMetadata(CanvasPanePlacement.TopLeft,
-            PropertyMetadataOptions.AffectsParentArrange | PropertyMetadataOptions.BindsTwoWayByDefault,
+            PropertyMetadataOptions.AffectsParentMeasure | PropertyMetadataOptions.AffectsParentArrange |
+            PropertyMetadataOptions.BindsTwoWayByDefault,
             OnPlacementChanged));
 
     public static readonly AdamantiumProperty KindProperty = AdamantiumProperty.Register(nameof(Kind),

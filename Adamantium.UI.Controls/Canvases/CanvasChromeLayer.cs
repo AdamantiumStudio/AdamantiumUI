@@ -7,7 +7,10 @@ using Adamantium.UI.Core;
 namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>The screen-space layer that places an <see cref="InfiniteCanvas"/>'s <see cref="CanvasPane"/>s by their
-/// <see cref="CanvasPane.Placement"/>; <see cref="Inset"/> says what docked panes take away.</summary>
+/// <see cref="CanvasPane.Placement"/>; <see cref="Inset"/> says what docked panes take away. A pane in a top corner is
+/// measured with the height left above the panes in the bottom corner under it, so it never runs into them - what does
+/// not fit is the pane's to scroll. Never less than its <c>MinHeight</c>, which keeps its grip within reach on a canvas
+/// too short for both.</summary>
 public class CanvasChromeLayer : Panel
 {
     // The panes declared in the canvas's template; their template order is their drawing order.
@@ -173,7 +176,31 @@ public class CanvasChromeLayer : Panel
         var width = Double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width;
         var height = Double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height;
 
-        foreach (var child in Children) child.Measure(new Size<double>(width, height));
+        foreach (var child in Children)
+        {
+            if (TopCorner(child)) continue;
+
+            child.Measure(new Size<double>(width, height));
+        }
+
+        var leftRoom = RoomAbove(CanvasPanePlacement.BottomLeft, height);
+        var rightRoom = RoomAbove(CanvasPanePlacement.BottomRight, height);
+
+        foreach (var child in Children)
+        {
+            if (child is not CanvasPane { Placement: CanvasPanePlacement.TopLeft or CanvasPanePlacement.TopRight } pane)
+                continue;
+
+            var onLeft = pane.Placement == CanvasPanePlacement.TopLeft;
+            var room = Math.Max(pane.MinHeight, onLeft ? leftRoom : rightRoom);
+            pane.Measure(new Size<double>(width, Math.Max(0, room)));
+
+            if (pane.Visibility == Visibility.Collapsed || pane.DesiredSize.Height <= 0) continue;
+
+            var taken = pane.DesiredSize.Height + PaneGap;
+            if (onLeft) leftRoom -= taken;
+            else rightRoom -= taken;
+        }
 
         // Nothing of its own: the layer is a place, not a thing with a size. Asking for room would push the canvas's
         // own measure around, and the canvas is the one that decides how big the plane's window is.
@@ -322,6 +349,17 @@ public class CanvasChromeLayer : Panel
         }
 
         return count > 1 ? total + gap * (count - 1) : total;
+    }
+
+    private static bool TopCorner(IMeasurableComponent child) =>
+        child is CanvasPane { Placement: CanvasPanePlacement.TopLeft or CanvasPanePlacement.TopRight };
+
+    private double RoomAbove(CanvasPanePlacement bottom, double height)
+    {
+        var inset = PaneInset;
+        var below = Total(bottom, PaneGap, true);
+
+        return height - inset.Top - inset.Bottom - (below > 0 ? below + PaneGap : 0);
     }
 
     private double Centered(CanvasPanePlacement placement, double room, double gap) =>
