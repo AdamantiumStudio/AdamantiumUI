@@ -1,0 +1,28 @@
+diff --git a/tools/make_distrib.py b/tools/make_distrib.py
+index b36054496..6d99dd73f 100644
+--- a/tools/make_distrib.py
++++ b/tools/make_distrib.py
+@@ -1141,6 +1141,7 @@ def main(argv=None):
+         {'path': 'chrome_elf.dll'},
+         {'path': 'd3dcompiler_47.dll'},
+         {'path': 'dxcompiler.dll', 'conditional': True},
++        {'path': 'ffmpeg.dll', 'conditional': True},
+         {'path': libcef_dll},
+         {'path': 'v8_context_snapshot.bin'},
+         {'path': 'vk_swiftshader.dll'},
+@@ -1150,6 +1151,7 @@ def main(argv=None):
+     pdb_files = [
+         {'path': 'chrome_elf.dll.pdb'},
+         {'path': 'dxcompiler.dll.pdb', 'conditional': True},
++        {'path': 'ffmpeg.dll.pdb', 'conditional': True},
+         {'path': '%s.pdb' % libcef_dll},
+         {'path': 'vk_swiftshader.dll.pdb'},
+         {'path': 'vulkan-1.dll.pdb'},
+@@ -1489,6 +1491,7 @@ def main(argv=None):
+     binaries = [
+         {'path': 'chrome_sandbox', 'out_path': 'chrome-sandbox'},
+         {'path': libcef_so},
++        {'path': 'libffmpeg.so', 'conditional': True},
+         {'path': 'libvk_swiftshader.so'},
+         {'path': 'libvulkan.so.1'},
+         {'path': 'v8_context_snapshot.bin'},

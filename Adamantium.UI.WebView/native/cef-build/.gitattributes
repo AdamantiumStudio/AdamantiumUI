@@ -1,0 +1,2 @@
+# The patches apply to LF sources and the scripts run in WSL as well: LF on every checkout.
+* text eol=lf

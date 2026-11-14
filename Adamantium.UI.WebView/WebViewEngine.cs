@@ -741,6 +741,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             switches.Add(new("no-zygote", null));
         }
 
+        if (ProprietaryCodecs.IsInstalled(CefLibrary.ApplicationFolder))
+        {
+            switches.Add(new(WebViewApp.EnableFeaturesSwitch, ProprietaryCodecs.Feature));
+        }
+
         return switches;
     }
 

@@ -53,4 +53,7 @@ from them.
 
 Copyright (c) Marshall A. Greenblatt, portions copyright Google Inc., under the BSD 3-Clause licence
 (`native/cef/LICENSE.txt`). CEF itself, which the
-WebView loads at run time, is downloaded by `native/fetch-cef` and not part of this repository.
+WebView loads at run time, is downloaded by `native/fetch-cef` and not part of this repository: on Windows and Linux
+our build of it from this repository's releases, made by `native/cef-build` (its patches to Chromium and CEF are under
+their BSD licences; FFmpeg in it is under the LGPL, with its source named in `FFMPEG.txt` of the archive), on macOS
+CEF's own build.
