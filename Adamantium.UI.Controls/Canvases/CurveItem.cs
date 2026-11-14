@@ -13,7 +13,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>A curve through points - Bezier, B-spline or NURBS, switchable after drawing. Reshaped by its points; the frame
 /// only moves it.</summary>
-public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
+public partial class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 {
     // What the curve is DRAWN with: a polyline handed to the ink pass as data. See Render for why it is not a geometry.
     private readonly InkBrush _ink = new();
@@ -45,8 +45,21 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     public ICanvasItem Copy() => new CurveItem(Kind, _points, Stroke?.Copy(), Thickness)
     {
         Degree = _degree,
-        IsUniform = IsUniform
+        IsUniform = IsUniform,
+        Name = Name,
+        Comment = Comment
     };
+
+    /// <summary>The short name a person gave it; empty for none. See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
+
+    /// <summary>Its name, for a list of what is on the plane.</summary>
+    public string Title => Name ?? string.Empty;
 
     public IReadOnlyList<Vector2<double>> Points => _points;
 

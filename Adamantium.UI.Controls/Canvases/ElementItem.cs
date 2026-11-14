@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>A real control on the plane at a world place and size. It costs a visual-tree node, which is why ink is not
 /// one; panning and zooming only re-arrange it.</summary>
-public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
+public partial class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 {
     private Boolean? _sizeFollowsContent;
     private Rect _world;
@@ -111,6 +111,10 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
     /// own name would have to be told about the next one too.</para></summary>
     public bool HasLabel => Model == null;
 
+    /// <summary>A node standing for the application's object is called by that object's title, not by a name of its own.
+    /// See <see cref="ICanvasItem.TakesName"/>.</summary>
+    public bool TakesName => Model == null;
+
     public Rect Bounds => World;
 
     /// <summary>The least it may be resized to, in world units: measured for content-sized items, otherwise zero unless the
@@ -137,8 +141,17 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
         Dress(node.InputPins, made.InputPins);
         Dress(node.OutputPins, made.OutputPins);
 
-        return new ElementItem(made, World) { SizeFollowsContent = SizeFollowsContent };
+        return new ElementItem(made, World) { SizeFollowsContent = SizeFollowsContent, Name = Name, Comment = Comment };
     }
+
+    /// <summary>The short name a person gave it; empty for none, when the list calls it by its kind and what it says.
+    /// See <see cref="ICanvasItem.Name"/>.</summary>
+    [Bindable, Affects(nameof(Title))]
+    public partial string Name { get; set; }
+
+    /// <summary>A longer note about it, shown apart from the name; empty for none.</summary>
+    [Bindable]
+    public partial string Comment { get; set; }
 
     private static void Dress(System.Collections.ObjectModel.ObservableCollection<CanvasNodePin> from,
         System.Collections.ObjectModel.ObservableCollection<CanvasNodePin> to)
@@ -157,6 +170,8 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
     {
         get
         {
+            if (!string.IsNullOrEmpty(Name)) return Name;
+
             // The control a person put down, not the presenter carrying it - the same rule as Sort. Read off Element,
             // every hosted object on the plane was called a ContentPresenter.
             var kind = (Painted ?? Element)?.GetType().Name ?? "Element";

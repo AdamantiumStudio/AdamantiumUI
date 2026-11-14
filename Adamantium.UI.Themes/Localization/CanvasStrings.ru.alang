@@ -1,6 +1,8 @@
 <Language>
     <Phrase Key="MovePanel" Text="Перетащите, чтобы передвинуть панель; щелчок сворачивает её"/>
     <Phrase Key="Map" Text="Карта"/>
+    <Phrase Key="FindOnPlane" Text="Найти на плоскости по имени"/>
+    <Phrase Key="ClearFind" Text="Показать всё снова"/>
     <Phrase Key="WholePlane" Text="Вся плоскость, видимая часть в рамке"/>
     <Phrase Key="AddNode" Text="Добавить узел"/>
     <Phrase Key="ResizePanel" Text="Перетащите, чтобы задать ширину панели"/>
