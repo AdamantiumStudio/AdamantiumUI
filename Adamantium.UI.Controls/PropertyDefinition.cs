@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using Adamantium.Core.Commands;
+using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
@@ -334,10 +335,32 @@ public abstract class PropertyDefinition : FundamentalUIComponent
 /// <summary>Text. The plain case, and the one everything else is measured against.</summary>
 public class StringProperty : PropertyDefinition
 {
-    private DataTemplate _editor;
+    /// <summary>Whether the text runs over several lines - a note rather than a name: Enter starts a new line, long lines
+    /// wrap, and the field shows a few lines however short the text is.</summary>
+    public static readonly AdamantiumProperty IsMultilineProperty = AdamantiumProperty.Register(nameof(IsMultiline),
+        typeof(bool), typeof(StringProperty), new PropertyMetadata(false));
 
-    protected internal override DataTemplate DefaultEditorTemplate =>
-        _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Field() });
+    private DataTemplate _editor;
+    private DataTemplate _noteEditor;
+
+    public bool IsMultiline
+    {
+        get => GetValue<bool>(IsMultilineProperty);
+        set => SetValue(IsMultilineProperty, value);
+    }
+
+    protected internal override DataTemplate DefaultEditorTemplate => IsMultiline
+        ? _noteEditor ??= new DataTemplate(() => new TemplateResult { RootComponent = Note() })
+        : _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Field() });
+
+    private static TextBox Note()
+    {
+        var field = PropertyEditors.Field();
+        field.AcceptsReturn = true;
+        field.TextWrapping = TextWrapping.WrapByWords;
+        field.MinLines = 3;
+        return field;
+    }
 
     protected internal override void PrepareEditor(IUIComponent editor, object value)
     {

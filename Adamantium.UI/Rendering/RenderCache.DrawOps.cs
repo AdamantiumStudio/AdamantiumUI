@@ -239,7 +239,12 @@ public partial class RenderCache
         ref var batch = ref inner ? ref _haloLivingOver : ref _haloLivingUnder;
         if (batch == null)
         {
-            batch = new HaloLivingCollector { BatchId = (byte)(inner ? 11 : 10), TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+            batch = Listed(new HaloLivingCollector
+            {
+                BatchId = (byte)(inner ? 11 : 10),
+                Layer = inner ? BatchLayer.HaloLivingOver : BatchLayer.HaloLivingUnder,
+                TransformsAddress = _transformTable?.DeviceAddress ?? 0
+            });
             batch.BeginFrame(device);
         }
 
@@ -284,7 +289,12 @@ public partial class RenderCache
         ref var batch = ref inner ? ref _haloOver : ref _haloUnder;
         if (batch == null)
         {
-            batch = new HaloRectCollector { BatchId = (byte)(inner ? 9 : 8), TransformsAddress = _transformTable?.DeviceAddress ?? 0 };
+            batch = Listed(new HaloRectCollector
+            {
+                BatchId = (byte)(inner ? 9 : 8),
+                Layer = inner ? BatchLayer.HaloOver : BatchLayer.HaloUnder,
+                TransformsAddress = _transformTable?.DeviceAddress ?? 0
+            });
             batch.BeginFrame(device);
         }
 
@@ -345,95 +355,64 @@ public partial class RenderCache
         return new Rect(0, 0, size.Width, size.Height).TransformToAABB(worldTransform);
     }
 
-    // Flush all batches in LAYER order - item-background rects, then instanced geometry fills (+ their deferred
-    // fringe/stroke), then text on top - and mark the group closed. Each Flush leaves the device on fullScissor.
     private void FlushBatches(IGraphicsDevice device, Rect2D fullScissor, ref bool scissorNarrowed)
     {
-        // FIRST, before every fill in this clip group: that is what puts an OUTER aura / shadow under the shapes it
-        // belongs to. Its INNER twin is flushed after the fills instead - see below.
-        if (_haloUnder != null) RecordSegment(8, _haloUnder.Flush(device, fullScissor, _projectionMatrix));
-        if (_haloLivingUnder != null) RecordSegment(10, _haloLivingUnder.Flush(device, fullScissor, _projectionMatrix));
-        RecordSegment(0, _rectBatch.Flush(device, fullScissor, _projectionMatrix));
-        RecordSegment(1, _ellipseBatch.Flush(device, fullScissor, _projectionMatrix));
-        if (_polygonBatch != null) RecordSegment(12, _polygonBatch.Flush(device, fullScissor, _projectionMatrix));
-        RecordSegment(3, _gradientRectBatch.Flush(device, fullScissor, _projectionMatrix));
-        RecordSegment(4, _gradientEllipseBatch.Flush(device, fullScissor, _projectionMatrix));
-        RecordSegment(5, _patternBatch.Flush(device, fullScissor, _projectionMatrix));   // pattern layer: after gradients, before instanced
-        RecordSegment(6, _fractalBatch.Flush(device, fullScissor, _projectionMatrix));   // fractal layer: after pattern, before instanced
-        if (_texRectBatch != null) RecordSegment(7, _texRectBatch.Flush(device, fullScissor, _projectionMatrix));   // textured layer: after fractal, before instanced
-        // The canvas GROUND, after every other fill. Where it flushes says nothing about what it draws under: what it
-        // covers is settled by OverlapsHigherLayer, which flushes anything painted earlier out of the way first.
-        if (_canvasGridBatch != null) RecordSegment(14, _canvasGridBatch.Flush(device, fullScissor, _projectionMatrix));
-        // INK after the ground it is drawn on - and after every other fill, for the same reason the grid is: what it
-        // covers is settled by OverlapsHigherLayer, not by where it flushes.
-        if (_inkBatch != null) RecordSegment(15, _inkBatch.Flush(device, fullScissor, _projectionMatrix));
-        // ARROWS and plain lines beside the ink, on the same layer and settled the same way.
-        if (_arrowBatch != null) RecordSegment(16, _arrowBatch.Flush(device, fullScissor, _projectionMatrix));
-        // STROKES over the lines and arrows beside them; what they cover is settled by OverlapsHigherLayer as theirs is.
-        if (_strokeBatch != null) RecordSegment(18, _strokeBatch.Flush(device, fullScissor, _projectionMatrix));
-        // The general instanced-fill flush is retained too: Flush records the group and returns its index, replayed via
-        // ReplayFlush - so a vector icon no longer disables replay for the whole window.
-        if (_instancedFill != null)
+        foreach (var batch in _batches)
         {
-            var fi = _instancedFill.Flush(fullScissor, _projectionMatrix);
-            if (_recording && fi >= 0)
-            {
-                RecordOp(new RenderOp
-                {
-                    Kind = RenderOpKind.InstancedFlush, Batch = InstancedFillCollector.ArenaBatchId, SegId = fi,
-                    Clip = _batchClip, Order = _recordOrder
-                });
-            }
+            if (ReferenceEquals(batch, _materialBatch)) AimMaterialCapture(fullScissor);
+
+            var segment = batch.Flush(device, fullScissor, _projectionMatrix);
+
+            if (ReferenceEquals(batch, _materialBatch)) NoteMaterialSegment(segment);
+
+            if (ReferenceEquals(batch, _instancedFill)) RecordInstancedFlush(segment);
+            else RecordSegment(batch.BatchId, segment);
         }
 
-        // BACKDROP MATERIALS go LAST of the fills, and that ordering is the whole feature: the material copies what is
-        // behind it out of the frame, so everything meant to be behind it has to be in the frame already. Flushed before
-        // the halo's inner band and before text for the same reason those come after fills at all - a pane of glass is
-        // still a fill, and a label on top of it is content.
-        if (_materialBatch != null)
-        {
-            // Captured from the instances' bounds (the scissor is the fallback), grown by a blur margin, then cut back to
-            // the clip group so content drawn over a scrolled panel does not bleed in.
-            const int blurMargin = 24;
-            var limit = _batchOpen ? _batchScissor : fullScissor;
-            var box = _materialBatch.HasPending
-                ? ToFramebufferScissor(_materialBatch.PendingBounds, fullScissor)
-                : limit;
-            _materialBatch.SetCaptureRect(Intersect(new Rect2D
-            {
-                Offset = new Offset2D { X = box.Offset.X - blurMargin, Y = box.Offset.Y - blurMargin },
-                Extent = new Extent2D
-                {
-                    Width = box.Extent.Width + blurMargin * 2,
-                    Height = box.Extent.Height + blurMargin * 2
-                }
-            }, limit));
-            var matSegId = _materialBatch.Flush(device, fullScissor, _projectionMatrix);
-            if (matSegId >= 0 && _batchClip != null && NodeOf(_batchClip) is { } matNode)
-                _matSegNode[matSegId] = (matNode, World(matNode));
-            
-            RecordSegment(13, matSegId);
-        }
-
-        // An INNER band lies inside the shape, so it belongs OVER every fill - drawn under, the shape's own fill covers
-        // it and nothing is on screen at all. Still below text: a glow is chrome, a label is content.
-        if (_haloOver != null)
-        {
-            RecordSegment(9, _haloOver.Flush(device, fullScissor, _projectionMatrix));
-            _haloOverOwner = null;
-        }
-        if (_haloLivingOver != null)
-        {
-            RecordSegment(11, _haloLivingOver.Flush(device, fullScissor, _projectionMatrix));
-        }
-
-        RecordSegment(2, _textBatch.Flush(device, fullScissor, _projectionMatrix));
+        _haloOverOwner = null;
 
         // The cycle is over, and with it the LAYER: a flush happens precisely when the next draw can no longer be
         // reordered with what is pending, so whatever is recorded from here belongs strictly after all of it.
         CloseLayer();
         scissorNarrowed = false;
         _batchOpen = false;
+    }
+
+    private void AimMaterialCapture(Rect2D fullScissor)
+    {
+        const int blurMargin = 24;
+        var limit = _batchOpen ? _batchScissor : fullScissor;
+        var box = _materialBatch.HasPending
+            ? ToFramebufferScissor(_materialBatch.PendingBounds, fullScissor)
+            : limit;
+        _materialBatch.SetCaptureRect(Intersect(new Rect2D
+        {
+            Offset = new Offset2D { X = box.Offset.X - blurMargin, Y = box.Offset.Y - blurMargin },
+            Extent = new Extent2D
+            {
+                Width = box.Extent.Width + blurMargin * 2,
+                Height = box.Extent.Height + blurMargin * 2
+            }
+        }, limit));
+    }
+
+    private void NoteMaterialSegment(int segment)
+    {
+        if (segment >= 0 && _batchClip != null && NodeOf(_batchClip) is { } node)
+        {
+            _matSegNode[segment] = (node, World(node));
+        }
+    }
+
+    private void RecordInstancedFlush(int flush)
+    {
+        if (!_recording || flush < 0) return;
+
+        RecordOp(new RenderOp
+        {
+            Kind = RenderOpKind.InstancedFlush, Batch = InstancedFillCollector.ArenaBatchId, SegId = flush,
+            Clip = _batchClip, Order = _recordOrder
+        });
     }
 
     // Record a batch segment op (the immediate draw already happened in Flush; this only appends it for a clean-frame

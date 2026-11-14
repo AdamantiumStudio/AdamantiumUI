@@ -3,6 +3,7 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
@@ -179,6 +180,45 @@ public class CanvasChromeThemeTests
                     Assert.That(piece.VisualChildren, Is.Not.Empty, $"{what} was given no template");
                 }
             }
+        });
+    }
+
+    // The tool rail scrolls the way it runs, with no bar: up and down standing, across once turned on its side - on a
+    // canvas too narrow for the turned rail its tools are scrolled to, not cut off.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheToolRailScrollsTheWayItRuns(string theme)
+    {
+        var canvas = Built(theme);
+        canvas.Tools.Add(new SelectTool());
+        canvas.Tools.Add(new PenTool());
+        canvas.Tools.Add(new CurveTool());
+        canvas.Tools.Add(new TextTool());
+        canvas.Tools.Add(new EraseTool());
+        canvas.Tools.Add(new NodeTool());
+        var rail = Panes(canvas).Find(pane => pane.Kind == CanvasPaneKind.Rail);
+        Assert.That(rail, Is.Not.Null, "no tool rail");
+
+        var scroll = rail.GetTemplateChild("PART_RailScroll") as ScrollViewer;
+        Assert.That(scroll, Is.Not.Null, "the rail has no scroll");
+        Assert.That(scroll.VerticalScrollBarVisibility, Is.EqualTo(ScrollBarVisibility.Hidden), "standing: up and down");
+        Assert.That(scroll.HorizontalScrollBarVisibility, Is.EqualTo(ScrollBarVisibility.Disabled), "standing: not across");
+
+        rail.Orientation = Orientation.Horizontal;
+        canvas.Width = 160;
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+        canvas.Measure(new Size<double>(160, 600));
+        canvas.Arrange(new Rect(0, 0, 160, 600));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scroll.HorizontalScrollBarVisibility, Is.EqualTo(ScrollBarVisibility.Hidden), "turned: across");
+            Assert.That(scroll.VerticalScrollBarVisibility, Is.EqualTo(ScrollBarVisibility.Disabled), "turned: not up and down");
+            Assert.That(rail.Bounds.Right, Is.LessThanOrEqualTo(160), "the turned rail runs off the canvas");
+            Assert.That(scroll.ExtentSize.Width, Is.GreaterThan(scroll.ViewportSize.Width),
+                "the tools that do not fit wrap to a second row instead of being scrolled to");
         });
     }
 

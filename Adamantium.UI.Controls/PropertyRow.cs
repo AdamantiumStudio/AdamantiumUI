@@ -702,7 +702,8 @@ public class PropertyRow : Control
         _editor = FindEditor(this);
         if (_editor == null) return;
 
-        if (_editor is not ToggleButton && _editor is MeasurableUIComponent sized && Owner is { EditorHeight: > 0 })
+        if (_editor is not ToggleButton && _editor is not TextBox { AcceptsReturn: true } &&
+            _editor is MeasurableUIComponent sized && Owner is { EditorHeight: > 0 })
         {
             sized.Height = Math.Max(Owner.EditorHeight, LineHeightOf(sized));
         }

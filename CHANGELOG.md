@@ -16,6 +16,28 @@ All packages share one version.
 - `PropertySection.Accent`: a color the header is marked with along its leading edge. A section with a `ContextMenu`
   offers it on a "⋯" button in its header (`HasMenu`, `OpenMenu()`) as well as on a right click, in every theme.
 - `FundamentalUIComponent.MadeFor`: the element a style's `x:Shared="False"` setter built a value for.
+- The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
+  go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
+  `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
+  domain, path, secure, HttpOnly, `SameSite` (`WebCookieSameSite`), when it expires, and when Chromium made it and last
+  sent it.
+- A name and a comment on every canvas item: `ICanvasItem.Name` (short - what the list of everything on the plane
+  calls it and what a search finds) and `ICanvasItem.Comment` (longer, shown apart in the inspector's own multi-line
+  field), both kept by a copy and in SVG (`data-adm-name`, `data-adm-comment`, and `<title>`/`<desc>` that other editors
+  show and that are read back from theirs). The inspector edits both for one selected item; `ICanvasItem.TakesName` says
+  whether the name line is offered - not for a wire, nor for a node standing for an application's object, which is
+  called by its own title. A frame's name is what it says along the top: its Title line is now the name line.
+- The canvas is searched by name: `InfiniteCanvas.SearchText` and `Matches(item)` (a group matches through what it
+  holds), `SearchTextChanged`, and Ctrl+F (`SearchAsked`, taken only while something listens). The inspector's search
+  field over the list of everything on the plane (`PART_Find`) filters that list as it is typed, the count over it says
+  how many are left (`FoundCount`), Esc shows everything again; picking one in the list brings the camera to it, as
+  before.
+- `InfiniteCanvas.PlaceOf(item)`: where an item stands, for the inspector's header (`"Title · place"`) - a document's
+  sheet, say; nothing by default.
+- `CanvasInspector.ShowsDrawingActions`: leaves out the plane's own actions - SVG in and out, and clearing the whole
+  plane (`ClearAction`) - for an application that keeps the plane's contents itself.
+- `StringProperty.IsMultiline`: a field of several wrapped lines that takes Enter; `PropertyRow` leaves its height to
+  the text.
 - What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
   of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
   the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same
@@ -449,6 +471,18 @@ All packages share one version.
   unloaded.
 - An item that is its own container - a menu row written in markup - keeps the visibility its author gave it: a list
   showed every such item it laid out, a row bound to hide itself too, and only shows again one it hid itself.
+- Batched draws keep the scene's order across every pair of batches. Each batch has one place in the flush order
+  (`BatchLayer`), and a draw waits for a flush when it overlaps anything pending in a batch flushed after its own. The
+  check used hand-numbered layers that disagreed with the flush order, so some pairs never asked about each other: an
+  ellipse drawn after a regular polygon, ink after a line or arrow, ink or a filled path after text all landed under
+  what came before them.
+- Turned or sheared text is drawn after what is still waiting to be drawn under it. Such text is not batched but drawn
+  by itself, and it went ahead of the batches still pending - strokes drawn before it landed on top: a PDF sheet turned
+  a quarter showed its hairline grid over the page number.
+- A canvas's tool rail no longer runs over the map on a short canvas. `CanvasChromeLayer` measures a pane in a top
+  corner with the height left above the panes in the bottom corner under it, and the themes' rail scrolls what does
+  not fit - one line of tools, along its own direction, by the wheel or a finger, with no bar (`PART_RailScroll`). It
+  used to wrap into a second column measured against the whole height, which reached the map anyway.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),

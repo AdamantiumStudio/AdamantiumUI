@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Layer" Text="Слой"/>
     <Phrase Key="Index" Text="Номер"/>
+    <Phrase Key="Comment" Text="Комментарий"/>
     <Phrase Key="StrokeItem" Text="Штрих"/>
     <Phrase Key="Color" Text="Цвет"/>
     <Phrase Key="Thickness" Text="Толщина"/>

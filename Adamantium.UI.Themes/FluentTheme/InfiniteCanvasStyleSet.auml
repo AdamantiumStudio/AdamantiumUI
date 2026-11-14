@@ -71,9 +71,10 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <!-- The tool rail, built from the canvas's Tools; anchored top-left so it does not reach the map
-                                 in the bottom corner. -->
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <!-- The tool rail, built from the canvas's Tools; anchored top-left and given only the height
+                                 above the map in the bottom corner, scrolling what does not fit; never shorter than
+                                 its grip, so it can always be taken hold of. -->
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
 
                             <!-- The MAP, in the corner nothing else wants: the rail is up the left side, the inspector
                                  down the right, the view bar along the bottom middle. -->
@@ -160,7 +161,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -230,9 +231,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasPane">
                     <!-- DOCK and not a stack, both here and inside the body. A vertical stack measures its children
-                         with INFINITE height, and a rail that is never told how much room there is can never wrap into
-                         a second column - it just runs off the bottom of the canvas, taking its last tools with it. A
-                         dock hands the fill child what is actually left. -->
+                         with INFINITE height, and a rail that is never told how much room there is can never know it
+                         has to scroll - it just runs off the bottom of the canvas, or over the map, taking its last
+                         tools with it. A dock hands the fill child what is actually left. -->
                     <DockPanel LastChildFill="True">
                         <!-- The grip carries and folds; the turn button is beside it and does the one other thing a
                              panel can be asked about itself. Both above the body, so a folded pane is its handles. -->
@@ -284,11 +285,17 @@
                                                       Content="{TemplateBinding Content}"
                                                       ContentTemplate="{TemplateBinding ContentTemplate}"/>
                                     <!-- A rail pane's buttons come from the tools themselves; custom content needs
-                                         another pane kind. -->
-                                    <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
-                                                    Canvas="{TemplateBinding Canvas}"
-                                                    Orientation="{TemplateBinding Orientation}"
-                                                    ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
+                                         another pane kind. One line of them, scrolled along its own direction when the
+                                         room the canvas leaves is short - by the wheel or a finger, with no bar: a bar
+                                         beside thirty-pixel buttons would be wider than the gap it scrolls past. -->
+                                    <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
+                                                  VerticalScrollBarVisibility="Hidden"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <CanvasToolRail x:Name="PART_Rail"
+                                                        Canvas="{TemplateBinding Canvas}"
+                                                        Orientation="{TemplateBinding Orientation}"
+                                                        ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
+                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
 
@@ -341,9 +348,15 @@
                             <Setter TargetName="PART_Body" Property="Background" Value="Transparent"/>
                             <Setter TargetName="PART_Body" Property="BorderThickness" Value="0"/>
                             <Setter TargetName="PART_Body" Property="Padding" Value="0"/>
-                            <Setter TargetName="PART_Rail" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+
+                        <!-- A rail turned across scrolls across. -->
+                        <PropertyTrigger Property="Orientation" Value="Horizontal">
+                            <Setter TargetName="PART_RailScroll" Property="VerticalScrollBarVisibility" Value="Disabled"/>
+                            <Setter TargetName="PART_RailScroll" Property="HorizontalScrollBarVisibility" Value="Hidden"/>
                         </PropertyTrigger>
 
                         <!-- ...and its handles run the way the tools do. Three buttons in a row are wider than one
@@ -487,6 +500,7 @@
                                  asks before it does anything - see ConfirmsDelete. -->
                             <Button Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                     ToolTip="{Localize CanvasStrings.ClearCanvas}"
+                                    Visibility="{TemplateBinding ClearAction}"
                                     Command="{Ancestor CanvasInspector, Canvas.ClearCommand}">
                                 <Image Source="{ObservableResource CanvasBinIcon}" Width="13" Height="13"/>
                             </Button>
@@ -528,12 +542,19 @@
                                 <!-- How much is on the plane: a count, or that there is nothing - shown by the trigger
                                      below. -->
                                 <TextBlock x:Name="ItemCountLabel" DockPanel.Dock="Top" MarginBottom="6"
-                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding ItemCount}}"
+                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding FoundCount}}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                                 <TextBlock x:Name="NothingDrawnLabel" DockPanel.Dock="Top" MarginBottom="6"
                                            Visibility="Collapsed"
                                            Text="{Localize CanvasStrings.NothingDrawn}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                <!-- The plane searched by name: the list keeps what is called so. Ctrl+F on the plane
+                                     comes here; Escape clears it. -->
+                                <TextBox x:Name="PART_Find" DockPanel.Dock="Top" MarginBottom="6" Height="26"
+                                         Padding="6 0 5 0" ShowsClearButton="True"
+                                         ClearButtonToolTip="{Localize CanvasStrings.ClearFind}"
+                                         Placeholder="{Localize CanvasStrings.FindOnPlane}"
+                                         AutomationProperties.Name="{Localize CanvasStrings.FindOnPlane}"/>
                                 <TreeView MaxHeight="300" MinWidth="0"
                                           AutomationProperties.Name="{Localize CanvasStrings.Layers}"
                                           ItemsSource="{TemplateBinding Structure}"

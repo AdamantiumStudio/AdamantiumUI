@@ -24,7 +24,7 @@ namespace Adamantium.UI.Rendering.Retained;
 
 // Instanced fills of tessellated meshes shared per GeometryKey, collected during the walk and flushed in paint order.
 // Each flush draws one instanced call per key, then the deferred per-unit fringes and strokes on top. Render thread only.
-internal sealed class InstancedFillCollector : DeferredDisposableObject
+internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendingBatch
 {
     // Master toggle for the general-geometry instancing path (off = solid arbitrary-geometry fills draw per-unit).
     public static bool Enabled = true;
@@ -907,6 +907,15 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (!unit.HasPerUnitOverlay) return;
         _pendingUnits.Add(unit);
     }
+
+    /// <summary>Where this batch is flushed among the others.</summary>
+    public BatchLayer Layer => BatchLayer.InstancedFill;
+
+    /// <summary>Which <see cref="RenderOp.Batch"/> its flush op names - <see cref="ArenaBatchId"/>.</summary>
+    public byte BatchId => ArenaBatchId;
+
+    int IPendingBatch.Flush(IGraphicsDevice device, Rect2D fullScissor, Matrix4x4F projection) =>
+        Flush(fullScissor, projection);
 
     /// <summary>Does a unit's logical bounds overlap the pending group? A later overlapping non-batched unit must draw
     /// AFTER a flush so it paints on top.</summary>

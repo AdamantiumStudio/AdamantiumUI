@@ -478,10 +478,7 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
         }
     }
 
-    private static DateTimeOffset? Time(CefBasetime time) =>
-        time.val > 0 && time.val < DateTime.MaxValue.ToFileTimeUtc() / 10
-            ? new DateTimeOffset(DateTime.FromFileTimeUtc(time.val * 10))
-            : null;
+    private static DateTimeOffset? Time(CefBasetime time) => CefTimes.Read(time);
 
     /// <summary>Takes the page it is downloaded from, the first time it is told.</summary>
     internal void SeenOn(string page)

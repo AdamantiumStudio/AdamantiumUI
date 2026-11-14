@@ -57,7 +57,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="22"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -132,7 +132,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="22"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -241,10 +241,14 @@
                                                       ContentTemplate="{TemplateBinding ContentTemplate}"/>
                                     <!-- The tool rail, filled by the canvas - see Fluent's set. Smaller buttons, like
                                          everything in this theme. -->
-                                    <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
-                                                    Canvas="{TemplateBinding Canvas}"
-                                                    Orientation="{TemplateBinding Orientation}"
-                                                    ButtonWidth="28" ButtonHeight="24" IconSize="12" ButtonGap="3"/>
+                                    <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
+                                                  VerticalScrollBarVisibility="Hidden"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <CanvasToolRail x:Name="PART_Rail"
+                                                        Canvas="{TemplateBinding Canvas}"
+                                                        Orientation="{TemplateBinding Orientation}"
+                                                        ButtonWidth="28" ButtonHeight="24" IconSize="12" ButtonGap="3"/>
+                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
 
@@ -288,9 +292,14 @@
                             <Setter TargetName="PART_Body" Property="Background" Value="Transparent"/>
                             <Setter TargetName="PART_Body" Property="BorderThickness" Value="0"/>
                             <Setter TargetName="PART_Body" Property="Padding" Value="0"/>
-                            <Setter TargetName="PART_Rail" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+
+                        <PropertyTrigger Property="Orientation" Value="Horizontal">
+                            <Setter TargetName="PART_RailScroll" Property="VerticalScrollBarVisibility" Value="Disabled"/>
+                            <Setter TargetName="PART_RailScroll" Property="HorizontalScrollBarVisibility" Value="Hidden"/>
                         </PropertyTrigger>
 
                         <MultiTrigger>
@@ -423,6 +432,7 @@
 
                             <Button Width="22" Height="22" MinWidth="0" MinHeight="0" Padding="0"
                                     ToolTip="{Localize CanvasStrings.ClearCanvas}"
+                                    Visibility="{TemplateBinding ClearAction}"
                                     Command="{Ancestor CanvasInspector, Canvas.ClearCommand}">
                                 <Image Source="{ObservableResource CanvasBinIcon}" Width="12" Height="12"/>
                             </Button>
@@ -461,12 +471,18 @@
                             <!-- HOW MUCH IS ON THE PLANE - see Fluent's set: the list is where that is asked. -->
                             <DockPanel Visibility="{TemplateBinding StructureFace}" LastChildFill="True">
                                 <TextBlock x:Name="ItemCountLabel" DockPanel.Dock="Top" MarginBottom="6"
-                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding ItemCount}}"
+                                           Text="{Localize CanvasStrings.Items, count={TemplateBinding FoundCount}}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
                                 <TextBlock x:Name="NothingDrawnLabel" DockPanel.Dock="Top" MarginBottom="6"
                                            Visibility="Collapsed"
                                            Text="{Localize CanvasStrings.NothingDrawn}"
                                            Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                <!-- The plane searched by name - see Fluent's set. -->
+                                <TextBox x:Name="PART_Find" DockPanel.Dock="Top" MarginBottom="6" Height="26"
+                                         Padding="6 0 5 0" ShowsClearButton="True"
+                                         ClearButtonToolTip="{Localize CanvasStrings.ClearFind}"
+                                         Placeholder="{Localize CanvasStrings.FindOnPlane}"
+                                         AutomationProperties.Name="{Localize CanvasStrings.FindOnPlane}"/>
                                 <TreeView MaxHeight="300" MinWidth="0"
                                           AutomationProperties.Name="{Localize CanvasStrings.Layers}"
                                           ItemsSource="{TemplateBinding Structure}"

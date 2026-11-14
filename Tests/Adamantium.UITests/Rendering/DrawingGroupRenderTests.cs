@@ -260,6 +260,34 @@ public class DrawingGroupRenderTests
         });
     }
 
+    // Turned glyphs are drawn by themselves rather than batched - and so after whatever is still pending under them, or a
+    // stroke drawn before them lands on top: a turned PDF sheet showed its hairline grid over the page number.
+    [Test]
+    public void TurnedGlyphs_CoverAStrokeDrawnBeforeThem()
+    {
+        var run = Bar(60, 0, 0);
+        var bounds = run.Bounds;
+        var turn = Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 2)) * Matrix4x4.CreateTranslation<float>(30, 30, 0);
+        var stem = Vector3F.TransformCoordinate(
+            new Vector3F((float)(bounds.X + bounds.Width / 2), (float)(bounds.Y + bounds.Height / 2), 0), turn);
+        var line = new StreamGeometry();
+        var context = line.Open();
+        context.BeginFigure(new Vector2<double>(0, stem.Y), false, false).LineTo(new Vector2<double>(Dim, stem.Y));
+        line.RecalculateBounds();
+
+        var frame = Render(session =>
+        {
+            session.DrawGeometry(null, line, new Pen(new SolidColorBrush(Red), 2));
+            session.DrawGlyphs(run, Brushes.Black, null, turn);
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(frame.At((int)stem.X, (int)stem.Y).R, Is.LessThan(64), "the turned stem, over the line");
+            Near(frame.At(2, (int)stem.Y), Solid, "the line beside it");
+        });
+    }
+
     [Test]
     public void NestedGroups_AreCutByTheOuterAndFadedByTheInner()
     {
