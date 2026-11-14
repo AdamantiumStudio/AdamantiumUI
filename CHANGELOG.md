@@ -9,7 +9,13 @@ All packages share one version.
 
 - `PropertyGrid.AutoGenerateSectionsFor`: beside the sections written for a `DataType`, the items of the source of this
   type get a section each, built from their own type - the components of a game's code, whose types no markup knows;
-  other items no section is written for stay unshown.
+  other items no section is written for stay unshown. `PropertyGrid.GeneratedSectionStyle`: a style for the sections
+  the grid builds itself, as an items control's container style. `PropertyGrid.SectionTemplateSelector`: an item no
+  written section claims gets a section of its own made from the template picked for it - one an item, where a section
+  written for a `DataType` serves all of them together; the item is the section's DataContext and target.
+- `PropertySection.Accent`: a color the header is marked with along its leading edge. A section with a `ContextMenu`
+  offers it on a "⋯" button in its header (`HasMenu`, `OpenMenu()`) as well as on a right click, in every theme.
+- `FundamentalUIComponent.MadeFor`: the element a style's `x:Shared="False"` setter built a value for.
 - What a canvas asks of the application before it draws, makes and frames things, for marks that belong to the sheets
   of a document: `InfiniteCanvas.ClipOf(item)` - the world rectangle an item is cut to as it is drawn (a group cut in
   the camera's placement, so it follows a pan or a zoom without the item being drawn again; items cut to the same
@@ -432,6 +438,15 @@ All packages share one version.
 
 - `PropertyDefinitionBuilder` no longer keeps the types it built definitions for alive: a type of code loaded to be
   unloaded again (a collectible load context) goes once nothing else holds it.
+- An idle window releases what it let go of: its wakes, a few times a second, were taken for stalls, so discarded
+  elements - a removed panel and everything it showed - stayed alive until something moved.
+- The render cache no longer keeps the last moved subtree alive between frames.
+- A list's panel no longer remembers the place of every item it ever showed: an item that leaves the list, or a source
+  replaced, is let go at once, also in a closed popup.
+- A context menu a style builds for each element (`x:Shared="False"`) goes with its element; before, only menus set
+  on the element or made by its template did.
+- `DataTemplateSet` and the index style selectors name types by no longer keep a type or an assembly that can be
+  unloaded.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),
