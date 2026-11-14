@@ -61,11 +61,11 @@ jobs:
         run: dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r win-x64 -o artifacts/helper
 
       # In .NET's cross-build image, against its old root file system: built on the runner the helper would ask the
-      # runner's glibc, newer than CEF's. The runner's .NET is mounted in.
+      # runner's glibc, newer than CEF's. The runner's .NET is mounted in; the runner's user owns what it writes.
       - name: Helper (Linux)
         if: matrix.rid == 'linux-x64'
         run: >
-          docker run --rm -v "$GITHUB_WORKSPACE:/src" -v "$DOTNET_ROOT:/dotnet" -w /src -e DOTNET_CLI_HOME=/tmp
+          docker run --rm --user "$(id -u):$(id -g)" -v "$GITHUB_WORKSPACE:/src" -v "$DOTNET_ROOT:/dotnet" -w /src -e DOTNET_CLI_HOME=/tmp
           -e NUGET_PACKAGES=/tmp/nuget mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-amd64
           /dotnet/dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r linux-x64
           -p:SysRoot=/crossrootfs/x64 -p:LinkerFlavor=lld -o artifacts/helper
