@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPicture.Draw(items, session)`: items of a plane drawn into any `IDrawingSession` away from a canvas - through
+  the same `ICanvasItem.Render`, groups opened out as a canvas opens them, each item by a copy so what it keeps for its
+  canvas is untouched, one world unit to one unit of the session, nothing put on whole pixels. `CanvasDrawing` says
+  what it is drawn through: `Scale`, `WorldToScreen` and `SnapsToPixels`; its `Canvas` is null in a picture, and a
+  wire, whose route is worked out on a canvas, is not drawn there.
+- `PdfContentSession` (UI.Pdf): an `IDrawingSession` that writes what is drawn into a PDF content stream as paths,
+  keeping the box of what it drew. Geometry is written from the curves the GPU draws it by (`CurvesForDrawing`, with
+  its own fill rule), in its own units under the matrix it is drawn with; ink and arrows are filled as their passes
+  shape them, each in one piece; text by its glyphs' outlines (`GlyphRun.Outline`). Solid brushes only; a group's
+  clip cuts, its opacity fades each thing in it rather than the group as one. `PdfPageSpace.ToSheet(page)` is the
+  matrix a page is drawn with, public: its inverse writes a sheet back into the page.
 - The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
   go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
   `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
@@ -449,6 +460,13 @@ All packages share one version.
 
 ### Fixed
 
+- The frame verifier no longer raises an alarm on every pan of a canvas with text. It read where the tree has a glyph
+  from a copy of the placement's matrix kept on the text's unit, which a batched glyph never refreshes - only its
+  transform slot is written when the placement moves. It now reads the newest matrix the cache holds for the placement
+  (`RenderCache.PlacedNow`), as the overlap tests already do.
+- A text long enough to be kept in a band (2048 glyphs and more) no longer runs out of glyphs when a canvas is panned
+  past the band. The band was fitted with the same stale copy of the placement, so it went on covering where the text
+  stood at the last walk; it is now fitted with the placement's newest matrix.
 - Batched draws keep the scene's order across every pair of batches. Each batch has one place in the flush order
   (`BatchLayer`), and a draw waits for a flush when it overlaps anything pending in a batch flushed after its own. The
   check used hand-numbered layers that disagreed with the flush order, so some pairs never asked about each other: an

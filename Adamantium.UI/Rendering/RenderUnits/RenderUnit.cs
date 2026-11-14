@@ -1302,14 +1302,17 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     internal bool HasBand => _band != null;
 
-    internal bool FitBand(Matrix4x4F world, Rect shown, Rect band)
+    /// <summary>Rebuilds the band of glyphs kept when the shown part of the text has left it. <paramref name="place"/>
+    /// is where the text is drawn now - its placement's newest matrix over its element's world - not
+    /// <see cref="Place"/>, whose copy of the placement a batched text does not refresh while it pans.</summary>
+    internal bool FitBand(Matrix4x4F place, Rect shown, Rect band)
     {
         if (_band is not { } held)
         {
             return false;
         }
 
-        var toLayout = Matrix4x4F.Invert(Place(world));
+        var toLayout = Matrix4x4F.Invert(place);
         var visible = ToLayout(shown, toLayout);
         if (!(visible.Width > 0) || !(visible.Height > 0) || held.Contains(visible))
         {

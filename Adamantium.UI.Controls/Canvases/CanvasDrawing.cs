@@ -16,6 +16,7 @@ public sealed class CanvasDrawing
 
     private readonly CanvasPlacements _places;
     private CanvasPlaced _placed;
+    private ICanvasCamera _camera;
 
     internal CanvasDrawing(CanvasPlacements places)
     {
@@ -25,8 +26,19 @@ public sealed class CanvasDrawing
     /// <summary>The session to draw into - always with one of this drawing's placements.</summary>
     public IDrawingSession Session { get; private set; }
 
-    /// <summary>The canvas the item stands on.</summary>
+    /// <summary>The canvas the item stands on; null when it is drawn away from one (<see cref="CanvasPicture"/>).
+    /// </summary>
     public InfiniteCanvas Canvas { get; private set; }
+
+    /// <summary>How many units of the drawing one world unit is - the canvas's zoom, or 1 away from a canvas.</summary>
+    public double Scale => _camera.Scale;
+
+    /// <summary>Whether what is drawn lands on pixels: on a canvas it does, in a <see cref="CanvasPicture"/> it does
+    /// not, and a text is put on a whole pixel only then.</summary>
+    public bool SnapsToPixels => _camera.SnapsToPixels;
+
+    /// <summary>Where a world point lands in the drawing.</summary>
+    public Vector2<double> WorldToScreen(Vector2<double> world) => _camera.WorldToScreen(world);
 
     /// <summary>The world point the drawing is stated from.</summary>
     public Vector2<double> Origin => _placed.Origin;
@@ -54,10 +66,11 @@ public sealed class CanvasDrawing
     /// that is neither scaled with the plane nor pinned to one point of it.</summary>
     internal Placement PartBy(Func<Matrix4x4F> where) => _places.Part(_placed, where);
 
-    internal void Begin(IDrawingSession session, InfiniteCanvas canvas, CanvasPlaced placed)
+    internal void Begin(IDrawingSession session, InfiniteCanvas canvas, ICanvasCamera camera, CanvasPlaced placed)
     {
         Session = session;
         Canvas = canvas;
+        _camera = camera;
         _placed = placed;
     }
 }
