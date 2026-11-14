@@ -449,6 +449,13 @@ All packages share one version.
 
 ### Fixed
 
+- The frame verifier no longer raises an alarm on every pan of a canvas with text. It read where the tree has a glyph
+  from a copy of the placement's matrix kept on the text's unit, which a batched glyph never refreshes - only its
+  transform slot is written when the placement moves. It now reads the newest matrix the cache holds for the placement
+  (`RenderCache.PlacedNow`), as the overlap tests already do.
+- A text long enough to be kept in a band (2048 glyphs and more) no longer runs out of glyphs when a canvas is panned
+  past the band. The band was fitted with the same stale copy of the placement, so it went on covering where the text
+  stood at the last walk; it is now fitted with the placement's newest matrix.
 - Batched draws keep the scene's order across every pair of batches. Each batch has one place in the flush order
   (`BatchLayer`), and a draw waits for a flush when it overlaps anything pending in a batch flushed after its own. The
   check used hand-numbered layers that disagreed with the flush order, so some pairs never asked about each other: an
