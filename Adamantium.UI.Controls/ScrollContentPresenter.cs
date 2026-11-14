@@ -637,13 +637,13 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     // The panel found left the content - its item's container went with a source replaced - while nothing measures this
     // presenter again soon, in a closed popup: let go of it at once, or it keeps what it showed, and through it the
-    // items, alive. The next measure finds the panel there is.
+    // items, alive. The next measure, which the content changing asks for anyway, finds the panel there is; asking for
+    // one here would put a presenter going with that container into a closed popup's layout queue, kept there.
     private void OnInnerDetached(object sender, VisualTreeAttachmentEventArgs e)
     {
         if (ReferenceEquals(sender, _inner))
         {
             Follow(null);
-            InvalidateMeasure();
         }
     }
 
