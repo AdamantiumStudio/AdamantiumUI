@@ -480,6 +480,9 @@ All packages share one version.
 
 ### Fixed
 
+- An element shown again inside something that casts a shadow is drawn at once: a canvas pane's toggle, under the
+  pane's shadowed plate, lit up only when the pointer came over it again. The patched frame placed what appeared in
+  front of the shadow's layer, and so under the plate's own fill.
 - A folded canvas pane carried to an edge stands against it: stuck to a right-hand slot it stood a whole open width
   away from the edge, in the middle of the page. Folded where it stands, it still keeps its grip there; the layout
   remembers which of the two it is.
