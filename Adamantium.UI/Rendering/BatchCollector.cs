@@ -299,6 +299,10 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
     /// <summary>Frees what a derived collector built on the device - its effect - along with the buffers. Base does nothing.</summary>
     protected virtual void OnDisposeGpuResources() { }
 
+    /// <summary>Where this batch is flushed among the others. Set per instance: the halo family runs one arena under
+    /// its shapes and one over them.</summary>
+    public required BatchLayer Layer { get; init; }
+
     /// <summary>Whether anything is waiting to be flushed. The recorder needs it to know WHERE the next segment's paint
     /// span begins: a segment glues every control that falls between two flushes, so its span starts with the first one
     /// that put something in it - and the only moment that is knowable is while the segment is still empty.</summary>

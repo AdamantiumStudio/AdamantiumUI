@@ -79,23 +79,7 @@ public class CanvasOrderRenderTests
 
     private static (byte R, byte G, byte B) Middle(InfiniteCanvas canvas)
     {
-        // LAID OUT TWICE. The canvas cuts its layers from what can be SEEN, which is not known until it has been given
-        // a size - so the stack is filled during the first pass, and the layers that arrived are placed by the second.
-        // An application runs a pass per frame and never notices; a test that renders one frame has to say so.
-        for (var pass = 0; pass < 2; pass++)
-        {
-            canvas.Measure(new Size<double>(Dim, Dim));
-            canvas.Arrange(new Rect(0, 0, Dim, Dim));
-        }
-
-        var root = new VisualRoot(canvas, Dim, Dim);
-
-        Assert.That(_renderer.RenderFrame(root), Is.True);
-
-        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
-        var pixels = new byte[(int)img.TotalSizeInBytes];
-
-        Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
+        var pixels = Pixels(canvas);
 
         // The middle of the canvas, which is where the world's origin sits and where both shapes are put.
         var i = (Dim / 2 * Dim + Dim / 2) * 4;
@@ -466,6 +450,92 @@ public class CanvasOrderRenderTests
         }
 
         return lit;
+    }
+
+    // AN ELLIPSE AND A POLYGON are two batches that the order check counted as one layer, so neither asked about the
+    // other: the polygon, flushed after the ellipse, covered an ellipse drawn after it.
+    [Test]
+    public void AnEllipseDrawnAfterAPolygonIsOnTop()
+    {
+        var canvas = Canvas();
+
+        canvas.Scene.Add(Hexagon(Colors.Red));
+        canvas.Scene.Add(new ShapeItem(CanvasShape.Ellipse, new Rect(-40, -40, 80, 80), Brushes.Transparent, 0,
+            new SolidColorBrush(Colors.Lime)));
+
+        var over = Middle(canvas);
+
+        Assert.That(over.G, Is.GreaterThan(120), $"an ellipse drawn after a polygon went under it: {over}");
+    }
+
+    // INK AND A LINE, the same: two batches counted as one layer.
+    [Test]
+    public void InkDrawnAfterALineIsOnTop()
+    {
+        var canvas = Canvas();
+
+        canvas.Scene.Add(new ShapeItem(CanvasShape.Line, new Rect(-40, -40, 80, 80), new SolidColorBrush(Colors.Red), 30,
+            Brushes.Transparent));
+        canvas.Scene.Add(Ink(Colors.Lime));
+
+        var over = Middle(canvas);
+
+        Assert.That(over.G, Is.GreaterThan(120), $"ink drawn after a line went under it: {over}");
+    }
+
+    // TEXT is flushed after every fill and stroke, so whatever is drawn over a label later has to flush it first.
+    [Test]
+    public void InkDrawnOverTextIsOnTop() => DrawnOverTextIsOnTop(Ink(Colors.Lime), "ink");
+
+    [Test]
+    public void AFilledPathDrawnOverTextIsOnTop() =>
+        DrawnOverTextIsOnTop(new PathItem("M -60 -60 L 60 -60 L 60 60 L -60 60 Z", new SolidColorBrush(Colors.Lime),
+            Brushes.Transparent, 0), "a filled path");
+
+    private static void DrawnOverTextIsOnTop(ICanvasItem over, string what)
+    {
+        var canvas = Canvas();
+
+        canvas.Scene.Add(new TextItem(new Vector2<double>(-40, -30), "HH", new SolidColorBrush(Colors.Red), 48));
+
+        var glyph = RedNearTheMiddleRow(Pixels(canvas));
+        Assert.That(glyph, Is.GreaterThanOrEqualTo(0), "the text drew nothing where the cover goes");
+
+        canvas.Scene.Add(over);
+
+        var pixels = Pixels(canvas);
+        var red = pixels[glyph + 2];
+        var green = pixels[glyph + 1];
+
+        Assert.That(green > 120 && red < 120, Is.True, $"{what} drawn over text went under it: red {red}, green {green}");
+    }
+
+    private static byte[] Pixels(InfiniteCanvas canvas)
+    {
+        Lay(canvas);
+
+        Assert.That(_renderer.RenderFrame(new VisualRoot(canvas, Dim, Dim)), Is.True);
+
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
+        var pixels = new byte[(int)img.TotalSizeInBytes];
+
+        Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
+        return pixels;
+    }
+
+    private static int RedNearTheMiddleRow(byte[] pixels)
+    {
+        const int reach = 10;
+        for (var row = Dim / 2 - reach; row <= Dim / 2 + reach; row++)
+        {
+            for (var column = 0; column < Dim; column++)
+            {
+                var at = (row * Dim + column) * 4;
+                if (pixels[at + 2] > 200 && pixels[at + 1] < 60) return at;
+            }
+        }
+
+        return -1;
     }
 
     private static void Lay(InfiniteCanvas canvas)

@@ -908,6 +908,15 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         _pendingUnits.Add(unit);
     }
 
+    /// <summary>Where this batch is flushed among the others.</summary>
+    public BatchLayer Layer => BatchLayer.InstancedFill;
+
+    /// <summary>Which <see cref="RenderOp.Batch"/> its flush op names - <see cref="ArenaBatchId"/>.</summary>
+    public byte BatchId => ArenaBatchId;
+
+    int IPendingBatch.Flush(IGraphicsDevice device, Rect2D fullScissor, Matrix4x4F projection) =>
+        Flush(fullScissor, projection);
+
     /// <summary>Does a unit's logical bounds overlap the pending group? A later overlapping non-batched unit must draw
     /// AFTER a flush so it paints on top.</summary>
     public bool OverlapsPending(Rect r)

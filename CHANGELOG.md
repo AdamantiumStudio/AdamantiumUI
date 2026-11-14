@@ -456,6 +456,11 @@ All packages share one version.
 - A text long enough to be kept in a band (2048 glyphs and more) no longer runs out of glyphs when a canvas is panned
   past the band. The band was fitted with the same stale copy of the placement, so it went on covering where the text
   stood at the last walk; it is now fitted with the placement's newest matrix.
+- Batched draws keep the scene's order across every pair of batches. Each batch has one place in the flush order
+  (`BatchLayer`), and a draw waits for a flush when it overlaps anything pending in a batch flushed after its own. The
+  check used hand-numbered layers that disagreed with the flush order, so some pairs never asked about each other: an
+  ellipse drawn after a regular polygon, ink after a line or arrow, ink or a filled path after text all landed under
+  what came before them.
 - Turned or sheared text is drawn after what is still waiting to be drawn under it. Such text is not batched but drawn
   by itself, and it went ahead of the batches still pending - strokes drawn before it landed on top: a PDF sheet turned
   a quarter showed its hairline grid over the page number.
