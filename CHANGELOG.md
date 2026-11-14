@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- The cookies of the profile every `WebView` shares, through `WebViewEngine`: `GetCookiesAsync(address)` - those that
+  go to an address, script-hidden ones too, or all of them - `SetCookieAsync(address, cookie)` and
+  `DeleteCookiesAsync(address, name)` (of a name, of a host, or every one). A cookie is a `WebCookie`: name, value,
+  domain, path, secure, HttpOnly, `SameSite` (`WebCookieSameSite`), when it expires, and when Chromium made it and last
+  sent it.
 - A name and a comment on every canvas item: `ICanvasItem.Name` (short - what the list of everything on the plane
   calls it and what a search finds) and `ICanvasItem.Comment` (longer, shown apart in the inspector's own multi-line
   field), both kept by a copy and in SVG (`data-adm-name`, `data-adm-comment`, and `<title>`/`<desc>` that other editors
