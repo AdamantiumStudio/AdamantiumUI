@@ -276,7 +276,7 @@ public sealed class PdfContentSession : IDrawingSession
             }
 
             var reach = strokes ? pen.Thickness / 2 * (pen.PenLineJoin == PenLineJoin.Miter
-                ? Core.Media.Pen.ClampMiterLimit(pen.MiterLimit)
+                ? MiterReach(curves, Core.Media.Pen.ClampMiterLimit(pen.MiterLimit))
                 : 1) : 0;
             GrowBox(curves.Bounds, place, reach);
         }
@@ -641,6 +641,45 @@ public sealed class PdfContentSession : IDrawingSession
         color = default;
         alpha = 0;
         return false;
+    }
+
+    private static double MiterReach(PathCurves curves, double limit)
+    {
+        var reach = 1.0;
+        foreach (var figure in curves.Figures)
+        {
+            var last = figure.First + figure.Count - 1;
+            for (var index = figure.First; index <= last; index++)
+            {
+                if (index == last && !figure.IsClosed)
+                {
+                    break;
+                }
+
+                var next = index == last ? figure.First : index + 1;
+                var incoming = Leaving(curves.Curves[index], false);
+                var outgoing = Leaving(curves.Curves[next], true);
+                var turn = incoming.X * outgoing.X + incoming.Y * outgoing.Y;
+                var halfAngleSine = Math.Sqrt(Math.Max(0, (1 - turn) / 2));
+                var ratio = halfAngleSine > 1e-9 ? 1 / halfAngleSine : double.PositiveInfinity;
+                if (ratio <= limit)
+                {
+                    reach = Math.Max(reach, ratio);
+                }
+            }
+        }
+
+        return reach;
+    }
+
+    private static Vector2<double> Leaving(QuadraticCurve curve, bool atStart)
+    {
+        var along = atStart
+            ? (curve.IsStraight() ? curve.End : curve.Control) - curve.Start
+            : curve.End - (curve.IsStraight() ? curve.Start : curve.Control);
+        var length = Length(along);
+        var unit = length > 0 ? along * (1 / length) : default;
+        return atStart ? unit : unit * -1;
     }
 
     private static bool Invertible(PdfMatrix place) => Math.Abs(place.A * place.D - place.B * place.C) > 1e-12;
