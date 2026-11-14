@@ -444,6 +444,9 @@ All packages share one version.
 
 ### Fixed
 
+- Turned or sheared text is drawn after what is still waiting to be drawn under it. Such text is not batched but drawn
+  by itself, and it went ahead of the batches still pending - strokes drawn before it landed on top: a PDF sheet turned
+  a quarter showed its hairline grid over the page number.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),

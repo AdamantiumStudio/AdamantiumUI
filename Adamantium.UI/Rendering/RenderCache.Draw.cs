@@ -1964,15 +1964,6 @@ public partial class RenderCache
                 if (strokeAdd == StrokeBatchCollector.Added.NoRoom && _recording) _deferredForRoom = true;
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
             }
-            else if (device != null && (_rectBatch.Active || _ellipseBatch.Active || _gradientRectBatch.Active || _gradientEllipseBatch.Active || _patternBatch.Active || _fractalBatch.Active || _textBatch.Active || (_instancedFill?.Active ?? false) || (_materialBatch?.Active ?? false) || (_canvasGridBatch?.Active ?? false) || (_strokeBatch?.Active ?? false)))
-            {
-                // A non-batchable unit that overlaps any pending batch: flush them first so this unit paints OVER them, as
-                // its later source order requires. Spatially disjoint units (a list's items) don't flush.
-                var lb = LogicalBounds(unit.Component, wt);
-                if (_rectBatch.OverlapsPending(lb) || _ellipseBatch.OverlapsPending(lb) || _gradientRectBatch.OverlapsPending(lb) || _gradientEllipseBatch.OverlapsPending(lb) || _patternBatch.OverlapsPending(lb) || _fractalBatch.OverlapsPending(lb) || _textBatch.OverlapsPending(lb) || (_instancedFill?.OverlapsPending(lb) ?? false)
-                    || (_materialBatch?.OverlapsPending(lb) ?? false) || (_canvasGridBatch?.OverlapsPending(lb) ?? false) || (_strokeBatch?.OverlapsPending(lb) ?? false))
-                    FlushBatches(device, fullScissor, ref scissorNarrowed);
-            }
             else if (device == null && unit is RectangleRenderUnit rruNoDev)
             {
                 // No device = the overlay (popup / tooltip) path: each unit draws individually via unit.Render() below,
@@ -2002,6 +1993,11 @@ public partial class RenderCache
                 case RegularPolygonRenderUnit polygon:
                     polygon.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
                     break;
+            }
+
+            if (device != null && OverlapsAnyPending(DirectBounds(unit, wt), unit.Component))
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
             }
 
             if (device != null)
@@ -2130,6 +2126,23 @@ public partial class RenderCache
         _deferredForRoom = true;
         return false;
     }
+
+    private bool OverlapsAnyPending(Rect bounds, IUIComponent owner) =>
+        (_haloUnder?.OverlapsPending(bounds) ?? false) || (_haloLivingUnder?.OverlapsPending(bounds) ?? false) ||
+        _rectBatch.OverlapsPending(bounds) || _ellipseBatch.OverlapsPending(bounds) ||
+        (_polygonBatch?.OverlapsPending(bounds) ?? false) || _gradientRectBatch.OverlapsPending(bounds) ||
+        _gradientEllipseBatch.OverlapsPending(bounds) || _patternBatch.OverlapsPending(bounds) ||
+        _fractalBatch.OverlapsPending(bounds) || (_texRectBatch?.OverlapsPending(bounds) ?? false) ||
+        (_canvasGridBatch?.OverlapsPending(bounds) ?? false) || (_inkBatch?.OverlapsPending(bounds) ?? false) ||
+        (_arrowBatch?.OverlapsPending(bounds) ?? false) || (_strokeBatch?.OverlapsPending(bounds) ?? false) ||
+        (_instancedFill?.OverlapsPending(bounds) ?? false) || (_materialBatch?.OverlapsPending(bounds) ?? false) ||
+        (!ReferenceEquals(owner, _haloOverOwner) &&
+         ((_haloOver?.OverlapsPending(bounds) ?? false) || (_haloLivingOver?.OverlapsPending(bounds) ?? false))) ||
+        _textBatch.OverlapsPending(bounds);
+
+    private Rect DirectBounds(IRenderUnit unit, Matrix4x4F world) => DrawnInk(unit, false, out var grow) is { } ink
+        ? ink.Inflate(grow).TransformToAABB(world)
+        : LogicalBounds(unit.Component, world);
 
     // The batches FlushBatches draws after the strokes: anything pending in them was painted earlier, so a stroke over it
     // has to flush them first - but not its own element's inner band, which belongs over it.
