@@ -1,10 +1,10 @@
 <Project>
 
-  <!-- Packed as buildTransitive/Adamantium.UI.WebView.Runtime.<rid>.targets: the platform is the end of this file's name.
-       CEF and the helper go into the application's cef folder, where the WebView looks for them, when the application
-       builds for that platform - its RuntimeIdentifier, or with none the platform it is built on, as it runs there. An
-       application referencing the packages of several platforms takes each into its own build. -->
-  <ItemGroup Condition="'$(RuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))' or ('$(RuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))')">
+  <!-- Packed as buildTransitive/Adamantium.UI.WebView.Runtime.<rid>.targets, the platform at the end of the name. CEF
+       and the helper go into an application's cef folder when it builds for that platform: its RuntimeIdentifier, or
+       with none the platform of the machine it is built on. Applications only: a library would pass them on for the
+       wrong platform. -->
+  <ItemGroup Condition="'$(OutputType)' != 'Library' and ('$(RuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))' or ('$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '$(MSBuildThisFileName.Replace(`Adamantium.UI.WebView.Runtime.`, ``))'))">
     <None Include="$(MSBuildThisFileDirectory)..\cef\**" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 

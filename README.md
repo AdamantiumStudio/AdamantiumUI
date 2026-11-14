@@ -422,7 +422,7 @@ Alpha: what is listed above works, and the API will change. Not there yet:
 | `Adamantium.UI.Automation` | Drives an application in tests: its windows headless in the test's process, or the application itself through its automation agent |
 | `Adamantium.UI.Templates` | The `dotnet new` templates |
 | `Adamantium.UI.WebView` | Web pages in the scene, drawn by Chromium Embedded Framework off screen |
-| `Adamantium.UI.WebView.Runtime.win-x64`, `.linux-x64` | CEF and the WebView's helper for one platform, copied into the application's `cef` folder: reference one for each platform the application runs on. H.264 and AAC are not in it |
+| `Adamantium.UI.WebView.Runtime.win-x64`, `.linux-x64` | CEF and the WebView's helper for one platform, copied into the application's `cef` folder: reference one for each platform the application runs on, of the WebView's version. A build with no runtime identifier takes the CEF of the machine it is built on. H.264 and AAC are not in it |
 
 All packages share one version and are released together.
 

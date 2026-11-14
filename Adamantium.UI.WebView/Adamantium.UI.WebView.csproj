@@ -11,8 +11,8 @@
         <PackageTags>adamantium;ui;webview;browser;cef;chromium</PackageTags>
         <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
-        <!-- CEF itself, downloaded and staged by native/fetch-cef: not part of the project. An application takes it with
-             build/Adamantium.UI.WebView.CefRuntime.targets. -->
+        <!-- CEF itself, staged by native/fetch-cef: not part of the project. Applications take it from the runtime
+             packages; inside this repository, from build/Adamantium.UI.WebView.CefRuntime.targets. -->
         <DefaultItemExcludes>$(DefaultItemExcludes);runtimes\**;native\download\**</DefaultItemExcludes>
     </PropertyGroup>
 

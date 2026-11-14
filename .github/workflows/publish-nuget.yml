@@ -56,8 +56,28 @@ jobs:
             bash Adamantium.UI.WebView/native/fetch-cef.sh linux-x64
           fi
 
-      - name: Helper
-        run: dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r ${{ matrix.rid }} -o artifacts/helper
+      - name: Helper (Windows)
+        if: matrix.rid == 'win-x64'
+        run: dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r win-x64 -o artifacts/helper
+
+      # In .NET's cross-build image, against its old root file system: built on the runner the helper would ask the
+      # runner's glibc, newer than CEF's. The runner's .NET is mounted in.
+      - name: Helper (Linux)
+        if: matrix.rid == 'linux-x64'
+        run: >
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -v "$DOTNET_ROOT:/dotnet" -w /src -e DOTNET_CLI_HOME=/tmp
+          -e NUGET_PACKAGES=/tmp/nuget mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-amd64
+          /dotnet/dotnet publish Adamantium.UI.WebView.Helper/Adamantium.UI.WebView.Helper.csproj -c Release -r linux-x64
+          -p:SysRoot=/crossrootfs/x64 -p:LinkerFlavor=lld -o artifacts/helper
+
+      - name: The helper asks no newer glibc than CEF
+        if: matrix.rid == 'linux-x64'
+        run: |
+          newest() { objdump -T "$1" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1; }
+          helper=$(newest artifacts/helper/Adamantium.UI.WebView.Helper)
+          cef=$(newest Adamantium.UI.WebView/runtimes/linux-x64/native/cef/libcef.so)
+          echo "helper $helper, libcef $cef"
+          [ "$(printf '%s\n%s\n' "$helper" "$cef" | sort -V | tail -1)" = "$cef" ]
 
       - name: Pack
         shell: bash
