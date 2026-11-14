@@ -447,6 +447,8 @@ All packages share one version.
   on the element or made by its template did.
 - `DataTemplateSet` and the index style selectors name types by no longer keep a type or an assembly that can be
   unloaded.
+- An item that is its own container - a menu row written in markup - keeps the visibility its author gave it: a list
+  showed every such item it laid out, a row bound to hide itself too, and only shows again one it hid itself.
 - At fractional scales (150%) a clipped element's content no longer shows a pixel past a snapped border beside it - a
   `ScrollViewer`'s content at the start of its scroll bars' tracks in the Fluent theme. An element's clip now takes its
   edges to the device pixel by the rule `DevicePixels` snaps drawn rectangles with (`DevicePixels.ToDevicePixel`),

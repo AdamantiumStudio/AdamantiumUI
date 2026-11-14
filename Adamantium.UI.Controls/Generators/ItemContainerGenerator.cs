@@ -25,6 +25,10 @@ public class ItemContainerGenerator
     private readonly List<IUIComponent> _newlyMappedDrainBuf = new();
 
     private readonly HashSet<IUIComponent> _generated = new();   // containers we created (recyclable); item-is-own are not
+
+    // Items that are their own containers the panel hid out of its window: only those it shows again. Such an item's
+    // visibility is otherwise its author's - a menu row bound to hide itself was shown by being laid out.
+    private readonly HashSet<IUIComponent> _parkedOwnItems = new(ReferenceEqualityComparer.Instance);
     private readonly List<IUIComponent> _donorBuf = new();       // reused across SetWindow calls - zero per-scroll-frame alloc
     private readonly List<int> _outKeysBuf = new();
     private readonly List<IUIComponent> _surplusBuf = new();
@@ -332,7 +336,7 @@ public class ItemContainerGenerator
             // it (keeps the panel's IsMeasureValid-only skip correct + stops a rebound tile silently going missing). Guard
             // the set: an out-of-window donor reused in place is ALREADY Visible, and Visibility set would otherwise
             // re-propagate down its whole subtree every rebind on the scroll hot path.
-            if (container.Visibility != Visibility.Visible) container.Visibility = Visibility.Visible;
+            ShowInWindow(container);
             // Attach + MEASURE this tile now, INSIDE the time budget (via the panel's callback): a rebind is cheap but the
             // measure that follows it is the expensive part, so measuring here (not in a separate unbudgeted loop) is what
             // makes the budget actually bound the frame - the next iteration's time check sees the measure cost too.
@@ -387,6 +391,30 @@ public class ItemContainerGenerator
 
     /// <summary>Whether this generator made the container, as against an item that is its own container.</summary>
     internal bool IsGenerated(IUIComponent container) => _generated.Contains(container);
+
+    /// <summary>Notes that the panel hid <paramref name="container"/> out of its window.</summary>
+    internal void NoteParked(IUIComponent container)
+    {
+        if (!IsGenerated(container))
+        {
+            _parkedOwnItems.Add(container);
+        }
+    }
+
+    /// <summary>Shows <paramref name="container"/> back in the window: one this generator made, or an item the panel hid
+    /// itself - never one its author hid.</summary>
+    internal void ShowInWindow(IUIComponent container)
+    {
+        if (container.Visibility == Visibility.Visible)
+        {
+            return;
+        }
+
+        if (IsGenerated(container) || _parkedOwnItems.Remove(container))
+        {
+            container.Visibility = Visibility.Visible;
+        }
+    }
 
     /// <summary>Pools a generated container that is attached but no longer mapped to any index (a scroll/recycle edge
     /// case left it visible). Returning it to the pool makes it reusable instead of leaking - the panel hides it and the

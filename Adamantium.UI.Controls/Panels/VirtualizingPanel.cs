@@ -406,7 +406,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             AddVisualChild(container);
             ShowChild(container);
         }
-        container.Visibility = Visibility.Visible;
+        Owner.ItemContainerGenerator.ShowInWindow(container);
         return container;
     }
 
@@ -423,9 +423,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     /// <summary>Hides an off-screen container and deactivates its bindings, keeping it attached and pooled; reuse sets its
     /// DataContext, which re-subscribes them.</summary>
-    protected static void ParkContainer(IUIComponent container)
+    protected void ParkContainer(IUIComponent container)
     {
         ParkCalls++;
+        Owner?.ItemContainerGenerator.NoteParked(container);
         container.Visibility = Visibility.Collapsed;
         DeactivateSubtreeBindings(container);
     }
