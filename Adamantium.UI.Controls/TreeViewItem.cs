@@ -64,6 +64,9 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
 
     private ToggleButton _expander;
 
+    /// <summary>The template's expander, or null without one.</summary>
+    internal ToggleButton Expander => _expander;
+
     static TreeViewItem()
     {
         // A tree node is a keyboard-focus target (arrow-key navigation) - opt in, since the base default is false.

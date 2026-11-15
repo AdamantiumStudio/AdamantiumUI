@@ -186,6 +186,51 @@ public class AutomationListTests
     }
 
     [Test]
+    public async Task WhatARowShows_ThatCanBeActedOn_IsTheRowsBeforeItsBranch()
+    {
+        var cat = new Node("Cat");
+        var tree = new TreeView
+        {
+            Name = "Kinds",
+            ItemTemplate = new HierarchicalDataTemplate(() =>
+            {
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                var shown = new CheckBox();
+                shown.SetBinding(ToggleButton.IsCheckedProperty, new Binding(nameof(Node.IsShown)) { Mode = BindingMode.TwoWay });
+                shown.SetBinding(AutomationProperties.NameProperty, new Binding(nameof(Node.Title)));
+                var title = new TextBlock();
+                title.SetBinding(TextBlock.TextProperty, new Binding(nameof(Node.Title)));
+                line.Children.Add(shown);
+                line.Children.Add(title);
+                return new TemplateResult { RootComponent = line };
+            })
+            {
+                ItemsSource = new Binding(nameof(Node.Children))
+            },
+            ItemsSource = new List<Node> { new("Animals", cat) }
+        };
+        await using var session = await Driving(tree);
+        var animals = session.Find(By.Id("Kinds")).Find(By.Type(AutomationControlType.TreeItem).And(By.Name("Animals")));
+        await animals.ExpandAsync();
+        var row = session.Find(By.Type(AutomationControlType.TreeItem).And(By.Name("Cat")));
+
+        await row.Find(By.Type(AutomationControlType.CheckBox)).ToggleAsync();
+        var children = await animals.Find(By.Type(AutomationControlType.CheckBox).And(By.Name("Animals"))).GetAsync();
+        var listed = await animals.TreeAsync(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(cat.IsShown, Is.False, "the row's check box is reached and toggled");
+            Assert.That(children.Path, Does.EndWith("CheckBox \"Animals\" [CheckBox]"));
+            Assert.That(listed, Does.Not.Contain("PART_Expander"), "the expander is the row's own pattern, not a child");
+            Assert.That(listed.IndexOf("CheckBox", System.StringComparison.Ordinal), Is.GreaterThan(0));
+            Assert.That(listed.IndexOf("CheckBox", System.StringComparison.Ordinal),
+                Is.LessThan(listed.IndexOf("TreeItem \"Cat\"", System.StringComparison.Ordinal)),
+                "what the row shows comes before the rows of its branch");
+        });
+    }
+
+    [Test]
     public async Task ASubmenu_StaysOpen_WhileThePointerMovesIntoIt()
     {
         var parent = new MenuItem { Header = "Open" };
@@ -251,5 +296,7 @@ public class AutomationListTests
         public string Title { get; }
 
         public List<Node> Children { get; }
+
+        public bool IsShown { get; set; } = true;
     }
 }
