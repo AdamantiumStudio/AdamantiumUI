@@ -13,7 +13,9 @@ All packages share one version.
   the thread does not hold the source (`ISourceThread.Holds` - a view model beside the world's objects), it writes at
   once. While a value of its own is on its way, a change the source tells is not shown, so a dragged number is not
   thrown back. A `PropertyGrid` row bound to the inspected object works on the source's thread by itself, and so does
-  `PropertyDefinition.WriteValue`; a line with a source of its own does not.
+  `PropertyDefinition.WriteValue` (an overload takes the thread from a caller outside the grid's tree); a line with a
+  source of its own does not. `PropertyValuesChangedEventArgs.Value` and `HasValue` tell the value written, which
+  reading the objects back says only once they have taken it.
 - `PropertyGrid.ValueChangingCommand`: run before each value is written or taken back, as `ValueChanging` is raised -
   for a view model keeping an undo, bound from markup like `ValueChangedCommand`. `PropertyDefinition.ReadValue` and
   `WriteValue` read and write one object's value through the definition's binding with no grid at hand, as an undo

@@ -2713,6 +2713,60 @@ public class PropertyGridTests
         });
     }
 
+    // Something keeping an undo is told the value written: under a source's thread the objects take it later, and read
+    // back at once they would still say the old one.
+    [Test]
+    public void AWrite_TellsTheValueWritten()
+    {
+        var target = new Target { Scale = 3 };
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        var grid = Built(Section(target, scale));
+        BindingEngine.SetSourceThread(grid, new QueuedSourceThread());
+        PropertyValuesChangedEventArgs told = null;
+        grid.ValueChanged += (_, about) => told = about;
+
+        grid.Write(RowOf(grid, scale), 10.0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(told?.HasValue, Is.True);
+            Assert.That(told?.Value, Is.EqualTo(10.0));
+            Assert.That(target.Scale, Is.EqualTo(3.0), "not taken yet");
+        });
+    }
+
+    // A view model inspected in the panel passes a world's object on: a number of a struct of that object is written on
+    // the world's thread, which holds the object, not the view model.
+    [Test]
+    public void UnderASourceThread_AStructOfAnObjectPassedOn_IsWrittenWhereThatObjectLives()
+    {
+        var held = new WorldView { Placed = new WorldObject { Offset = new Vector2<double>(1, 2) } };
+        var x = new NumericProperty { Header = "X", Binding = new Binding("Placed.Offset.X") };
+        var grid = Built(Section(held, x));
+        var thread = new QueuedSourceThread { Holding = source => source is WorldObject };
+        BindingEngine.SetSourceThread(grid, thread);
+
+        grid.Write(RowOf(grid, x), 5.0);
+        var before = held.Placed.Offset;
+        thread.RunAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo(new Vector2<double>(1, 2)));
+            Assert.That(held.Placed.Offset, Is.EqualTo(new Vector2<double>(5, 2)));
+        });
+    }
+
+    private sealed class WorldView
+    {
+        public WorldObject Placed { get; init; }
+    }
+
+    private sealed class WorldObject
+    {
+        public Vector2<double> Offset { get; set; }
+    }
+
     // A line bound to the panel's own view-model - not to the object inspected - is the UI's, and is written at once.
     [Test]
     public void UnderASourceThread_ALineWithItsOwnSource_IsWrittenAtOnce()

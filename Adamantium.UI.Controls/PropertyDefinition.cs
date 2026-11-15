@@ -136,8 +136,13 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     /// <summary>Writes <paramref name="value"/> to <paramref name="target"/> once through this definition's binding: for
     /// a caller with no row to write through - an undo putting a value back, when the rows may show something else or
     /// nothing.</summary>
-    public bool WriteValue(object target, object value) =>
-        BoundValue.WriteOnce(target, Binding, value, BindingEngine.GetSourceThread(this));
+    public bool WriteValue(object target, object value) => WriteValue(target, value, BindingEngine.GetSourceThread(this));
+
+    /// <summary>As <see cref="WriteValue(object, object)"/>, on <paramref name="sourceThread"/> when the target lives on
+    /// another thread: for a caller that knows that thread whether or not this definition is in a tree that names it.
+    /// </summary>
+    public bool WriteValue(object target, object value, ISourceThread sourceThread) =>
+        BoundValue.WriteOnce(target, Binding, value, sourceThread);
 
     /// <summary>The single object this line describes, or null with several selected; lets a line bind to its target's
     /// state, e.g. <c>IsVisible="{Self Inspected.HasLabel}"</c>. DataContext stays the panel's view-model.</summary>

@@ -3,6 +3,7 @@ using System.Threading;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using NUnit.Framework;
 
@@ -59,6 +60,33 @@ public class SourceThreadBindingTests
 
         public event PropertyChangedEventHandler PropertyChanged;
     }
+
+    // Takes no name at all, as a source whose setter fails on its thread.
+    private sealed class RefusingModel : INotifyPropertyChanged
+    {
+        public string Name
+        {
+            get => "A";
+            set => throw new System.InvalidOperationException("refused");
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged
+        {
+            add { }
+            remove { }
+        }
+    }
+
+    // The UI's thread is the loop's, as in an application: a change told on any other is not the UI's.
+    [SetUp]
+    public void ClaimTheLoop()
+    {
+        BindingUpdateQueue.Flush();
+        LoopSignal.Claim();
+    }
+
+    [TearDown]
+    public void LetTheLoopGo() => LoopSignal.Unclaim();
 
     [Test]
     public void AWriteBack_WaitsForTheSourcesThread_AndTakesTheLatestValue()
@@ -192,6 +220,87 @@ public class SourceThreadBindingTests
         {
             Assert.That(model.Name, Is.EqualTo("B"));
             Assert.That(target.Text, Is.EqualTo("B"));
+        });
+    }
+
+    // An animation moves the object every frame: a value typed between the move and the flush that would show it is the
+    // user's, and goes to the object - it was thrown away as one decided against an old value.
+    [Test]
+    public void AnEditWhileTheSourceMovedOnItsThread_IsWrittenThere()
+    {
+        var model = new Model();
+        var thread = new QueuedSourceThread();
+        var target = Bound(model, "Name", thread);
+
+        Told(() => model.Name = "X");
+        target.SetCurrentValue(TextBlock.TextProperty, "B");
+        var waiting = thread.Waiting;
+        thread.RunAll();
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(waiting, Is.EqualTo(1));
+            Assert.That(model.Name, Is.EqualTo("B"));
+            Assert.That(target.Text, Is.EqualTo("B"));
+        });
+    }
+
+    [Test]
+    public void AWriteTheSourceRefused_ShowsWhatTheSourceHolds()
+    {
+        var model = new RefusingModel();
+        var thread = new QueuedSourceThread();
+        var target = Bound(model, "Name", thread);
+
+        target.SetCurrentValue(TextBlock.TextProperty, "B");
+        thread.RunAll();
+        BindingUpdateQueue.Flush();
+
+        Assert.That(target.Text, Is.EqualTo("A"));
+    }
+
+    // The binding was pointed at another object before the source's thread ran the write for the first: each gets its own.
+    [Test]
+    public void AWriteForAnObjectNoLongerBound_StillReachesIt()
+    {
+        var first = new Model();
+        var second = new Model();
+        var thread = new QueuedSourceThread();
+        var holder = new Border { DataContext = first };
+        BindingEngine.SetSourceThread(holder, thread);
+        var target = new TextBlock();
+        holder.Child = target;
+        target.SetBinding("Text", new Binding("Name") { Mode = BindingMode.TwoWay, WorkOnSourceThread = true });
+
+        target.SetCurrentValue(TextBlock.TextProperty, "B");
+        holder.DataContext = second;
+        target.SetCurrentValue(TextBlock.TextProperty, "C");
+        thread.RunAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.Name, Is.EqualTo("B"));
+            Assert.That(second.Name, Is.EqualTo("C"));
+        });
+    }
+
+    // An undo writes through a binding made for the write and let go at once: what the source took is no one's to show.
+    [Test]
+    public void ABindingLetGo_IsNotQueuedByWhatTheSourceTook()
+    {
+        var model = new ShoutingModel();
+        var thread = new QueuedSourceThread();
+        var target = Bound(model, "Name", thread);
+
+        target.SetCurrentValue(TextBlock.TextProperty, "b");
+        BindingEngine.ClearBindings(target);
+        thread.RunAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.Name, Is.EqualTo("B"));
+            Assert.That(BindingUpdateQueue.IsEmpty, Is.True);
         });
     }
 

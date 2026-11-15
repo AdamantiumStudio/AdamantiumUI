@@ -96,8 +96,13 @@ public class BindingExpression : BindingExpressionBase
    // value only, and one update at a time is handed to it.
    private readonly object _sourceWriteGate = new();
    private PendingSourceWrite _sourceWrite;
+   private Action _writeOnSourceThread;
+   private object[] _sourceBoxes;
    private volatile bool _sourceWriteHanded;
    private volatile bool _writingOnSourceThread;
+
+   // The source told a change on its own thread: what it means for the path is worked out in the flush, on the UI's.
+   private volatile bool _changedElsewhere;
 
    public Binding Binding { get; set; }
    public BindingMode Mode { get; set; }
@@ -252,7 +257,7 @@ public class BindingExpression : BindingExpressionBase
       if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _errorProperty) return;
 
       _errorsPending = true;
-      if (BindingBase?.IsImmediate == true && OnOwnThread) ApplyPending();
+      if (BindingBase?.IsImmediate == true && OnUiThread) ApplyPending();
       else BindingUpdateQueue.Enqueue(this);
    }
 
@@ -651,6 +656,13 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
+      // Told on the source's own thread: the path is the UI's thread's to walk, so the flush works out what changed.
+      if (!OnUiThread)
+      {
+         TellChangedElsewhere();
+         return;
+      }
+
       if (Passes(sender, e.PropertyName))
       {
          _reconnectPending = true;
@@ -671,9 +683,45 @@ public class BindingExpression : BindingExpressionBase
       ScheduleUpdate();
    }
 
+   private void TellChangedElsewhere()
+   {
+      // Let go of its source on the UI's thread meanwhile: a closed binding is not queued again.
+      if (_observed == null)
+         return;
+
+      _changedElsewhere = true;
+      ValuePending = true;
+      BindingUpdateQueue.Enqueue(this);
+   }
+
+   // A source on another thread moves on its own all the time - a game world's, each frame - and an edit typed meanwhile
+   // is the user's to make, not one decided against an old value: it goes to the source's thread, after what moved it.
    private bool IsSourceAheadOfTarget() =>
       _sourceAhead && Mode == BindingMode.TwoWay && !_bindToSource && (_leaf != null || _source != null)
-      && !Equals(ReadSource(), _syncedSource);
+      && SourceThread() == null && !Equals(ReadSource(), _syncedSource);
+
+   // The thread this binding writes its source on, when it works there; null when it writes it at once.
+   private ISourceThread SourceThread() =>
+      Binding.WorkOnSourceThread && SourceSlot().Property == null && BindingEngine.GetSourceThread(Target) is { } thread
+      && thread.Holds(WrittenObject())
+         ? thread
+         : null;
+
+   // The object a write changes: the source itself, or - for a path ending inside a struct - the last object on the way
+   // that is not a copy, which the struct is put back into. A camera's view model passes the camera on to its OrthoScale.
+   private object WrittenObject()
+   {
+      if (_leaf == null || !Walk())
+         return ResolvedSource;
+
+      for (var i = _boxes.Length - 1; i >= 0; i--)
+      {
+         if (_boxes[i] != null && !_boxes[i].GetType().IsValueType)
+            return _boxes[i];
+      }
+
+      return ResolvedSource;
+   }
 
    // Element source ({ElementName}) property changed via the AdamantiumProperty system - push to the target if it's the
    // property we bind.
@@ -700,6 +748,15 @@ public class BindingExpression : BindingExpressionBase
       var errorsOnly = _errorsPending && !ValuePending;
       _errorsPending = false;
       ValuePending = false;
+      if (_changedElsewhere)
+      {
+         // A change told on the source's thread: one of the objects the path passes may have been replaced - walked
+         // again - or only the value moved.
+         _changedElsewhere = false;
+         if (_passed is { Count: > 0 }) _reconnectPending = true;
+         else _sourceAhead = true;
+      }
+
       if (!_reconnectPending)
       {
          if (!errorsOnly) Refresh();
@@ -1000,19 +1057,32 @@ public class BindingExpression : BindingExpressionBase
    // over - a number dragged across a frame writes the source once, with where it ended.
    private void HandOver(ISourceThread thread, object written)
    {
-      var write = new PendingSourceWrite(ResolvedSource, _source, _leaf, _segments, written);
+      PendingSourceWrite displaced = null;
+      bool handed;
       lock (_sourceWriteGate)
       {
-         _sourceWrite = write;
-         if (_sourceWriteHanded) return;
+         if (_sourceWrite != null && ReferenceEquals(_sourceWrite.Root, ResolvedSource))
+         {
+            _sourceWrite.Value = written;
+         }
+         else
+         {
+            displaced = _sourceWrite;
+            _sourceWrite = new PendingSourceWrite(ResolvedSource, _source, _leaf, _segments, written);
+         }
+
+         handed = _sourceWriteHanded;
          _sourceWriteHanded = true;
       }
 
-      thread.Run(WriteOnSourceThread);
+      // A value still waiting for the object the binding pointed at before goes there on its own.
+      if (displaced != null)
+         thread.Run(() => Write(displaced));
+
+      if (!handed)
+         thread.Run(_writeOnSourceThread ??= WriteOnSourceThread);
    }
 
-   // On the source's thread: the waiting value goes in, through the binding as it stood when the value was written. A
-   // source that took something else - clamped it, refused it - is shown by the flush, on the UI's thread.
    private void WriteOnSourceThread()
    {
       PendingSourceWrite write;
@@ -1023,40 +1093,54 @@ public class BindingExpression : BindingExpressionBase
          _sourceWriteHanded = false;
       }
 
-      if (write?.Root == null) return;
+      if (write != null)
+         Write(write);
+   }
 
-      object took;
+   // On the source's thread: the value goes in, through the binding as it stood when the value was written. A source that
+   // took something else - clamped it, refused it, or failed to - is shown again by the flush, on the UI's thread, while
+   // the binding still points at it; one it no longer points at, or let go of, is left alone.
+   private void Write(PendingSourceWrite write)
+   {
+      if (write.Root == null)
+         return;
+
+      bool took;
       _writingOnSourceThread = true;
       try
       {
-         took = WriteAndRead(write);
+         took = Wrote(write);
       }
       catch (Exception e)
       {
          WriteBackFailed(e);
-         return;
+         took = false;
       }
       finally
       {
          _writingOnSourceThread = false;
       }
 
-      if (!Equals(took, write.Value)) MarkSourceAhead();
+      // Still listening to the object written: a binding closed, or pointed elsewhere, has let go of it.
+      if (!took && ReferenceEquals(_observed, write.Root))
+         TellChangedElsewhere();
    }
 
-   private static object WriteAndRead(PendingSourceWrite write)
+   private bool Wrote(PendingSourceWrite write)
    {
       if (write.Leaf == null)
       {
          write.Source.SetValue(write.Root, write.Value);
-         return Read(write.Source, write.Root);
+         return Equals(Read(write.Source, write.Root), write.Value);
       }
 
-      var boxes = new object[write.Segments.Length];
-      if (!Walk(write.Root, write.Segments, boxes)) return write.Value;
+      // Walked on the source's thread only, and one update after another there: the boxes are never shared.
+      var boxes = _sourceBoxes ??= new object[write.Segments.Length];
+      if (!Walk(write.Root, write.Segments, boxes))
+         return false;
 
       Backfill(write.Leaf, write.Segments, boxes, write.Value);
-      return Walk(write.Root, write.Segments, boxes) ? Read(write.Leaf, boxes[^1]) : write.Value;
+      return Walk(write.Root, write.Segments, boxes) && Equals(Read(write.Leaf, boxes[^1]), write.Value);
    }
 
    private object ReadSource()
@@ -1140,8 +1224,7 @@ public class BindingExpression : BindingExpressionBase
 
       // A source on another thread is written there; the target keeps what was typed, and what the source took comes
       // back as any change of it does.
-      if (Binding.WorkOnSourceThread && SourceSlot().Property == null && BindingEngine.GetSourceThread(Target) is { } thread
-          && thread.Holds(ResolvedSource))
+      if (SourceThread() is { } thread)
       {
          HandOver(thread, written);
          _syncedSource = written;
