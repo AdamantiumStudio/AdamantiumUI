@@ -115,6 +115,58 @@ public class FrameVerifierTests
         Assert.That(log, Does.Contain("parent in the cache (none)"), "...and the parent it lost");
     }
 
+    // A fill spliced in front of its ancestor's own fill is under it on the screen: a canvas pane's checked rule, shown
+    // under the pane's shadowed plate, went into the stream before the plate's fill, and the verifier said nothing - it
+    // checked text against its ancestors' fills, not fills.
+    [Test]
+    public void AFillShownUnderAShadowedAncestor_IsDrawnOverIt_AndChecked()
+    {
+        var device = GpuTestDevice.Device;
+        using var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new StubResourceFactory()), Dim, Dim)
+        {
+            ClearColor = Colors.Black
+        };
+        var stage = Placed(new Rect(0, 0, Dim, Dim));
+        TestControl plate = null;
+        for (var card = 0; card < 3; card++)
+        {
+            var top = card * 12;
+            var fill = Placed(new Rect(0, top, Dim, 10));
+            fill.RenderAction = session => session.DrawRectangle(Brushes.Blue, new Rect(4, 0, Dim - 8, 10));
+            stage.Add(fill);
+            stage.Add(Placed(new Rect(0, 70, Dim, 10)));
+            var over = Placed(new Rect(0, top, 20, 10));
+            stage.Add(over);
+            if (card == 1) plate = over;
+        }
+
+        var root = new VisualRoot(stage, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var rule = Placed(new Rect(2, 2, 8, 4));
+        rule.Visibility = Visibility.Hidden;
+        rule.RenderAction = session => session.DrawRectangle(Brushes.Lime, new Rect(0, 0, 8, 4));
+        plate.Add(rule);
+        plate.Shadow = new Shadow { OffsetY = 2, BlurRadius = 8 };
+        plate.RenderAction = session => session.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 10));
+        plate.Invalidate();
+        RenderDirty.MarkStructural();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var verifier = new FrameVerifier(_settings, root);
+        renderer.Cache.Observer = verifier;
+
+        foreach (var visibility in new[] { Visibility.Visible, Visibility.Hidden, Visibility.Visible })
+        {
+            rule.Visibility = visibility;
+            Draw(renderer, root, verifier);
+        }
+
+        Assert.That(_settings.VerifiedFrames, Is.EqualTo(3), "every frame must be checked");
+        Assert.That(_settings.MismatchedFrames, Is.Zero,
+            File.Exists(_settings.LogPath) ? File.ReadAllText(_settings.LogPath) : "no log");
+    }
+
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory
     {
