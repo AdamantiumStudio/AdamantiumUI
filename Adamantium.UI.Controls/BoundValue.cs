@@ -27,9 +27,7 @@ internal sealed class BoundValue : FundamentalUIComponent
     public static object ReadOnce(object target, BindingBase binding)
     {
         if (target == null || binding == null)
-        {
             return null;
-        }
 
         var probe = new BoundValue();
         probe.PointAt(target, binding);
@@ -43,9 +41,7 @@ internal sealed class BoundValue : FundamentalUIComponent
     public static bool WriteOnce(object target, BindingBase binding, object value)
     {
         if (target == null || binding == null)
-        {
             return false;
-        }
 
         var probe = new BoundValue();
         probe.PointAt(target, binding);
