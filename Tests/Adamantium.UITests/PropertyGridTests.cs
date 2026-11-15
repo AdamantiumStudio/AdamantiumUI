@@ -2557,9 +2557,15 @@ public class PropertyGridTests
 
         public bool CanRun = true;
 
+        public Action<object> Running;
+
         public bool CanExecute(object parameter = null) => CanRun;
 
-        public void Execute(object parameter = null) => Ran = parameter;
+        public void Execute(object parameter = null)
+        {
+            Ran = parameter;
+            Running?.Invoke(parameter);
+        }
 
         public event EventHandler CanExecuteChanged;
 
@@ -2644,5 +2650,38 @@ public class PropertyGridTests
         grid.Write(RowOf(grid, scale), 10.0);
         Assert.That(command.Ran, Is.InstanceOf<PropertyValuesChangedEventArgs>());
         Assert.That(((PropertyValuesChangedEventArgs)command.Ran).Property, Is.SameAs(scale));
+    }
+
+    // A view model keeping an undo is bound to the command, not to the event: it runs while the old value is still there.
+    [Test]
+    public void AWriteRunsTheValueChangingCommand_BeforeTheValueIsReplaced()
+    {
+        var target = new Target { Scale = 3 };
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        var grid = Built(Section(target, scale));
+        object before = null;
+        grid.ValueChangingCommand = new Recording { Running = _ => before = scale.ReadValue(target) };
+
+        grid.Write(RowOf(grid, scale), 10.0);
+
+        Assert.That(before, Is.EqualTo(3.0));
+    }
+
+    // An undo puts a value back with no grid at hand - the rows may show something else by then.
+    [Test]
+    public void ADefinition_ReadsAndWritesAValue_WithNoGrid()
+    {
+        var target = new Target { Scale = 3 };
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+
+        var read = scale.ReadValue(target);
+        var written = scale.WriteValue(target, 7.0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(read, Is.EqualTo(3.0));
+            Assert.That(written, Is.True);
+            Assert.That(target.Scale, Is.EqualTo(7.0));
+        });
     }
 }

@@ -22,6 +22,32 @@ internal sealed class BoundValue : FundamentalUIComponent
     private BindingExpressionBase _expression;
     private Binding _converting;
 
+    /// <summary>What <paramref name="binding"/> answers on <paramref name="target"/>, asked once; null for either
+    /// missing.</summary>
+    public static object ReadOnce(object target, BindingBase binding)
+    {
+        if (target == null || binding == null) return null;
+
+        var probe = new BoundValue();
+        probe.PointAt(target, binding);
+        var value = probe.Value;
+        probe.Release();
+        return value;
+    }
+
+    /// <summary>Writes <paramref name="value"/> to <paramref name="target"/> through <paramref name="binding"/>, once;
+    /// false for either missing.</summary>
+    public static bool WriteOnce(object target, BindingBase binding, object value)
+    {
+        if (target == null || binding == null) return false;
+
+        var probe = new BoundValue();
+        probe.PointAt(target, binding);
+        probe.Value = value;
+        probe.Release();
+        return true;
+    }
+
     /// <summary>Whether the object this was pointed at HAS what the binding asks for. False is not "the value is
     /// empty" - it is "this is not one of the objects the line is about", which is what a wire is to a line about
     /// nodes.</summary>

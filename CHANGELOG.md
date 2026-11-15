@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `PropertyGrid.ValueChangingCommand`: run before each value is written or taken back, as `ValueChanging` is raised -
+  for a view model keeping an undo, bound from markup like `ValueChangedCommand`. `PropertyDefinition.ReadValue` and
+  `WriteValue` read and write one object's value through the definition's binding with no grid at hand, as an undo
+  puts a value back; `PropertyGrid.ValueOf` and `WriteTo` go through them.
 - `InfiniteCanvas.OnEmptyPlaneClick(world)`: a plain click of the select tool on empty plane, told to a derived canvas
   after the selection is cleared - what it picks by a click on something of its own that is not an item, as a PDF
   viewer its sheets.

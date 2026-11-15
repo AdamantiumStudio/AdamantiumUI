@@ -130,6 +130,14 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         set => SetValue(BindingProperty, value);
     }
 
+    /// <summary>What this definition holds on <paramref name="target"/>, read once through its binding.</summary>
+    public object ReadValue(object target) => BoundValue.ReadOnce(target, Binding);
+
+    /// <summary>Writes <paramref name="value"/> to <paramref name="target"/> once through this definition's binding: for
+    /// a caller with no row to write through - an undo putting a value back, when the rows may show something else or
+    /// nothing.</summary>
+    public bool WriteValue(object target, object value) => BoundValue.WriteOnce(target, Binding, value);
+
     /// <summary>The single object this line describes, or null with several selected; lets a line bind to its target's
     /// state, e.g. <c>IsVisible="{Self Inspected.HasLabel}"</c>. DataContext stays the panel's view-model.</summary>
     public static readonly AdamantiumProperty InspectedProperty = AdamantiumProperty.Register(nameof(Inspected),

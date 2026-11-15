@@ -142,6 +142,12 @@ public class PropertyGrid : Control
     public static readonly AdamantiumProperty ValueChangedCommandProperty = AdamantiumProperty.Register(
         nameof(ValueChangedCommand), typeof(ICommand), typeof(PropertyGrid), new PropertyMetadata(null));
 
+    /// <summary>Executed BEFORE each value is written or taken back, with the change as its parameter: what
+    /// <see cref="ValueChanging"/> says, for a view model bound from markup - the moment the value about to be replaced
+    /// can still be read, as an undo needs it.</summary>
+    public static readonly AdamantiumProperty ValueChangingCommandProperty = AdamantiumProperty.Register(
+        nameof(ValueChangingCommand), typeof(ICommand), typeof(PropertyGrid), new PropertyMetadata(null));
+
     private readonly List<PropertyRow> _rows = new();
     private readonly List<PropertySection> _openedBySearch = new();
     private readonly Dictionary<PropertySection, BindingExpressionBase> _foldingHeldBySearch = new();
@@ -297,6 +303,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<ICommand>(ValueChangedCommandProperty);
         set => SetValue(ValueChangedCommandProperty, value);
+    }
+
+    public ICommand ValueChangingCommand
+    {
+        get => GetValue<ICommand>(ValueChangingCommandProperty);
+        set => SetValue(ValueChangingCommandProperty, value);
     }
 
     public Boolean ShowSearch
@@ -518,37 +530,16 @@ public class PropertyGrid : Control
 
     /// <summary>What a definition holds on ONE object, read through its binding. For a question asked once - a test, a
     /// report; a row on screen keeps its bindings live instead.</summary>
-    public object ValueOf(object target, PropertyDefinition definition) => Read(target, definition?.Binding);
+    public object ValueOf(object target, PropertyDefinition definition) => definition?.ReadValue(target);
 
     /// <summary>What a BINDING answers on one object, asked once. The same question <see cref="ValueOf"/> asks, for a
     /// caller holding a binding that belongs to no line of its own - an items list naming each of its items.</summary>
-    public object Read(object target, BindingBase binding)
-    {
-        if (target == null || binding == null) return null;
+    public object Read(object target, BindingBase binding) => BoundValue.ReadOnce(target, binding);
 
-        var probe = new BoundValue();
-        probe.PointAt(target, binding);
-        var value = probe.Value;
-        probe.Release();
-
-        return value;
-    }
-
-    /// <summary>Writes one value to ONE object through a definition's binding - the mirror of <see cref="ValueOf"/>,
-    /// and for the same kind of caller: something that knows what it wants written and has no row to write it through.
-    /// <para>Undo is that caller. A step that puts a color back cannot go through a ROW, because by then the rows may
-    /// be showing something else entirely - or nothing.</para></summary>
-    public bool WriteTo(object target, PropertyDefinition definition, object value)
-    {
-        if (target == null || definition?.Binding == null) return false;
-
-        var probe = new BoundValue();
-        probe.PointAt(target, definition.Binding);
-        probe.Value = value;
-        probe.Release();
-
-        return true;
-    }
+    /// <summary>Writes one value to ONE object through a definition's binding - the mirror of <see cref="ValueOf"/>;
+    /// <see cref="PropertyDefinition.WriteValue"/> does it with no grid at hand.</summary>
+    public bool WriteTo(object target, PropertyDefinition definition, object value) =>
+        definition != null && definition.WriteValue(target, value);
 
     /// <summary>What a definition holds across SEVERAL objects: their common value, or nothing at all when they differ -
     /// which <paramref name="mixed"/> is what says. A blank cell with no explanation would read as "empty", and the user
@@ -585,7 +576,7 @@ public class PropertyGrid : Control
         // take the edit back needs it: a color or a width leaves no trace in a comparison of where things are, so the
         // only way to undo one is to have read it while it was still there. The grid says so and keeps nothing - what
         // becomes of it is not an inspector's business.
-        ValueChanging?.Invoke(this, about);
+        OnValueChanging(about);
 
         // INTO the value first, where the definition says the value is an object with parts rather than a thing to be
         // replaced. Nothing is written through the binding then: the property still points at the same object, which is
@@ -610,6 +601,12 @@ public class PropertyGrid : Control
         return true;
     }
 
+    private void OnValueChanging(PropertyValuesChangedEventArgs about)
+    {
+        ValueChanging?.Invoke(this, about);
+        CommandManager.ExecuteFrom(ValueChangingCommand, about, this, null);
+    }
+
     private void OnValueChanged(PropertyValuesChangedEventArgs about)
     {
         ValueChanged?.Invoke(this, about);
@@ -626,7 +623,7 @@ public class PropertyGrid : Control
         var about = new PropertyValuesChangedEventArgs(row.Targets.Count > 0 ? row.Targets[0] : null,
             row.Definition, row.Targets);
 
-        ValueChanging?.Invoke(this, about);
+        OnValueChanging(about);
 
         if (!row.ResetValues()) return false;
 
