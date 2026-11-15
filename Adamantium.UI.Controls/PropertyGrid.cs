@@ -32,6 +32,20 @@ public class PropertyValuesChangedEventArgs : EventArgs
     /// <summary>EVERY object the write goes to. One line of an inspector can be pointed at a whole selection, and
     /// something recording the change - undo - has to know about all of them, not only the first.</summary>
     public IReadOnlyList<object> Targets { get; }
+
+    /// <summary>Whether <see cref="Value"/> is known: a value written through the line's binding, once written. Not for
+    /// a value taken back, nor for one written into the parts of the object the property holds.</summary>
+    public bool HasValue { get; private set; }
+
+    /// <summary>The value written to every target. Reading the targets back says the same only once they have taken it:
+    /// a target living on another thread (<see cref="Binding.WorkOnSourceThread"/>) takes it there, later.</summary>
+    public object Value { get; private set; }
+
+    internal void Wrote(object value)
+    {
+        Value = value;
+        HasValue = true;
+    }
 }
 
 /// <summary>An inspector: names and values split by a draggable grip, in folding sections. Declared as
@@ -596,6 +610,7 @@ public class PropertyGrid : Control
             return false;
         }
 
+        about.Wrote(value);
         OnValueChanged(about);
         Refresh(null, row.Definition);
         return true;

@@ -196,6 +196,10 @@ public abstract class BindingExpressionBase
    /// </summary>
    private protected bool ValuePending;
 
+   /// <summary>Whether this runs on the UI's thread - the loop's, or any while no loop has claimed one. A source living on
+   /// another thread tells its changes there, and the target is the UI's to change.</summary>
+   private protected static bool OnUiThread => !LoopSignal.IsClaimed || LoopSignal.IsLoopThread;
+
    // F2: queue this expression for the once-per-frame coalesced flush instead of pushing synchronously - unless the
    // binding opted into immediate application (a side-effect binding). Used for RUNTIME source changes; the initial
    // connect push stays synchronous.
@@ -204,9 +208,12 @@ public abstract class BindingExpressionBase
       ValuePending = true;
       // Only a TOP-LEVEL binding (one that writes to a UI target) is batched. A producer (TargetProperty == null, a
       // MultiBinding child) feeds its parent synchronously - it's combinator plumbing, not a target write, and is also
-      // exercised in isolation with no frame to flush it. IsImmediate opts a side-effect binding back to synchronous.
-      if (TargetProperty == null || BindingBase?.IsImmediate == true) ApplyPending();
-      else BindingUpdateQueue.Enqueue(this);
+      // exercised in isolation with no frame to flush it. IsImmediate opts a side-effect binding back to synchronous -
+      // on the UI's thread only: a change told on another goes through the flush, which the UI's thread runs.
+      if (TargetProperty == null || (BindingBase?.IsImmediate == true && OnUiThread))
+         ApplyPending();
+      else
+         BindingUpdateQueue.Enqueue(this);
    }
 
    // F2: apply the pending (coalesced) update - reads the CURRENT source value and pushes it to the target. Called by

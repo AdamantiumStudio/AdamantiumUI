@@ -47,8 +47,15 @@ public class Binding : BindingBase
          TargetNullValue = TargetNullValue,
          ElementName = ElementName,
          IsImmediate = IsImmediate,
+         WorkOnSourceThread = WorkOnSourceThread,
       };
    }
+
+   /// <summary>Whether the source lives on another thread and is written there: a value written back is not set at once
+   /// but handed to the <see cref="ISourceThread"/> of the target's <see cref="BindingEngine.SourceThreadProperty"/>,
+   /// only the latest of the values written meanwhile. Without one in the tree, or with one that does not hold the
+   /// source, the source is written at once, as by any binding.</summary>
+   public bool WorkOnSourceThread { get; set; }
 
    public override BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty) =>
       new BindingExpression(target, targetProperty, this);

@@ -15,6 +15,18 @@ public static class BindingEngine
 
     private static readonly ConditionalWeakTable<IAdamantiumComponent, Dictionary<(AdamantiumProperty Property, object Owner), BindingExpressionBase>> _owned = new();
 
+    /// <summary>The thread the sources of this element's subtree live on, for the bindings that say
+    /// <see cref="Binding.WorkOnSourceThread"/>: what they write back is run there. Inherited; unset, they write at once.
+    /// </summary>
+    public static readonly AdamantiumProperty SourceThreadProperty = AdamantiumProperty.RegisterAttached("SourceThread",
+        typeof(ISourceThread), typeof(AdamantiumComponent), new PropertyMetadata(null, PropertyMetadataOptions.Inherits));
+
+    public static ISourceThread GetSourceThread(IAdamantiumComponent element) =>
+        element?.GetValue(SourceThreadProperty) as ISourceThread;
+
+    public static void SetSourceThread(IAdamantiumComponent element, ISourceThread value) =>
+        element?.SetValue(SourceThreadProperty, value);
+
     public static BindingExpressionBase SetBinding(IAdamantiumComponent target, AdamantiumProperty targetProperty,
         BindingBase bindingBase)
         => SetBinding(target, targetProperty, bindingBase, ValuePriority.Binding);

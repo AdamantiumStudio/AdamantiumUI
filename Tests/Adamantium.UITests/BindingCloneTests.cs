@@ -18,6 +18,14 @@ public class BindingCloneTests
     }
 
     [Test]
+    public void ABindingsClone_StillWorksOnTheSourcesThread()
+    {
+        var clone = (Binding)new Binding("Name") { WorkOnSourceThread = true }.Clone();
+
+        Assert.That(clone.WorkOnSourceThread, Is.True);
+    }
+
+    [Test]
     public void AMultiBindingsClone_KeepsItsImmediacy()
     {
         var clone = (MultiBinding)new MultiBinding { IsImmediate = true }.Clone();
