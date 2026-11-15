@@ -375,7 +375,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         }
 
         _textWithRuns.Clear();
-        CheckTextOverItsAncestors(live);
+        CheckDrawnOverTheirAncestors(live);
         _runs.Sort((a, b) => a.First.CompareTo(b.First));
         for (var i = 1; i < _runs.Count; i++)
         {
@@ -481,21 +481,52 @@ internal sealed class FrameVerifier : IRenderCacheObserver
 
     // A text's glyphs are drawn after everything its ancestors draw - a background issued later covers it, however right
     // every datum of both is.
-    private void CheckTextOverItsAncestors(RenderCache live)
+    private void CheckDrawnOverTheirAncestors(RenderCache live)
     {
-        if (_runs.Count == 0)
-        {
-            return;
-        }
-
         var order = live.DescribeDrawOrder();
-
-        // The last op drawing each element's fills - the only thing of an ancestor that can cover a text.
         _lastFillOp.Clear();
         foreach (var (unit, op) in order)
         {
             if (unit is RenderUnits.TextRenderUnit || unit.Component is not { } owner) continue;
             if (!_lastFillOp.TryGetValue(owner, out var was) || op > was) _lastFillOp[owner] = op;
+        }
+
+        CheckTextOverItsAncestors(live, order);
+        CheckFillsOverTheirAncestors(live, order);
+    }
+
+    private void CheckFillsOverTheirAncestors(RenderCache live, Dictionary<Core.Graphics.IRenderUnit, int> order)
+    {
+        foreach (var (unit, fillOp) in order)
+        {
+            if (unit is RenderUnits.TextRenderUnit || unit.Component is not { } component ||
+                !_facts.TryGetValue(component, out var fact) || fact.Hidden)
+            {
+                continue;
+            }
+
+            var bounds = BoundsOf(fact);
+            var depth = 0;
+            for (var link = fact.Parent; link != null && depth++ < 16;
+                 link = _facts.TryGetValue(link, out var above) ? above.Parent : null)
+            {
+                if (_lastFillOp.TryGetValue(link, out var ancestorOp) && ancestorOp > fillOp &&
+                    _facts.TryGetValue(link, out var ancestor) && Overlaps(bounds, BoundsOf(ancestor)))
+                {
+                    Alarm($"{ComponentText.Of(component)}: its fill is drawn by op {fillOp}, before {ComponentText.Of(link)} " +
+                          $"behind it (op {ancestorOp}), which covers it - fill {live.DescribeRanks(component, fillOp)}; " +
+                          $"behind {live.DescribeRanks(link, ancestorOp)}; chain {ChainRanks(live, component, link)}");
+                    break;
+                }
+            }
+        }
+    }
+
+    private void CheckTextOverItsAncestors(RenderCache live, Dictionary<Core.Graphics.IRenderUnit, int> order)
+    {
+        if (_runs.Count == 0)
+        {
+            return;
         }
 
         foreach (var (unit, _, _) in live.DescribeTextRuns())
@@ -660,4 +691,10 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             : $"({m.M41:0.##}, {m.M42:0.##}) [{m.M11:0.###} {m.M12:0.###}; {m.M21:0.###} {m.M22:0.###}]";
 
     private static string Dims(Size<double> size) => $"{size.Width:0.##}x{size.Height:0.##}";
+
+    private static Rect BoundsOf(TreeFact fact) =>
+        new Rect(0, 0, fact.Size.Width, fact.Size.Height).TransformToAABB(fact.World);
+
+    private static bool Overlaps(Rect one, Rect other) =>
+        one.X < other.Right && other.X < one.Right && one.Y < other.Bottom && other.Y < one.Bottom;
 }
