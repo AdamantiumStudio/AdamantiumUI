@@ -1273,6 +1273,11 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>A double click on empty plane at that point in the world; true when it was answered.</summary>
     protected virtual bool OnEmptyPlaneDoubleClick(Vector2<double> world) => false;
 
+    /// <summary>A plain click of the select tool on empty plane at that point in the world, after it cleared the
+    /// selection - what a derived canvas picks by a click on something of its own that is not an item. A click that
+    /// extends the selection, which keeps it, is not one.</summary>
+    protected internal virtual void OnEmptyPlaneClick(Vector2<double> world) { }
+
     /// <summary>The scene the canvas shows arrived - given, or taken back from another canvas. A derived canvas that
     /// keeps the application's objects in step with the scene starts following it here.</summary>
     protected virtual void OnSceneShown(ICanvasScene scene) { }

@@ -399,6 +399,7 @@ public partial class RenderCache
     // Noted while the segment is still empty, because afterwards there is nothing left to read it from - and a splice that
     // places a newcomer needs the span's START, not just where it ended (see PlaceNewSegment).
     private long _rectSegStart;
+    private long _cycleStart;
 
     // The transform-table version the stream was recorded against: scissors and per-unit worlds are baked, while batch
     // segments follow slots live, so a moved matrix makes them disagree on replay.
@@ -911,6 +912,7 @@ public partial class RenderCache
             _unitsByBrush.Clear();
             _brushPaintBaked.Clear();
             _walkGroup = null;
+            _cycleStart = 0;
             _walkVersion++;
             _nodeAllAware.Clear();
             _culledWhenRecorded.Clear();

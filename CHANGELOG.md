@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.OnEmptyPlaneClick(world)`: a plain click of the select tool on empty plane, told to a derived canvas
+  after the selection is cleared - what it picks by a click on something of its own that is not an item, as a PDF
+  viewer its sheets.
 - `KeyBinding.Reach` (`KeyBindingReach`): a binding that runs only while the focus is in the element it is set on
   (`FocusWithin`), never from elsewhere in the window - a list's Delete, F2 or Enter. By default a key nobody nearer
   takes still runs a binding from anywhere in the window (`Window`), as before.
@@ -354,6 +357,9 @@ All packages share one version.
 
 ### Changed
 
+- A canvas's panes stand on one solid plate each, lifted by a shadow as a map's plates are - their handles, content
+  and a rail's tools, the chosen one too, all on it - so they are seen over whatever is drawn under them, a white
+  page included. A lone grip on the plane stands on a plate of its own (`Button.CanvasChrome`).
 - A `WebView`'s `PageBackground` shows under the page's frames: before the first one too, where the theme's background
   under the view showed.
 - `LaunchOptions.VirtualDisplay` (and `adam-auto start --virtual`) works on Windows too: the application runs on a
@@ -477,6 +483,12 @@ All packages share one version.
 
 ### Fixed
 
+- An element shown again inside something that casts a shadow is drawn at once: a canvas pane's toggle, under the
+  pane's shadowed plate, lit up only when the pointer came over it again. The patched frame placed what appeared in
+  front of the shadow's layer, and so under the plate's own fill.
+- A folded canvas pane carried to an edge stands against it: stuck to a right-hand slot it stood a whole open width
+  away from the edge, in the middle of the page. Folded where it stands, it still keeps its grip there; the layout
+  remembers which of the two it is.
 - A closed popup no longer keeps alive the lists it showed and their items, once its source changed: the render cache
   let go of the last clip owner only at its next frame, which a closed popup never draws; a scroll viewer's presenter
   held the panel it scrolled for after that panel left its content, until it was measured again; and a list's panel

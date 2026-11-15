@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="A pane's stick-to-edge toggle, pressed as a hand presses it: where the pane opens, folded, and folded and carried to the bottom, the right and the left edge of the canvas, its tooltip showing too - each time it lights up and the pane takes the state; with it on, the folded pane carried to the right edge sticks there, and opens again.">
+  <Select Target="id=GalleryTabs/id=DrawingBoard" />
+  <Wait Target="id=Canvas" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+
+  <!-- Folded where it stood. -->
+  <Click Target="id=PART_Inspector/id=PART_Grip" />
+  <Expect Target="id=PART_Inspector" IsOpen="False" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+
+  <!-- Folded and carried to each edge, the toggle off: the pane goes where it is dropped. -->
+  <Drag Target="id=PART_Inspector/id=PART_Grip" From="15,12" To="15,2000" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+  <Drag Target="id=PART_Inspector/id=PART_Grip" From="15,12" To="3000,12" />
+  <Hover Target="id=PART_Inspector/id=PART_Snap" />
+  <Wait Target="type=ToolTip" Timeout="5s" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+  <Drag Target="id=PART_Inspector/id=PART_Grip" From="15,12" To="-3000,12" />
+  <Expect Target="id=PART_Inspector" Placement="Free" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+
+  <!-- The toggle on: carried folded to the right edge, it sticks to it, and the toggle still answers. -->
+  <Drag Target="id=PART_Inspector/id=PART_Grip" From="15,12" To="3000,12" />
+  <Expect Target="id=PART_Inspector" Placement="BottomRight" IsOpen="False" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="On" />
+
+  <!-- Back as the page opens: open, in its corner, not sticking. -->
+  <Click Target="id=PART_Inspector/id=PART_Grip" />
+  <Expect Target="id=PART_Inspector" IsOpen="True" />
+  <Drag Target="id=PART_Inspector/id=PART_Grip" From="15,12" To="15,-3000" />
+  <Expect Target="id=PART_Inspector" Placement="TopRight" />
+  <Click Target="id=PART_Inspector/id=PART_Snap" />
+  <Expect Target="id=PART_Inspector/id=PART_Snap" Toggle="Off" />
+</Scenario>

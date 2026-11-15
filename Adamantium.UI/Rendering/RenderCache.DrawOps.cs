@@ -366,10 +366,11 @@ public partial class RenderCache
             if (ReferenceEquals(batch, _materialBatch)) NoteMaterialSegment(segment);
 
             if (ReferenceEquals(batch, _instancedFill)) RecordInstancedFlush(segment);
-            else RecordSegment(batch.BatchId, segment);
+            else RecordSegment(batch.BatchId, segment, batch.Layer < BatchLayer.Rect);
         }
 
         _haloOverOwner = null;
+        _cycleStart = _recordOrder;
 
         // The cycle is over, and with it the LAYER: a flush happens precisely when the next draw can no longer be
         // reordered with what is pending, so whatever is recorded from here belongs strictly after all of it.
@@ -421,17 +422,20 @@ public partial class RenderCache
 
     // Record a batch segment op (the immediate draw already happened in Flush; this only appends it for a clean-frame
     // replay). A Flush that drew nothing returns -1 and records nothing.
-    private void RecordSegment(byte batch, int segId)
+    private void RecordSegment(byte batch, int segId, bool underTheFills)
     {
         if (!_recording || segId < 0) return;
 
         // A segment's paint span runs from the first group that filled it to the one being recorded when it flushed. Only
-        // the RECT batch is ever spliced into, so only its span is tracked; for the others the span is a point, which is
-        // all their ops are compared by.
+        // the RECT batch is ever spliced into, so only its span is tracked exactly. A layer UNDER the fills (an outer
+        // shadow) is drawn under everything of its cycle, so it spans the whole cycle: as a point at the cycle's end, a
+        // newcomer of the cycle was placed in front of it - and so in front of the fills over it, under a pane's plate.
+        // The others are points, which is all their ops are compared by.
         RecordOp(new RenderOp
         {
             Kind = RenderOpKind.Segment, Batch = batch, SegId = segId, Clip = _batchClip,
-            Order = _recordOrder, OrderFirst = batch == 0 ? _rectSegStart : _recordOrder
+            Order = _recordOrder,
+            OrderFirst = batch == 0 ? _rectSegStart : underTheFills ? Math.Min(_cycleStart, _recordOrder) : _recordOrder
         });
     }
 
