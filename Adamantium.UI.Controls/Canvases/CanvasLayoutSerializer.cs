@@ -146,6 +146,7 @@ public static class CanvasLayoutSerializer
             if (!Double.IsNaN(pane.Height)) writer.WriteNumber("height", pane.Height);
 
             writer.WriteBoolean("open", pane.IsOpen);
+            writer.WriteBoolean("keepsRoom", pane.KeepsOpenRoom);
             writer.WriteBoolean("wanted", pane.IsWanted);
             writer.WriteBoolean("snaps", pane.SnapsToEdges);
             writer.WriteEndObject();
@@ -181,6 +182,7 @@ public static class CanvasLayoutSerializer
                 pane.Height = tall.GetDouble();
 
             pane.IsOpen = Flag(said, "open", pane.IsOpen);
+            pane.KeepsOpenRoom = Flag(said, "keepsRoom", true);
             pane.IsWanted = Flag(said, "wanted", pane.IsWanted);
             pane.SnapsToEdges = Flag(said, "snaps", pane.SnapsToEdges);
         }

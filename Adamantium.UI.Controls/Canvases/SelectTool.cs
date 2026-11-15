@@ -170,7 +170,11 @@ public class SelectTool : ICanvasTool
             var least = canvas.ScreenToWorldLength(3);
             if (band.Width < least && band.Height < least)
             {
-                if (!_bandExtends) canvas.ClearSelection();
+                if (!_bandExtends)
+                {
+                    canvas.ClearSelection();
+                    canvas.OnEmptyPlaneClick(_fromPointer);
+                }
             }
             else
             {

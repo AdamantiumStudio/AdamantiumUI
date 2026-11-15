@@ -34,7 +34,7 @@
                         <CanvasFrontLayer x:Name="PART_Front"/>
 
                         <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="14">
-                            <Button x:Name="PART_OverlayGrip" Width="32" Height="24"
+                            <Button x:Name="PART_OverlayGrip" Classes="CanvasChrome" Width="32" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
@@ -57,7 +57,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="38"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -118,7 +118,7 @@
                         <CanvasFrontLayer x:Name="PART_Front"/>
 
                         <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="14">
-                            <Button x:Name="PART_OverlayGrip" Width="32" Height="24"
+                            <Button x:Name="PART_OverlayGrip" Classes="CanvasChrome" Width="32" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
@@ -132,7 +132,7 @@
                                 <CanvasSelectionBar/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="24"/>
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True" MinHeight="38"/>
 
                             <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
                                         CanDrag="True">
@@ -184,6 +184,16 @@
     </Style>
 
 
+    <!-- A lone chrome button standing on the plane, on a solid plate of its own - see Fluent's set. -->
+    <Style Selector="Button.CanvasChrome">
+        <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
+        <Setter Property="BorderBrush" Value="{ObservableResource ControlStrokeColorDefault}"/>
+        <Setter Property="BackgroundPointerOver" Value="{ObservableResource SolidBackgroundFillColorTertiary}"/>
+        <Setter Property="BackgroundPressed" Value="{ObservableResource SolidBackgroundFillColorSecondary}"/>
+        <Setter Property="BackgroundDisabled" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
+    </Style>
+
+
     <!-- One panel of an InfiniteCanvas's chrome - see Fluent's set for what the parts are and why the grip travels with
          the body. Rounder and roomier, like every panel in this theme. -->
     <Style Selector="CanvasPane">
@@ -198,6 +208,17 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasPane">
                     <!-- Dock and not a stack - see Fluent's set for why a wrapping rail needs to be told its height. -->
+                    <!-- One plate for the whole pane, handles and all, lifted by a shadow - see Fluent's set. -->
+                    <Grid>
+                    <Border x:Name="PART_Plate"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Border.Shadow>
+                            <Shadow OffsetY="2" BlurRadius="8" Opacity="1" Color="#50000000"/>
+                        </Border.Shadow>
                     <DockPanel LastChildFill="True">
                         <!-- The handles in a row of their own, collapsed whole - see Fluent's set. -->
                         <StackPanel x:Name="PART_Handles" Orientation="Horizontal" DockPanel.Dock="Top"
@@ -219,14 +240,8 @@
                             </Button>
                         </StackPanel>
 
-                        <!-- The edges lie OVER the plate - see Fluent's set. -->
                         <Grid VerticalAlignment="Top">
-                            <Border x:Name="PART_Body"
-                                    Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="{TemplateBinding CornerRadius}"
-                                    Padding="{TemplateBinding Padding}">
+                            <Border x:Name="PART_Body">
                                 <DockPanel LastChildFill="True">
                                     <!-- Colored outright - see Fluent's set. -->
                                     <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
@@ -251,47 +266,48 @@
                                     </ScrollViewer>
                                 </DockPanel>
                             </Border>
-
-                            <!-- Three dots mark each strip - see Fluent's set. -->
-                            <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeWE"
-                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeWE">
-                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeWE"
-                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeWE">
-                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Border>
                         </Grid>
                     </DockPanel>
+                    </Border>
+
+                    <!-- The resize strips over the plate's outer edge, three dots each - see Fluent's set. -->
+                    <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
+                            Background="Transparent" Cursor="SizeWE"
+                            ToolTip="{Localize CanvasStrings.ResizePanel}">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Cursor="SizeWE">
+                            <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
+                            Background="Transparent" Cursor="SizeWE"
+                            ToolTip="{Localize CanvasStrings.ResizePanel}">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Cursor="SizeWE">
+                            <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                    </Grid>
 
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="IsOpen" Value="false">
                             <Setter TargetName="PART_Body" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PART_Handles" Property="MarginBottom" Value="0"/>
                         </PropertyTrigger>
 
                         <PropertyTrigger Property="Kind" Value="Bar">
                             <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Body" Property="Padding" Value="5"/>
+                            <Setter TargetName="PART_Plate" Property="Padding" Value="5"/>
                         </PropertyTrigger>
 
-                        <!-- No plate around a rail, and handles that run the way the tools do - see Fluent's set. -->
+                        <!-- A narrow plate around a rail, and handles that run the way the tools do - see Fluent's set. -->
                         <PropertyTrigger Property="Kind" Value="Rail">
-                            <Setter TargetName="PART_Body" Property="Background" Value="Transparent"/>
-                            <Setter TargetName="PART_Body" Property="BorderThickness" Value="0"/>
-                            <Setter TargetName="PART_Body" Property="Padding" Value="0"/>
+                            <Setter TargetName="PART_Plate" Property="Padding" Value="5"/>
                             <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>

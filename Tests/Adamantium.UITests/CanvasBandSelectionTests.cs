@@ -205,4 +205,62 @@ public class CanvasBandSelectionTests
 
         Assert.That(Band(canvas, 140, 140, 320, 250), Is.EqualTo(new List<ICanvasItem> { node }));
     }
+
+    // A click on empty plane is told to the canvas, where it was made, after the selection is cleared: a viewer picks
+    // a sheet of its own by it. A band that opened, a click on an item, or one that extends the selection is not.
+    [Test]
+    public void AClickOnEmptyPlane_IsToldToTheCanvas_ABandAnItemOrAnExtendingClickIsNot()
+    {
+        var clicks = new List<Vector2<double>>();
+        var canvas = new ClickedBoard(clicks);
+        canvas.Measure(new Size<double>(800, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 800, 600));
+        var scene = new CanvasScene();
+        canvas.Scene = scene;
+        var box = Box(100, 100);
+        scene.Add(box);
+        canvas.Select(box, false);
+
+        Band(canvas, 300, 200, 300, 200);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clicks, Is.EqualTo(new List<Vector2<double>> { new(300, 200) }));
+            Assert.That(canvas.Selection, Is.Empty, "cleared before it was told");
+        });
+
+        Band(canvas, 300, 200, 360, 260);
+        Band(canvas, 120, 120, 120, 120);
+        var tool = (SelectTool)canvas.Tool;
+        var extending = new CanvasPointerEventArgs
+        {
+            World = new Vector2<double>(400, 300), Pointer = new Vector2<double>(400, 300),
+            Screen = new Vector2<double>(400, 300), Button = MouseButtons.Left, ClickCount = 1,
+            Modifiers = InputModifiers.LeftShift
+        };
+        tool.OnPressed(canvas, extending);
+        tool.OnReleased(canvas, extending);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clicks, Has.Count.EqualTo(1));
+            Assert.That(canvas.Selection, Has.Count.EqualTo(1), "an extending click keeps the selection");
+        });
+    }
+
+    private sealed class ClickedBoard : DrawingBoard
+    {
+        private readonly List<Vector2<double>> _clicks;
+
+        public ClickedBoard(List<Vector2<double>> clicks)
+        {
+            _clicks = clicks;
+        }
+
+        protected internal override void OnEmptyPlaneClick(Vector2<double> world)
+        {
+            Assert.That(Selection, Is.Empty);
+            _clicks.Add(world);
+        }
+    }
 }

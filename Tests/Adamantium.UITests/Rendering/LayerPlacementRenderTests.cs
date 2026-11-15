@@ -609,6 +609,52 @@ public class LayerPlacementRenderTests
             $"showing it again must put back exactly what it drew (by {FrameTrace.Refuser})");
     }
 
+    // The same inside a plate with a SHADOW, hidden when the frame was first walked, then shown, hidden and shown again -
+    // a canvas pane's toggle: its checked rule, a child under the pane's shadowed plate, came on the first time and stayed
+    // away after it had been hidden once.
+    [TestCase(true)]
+    [TestCase(false)]
+    public void AChildOfAShadowedPlate_HiddenAtTheFirstWalk_IsShownEachTime(bool shadowed)
+    {
+        FrameTrace.Enabled = true;
+        using var scene = NewScene();
+
+        var rule = Placed(new Rect(2, 2, 8, 4));
+        rule.Visibility = Visibility.Hidden;
+        rule.RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 8, 4));
+        scene.Over[1].Add(rule);
+        if (shadowed)
+        {
+            scene.Over[1].Shadow = new Shadow { OffsetY = 2, BlurRadius = 8 };
+        }
+
+        scene.Over[1].RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, CardHeight));
+        scene.Over[1].Invalidate();
+        RenderDirty.MarkStructural();
+        scene.Draw();
+        Assert.That(CountLime(Pixels(scene.Renderer)), Is.Zero, "hidden when the frame is first walked");
+
+        rule.Visibility = Visibility.Visible;
+        scene.Draw();
+        var shown = Pixels(scene.Renderer);
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "showing it patches the recorded frame");
+        Assert.That(CountLime(shown), Is.Not.Zero, $"shown the first time (by {FrameTrace.Refuser})");
+        AssertMatchesAFullWalk(scene, shown, "what the patch shows must be what a walk draws");
+
+        for (var round = 1; round <= 2; round++)
+        {
+            rule.Visibility = Visibility.Hidden;
+            scene.Draw();
+            Assert.That(CountLime(Pixels(scene.Renderer)), Is.Zero,
+                $"round {round}: hiding must take it off the frame (by {FrameTrace.Refuser})");
+
+            rule.Visibility = Visibility.Visible;
+            scene.Draw();
+            Assert.That(DifferingPixels(shown, Pixels(scene.Renderer)), Is.Zero,
+                $"round {round}: showing it again must put back exactly what it drew (by {FrameTrace.Refuser})");
+        }
+    }
+
     private static int CountLime(byte[] pixels)
     {
         var n = 0;
