@@ -10,6 +10,9 @@ All packages share one version.
 - `InfiniteCanvas.OnEmptyPlaneClick(world)`: a plain click of the select tool on empty plane, told to a derived canvas
   after the selection is cleared - what it picks by a click on something of its own that is not an item, as a PDF
   viewer its sheets.
+- `KeyBinding.Reach` (`KeyBindingReach`): a binding that runs only while the focus is in the element it is set on
+  (`FocusWithin`), never from elsewhere in the window - a list's Delete, F2 or Enter. By default a key nobody nearer
+  takes still runs a binding from anywhere in the window (`Window`), as before.
 - `PropertyGrid.AutoGenerateSectionsFor`: beside the sections written for a `DataType`, the items of the source of this
   type get a section each, built from their own type - the components of a game's code, whose types no markup knows;
   other items no section is written for stay unshown. `PropertyGrid.GeneratedSectionStyle`: a style for the sections
@@ -486,6 +489,11 @@ All packages share one version.
 - A folded canvas pane carried to an edge stands against it: stuck to a right-hand slot it stood a whole open width
   away from the edge, in the middle of the page. Folded where it stands, it still keeps its grip there; the layout
   remembers which of the two it is.
+- A closed popup no longer keeps alive the lists it showed and their items, once its source changed: the render cache
+  let go of the last clip owner only at its next frame, which a closed popup never draws; a scroll viewer's presenter
+  held the panel it scrolled for after that panel left its content, until it was measured again; and a list's panel
+  that left the tree kept where every item stood. A game's code shown in the editor's Add component list could not be
+  unloaded.
 - A `TreeView` follows the member its `HierarchicalDataTemplate.ItemsSource` binding names: a node that gives another
   children collection - a folder's list read again from disk - is read again. A leaf that gained children shows its
   expander, and opens at once when it was asked open; an open branch shows the new children. The member was read once,

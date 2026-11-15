@@ -814,6 +814,9 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     {
         base.OnDetachedFromVisualTree(e);
         HideSkeletons();
+
+        // Where the items stood means nothing off the tree, and would keep them alive with the panel.
+        _lastItemPos.Clear();
     }
 
     // The margin a real item's template leaves around each tile - read ONCE from a realized item so a skeleton card

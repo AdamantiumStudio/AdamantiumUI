@@ -70,6 +70,59 @@ public class PanelItemPlacesTests
         Assert.That(panel.RemembersPlaceOf(row), Is.False);
     }
 
+    // A list that leaves the tree - its group's container gone with a source replaced, in a closed popup - forgets where
+    // its items stood: something still holding the panel holds no item through it.
+    [Test]
+    public void AListTakenOffTheTree_ForgetsItsItems()
+    {
+        var row = new Row();
+        var list = new ItemsControl
+        {
+            ItemTemplate = RowTemplate(),
+            ItemsSource = new ObservableCollection<object> { row },
+            Template = ItemsPresenterTemplate()
+        };
+        var holder = new StackPanel { Children = { list } };
+        var window = new Window { Width = 200, Height = 300, Content = holder };
+        Settle(window);
+        var panel = PanelOf(list);
+        Assume.That(panel.RemembersPlaceOf(row), Is.True, "a shown item's place is remembered");
+
+        holder.Children.Remove(list);
+
+        Assert.That(panel.RemembersPlaceOf(row), Is.False);
+    }
+
+    // The presenter of a scroll viewer lets go of the panel it scrolled for once that panel leaves its content - not at
+    // its next measure, which a closed popup never has.
+    [Test]
+    public void AScrollViewer_LetsGoOfAPanelThatLeftItsContent()
+    {
+        var list = new ItemsControl
+        {
+            ItemTemplate = RowTemplate(),
+            ItemsSource = new ObservableCollection<object> { new Row() },
+            Template = ItemsPresenterTemplate()
+        };
+        var holder = new Border { Child = list };
+        var presenter = new ScrollContentPresenter { Content = holder, CanContentScroll = true };
+        var window = new Window { Width = 200, Height = 300, Content = presenter };
+        Settle(window);
+        Assume.That(presenter.Inner, Is.SameAs(PanelOf(list)), "the presenter scrolls for the list's panel");
+
+        holder.Child = null;
+
+        Assert.That(presenter.Inner, Is.Null);
+    }
+
+    private static void Settle(Window window)
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        }
+    }
+
     private static VirtualizingPanel PanelOf(ItemsControl list) =>
         list.GetVisualDescendants().OfType<VirtualizingPanel>().First();
 
