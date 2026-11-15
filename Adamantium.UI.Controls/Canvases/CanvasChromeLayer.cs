@@ -161,8 +161,24 @@ public class CanvasChromeLayer : Panel
         // ...and the room between such a pane and its edge: it stands PaneInset off the edge, and the strip it leaves
         // there is no more to be seen through than the pane - a document's last line lay under the bar.
         var inset = PaneInset;
-        return new Thickness(left > 0 ? left + inset.Left : 0, top > 0 ? top + inset.Top : 0,
-            right > 0 ? right + inset.Right : 0, bottom > 0 ? bottom + inset.Bottom : 0);
+        return new Thickness(GetSideWidth(CanvasPanePlacement.LeftSide) + (left > 0 ? left + inset.Left : 0),
+            top > 0 ? top + inset.Top : 0,
+            GetSideWidth(CanvasPanePlacement.RightSide) + (right > 0 ? right + inset.Right : 0),
+            bottom > 0 ? bottom + inset.Bottom : 0);
+    }
+
+    private double GetSideWidth(CanvasPanePlacement side)
+    {
+        var widest = 0.0;
+        foreach (var pane in _panes)
+        {
+            if (pane.Placement == side && pane.Visibility == Visibility.Visible && pane.DesiredSize.Width > widest)
+            {
+                widest = pane.DesiredSize.Width;
+            }
+        }
+
+        return widest;
     }
 
     public CanvasChromeLayer()
@@ -178,13 +194,24 @@ public class CanvasChromeLayer : Panel
 
         foreach (var child in Children)
         {
-            if (TopCorner(child)) continue;
+            if (child is CanvasPane { IsSide: true } side)
+            {
+                side.Measure(new Size<double>(width, height));
+            }
+        }
+
+        width = Math.Max(0, width - GetSideWidth(CanvasPanePlacement.LeftSide) - GetSideWidth(CanvasPanePlacement.RightSide));
+        foreach (var child in Children)
+        {
+            if (TopCorner(child) || child is CanvasPane { IsSide: true })
+                continue;
 
             child.Measure(new Size<double>(width, height));
         }
 
-        var leftRoom = RoomAbove(CanvasPanePlacement.BottomLeft, height);
-        var rightRoom = RoomAbove(CanvasPanePlacement.BottomRight, height);
+        var band = GetTopBand();
+        var leftRoom = RoomAbove(CanvasPanePlacement.BottomLeft, height) - band;
+        var rightRoom = RoomAbove(CanvasPanePlacement.BottomRight, height) - band;
 
         foreach (var child in Children)
         {
@@ -207,15 +234,19 @@ public class CanvasChromeLayer : Panel
         return new Size<double>();
     }
 
-    protected override Size<double> ArrangeOverride(Size<double> finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> layerSize)
     {
+        var leftSide = GetSideWidth(CanvasPanePlacement.LeftSide);
+        var rightSide = GetSideWidth(CanvasPanePlacement.RightSide);
+        var finalSize = new Size<double>(Math.Max(0, layerSize.Width - leftSide - rightSide), layerSize.Height);
 
         var inset = PaneInset;
         var gap = PaneGap;
 
         // Each slot runs its own stack, so two panes placed against the same edge sit one after the other instead of
         // on top of each other.
-        double topLeft = inset.Top, topRight = inset.Top;
+        var band = GetTopBand();
+        double topLeft = inset.Top + band, topRight = inset.Top + band;
         double bottomLeft = finalSize.Height - inset.Bottom, bottomRight = finalSize.Height - inset.Bottom;
         double topCenter = inset.Left, bottomCenter = inset.Left;
         double left = 0, right = 0;
@@ -233,6 +264,14 @@ public class CanvasChromeLayer : Panel
             var x = 0.0;
             var y = 0.0;
 
+            if (pane.IsSide)
+            {
+                var along = pane.Placement == CanvasPanePlacement.LeftSide ? 0 : layerSize.Width - size.Width;
+                pane.Arrange(new Rect(Math.Max(0, along), 0, size.Width, layerSize.Height));
+                continue;
+            }
+
+            var free = pane.Placement is CanvasPanePlacement.Free or CanvasPanePlacement.Selection;
             switch (pane.Placement)
             {
                 case CanvasPanePlacement.TopLeft:
@@ -284,7 +323,7 @@ public class CanvasChromeLayer : Panel
                     break;
 
                 case CanvasPanePlacement.Selection:
-                    var over = AboveSelection(size, finalSize, inset);
+                    var over = AboveSelection(size, layerSize, inset);
                     x = over.X;
                     y = over.Y;
                     break;
@@ -293,9 +332,9 @@ public class CanvasChromeLayer : Panel
                     // Asked to open at a POINT - here is where both the room and the pane's own size are known, so
                     // here is where that point becomes the fraction everything else is kept in.
                     if (pane.TakePending(out var asked))
-                        pane.Anchor = CanvasPane.AnchorFor(asked, finalSize, size);
+                        pane.Anchor = CanvasPane.AnchorFor(asked, layerSize, size);
 
-                    var put = CanvasPane.PlaceOf(pane.Anchor, finalSize, size);
+                    var put = CanvasPane.PlaceOf(pane.Anchor, layerSize, size);
                     x = put.X;
                     y = put.Y;
                     break;
@@ -303,8 +342,9 @@ public class CanvasChromeLayer : Panel
 
             // Never off the edge, whatever the arithmetic said: a pane that cannot be reached is a pane that is gone,
             // and there is no edge on the plane itself to find it by.
-            x = Math.Clamp(x, 0, Math.Max(0, finalSize.Width - size.Width));
-            y = Math.Clamp(y, 0, Math.Max(0, finalSize.Height - size.Height));
+            var room = free ? layerSize : finalSize;
+            x = Math.Clamp(x, 0, Math.Max(0, room.Width - size.Width)) + (free ? 0 : leftSide);
+            y = Math.Clamp(y, 0, Math.Max(0, room.Height - size.Height));
 
             pane.Arrange(new Rect(x, y, size.Width, size.Height));
         }
@@ -349,6 +389,21 @@ public class CanvasChromeLayer : Panel
         }
 
         return count > 1 ? total + gap * (count - 1) : total;
+    }
+
+    private double GetTopBand()
+    {
+        var tallest = 0.0;
+        foreach (var pane in _panes)
+        {
+            if (pane is { Placement: CanvasPanePlacement.TopCenter, IsDocked: true, Visibility: Visibility.Visible } &&
+                pane.DesiredSize.Height > tallest)
+            {
+                tallest = pane.DesiredSize.Height;
+            }
+        }
+
+        return tallest > 0 ? tallest + PaneGap : 0;
     }
 
     private static bool TopCorner(IMeasurableComponent child) =>

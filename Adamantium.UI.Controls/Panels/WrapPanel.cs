@@ -285,8 +285,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       var itemWidth = ItemWidth;
       var itemHeight = ItemHeight;
 
-      double childAvailableWidth = double.PositiveInfinity;
-      double childAvailableHeight = double.PositiveInfinity;
+      double childAvailableWidth = availableSize.Width;
+      double childAvailableHeight = availableSize.Height;
 
       if (!double.IsNaN(Width))
       {

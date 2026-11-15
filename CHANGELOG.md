@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPanePlacement.LeftSide` and `RightSide`: a canvas pane along a whole side of the canvas, flush with the edge
+  and as tall as it - a side panel that splits the viewport. `InfiniteCanvas.UsableBounds` lies beside it, and every
+  pane placed against an edge or a corner stands in the room left; a free pane and the selection's bar keep the whole
+  canvas. It is not carried, and only its inner edge widens it. The themes draw it square and unlifted, bordered where
+  it meets the plane, with no handles, its content handed the whole height. A pane in a top corner now starts below
+  the bars docked along the top: a toolbar grown wide enough to reach the corner stood under it.
+
 - `Binding.WorkOnSourceThread` and `BindingEngine.SourceThread` (`ISourceThread`): a binding whose source lives on
   another thread - a game world's - writes it there. What it writes back is handed to the `ISourceThread` the target's
   tree names (inherited, set once on a panel), only the latest value of those written meanwhile; without one, or when
@@ -501,6 +508,9 @@ All packages share one version.
 
 ### Fixed
 
+- `WrapPanel` measures its children within the room it has, as WPF's does: measured without a bound, a child that
+  wraps its own - a wrap panel inside a wrap panel, a group on a toolbar that wraps - laid them all on one line, wider
+  than the room it was put in.
 - A binding marked `IsImmediate` changes its target on the UI's thread only: a source change told on another thread -
   a game world's component moved by its gizmo - goes through the flush. A `PropertyGrid` row read its object that way
   and redrew itself on the world's thread.

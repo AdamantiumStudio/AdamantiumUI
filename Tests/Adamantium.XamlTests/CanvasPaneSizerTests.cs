@@ -131,6 +131,8 @@ public class CanvasPaneSizerTests
     [TestCase(CanvasPanePlacement.TopLeft, Dock.Right)]
     [TestCase(CanvasPanePlacement.Left, Dock.Right)]
     [TestCase(CanvasPanePlacement.BottomLeft, Dock.Right)]
+    [TestCase(CanvasPanePlacement.LeftSide, Dock.Right)]
+    [TestCase(CanvasPanePlacement.RightSide, Dock.Left)]
     public void APinnedPaneOffersOnlyTheEdgeFacingIntoTheCanvas(CanvasPanePlacement placement, Dock side)
     {
         Use(ThemeNamed("Fluent"));

@@ -383,10 +383,15 @@ public class CanvasPane : ContentControl
 
     private bool Pulls(Dock side) => Placement switch
     {
-        CanvasPanePlacement.TopRight or CanvasPanePlacement.Right or CanvasPanePlacement.BottomRight => side == Dock.Left,
-        CanvasPanePlacement.TopLeft or CanvasPanePlacement.Left or CanvasPanePlacement.BottomLeft => side == Dock.Right,
+        CanvasPanePlacement.TopRight or CanvasPanePlacement.Right or CanvasPanePlacement.BottomRight
+            or CanvasPanePlacement.RightSide => side == Dock.Left,
+        CanvasPanePlacement.TopLeft or CanvasPanePlacement.Left or CanvasPanePlacement.BottomLeft
+            or CanvasPanePlacement.LeftSide => side == Dock.Right,
         _ => true
     };
+
+    /// <summary>Whether the pane stands along a whole side of the canvas, splitting the viewport.</summary>
+    internal bool IsSide => Placement is CanvasPanePlacement.LeftSide or CanvasPanePlacement.RightSide;
 
     // How wide the pane becomes when the edge on `side` has been dragged `reach` pixels along X from a width of
     // `from`. The ceiling is the viewport: a panel wider than the canvas leaves nothing behind it to look at.
@@ -438,12 +443,14 @@ public class CanvasPane : ContentControl
         }
     }
 
-    /// <summary>What this pane takes out of the canvas's usable area - all zero unless it is docked.</summary>
+    /// <summary>What this pane takes out of the canvas's usable area - all zero unless it is docked. A side pane takes
+    /// its side whether docked or not, and the layer counts that apart: it stands flush with the edge.</summary>
     internal Thickness Reserved()
     {
         // A pane that is not there takes nothing. Collapsed it is never arranged, so its RenderSize is whatever it was
         // when it was last shown - a switched-off bar would go on walling off the bottom of the plane.
-        if (!IsDocked || Visibility != Visibility.Visible) return new Thickness(0);
+        if (!IsDocked || IsSide || Visibility != Visibility.Visible)
+            return new Thickness(0);
 
         var size = RenderSize;
 
@@ -530,7 +537,8 @@ public class CanvasPane : ContentControl
             return;
         }
 
-        if (!CanDrag) return;
+        if (!CanDrag || IsSide)
+            return;
 
         var onGrip = OnGrip(e.OriginalSource);
         if (!onGrip && !IsChrome(e.OriginalSource)) return;
