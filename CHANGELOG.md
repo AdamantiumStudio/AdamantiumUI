@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `KeyBinding.Reach` (`KeyBindingReach`): a binding that runs only while the focus is in the element it is set on
+  (`FocusWithin`), never from elsewhere in the window - a list's Delete, F2 or Enter. By default a key nobody nearer
+  takes still runs a binding from anywhere in the window (`Window`), as before.
 - `PropertyGrid.AutoGenerateSectionsFor`: beside the sections written for a `DataType`, the items of the source of this
   type get a section each, built from their own type - the components of a game's code, whose types no markup knows;
   other items no section is written for stay unshown. `PropertyGrid.GeneratedSectionStyle`: a style for the sections

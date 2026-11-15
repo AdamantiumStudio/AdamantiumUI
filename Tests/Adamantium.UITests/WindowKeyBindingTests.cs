@@ -169,6 +169,37 @@ public class WindowKeyBindingTests
         Assert.That((elsewhere, around, own, unbound), Is.EqualTo((true, true, false, false)));
     }
 
+    // A list's Delete, kept to the focus being in the list: pressed while the user works elsewhere - in a view of a
+    // scene - it takes nothing out of the list; with the focus in the list it runs.
+    [Test]
+    public void ABindingKeptToItsElement_RunsOnlyWithTheFocusInIt()
+    {
+        var (window, field, side) = Layout();
+        var inSide = (Button)side.Children[0];
+        var ran = 0;
+        side.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => ran++), KeyGesture.Parse("Delete"))
+        {
+            Reach = KeyBindingReach.FocusWithin
+        });
+        Settle(window);
+        FocusManager.Focus(field);
+
+        var elsewhere = Press(field, Key.Delete).Handled;
+        var boundElsewhere = CommandManager.IsBoundInWindow(field, Args(field, Key.Delete));
+        FocusManager.Focus(inSide);
+        var within = Press(inSide, Key.Delete).Handled;
+        var boundAround = CommandManager.IsBoundInWindow(inSide, Args(inSide, Key.Delete));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(elsewhere, Is.False, "away from its element the key is nobody's");
+            Assert.That(boundElsewhere, Is.False, "and a view of a scene may take it for itself");
+            Assert.That(within, Is.True);
+            Assert.That(ran, Is.EqualTo(1));
+            Assert.That(boundAround, Is.True, "around the focus it is the key of what holds the focus");
+        });
+    }
+
     // A field being typed in keeps the keys that type: a letter, Esc or an AltGr character stays with it, Ctrl with a
     // letter or a function key goes on to the window's bindings.
     [Test]
