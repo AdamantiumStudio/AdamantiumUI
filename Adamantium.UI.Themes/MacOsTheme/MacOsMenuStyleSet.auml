@@ -91,6 +91,13 @@
             <Setter TargetName="Gesture" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
             <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
         </PropertyTrigger>
+        <!-- A row the range of an undo list reaches looks like the one under the pointer. -->
+        <PropertyTrigger Property="IsInRange" Value="true">
+            <Setter TargetName="Root" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="Gesture" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
             <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
@@ -224,9 +231,19 @@
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                             Foreground="{ObservableResource TextFillColorPrimary}"
                                             BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="160">
-                                        <MenuScrollViewer x:Name="PART_MenuScroll">
-                                            <ItemsPresenter x:Name="PART_ItemsPresenter"/>
-                                        </MenuScrollViewer>
+                                        <!-- Under the rows, the line of a menu that selects a range: how many it reaches. -->
+                                        <Grid RowDefinitions="*,Auto">
+                                            <MenuScrollViewer x:Name="PART_MenuScroll">
+                                                <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                                            </MenuScrollViewer>
+                                            <TextBlock x:Name="PART_RangeLine"
+                                                       Grid.Row="1"
+                                                       Visibility="Collapsed"
+                                                       Margin="10 6 10 4"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{ObservableResource TextFillColorSecondary}"
+                                                       FontSize="{ResourceReference FontSizeCaption}"/>
+                                        </Grid>
                                     </Border>
                                 </ControlTemplate>
                             </Popup.ChildTemplate>
