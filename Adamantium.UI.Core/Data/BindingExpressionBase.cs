@@ -210,8 +210,10 @@ public abstract class BindingExpressionBase
       // MultiBinding child) feeds its parent synchronously - it's combinator plumbing, not a target write, and is also
       // exercised in isolation with no frame to flush it. IsImmediate opts a side-effect binding back to synchronous -
       // on the UI's thread only: a change told on another goes through the flush, which the UI's thread runs.
-      if (TargetProperty == null || (BindingBase?.IsImmediate == true && OnUiThread)) ApplyPending();
-      else BindingUpdateQueue.Enqueue(this);
+      if (TargetProperty == null || (BindingBase?.IsImmediate == true && OnUiThread))
+         ApplyPending();
+      else
+         BindingUpdateQueue.Enqueue(this);
    }
 
    // F2: apply the pending (coalesced) update - reads the CURRENT source value and pushes it to the target. Called by

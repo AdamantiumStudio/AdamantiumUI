@@ -257,8 +257,10 @@ public class BindingExpression : BindingExpressionBase
       if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _errorProperty) return;
 
       _errorsPending = true;
-      if (BindingBase?.IsImmediate == true && OnUiThread) ApplyPending();
-      else BindingUpdateQueue.Enqueue(this);
+      if (BindingBase?.IsImmediate == true && OnUiThread)
+         ApplyPending();
+      else
+         BindingUpdateQueue.Enqueue(this);
    }
 
    private void ShowErrors()
@@ -753,8 +755,10 @@ public class BindingExpression : BindingExpressionBase
          // A change told on the source's thread: one of the objects the path passes may have been replaced - walked
          // again - or only the value moved.
          _changedElsewhere = false;
-         if (_passed is { Count: > 0 }) _reconnectPending = true;
-         else _sourceAhead = true;
+         if (_passed is { Count: > 0 })
+            _reconnectPending = true;
+         else
+            _sourceAhead = true;
       }
 
       if (!_reconnectPending)
@@ -1036,14 +1040,17 @@ public class BindingExpression : BindingExpressionBase
 
       for (var i = segments.Length - 1; i >= 1; i--)
       {
-         if (!boxes[i].GetType().IsValueType) return;
+         if (!boxes[i].GetType().IsValueType)
+            return;
 
          var into = PropertyAccessors.Find(boxes[i - 1].GetType(), segments[i - 1]);
-         if (into is not { CanWrite: true }) return;
+         if (into is not { CanWrite: true })
+            return;
 
          if (boxes[i - 1] is AdamantiumComponent component && component.GetProperty(segments[i - 1]) is { } property)
          {
-            if (property.ReadOnly) return;
+            if (property.ReadOnly)
+               return;
             component.SetCurrentValue(property, boxes[i]);
          }
          else
