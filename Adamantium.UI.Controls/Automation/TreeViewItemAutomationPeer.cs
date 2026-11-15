@@ -5,7 +5,8 @@ using Adamantium.UI.Core.Input;
 namespace Adamantium.UI.Controls.Automation;
 
 /// <summary>The peer of a row of a <see cref="TreeView"/>: a tree item, expanded and selected the way its expander and a
-/// click do it, with the rows of its branch as children.</summary>
+/// click do it. Its children are what the row shows that can be acted on - a check box in its line, say; the text is
+/// its name and the expander its own pattern - then the rows of its branch.</summary>
 public class TreeViewItemAutomationPeer : UIComponentAutomationPeer, ISelectionItemProvider, IExpandCollapseProvider, IScrollItemProvider
 {
     public TreeViewItemAutomationPeer(TreeViewItem owner) : base(owner)
@@ -53,8 +54,26 @@ public class TreeViewItemAutomationPeer : UIComponentAutomationPeer, ISelectionI
 
     protected override string NameCore() => TextOf(Owner);
 
-    protected override IReadOnlyList<AutomationPeer> ChildrenCore() =>
-        TreePeer() is { } tree && ((TreeViewItem)Owner).Row is { } row ? tree.ChildrenOf(row) : [];
+    protected override IReadOnlyList<AutomationPeer> ChildrenCore()
+    {
+        var item = (TreeViewItem)Owner;
+        var children = new List<AutomationPeer>();
+        foreach (var shown in base.ChildrenCore())
+        {
+            var isExpander = shown is UIComponentAutomationPeer { Owner: var element } && element == item.Expander;
+            if (!isExpander && shown.ControlType is not (AutomationControlType.Text or AutomationControlType.Image))
+            {
+                children.Add(shown);
+            }
+        }
+
+        if (TreePeer() is { } tree && item.Row is { } row)
+        {
+            children.AddRange(tree.ChildrenOf(row));
+        }
+
+        return children;
+    }
 
     private TreeView Tree() => ((TreeViewItem)Owner).FindOwnerTreeView();
 
