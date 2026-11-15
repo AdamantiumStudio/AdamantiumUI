@@ -54,6 +54,9 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public static readonly AdamantiumProperty StaysOpenOnClickProperty = AdamantiumProperty.Register(nameof(StaysOpenOnClick),
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty IsInRangeProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsInRange),
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
     // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
     // looking ordinary and doing nothing when clicked. A menu is built and thrown away on every open, so the listener's
     // weak hold keeps that from leaking per open.
@@ -229,6 +232,15 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     {
         get => GetValue<bool>(ShowsCheckColumnProperty);
         private set => SetValue(ShowsCheckColumnProperty, value);
+    }
+
+    /// <summary>Whether the row is in the range a menu that selects one reaches (<see cref="ContextMenu.SelectsRange"/>):
+    /// every row from the first to the one under the pointer or the keyboard, drawn as that one is - as an undo list
+    /// marks the steps a choice takes back. Set by the menu.</summary>
+    public bool IsInRange
+    {
+        get => GetValue<bool>(IsInRangeProperty);
+        internal set => SetValue(IsInRangeProperty, value);
     }
 
     /// <summary>Whether the row keeps a column for an icon. Every row of a menu does once one of them has an

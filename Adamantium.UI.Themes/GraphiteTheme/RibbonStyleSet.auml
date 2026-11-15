@@ -1391,10 +1391,13 @@
             <Setter TargetName="DropDownGlyph" Property="Grid.Column" Value="2"/>
             <Setter TargetName="DropDownGlyph" Property="Margin" Value="{ResourceReference RibbonIconLabelGap}"/>
         </PropertyTrigger>
+        <!-- A small command's arrow is a small chevron: the large one, as wide as the icon beside it, read as a second
+             icon rather than as the command's other half. -->
         <PropertyTrigger Property="Ribbon.Size" Value="Small">
             <Setter TargetName="DropDownGlyph" Property="Grid.Row" Value="0"/>
             <Setter TargetName="DropDownGlyph" Property="Grid.Column" Value="1"/>
             <Setter TargetName="DropDownGlyph" Property="Margin" Value="{ResourceReference RibbonIconLabelGap}"/>
+            <Setter TargetName="DropDownGlyph" Property="Data" Value="M0,0 L3,3 L6,0"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="DropDownGlyph" Property="Stroke" Value="{TemplateBinding ForegroundDisabled}"/>
@@ -1588,6 +1591,7 @@
         <PropertyTrigger Property="Ribbon.Size" Value="Small">
             <Setter TargetName="SplitLayout" Property="VerticalAlignment" Value="Center"/>
             <Setter TargetName="DropDownGlyph" Property="VerticalAlignment" Value="Center"/>
+            <Setter TargetName="DropDownGlyph" Property="Data" Value="M0,0 L3,3 L6,0"/>
             <Setter TargetName="ActionArea" Property="CornerRadius" Value="{ResourceReference RibbonSplitLeadingRadius}"/>
             <Setter TargetName="SplitRule" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Row" Value="0"/>

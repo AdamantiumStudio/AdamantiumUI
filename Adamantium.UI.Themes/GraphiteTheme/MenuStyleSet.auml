@@ -101,6 +101,10 @@
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Root" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
         </PropertyTrigger>
+        <!-- A row the range of an undo list reaches looks like the one under the pointer. -->
+        <PropertyTrigger Property="IsInRange" Value="true">
+            <Setter TargetName="Root" Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                     Value="{ResourceReference TextFillColorDisabled}"/>
@@ -242,9 +246,19 @@
                                             CornerRadius="0"
                                             Padding="{ResourceReference MenuCardPadding}"
                                             MinWidth="{ResourceReference MenuMinWidth}">
-                                        <MenuScrollViewer x:Name="PART_MenuScroll">
-                                            <ItemsPresenter x:Name="PART_ItemsPresenter"/>
-                                        </MenuScrollViewer>
+                                        <!-- Under the rows, the line of a menu that selects a range: how many it reaches. -->
+                                        <Grid RowDefinitions="*,Auto">
+                                            <MenuScrollViewer x:Name="PART_MenuScroll">
+                                                <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                                            </MenuScrollViewer>
+                                            <TextBlock x:Name="PART_RangeLine"
+                                                       Grid.Row="1"
+                                                       Visibility="Collapsed"
+                                                       Margin="8 4 8 2"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{ObservableResource TextFillColorSecondary}"
+                                                       FontSize="{ResourceReference FontSizeCaption}"/>
+                                        </Grid>
                                     </Border>
                                 </ControlTemplate>
                             </Popup.ChildTemplate>

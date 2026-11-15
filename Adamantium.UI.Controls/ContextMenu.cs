@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -32,7 +33,17 @@ public class ContextMenu : ItemsControl
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(PlacementMode), typeof(ContextMenu), new PropertyMetadata(PlacementMode.Bottom));
 
+    public static readonly AdamantiumProperty SelectsRangeProperty = AdamantiumProperty.Register(nameof(SelectsRange),
+        typeof(bool), typeof(ContextMenu), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty RangeCountProperty = AdamantiumProperty.RegisterReadOnly(nameof(RangeCount),
+        typeof(int), typeof(ContextMenu), new PropertyMetadata(0));
+
+    public static readonly AdamantiumProperty RangeFormatProperty = AdamantiumProperty.Register(nameof(RangeFormat),
+        typeof(string), typeof(ContextMenu), new PropertyMetadata(null));
+
     private Popup _popup;
+    private TextBlock _rangeLine;
     private IInputComponent _clickRoot;   // the items presenter; leaf-row clicks bubble to it (it IS an input element)
     private ScrollViewer _scroll;         // wraps the items; capped to the window height so a long menu scrolls
 
@@ -59,6 +70,31 @@ public class ContextMenu : ItemsControl
     {
         get => GetValue<PlacementMode>(PlacementProperty);
         set => SetValue(PlacementProperty, value);
+    }
+
+    /// <summary>Whether the menu selects a RANGE, as an undo list does: the pointer or the keyboard on a row marks every
+    /// row from the first to that one (<see cref="MenuItem.IsInRange"/>), <see cref="RangeCount"/> says how many, and the
+    /// line under the rows says it in <see cref="RangeFormat"/>. Choosing the row is choosing them all - its command
+    /// decides what that means.</summary>
+    public bool SelectsRange
+    {
+        get => GetValue<bool>(SelectsRangeProperty);
+        set => SetValue(SelectsRangeProperty, value);
+    }
+
+    /// <summary>How many rows the range reaches, from the first; 0 while the pointer and the keyboard are on none.</summary>
+    public int RangeCount
+    {
+        get => GetValue<int>(RangeCountProperty);
+        private set => SetValue(RangeCountProperty, value);
+    }
+
+    /// <summary>What the line under the rows of a menu that selects a range says, <c>{0}</c> standing for
+    /// <see cref="RangeCount"/>: "Undo {0} steps". No line while it is null or the range is empty.</summary>
+    public string RangeFormat
+    {
+        get => GetValue<string>(RangeFormatProperty);
+        set => SetValue(RangeFormatProperty, value);
     }
 
     /// <summary>Extra offset of the popup from its placement (used to open AT the cursor for a right-click menu:
@@ -147,6 +183,8 @@ public class ContextMenu : ItemsControl
         if (container is MenuItem row)
         {
             _rows.Join(row);
+            row.PointerEntered += OnRowReached;
+            row.GotFocus += OnRowReached;
         }
     }
 
@@ -155,9 +193,46 @@ public class ContextMenu : ItemsControl
         if (container is MenuItem row)
         {
             _rows.Leave(row);
+            row.PointerEntered -= OnRowReached;
+            row.GotFocus -= OnRowReached;
+            row.IsInRange = false;
         }
 
         base.ClearContainer(container);
+    }
+
+    private void OnRowReached(object sender, RoutedEventArgs e)
+    {
+        if (SelectsRange && sender is MenuItem row && ItemContainerGenerator.IndexFromContainer(row) is >= 0 and var index)
+        {
+            Reach(index + 1);
+        }
+    }
+
+    private void Reach(int count)
+    {
+        RangeCount = count;
+        for (var index = 0; index < Items.Count; index++)
+        {
+            if (ItemContainerGenerator.ContainerFromIndex(index) is MenuItem row)
+            {
+                row.IsInRange = index < count;
+            }
+        }
+
+        ShowRangeLine();
+    }
+
+    private void ShowRangeLine()
+    {
+        if (_rangeLine == null)
+        {
+            return;
+        }
+
+        var shown = SelectsRange && RangeCount > 0 && RangeFormat != null;
+        _rangeLine.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+        _rangeLine.Text = shown ? string.Format(System.Globalization.CultureInfo.CurrentCulture, RangeFormat, RangeCount) : null;
     }
 
     protected override void OnItemsChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -199,6 +274,8 @@ public class ContextMenu : ItemsControl
 
         _clickRoot = popup.FindContentChild("PART_ItemsPresenter") as IInputComponent;
         _scroll = popup.FindContentChild("PART_MenuScroll") as ScrollViewer;
+        _rangeLine = popup.FindContentChild("PART_RangeLine") as TextBlock;
+        ShowRangeLine();
 
         // base.OnApplyTemplate connected the items host while it was still in this control's namescope; now it isn't, so
         // the connection is made here instead - an unconnected host has no owner and never grows an items panel.
@@ -241,6 +318,7 @@ public class ContextMenu : ItemsControl
 
         _scroll = null;
         _clickRoot = null;
+        _rangeLine = null;
         _popup = null;
     }
 
@@ -270,6 +348,7 @@ public class ContextMenu : ItemsControl
         {
             menu.EnsureTemplate();
             CommandManager.RequeryNow();
+            menu.Reach(0);
         }
 
         if (menu._popup != null)

@@ -11,6 +11,11 @@ All packages share one version.
   for a view model keeping an undo, bound from markup like `ValueChangedCommand`. `PropertyDefinition.ReadValue` and
   `WriteValue` read and write one object's value through the definition's binding with no grid at hand, as an undo
   puts a value back; `PropertyGrid.ValueOf` and `WriteTo` go through them.
+- `ContextMenu.SelectsRange`, as an undo list in Office: the row under the pointer or the keyboard marks every row from
+  the first to it (`MenuItem.IsInRange`, drawn as the row under the pointer in every theme), `RangeCount` says how many,
+  and a line under the rows says it in `RangeFormat` ("Undo {0}"). Opened again, the menu reaches nothing.
+- A small ribbon command's drop-down arrow is a small chevron (6x3) in every theme: the large one, as wide as the icon
+  beside it, read as a second icon in the quick-access bar.
 - `InfiniteCanvas.OnEmptyPlaneClick(world)`: a plain click of the select tool on empty plane, told to a derived canvas
   after the selection is cleared - what it picks by a click on something of its own that is not an item, as a PDF
   viewer its sheets.
