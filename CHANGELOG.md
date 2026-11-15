@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `Binding.WorkOnSourceThread` and `BindingEngine.SourceThread` (`ISourceThread`): a binding whose source lives on
+  another thread - a game world's - writes it there. What it writes back is handed to the `ISourceThread` the target's
+  tree names (inherited, set once on a panel), only the latest value of those written meanwhile; without one, or when
+  the thread does not hold the source (`ISourceThread.Holds` - a view model beside the world's objects), it writes at
+  once. While a value of its own is on its way, a change the source tells is not shown, so a dragged number is not
+  thrown back. A `PropertyGrid` row bound to the inspected object works on the source's thread by itself, and so does
+  `PropertyDefinition.WriteValue`; a line with a source of its own does not.
 - `PropertyGrid.ValueChangingCommand`: run before each value is written or taken back, as `ValueChanging` is raised -
   for a view model keeping an undo, bound from markup like `ValueChangedCommand`. `PropertyDefinition.ReadValue` and
   `WriteValue` read and write one object's value through the definition's binding with no grid at hand, as an undo
@@ -492,6 +499,9 @@ All packages share one version.
 
 ### Fixed
 
+- A binding marked `IsImmediate` changes its target on the UI's thread only: a source change told on another thread -
+  a game world's component moved by its gizmo - goes through the flush. A `PropertyGrid` row read its object that way
+  and redrew itself on the world's thread.
 - An element shown again inside something that casts a shadow is drawn at once: a canvas pane's toggle, under the
   pane's shadowed plate, lit up only when the pointer came over it again. The patched frame placed what appeared in
   front of the shadow's layer, and so under the plate's own fill.

@@ -2684,4 +2684,52 @@ public class PropertyGridTests
             Assert.That(target.Scale, Is.EqualTo(7.0));
         });
     }
+
+    // The inspected objects live on a game world's thread, which the grid's tree names: an edit and an undo write there,
+    // not on the UI's thread.
+    [Test]
+    public void UnderASourceThread_AnEditAndAnUndo_AreWrittenOnThatThread()
+    {
+        var target = new Target { Scale = 3 };
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        var grid = Built(Section(target, scale));
+        var thread = new QueuedSourceThread();
+        BindingEngine.SetSourceThread(grid, thread);
+
+        grid.Write(RowOf(grid, scale), 10.0);
+        var afterEdit = target.Scale;
+        thread.RunAll();
+        var editRun = target.Scale;
+        scale.WriteValue(target, 3.0);
+        var afterUndo = target.Scale;
+        thread.RunAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterEdit, Is.EqualTo(3.0), "the edit, on the UI's thread");
+            Assert.That(editRun, Is.EqualTo(10.0));
+            Assert.That(afterUndo, Is.EqualTo(10.0), "the undo, on the UI's thread");
+            Assert.That(target.Scale, Is.EqualTo(3.0));
+        });
+    }
+
+    // A line bound to the panel's own view-model - not to the object inspected - is the UI's, and is written at once.
+    [Test]
+    public void UnderASourceThread_ALineWithItsOwnSource_IsWrittenAtOnce()
+    {
+        var target = new Target { Scale = 3 };
+        var own = new Target { Name = "own" };
+        var name = new StringProperty { Header = "Name", Binding = new Binding("Name") { Source = own } };
+        var grid = Built(Section(target, name));
+        var thread = new QueuedSourceThread();
+        BindingEngine.SetSourceThread(grid, thread);
+
+        grid.Write(RowOf(grid, name), "written");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(own.Name, Is.EqualTo("written"));
+            Assert.That(thread.Waiting, Is.Zero);
+        });
+    }
 }

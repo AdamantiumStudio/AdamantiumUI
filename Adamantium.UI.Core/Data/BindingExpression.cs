@@ -92,6 +92,13 @@ public class BindingExpression : BindingExpressionBase
    private PropertyAccessor _leaf;      // set only for a struct-ended path; the fast path leaves it null
    private object[] _boxes;   // what each segment was read from, reused between walks
 
+   // A SOURCE ON ANOTHER THREAD (Binding.WorkOnSourceThread): what is written back waits here for that thread, the latest
+   // value only, and one update at a time is handed to it.
+   private readonly object _sourceWriteGate = new();
+   private PendingSourceWrite _sourceWrite;
+   private volatile bool _sourceWriteHanded;
+   private volatile bool _writingOnSourceThread;
+
    public Binding Binding { get; set; }
    public BindingMode Mode { get; set; }
 
@@ -245,7 +252,7 @@ public class BindingExpression : BindingExpressionBase
       if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _errorProperty) return;
 
       _errorsPending = true;
-      if (BindingBase?.IsImmediate == true) ApplyPending();
+      if (BindingBase?.IsImmediate == true && OnOwnThread) ApplyPending();
       else BindingUpdateQueue.Enqueue(this);
    }
 
@@ -637,6 +644,13 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
+      // Our own write run on the source's thread, which looks at what the source took itself; or a value of ours still on
+      // its way there, which will overwrite this one - showing it meanwhile would throw the field back while it is dragged.
+      if (ours && (_writingOnSourceThread || _sourceWriteHanded))
+      {
+         return;
+      }
+
       if (Passes(sender, e.PropertyName))
       {
          _reconnectPending = true;
@@ -935,47 +949,114 @@ public class BindingExpression : BindingExpressionBase
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
 
-   // Walks the path from the root, remembering what each segment was read FROM - the last of them owns the leaf.
-   private bool Walk()
-   {
-      object current = ResolvedSource;
+   private bool Walk() => Walk(ResolvedSource, _segments, _boxes);
 
-      for (var i = 0; i < _segments.Length; i++)
+   // Walks the path from the root, remembering what each segment was read FROM - the last of them owns the leaf.
+   private static bool Walk(object root, string[] segments, object[] boxes)
+   {
+      var current = root;
+
+      for (var i = 0; i < segments.Length; i++)
       {
          if (current == null) return false;
 
-         _boxes[i] = current;
-         if (i < _segments.Length - 1)
+         boxes[i] = current;
+         if (i < segments.Length - 1)
          {
-            current = PropertyAccessors.GetValue(current, _segments[i]);
+            current = PropertyAccessors.GetValue(current, segments[i]);
          }
       }
 
       return true;
    }
 
+   private void Backfill(object written) => Backfill(_leaf, _segments, _boxes, written);
+
    // The leaf into its box, then each box into whatever held it - until something that is not a copy is reached.
-   private void Backfill(object written)
+   private static void Backfill(PropertyAccessor leaf, string[] segments, object[] boxes, object written)
    {
-      _leaf.SetValue(_boxes[^1], written);
+      leaf.SetValue(boxes[^1], written);
 
-      for (var i = _segments.Length - 1; i >= 1; i--)
+      for (var i = segments.Length - 1; i >= 1; i--)
       {
-         if (!_boxes[i].GetType().IsValueType) return;
+         if (!boxes[i].GetType().IsValueType) return;
 
-         var into = PropertyAccessors.Find(_boxes[i - 1].GetType(), _segments[i - 1]);
+         var into = PropertyAccessors.Find(boxes[i - 1].GetType(), segments[i - 1]);
          if (into is not { CanWrite: true }) return;
 
-         if (_boxes[i - 1] is AdamantiumComponent component && component.GetProperty(_segments[i - 1]) is { } property)
+         if (boxes[i - 1] is AdamantiumComponent component && component.GetProperty(segments[i - 1]) is { } property)
          {
             if (property.ReadOnly) return;
-            component.SetCurrentValue(property, _boxes[i]);
+            component.SetCurrentValue(property, boxes[i]);
          }
          else
          {
-            into.SetValue(_boxes[i - 1], _boxes[i]);
+            into.SetValue(boxes[i - 1], boxes[i]);
          }
       }
+   }
+
+   // Hands what is written back to the source's thread: the latest value waits there, and one update at a time is handed
+   // over - a number dragged across a frame writes the source once, with where it ended.
+   private void HandOver(ISourceThread thread, object written)
+   {
+      var write = new PendingSourceWrite(ResolvedSource, _source, _leaf, _segments, written);
+      lock (_sourceWriteGate)
+      {
+         _sourceWrite = write;
+         if (_sourceWriteHanded) return;
+         _sourceWriteHanded = true;
+      }
+
+      thread.Run(WriteOnSourceThread);
+   }
+
+   // On the source's thread: the waiting value goes in, through the binding as it stood when the value was written. A
+   // source that took something else - clamped it, refused it - is shown by the flush, on the UI's thread.
+   private void WriteOnSourceThread()
+   {
+      PendingSourceWrite write;
+      lock (_sourceWriteGate)
+      {
+         write = _sourceWrite;
+         _sourceWrite = null;
+         _sourceWriteHanded = false;
+      }
+
+      if (write?.Root == null) return;
+
+      object took;
+      _writingOnSourceThread = true;
+      try
+      {
+         took = WriteAndRead(write);
+      }
+      catch (Exception e)
+      {
+         WriteBackFailed(e);
+         return;
+      }
+      finally
+      {
+         _writingOnSourceThread = false;
+      }
+
+      if (!Equals(took, write.Value)) MarkSourceAhead();
+   }
+
+   private static object WriteAndRead(PendingSourceWrite write)
+   {
+      if (write.Leaf == null)
+      {
+         write.Source.SetValue(write.Root, write.Value);
+         return Read(write.Source, write.Root);
+      }
+
+      var boxes = new object[write.Segments.Length];
+      if (!Walk(write.Root, write.Segments, boxes)) return write.Value;
+
+      Backfill(write.Leaf, write.Segments, boxes, write.Value);
+      return Walk(write.Root, write.Segments, boxes) ? Read(write.Leaf, boxes[^1]) : write.Value;
    }
 
    private object ReadSource()
@@ -1056,6 +1137,29 @@ public class BindingExpression : BindingExpressionBase
 
       // Guard the ECHO (see _writingSource): our synchronous source write must not schedule a source->target push back.
       var written = TryCoerce(value, sourceType, out var fitted, FormatCulture) ? fitted : value;
+
+      // A source on another thread is written there; the target keeps what was typed, and what the source took comes
+      // back as any change of it does.
+      if (Binding.WorkOnSourceThread && SourceSlot().Property == null && BindingEngine.GetSourceThread(Target) is { } thread
+          && thread.Holds(ResolvedSource))
+      {
+         HandOver(thread, written);
+         _syncedSource = written;
+         if (Mode == BindingMode.TwoWay && !_syncingSlot)
+         {
+            _syncingSlot = true;
+            try
+            {
+               WriteTarget(targetValue);
+            }
+            finally
+            {
+               _syncingSlot = false;
+            }
+         }
+
+         return;
+      }
 
       _sourceSpoke = false;
       _writingSource = true;

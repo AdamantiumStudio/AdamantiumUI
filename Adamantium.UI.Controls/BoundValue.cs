@@ -36,14 +36,16 @@ internal sealed class BoundValue : FundamentalUIComponent
         return value;
     }
 
-    /// <summary>Writes <paramref name="value"/> to <paramref name="target"/> through <paramref name="binding"/>, once;
-    /// false for either missing.</summary>
-    public static bool WriteOnce(object target, BindingBase binding, object value)
+    /// <summary>Writes <paramref name="value"/> to <paramref name="target"/> through <paramref name="binding"/>, once - on
+    /// <paramref name="sourceThread"/> when one is given, the target living on another thread; false for either
+    /// missing.</summary>
+    public static bool WriteOnce(object target, BindingBase binding, object value, ISourceThread sourceThread)
     {
         if (target == null || binding == null)
             return false;
 
         var probe = new BoundValue();
+        BindingEngine.SetSourceThread(probe, sourceThread);
         probe.PointAt(target, binding);
         probe.Value = value;
         probe.Release();
@@ -104,8 +106,13 @@ internal sealed class BoundValue : FundamentalUIComponent
         var binding = (BindingBase)declared.Clone();
 
         // A plain {Binding Member} means "off the object being inspected". One that names its own source, element or
-        // ancestor said where to look, and is left exactly as written.
-        if (binding is Binding { Source: null, ElementName: null } plain) plain.Source = source;
+        // ancestor said where to look, and is left exactly as written. The object being inspected may live on another
+        // thread - a game world's - and is written there when the tree names that thread.
+        if (binding is Binding { Source: null, ElementName: null } plain)
+        {
+            plain.Source = source;
+            plain.WorkOnSourceThread = true;
+        }
 
         // A binding written OneWay is a value to look at - Default is two-way here, because this property says so. Saying
         // "written" when nothing was written would leave the inspector showing a number the object never took.
