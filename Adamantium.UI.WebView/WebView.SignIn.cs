@@ -96,9 +96,10 @@ public partial class WebView
         });
         signInDialog.SetCurrentValue(WebViewSignInDialog.IsInsecureProperty, !target.IsProxy && IsPlainHttp(request.Address));
         signInDialog.SetCurrentValue(WebViewSignInDialog.ErrorProperty, isRetry ? WebViewStrings.WrongSignIn : string.Empty);
+        // The name kept for the site, or, asked again, the one just typed: only the password is typed anew.
         var store = Engine?.Credentials;
         signInDialog.SetCurrentValue(WebViewSignInDialog.UserNameProperty,
-            store?.Find(target)?.UserName ?? string.Empty);
+            store?.Find(target)?.UserName ?? (isRetry ? signInDialog.UserName : string.Empty));
         signInDialog.SetCurrentValue(WebViewSignInDialog.PasswordProperty, string.Empty);
         signInDialog.SetCurrentValue(WebViewSignInDialog.CanRememberProperty, store?.CanSave == true);
         signInDialog.SetCurrentValue(WebViewSignInDialog.RememberProperty, false);

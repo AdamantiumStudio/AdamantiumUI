@@ -168,6 +168,7 @@ public class AutomationAuditTests
         [typeof(WebViewStatusBar)] = (null, "shows a status bar of the theme's, which answers for itself and its fields"),
         [typeof(WebViewScriptDialog)] = (null, "shows the theme's card for a page's dialog, which answers for itself, its text and its buttons"),
         [typeof(WebViewFindBar)] = (null, "shows the theme's search card, which answers for itself, its field and its buttons"),
+        [typeof(WebViewSignInDialog)] = (null, "shows the theme's sign-in card, which answers for itself, its fields and its buttons"),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),
