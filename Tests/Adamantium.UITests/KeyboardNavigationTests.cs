@@ -1222,10 +1222,11 @@ public class KeyboardNavigationTests
             RoutedEvent = Keyboard.KeyDownEvent
         });
 
-    /// <summary>A click focuses without a ring, so the keyboard cannot see where it starts: the first Tab shows the ring
-    /// where the focus is, and only the next one moves on. It went straight to the next control.</summary>
+    /// <summary>A click focuses without a ring; the first Tab after it moves on at once, the ring on where it went. It
+    /// showed the ring on the clicked control first, and every Tab from a click cost one press more (owner, 16.11).
+    /// Shift+Tab the same way back.</summary>
     [Test]
-    public void TheFirstTabAfterAClick_ShowsTheRingWhereTheFocusIs()
+    public void TheFirstTabAfterAClick_MovesOnAtOnce_WithTheRing()
     {
         var a = NewButton("a");
         var b = NewButton("b");
@@ -1240,13 +1241,14 @@ public class KeyboardNavigationTests
         var ring = window.AdornerLayer.Adorners.OfType<FocusAdorner>().SingleOrDefault();
         Assert.Multiple(() =>
         {
-            Assert.That(FocusManager.Focused, Is.SameAs(a), "the first Tab stays on the clicked control");
-            Assert.That(ring?.AdornedElement, Is.SameAs(a), "and shows the ring on it");
-            Assert.That(a.IsFocusVisible, Is.True);
+            Assert.That(FocusManager.Focused, Is.SameAs(b), "the first Tab moved on");
+            Assert.That(ring?.AdornedElement, Is.SameAs(b), "and the ring is on where it went");
+            Assert.That(b.IsFocusVisible, Is.True);
         });
 
-        PressTab(a);
-        Assert.That(FocusManager.Focused, Is.SameAs(b), "the next Tab moves on");
+        FocusManager.Focus(b, NavigationMethod.Mouse);
+        PressOn(b, Key.Tab, InputModifiers.LeftShift);
+        Assert.That(FocusManager.Focused, Is.SameAs(a), "Shift+Tab after a click moves back at once");
     }
 
     /// <summary>A control a DATA template built wears the ring itself. Its templated parent is the presenter showing the

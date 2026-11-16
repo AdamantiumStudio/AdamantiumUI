@@ -250,7 +250,7 @@ public static class FocusManager
 
    /// <summary>Shows where the focus is without moving it, and marks the keyboard as in use until the focus next moves,
    /// for whoever asks <see cref="IsFocusVisible"/> before moving it - a menu opening. A focus the mouse put somewhere
-   /// wears no ring; the first navigation key and Alt ask for the ring rather than moving. False when there is nothing
+   /// wears no ring; the first arrow and Alt ask for the ring rather than moving - Tab moves. False when there is nothing
    /// to show.</summary>
    public static bool Reveal()
    {
