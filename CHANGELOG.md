@@ -511,6 +511,8 @@ All packages share one version.
 
 ### Fixed
 
+- A large `RibbonSplitButton` has its arrow in the middle of its lower half, in every theme, not pressed against the
+  rule under the label.
 - `WrapPanel` measures its children within the room it has, as WPF's does: measured without a bound, a child that
   wraps its own - a wrap panel inside a wrap panel, a group on a toolbar that wraps - laid them all on one line, wider
   than the room it was put in.

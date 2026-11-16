@@ -1553,14 +1553,14 @@
                                     Fill="{ResourceReference ControlStrokeColorDefault}"/>
 
                             <!-- A real element with a size, not a glyph in a corner: the control asks this part where
-                                 the pointer is. At Large it reaches the bottom, the arrow at its top. -->
+                                 the pointer is. At Large it reaches the bottom, the arrow in its middle. -->
                             <Border x:Name="PART_DropDownArea" Grid.Row="2" Grid.Column="0"
                                     Padding="{ResourceReference RibbonSplitDropDownPadding}"
                                     CornerRadius="0">
                                 <Path x:Name="DropDownGlyph"
                                         Data="M0,0 L4,4 L8,0"
                                         StrokeThickness="{ResourceReference StrokeThinValue}"
-                                        HorizontalAlignment="Center" VerticalAlignment="Top"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                         Stroke="{TemplateBinding Foreground}"/>
                             </Border>
                         </Grid>
