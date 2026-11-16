@@ -3,6 +3,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.WebView.Themes;
 
 namespace Adamantium.UI.WebView;
@@ -27,7 +28,11 @@ public class WebViewSignInDialog : Control
         typeof(bool), typeof(WebViewSignInDialog), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty ErrorProperty = AdamantiumProperty.Register(nameof(Error),
-        typeof(string), typeof(WebViewSignInDialog), new PropertyMetadata(string.Empty));
+        typeof(string), typeof(WebViewSignInDialog), new PropertyMetadata(string.Empty, OnErrorChanged));
+
+    /// <summary>Whether there is an <see cref="Error"/> to say; the theme shows it only then.</summary>
+    public static readonly AdamantiumProperty HasErrorProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasError),
+        typeof(bool), typeof(WebViewSignInDialog), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty UserNameProperty = AdamantiumProperty.Register(nameof(UserName),
         typeof(string), typeof(WebViewSignInDialog),
@@ -114,6 +119,15 @@ public class WebViewSignInDialog : Control
         get => GetValue<string>(ErrorProperty);
         set => SetValue(ErrorProperty, value);
     }
+
+    public bool HasError
+    {
+        get => GetValue<bool>(HasErrorProperty);
+        private set => SetValue(HasErrorProperty, value);
+    }
+
+    private static void OnErrorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        ((WebViewSignInDialog)component).HasError = !string.IsNullOrEmpty(e.NewValue as string);
 
     /// <summary>The user name, as typed.</summary>
     public string UserName

@@ -20,6 +20,10 @@ public class WebSignInScenarioTests
     private static readonly TimeSpan CefStart = TimeSpan.FromSeconds(40);
     private static readonly TimeSpan Asked = TimeSpan.FromSeconds(15);
 
+    // A collapsed part stays in the tree, off screen.
+    private static readonly Expectation Shown = new("offscreen", "False");
+    private static readonly Expectation Hidden = new("offscreen", "True");
+
     [Test]
     public async Task ASiteAskingToSignIn_IsAnsweredInTheDialogOverThePage()
     {
@@ -39,33 +43,33 @@ public class WebSignInScenarioTests
         await session.Find(By.Id("WebAddress")).PressKeysAsync("Enter");
 
         // Asked: the site and the warning shown, no error yet, nothing to remember with no store.
-        await session.Find(By.Id("WebSignIn")).WaitForAsync(CefStart);
-        await session.Find(By.Id("WebSignInInsecure")).WaitForAsync();
-        await session.Find(By.Id("WebSignInError")).ExpectAbsentAsync();
-        await session.Find(By.Id("WebSignInRemember")).ExpectAbsentAsync();
+        await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Shown], CefStart);
+        await session.Find(By.Id("WebSignInInsecure")).ExpectAsync(Shown);
+        await session.Find(By.Id("WebSignInError")).ExpectAsync(Hidden);
+        await session.Find(By.Id("WebSignInRemember")).ExpectAsync(Hidden);
         await session.Find(By.Id("WebSignInUser")).WaitUntilAsync([new Expectation("focus", "True")]);
 
         // A wrong password: asked again, saying why, with the name kept.
         await session.Find(By.Id("WebSignInUser")).TypeAsync("anna");
         await session.Find(By.Id("WebSignInPassword")).TypeAsync("wrong");
         await session.Find(By.Id("WebSignInAccept")).InvokeAsync();
-        await session.Find(By.Id("WebSignInError")).WaitForAsync(Asked);
+        await session.Find(By.Id("WebSignInError")).WaitUntilAsync([Shown], Asked);
         await session.Find(By.Id("WebSignInUser")).ExpectAsync(new Expectation("value", "anna"));
 
         // Esc cancels: the dialog goes, the page keeps the site's refusal.
         await session.Find(By.Id("WebSignInPassword")).PressKeysAsync("Escape");
-        await session.Find(By.Id("WebSignIn")).WaitForAbsentAsync(Asked);
+        await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Hidden], Asked);
         Assert.That(site.Admitted, Is.Zero, "nobody let in yet");
 
         // Reloaded, it asks anew - no error - and the right password on Enter lets the page in.
         await session.Find(By.Id("WebReload")).InvokeAsync();
-        await session.Find(By.Id("WebSignIn")).WaitForAsync(Asked);
-        await session.Find(By.Id("WebSignInError")).ExpectAbsentAsync();
+        await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Shown], Asked);
+        await session.Find(By.Id("WebSignInError")).ExpectAsync(Hidden);
         await session.Find(By.Id("WebSignInUser")).ExpectAsync(new Expectation("value", ""));
         await session.Find(By.Id("WebSignInUser")).TypeAsync("anna");
         await session.Find(By.Id("WebSignInPassword")).TypeAsync("secret");
         await session.Find(By.Id("WebSignInPassword")).PressKeysAsync("Enter");
-        await session.Find(By.Id("WebSignIn")).WaitForAbsentAsync(Asked);
+        await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Hidden], Asked);
         await session.WaitForIdleAsync();
         Assert.That(site.Admitted, Is.GreaterThan(0), "let in with the right password");
     }

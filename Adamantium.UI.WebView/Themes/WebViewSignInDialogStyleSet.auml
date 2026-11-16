@@ -39,6 +39,7 @@
                                            Foreground="{ResourceReference SystemFillColorCaution}"
                                            AutomationProperties.AutomationId="WebSignInInsecure"/>
                                 <TextBlock x:Name="PART_Error"
+                                           Visibility="Collapsed"
                                            Text="{TemplateBinding Error}"
                                            TextWrapping="WrapByWords"
                                            Foreground="{ResourceReference SystemFillColorCritical}"
@@ -81,8 +82,8 @@
                         <PropertyTrigger Property="IsInsecure" Value="True">
                             <Setter TargetName="PART_Insecure" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
-                        <PropertyTrigger Property="Error" Value="">
-                            <Setter TargetName="PART_Error" Property="Visibility" Value="Collapsed"/>
+                        <PropertyTrigger Property="HasError" Value="True">
+                            <Setter TargetName="PART_Error" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="CanRemember" Value="True">
                             <Setter TargetName="PART_Remember" Property="Visibility" Value="Visible"/>
