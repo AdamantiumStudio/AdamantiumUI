@@ -183,8 +183,9 @@ public class CanvasChromeLayer : Panel
             child.Measure(new Size<double>(width, height));
         }
 
-        var leftRoom = RoomAbove(CanvasPanePlacement.BottomLeft, height);
-        var rightRoom = RoomAbove(CanvasPanePlacement.BottomRight, height);
+        var band = GetTopBand();
+        var leftRoom = RoomAbove(CanvasPanePlacement.BottomLeft, height) - band;
+        var rightRoom = RoomAbove(CanvasPanePlacement.BottomRight, height) - band;
 
         foreach (var child in Children)
         {
@@ -215,7 +216,8 @@ public class CanvasChromeLayer : Panel
 
         // Each slot runs its own stack, so two panes placed against the same edge sit one after the other instead of
         // on top of each other.
-        double topLeft = inset.Top, topRight = inset.Top;
+        var band = GetTopBand();
+        double topLeft = inset.Top + band, topRight = inset.Top + band;
         double bottomLeft = finalSize.Height - inset.Bottom, bottomRight = finalSize.Height - inset.Bottom;
         double topCenter = inset.Left, bottomCenter = inset.Left;
         double left = 0, right = 0;
@@ -349,6 +351,21 @@ public class CanvasChromeLayer : Panel
         }
 
         return count > 1 ? total + gap * (count - 1) : total;
+    }
+
+    private double GetTopBand()
+    {
+        var tallest = 0.0;
+        foreach (var pane in _panes)
+        {
+            if (pane is { Placement: CanvasPanePlacement.TopCenter, IsDocked: true, Visibility: Visibility.Visible } &&
+                pane.DesiredSize.Height > tallest)
+            {
+                tallest = pane.DesiredSize.Height;
+            }
+        }
+
+        return tallest > 0 ? tallest + PaneGap : 0;
     }
 
     private static bool TopCorner(IMeasurableComponent child) =>

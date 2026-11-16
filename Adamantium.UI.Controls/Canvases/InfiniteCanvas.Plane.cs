@@ -85,7 +85,7 @@ public partial class InfiniteCanvas
     }
 
     // The viewport the arrange pass gave, or the rendered one before it.
-    private Size<double> Viewport => _viewport is { Width: > 0, Height: > 0 } ? _viewport : RenderSize;
+    private Size<double> Viewport => _viewport is { Width: > 0, Height: > 0 } ? _viewport : ViewportSize;
 
     // What the plane is seen through at `scale`: the viewport less what docked panes take and, along an axis the plane
     // overflows, less the scroll bar across it - so its last strip can be scrolled out from under the bar. Empty before

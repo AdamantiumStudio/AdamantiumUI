@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `PART_Viewport`: the part of an `InfiniteCanvas` template the plane is looked at through
+  (`InfiniteCanvas.ViewportElement`, `ViewportSize`, `ViewportOrigin`). The pointer, the camera, the usable bounds,
+  fitting and centering, the ground and the chrome are all measured in it, so a template can stand other things beside
+  the plane - a side panel in a grid with a splitter - and nothing reaches under them. A template that names none is
+  its own viewport, as before. A pane in a top corner now starts below the bars docked along the top: a toolbar grown
+  wide enough to reach the corner stood under it.
+
 - `Binding.WorkOnSourceThread` and `BindingEngine.SourceThread` (`ISourceThread`): a binding whose source lives on
   another thread - a game world's - writes it there. What it writes back is handed to the `ISourceThread` the target's
   tree names (inherited, set once on a panel), only the latest value of those written meanwhile; without one, or when
@@ -501,6 +508,9 @@ All packages share one version.
 
 ### Fixed
 
+- `WrapPanel` measures its children within the room it has, as WPF's does: measured without a bound, a child that
+  wraps its own - a wrap panel inside a wrap panel, a group on a toolbar that wraps - laid them all on one line, wider
+  than the room it was put in.
 - A binding marked `IsImmediate` changes its target on the UI's thread only: a source change told on another thread -
   a game world's component moved by its gizmo - goes through the flush. A `PropertyGrid` row read its object that way
   and redrew itself on the world's thread.
