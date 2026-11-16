@@ -251,6 +251,47 @@ public class MarkupHotReloadTests
         Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("After"));
     }
 
+    // A save on its way when the files stop being followed is dropped: it neither reaches the instance nor reports to
+    // whoever listens now - on CI, a late apply reported into the next test's handler.
+    [Test]
+    public async Task ASaveOnItsWay_WhenTheFilesAreForgotten_IsDropped()
+    {
+        var panel = Built(Panel("Before"));
+        Action onLoop = null;
+        MarkupHotReload.Dispatch = action => onLoop = action;
+        var reloaded = 0;
+        Action<MarkupReloadReport> counted = _ => reloaded++;
+        MarkupHotReload.Reloaded += counted;
+        try
+        {
+            File.WriteAllText(_file, Panel("After"));
+            var applying = MarkupHotReload.ApplyAsync([_file]);
+            var waited = 0;
+            while (onLoop == null && waited < 5000)
+            {
+                await Task.Delay(10);
+                waited += 10;
+            }
+
+            MarkupHotReload.Reset();
+            onLoop?.Invoke();
+            var reports = await applying;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(onLoop, Is.Not.Null, "the save never reached the loop");
+                Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("Before"), "a forgotten save reached the instance");
+                Assert.That(reloaded, Is.Zero, "a forgotten save reported itself");
+                Assert.That(_failures, Is.Empty, "a forgotten save reported a failure");
+                Assert.That(reports.Single().Applied, Is.False);
+            });
+        }
+        finally
+        {
+            MarkupHotReload.Reloaded -= counted;
+        }
+    }
+
     // Two writes within one tick of the file clock share a write time, and a save told apart by it was lost - on CI.
     [Test]
     public async Task ASaveWithTheWriteTimeOfTheOneBefore_IsStillApplied()
