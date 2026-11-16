@@ -194,6 +194,8 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         var needed = Count + _deferredItems;
         EnsureCpuCapacity(needed + Math.Max(64, needed / 8));
 
+        // The ring before the last frame is let go of: the GPU out of memory, that frame is still whole for a patch.
+        EnsureRing(device);
         _deferredItems = 0;
         Count = 0;
         _segmentStart = 0;
@@ -201,7 +203,6 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         _segments.Clear();
         _indexById.Clear();
         _freeBlocks.Clear();
-        EnsureRing(device);
         if (device.FrameTicket != _writeFrame)
         {
             SelectSlot(device);
@@ -220,6 +221,12 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         var copies = (int)Math.Max(1, device.MaxFramesInFlight);
         if (_ring != null && _ring.Length == copies && _gpuCapacity >= Items.Length) return;
 
+        // The new copies first: the GPU out of memory, the old ones stay and the next frame asks again.
+        var capacity = Items.Length;
+        var made = GpuRing.Make(copies, _ =>
+            Adamantium.Graphics.Buffer.New<TItem>(device, (uint)capacity,
+                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal));
         if (_ring != null)
         {
             foreach (var buffer in _ring)
@@ -228,18 +235,15 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
             }
         }
 
-        _ring = new Buffer<TItem>[copies];
+        _ring = made;
         _mirror = new TItem[copies][];
         _mirrorCount = new int[copies];
         for (var i = 0; i < copies; i++)
         {
-            _ring[i] = Adamantium.Graphics.Buffer.New<TItem>(device, (uint)Items.Length,
-                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-                MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal);
-            _mirror[i] = new TItem[Items.Length];
+            _mirror[i] = new TItem[capacity];
             _mirrorCount[i] = 0;   // a fresh buffer holds nothing -> everything differs -> first write sends it all
         }
-        _gpuCapacity = Items.Length;
+        _gpuCapacity = capacity;
     }
 
     // Round-robin per write, not per frame: one walk's copy is read by several replay frames that follow it.

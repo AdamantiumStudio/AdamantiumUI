@@ -372,7 +372,10 @@ public static class KeyboardNavigation
         if (!ReferenceEquals(RootOf(FocusManager.Focused), sender))
             return;
 
-        if (IsStop(FocusManager.Focused, direction.Value) && FocusManager.Reveal())
+        // A focus the mouse put somewhere wears no ring: the first arrow shows it there - a menu a click opened has the
+        // keyboard on a row nobody could see was current. Tab moves at once: where it goes wears the ring, and showing it
+        // first cost an extra press every time.
+        if (!IsTabbing(direction.Value) && IsStop(FocusManager.Focused, direction.Value) && FocusManager.Reveal())
         {
             e.Handled = true;
             return;

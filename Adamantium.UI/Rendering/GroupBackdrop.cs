@@ -97,21 +97,14 @@ internal sealed class GroupBackdrop : IDisposable
         _ring ??= new Texture[Math.Max(1, (int)device.MaxFramesInFlight)];
         if (_ring[0] != null && _width >= width && _height >= height && _format == format) return;
 
-        _format = format;
-
-        foreach (var old in _ring)
-        {
-            if (old != null) device.AddToDeferDisposeQueue(old);
-        }
-
-        _width = Math.Max(_width, width);
-        _height = Math.Max(_height, height);
-        for (var i = 0; i < _ring.Length; i++)
-        {
-            _ring[i] = Graphics.Texture.New(device, new TextureDescription
+        // The new copies first, at the new size: the GPU out of memory, the old ones stay as they were.
+        var newWidth = Math.Max(_width, width);
+        var newHeight = Math.Max(_height, height);
+        var made = GpuRing.Make(_ring.Length, i =>
+            Graphics.Texture.New(device, new TextureDescription
             {
-                Width = _width,
-                Height = _height,
+                Width = newWidth,
+                Height = newHeight,
                 Depth = 1,
                 ArrayLayers = 1,
                 MipLevels = 1,
@@ -124,8 +117,17 @@ internal sealed class GroupBackdrop : IDisposable
                 ImageTiling = Vulkan.Core.ImageTiling.Optimal,
                 Usage = ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferDstBit,
                 Dimension = TextureDimension.Texture2D
-            }, $"GroupBackdrop:{i}");
+            }, $"GroupBackdrop:{i}"));
+
+        foreach (var old in _ring)
+        {
+            if (old != null) device.AddToDeferDisposeQueue(old);
         }
+
+        _ring = made;
+        _format = format;
+        _width = newWidth;
+        _height = newHeight;
     }
 
     public void Dispose()

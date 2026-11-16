@@ -256,18 +256,9 @@ internal sealed class BackdropCapture : IDisposable
         _ring ??= new Texture[Math.Max(1, (int)device.MaxFramesInFlight)];
         if (_ring[0] != null && _width == width && _height == height) return;
 
-        for (var i = 0; i < _ring.Length; i++)
-        {
-            if (_ring[i] != null) device.AddToDeferDisposeQueue(_ring[i]);
-            _ring[i] = null;
-        }
-
-        _current = null;
-        _width = width;
-        _height = height;
-        for (var i = 0; i < _ring.Length; i++)
-        {
-            _ring[i] = Graphics.Texture.New(device, new TextureDescription
+        // The new copies first: the GPU out of memory, the old ones stay and the next frame asks again.
+        var made = GpuRing.Make(_ring.Length, i =>
+            Graphics.Texture.New(device, new TextureDescription
             {
                 Width = width,
                 Height = height,
@@ -291,8 +282,17 @@ internal sealed class BackdropCapture : IDisposable
                 Usage = ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferDstBit
                         | ImageUsageFlagBits.TransferSrcBit | ImageUsageFlagBits.ColorAttachmentBit,
                 Dimension = TextureDimension.Texture2D
-            }, $"BackdropCapture:{i}");
+            }, $"BackdropCapture:{i}"));
+
+        foreach (var old in _ring)
+        {
+            if (old != null) device.AddToDeferDisposeQueue(old);
         }
+
+        _ring = made;
+        _current = null;
+        _width = width;
+        _height = height;
     }
 
     public void Dispose()

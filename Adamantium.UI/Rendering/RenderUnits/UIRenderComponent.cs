@@ -585,14 +585,16 @@ public class TextRenderComponent : UIRenderComponent
                 capacity *= 2;
             }
 
+            // The new one first: the GPU out of memory, the old one stays and the next frame asks again.
+            var made = Adamantium.Graphics.Buffer.Vertex.New<FontItem>(GraphicsDevice, (uint)capacity,
+                Adamantium.Graphics.BufferMemoryUsage.UploadFromCpuToGpu);
             if (_glyphVtx != null)
             {
                 RemoveToDispose(_glyphVtx);
                 GraphicsDevice.AddToDeferDisposeQueue(_glyphVtx);
             }
 
-            _glyphVtx = ToDispose(Adamantium.Graphics.Buffer.Vertex.New<FontItem>(GraphicsDevice, (uint)capacity,
-                Adamantium.Graphics.BufferMemoryUsage.UploadFromCpuToGpu));
+            _glyphVtx = ToDispose(made);
             _glyphVtxDirty = true;
         }
 

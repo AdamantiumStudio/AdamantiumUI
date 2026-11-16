@@ -187,17 +187,15 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         {
             if (seg.GpuRing != null && (seg.GpuRing.Length != copies || seg.GpuCapacity < seg.Items.Length))
             {
+                // With its current copy: a new ring the GPU refuses must not leave that pointing at a buffer given back.
                 DeferRing(seg.GpuRing);
                 seg.GpuRing = null;
+                seg.Gpu = null;
             }
             if (seg.GpuRing == null && seg.MeshUploaded)
             {
-                seg.GpuRing = new Buffer[copies];
-                for (var i = 0; i < copies; i++)
-                {
-                    seg.GpuRing[i] = Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
-                        BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-                }
+                seg.GpuRing = GpuRing.Make<Buffer>(copies, _ => Buffer.New<GeometryInstance>(_device,
+                    (uint)seg.Items.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
                 seg.GpuCapacity = seg.Items.Length;
                 seg.Recreated = true;
             }
@@ -213,15 +211,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.GradGpuRing);
                 seg.GradGpuRing = null;
+                seg.GradGpu = null;
             }
             if (seg.GradGpuRing == null && seg.MeshUploaded && seg.GradCount > 0)
             {
-                seg.GradGpuRing = new Buffer[copies];
-                for (var i = 0; i < copies; i++)
-                {
-                    seg.GradGpuRing[i] = Buffer.New<GradientGeometryInstance>(_device, (uint)seg.GradItems.Length,
-                        BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-                }
+                seg.GradGpuRing = GpuRing.Make<Buffer>(copies, _ => Buffer.New<GradientGeometryInstance>(_device,
+                    (uint)seg.GradItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
                 seg.GradGpuCapacity = seg.GradItems.Length;
                 seg.GradRecreated = true;
             }
@@ -233,15 +228,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.PatGpuRing);
                 seg.PatGpuRing = null;
+                seg.PatGpu = null;
             }
             if (seg.PatGpuRing == null && seg.MeshUploaded && seg.PatCount > 0)
             {
-                seg.PatGpuRing = new Buffer[copies];
-                for (var i = 0; i < copies; i++)
-                {
-                    seg.PatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.PatItems.Length,
-                        BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-                }
+                seg.PatGpuRing = GpuRing.Make<Buffer>(copies, _ => Buffer.New<PatternGeometryInstance>(_device,
+                    (uint)seg.PatItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
                 seg.PatGpuCapacity = seg.PatItems.Length;
                 seg.PatRecreated = true;
             }
@@ -253,15 +245,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.TexGpuRing);
                 seg.TexGpuRing = null;
+                seg.TexGpu = null;
             }
             if (seg.TexGpuRing == null && seg.MeshUploaded && seg.TexCount > 0)
             {
-                seg.TexGpuRing = new Buffer[copies];
-                for (var i = 0; i < copies; i++)
-                {
-                    seg.TexGpuRing[i] = Buffer.New<TextureGeometryInstance>(_device, (uint)seg.TexItems.Length,
-                        BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-                }
+                seg.TexGpuRing = GpuRing.Make<Buffer>(copies, _ => Buffer.New<TextureGeometryInstance>(_device,
+                    (uint)seg.TexItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
                 seg.TexGpuCapacity = seg.TexItems.Length;
                 seg.TexRecreated = true;
             }
@@ -273,15 +262,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.MatGpuRing);
                 seg.MatGpuRing = null;
+                seg.MatGpu = null;
             }
             if (seg.MatGpuRing == null && seg.MeshUploaded && seg.MatCount > 0)
             {
-                seg.MatGpuRing = new Buffer[copies];
-                for (var i = 0; i < copies; i++)
-                {
-                    seg.MatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.MatItems.Length,
-                        BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-                }
+                seg.MatGpuRing = GpuRing.Make<Buffer>(copies, _ => Buffer.New<PatternGeometryInstance>(_device,
+                    (uint)seg.MatItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
                 seg.MatGpuCapacity = seg.MatItems.Length;
                 seg.MatRecreated = true;
             }
@@ -529,13 +515,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             // First add for this key (its mesh only just uploaded): build the WHOLE ring, not one buffer, or this key
             // would spend its life writing a single copy under the frames drawing it.
             var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+            var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
+                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
             if (seg.GpuRing != null) DeferRing(seg.GpuRing);
-            seg.GpuRing = new Buffer[copies];
-            for (var i = 0; i < copies; i++)
-            {
-                seg.GpuRing[i] = Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-            }
+            seg.GpuRing = made;
             seg.Gpu = seg.GpuRing[_copy % copies];
             seg.GpuCapacity = seg.Items.Length;
             seg.Recreated = true;
@@ -579,13 +562,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         if (seg.GradGpu == null)
         {
             var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+            var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<GradientGeometryInstance>(_device,
+                (uint)seg.GradItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
             if (seg.GradGpuRing != null) DeferRing(seg.GradGpuRing);
-            seg.GradGpuRing = new Buffer[copies];
-            for (var i = 0; i < copies; i++)
-            {
-                seg.GradGpuRing[i] = Buffer.New<GradientGeometryInstance>(_device, (uint)seg.GradItems.Length,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-            }
+            seg.GradGpuRing = made;
             seg.GradGpu = seg.GradGpuRing[_copy % copies];
             seg.GradGpuCapacity = seg.GradItems.Length;
             seg.GradRecreated = true;
@@ -655,13 +635,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         if (seg.TexGpu == null)
         {
             var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+            var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<TextureGeometryInstance>(_device,
+                (uint)seg.TexItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
             if (seg.TexGpuRing != null) DeferRing(seg.TexGpuRing);
-            seg.TexGpuRing = new Buffer[copies];
-            for (var i = 0; i < copies; i++)
-            {
-                seg.TexGpuRing[i] = Buffer.New<TextureGeometryInstance>(_device, (uint)seg.TexItems.Length,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-            }
+            seg.TexGpuRing = made;
             seg.TexGpu = seg.TexGpuRing[_copy % copies];
             seg.TexGpuCapacity = seg.TexItems.Length;
             seg.TexRecreated = true;
@@ -728,13 +705,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         if (seg.PatGpu == null)
         {
             var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+            var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<PatternGeometryInstance>(_device,
+                (uint)seg.PatItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
             if (seg.PatGpuRing != null) DeferRing(seg.PatGpuRing);
-            seg.PatGpuRing = new Buffer[copies];
-            for (var i = 0; i < copies; i++)
-            {
-                seg.PatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.PatItems.Length,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-            }
+            seg.PatGpuRing = made;
             seg.PatGpu = seg.PatGpuRing[_copy % copies];
             seg.PatGpuCapacity = seg.PatItems.Length;
             seg.PatRecreated = true;
@@ -811,13 +785,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         if (seg.MatGpu == null)
         {
             var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+            var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<PatternGeometryInstance>(_device,
+                (uint)seg.MatItems.Length, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
             if (seg.MatGpuRing != null) DeferRing(seg.MatGpuRing);
-            seg.MatGpuRing = new Buffer[copies];
-            for (var i = 0; i < copies; i++)
-            {
-                seg.MatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.MatItems.Length,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-            }
+            seg.MatGpuRing = made;
             seg.MatGpu = seg.MatGpuRing[_copy % copies];
             seg.MatGpuCapacity = seg.MatItems.Length;
             seg.MatRecreated = true;
@@ -1576,23 +1547,45 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         var indices = mesh.Indices;
         var indexed = indices is { Length: > 0 };
 
-        seg ??= new KeySegment();
-        seg.VtxBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer, "shared mesh vertices");
-        seg.VertexCount = (uint)vertices.Length;
+        // All three uploaded before any is kept: the GPU out of memory on the second, the first is let go of at once, not
+        // left on a segment nobody holds - every retry would lose another.
+        Buffer vertexBuffer = null, indexBuffer = null, fringeBuffer = null;
+        try
+        {
+            vertexBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer, "shared mesh vertices");
+            if (indexed)
+            {
+                indexBuffer = Upload(indices, BufferUsageFlags.IndexBuffer, "shared mesh indices");
+            }
 
+            // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
+            if (mesh.Ring is { Length: > 0 } fringe)
+            {
+                fringeBuffer = Upload(fringe, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                    "shared mesh fringe");
+            }
+        }
+        catch
+        {
+            vertexBuffer?.Dispose();
+            indexBuffer?.Dispose();
+            throw;
+        }
+
+        seg ??= new KeySegment();
+        seg.VtxBuffer = vertexBuffer;
+        seg.VertexCount = (uint)vertices.Length;
         seg.Indexed = indexed;
         if (indexed)
         {
-            seg.IdxBuffer = Upload(indices, BufferUsageFlags.IndexBuffer, "shared mesh indices");
+            seg.IdxBuffer = indexBuffer;
             seg.IndexCount = (uint)indices.Length;
         }
 
-        // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
-        if (mesh.Ring is { Length: > 0 } ring)
+        if (fringeBuffer != null)
         {
-            seg.RingBuffer = Upload(ring, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-                "shared mesh fringe");
-            seg.RingVertexCount = (uint)ring.Length * 6;
+            seg.RingBuffer = fringeBuffer;
+            seg.RingVertexCount = (uint)mesh.Ring.Length * 6;
         }
 
         seg.Topology = mesh.Topology;
@@ -1608,9 +1601,17 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     private Buffer Upload<T>(T[] data, BufferUsageFlags usage, string name) where T : unmanaged
     {
         var buffer = Buffer.New<T>(_device, (uint)data.Length, usage, Mem);
-        buffer.Name = name;
-        buffer.SetData(data, 0, (uint)data.Length);
-        return buffer;
+        try
+        {
+            buffer.Name = name;
+            buffer.SetData(data, 0, (uint)data.Length);
+            return buffer;
+        }
+        catch
+        {
+            buffer.Dispose();
+            throw;
+        }
     }
 
     // ---- Retained ARENA surface (see InstancedKeyArena) -------------------------------------------------------------
@@ -1812,13 +1813,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         if (seg.Gpu != null || !seg.MeshUploaded) return;
 
         var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
+        var made = GpuRing.Make<Buffer>(copies, _ => Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem));
         if (seg.GpuRing != null) DeferRing(seg.GpuRing);
-        seg.GpuRing = new Buffer[copies];
-        for (var i = 0; i < copies; i++)
-        {
-            seg.GpuRing[i] = Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
-                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
-        }
+        seg.GpuRing = made;
 
         seg.Gpu = seg.GpuRing[_copy % copies];
         seg.GpuCapacity = seg.Items.Length;

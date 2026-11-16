@@ -891,6 +891,9 @@ public partial class RenderCache
         _deferredForRoom = false;
         if (_recording)
         {
+            // Not a complete frame until this walk ends: one that throws halfway - the GPU out of memory - leaves nothing
+            // the next still frame could replay.
+            _opsRecorded = false;
             _ops.Clear();
             _layers.Clear();
             _opsHoldCommandGroups = false;
