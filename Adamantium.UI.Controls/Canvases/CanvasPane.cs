@@ -77,6 +77,9 @@ public class CanvasPane : ContentControl
     public static readonly AdamantiumProperty CanDragProperty = AdamantiumProperty.Register(nameof(CanDrag),
         typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(true));
 
+    public static readonly AdamantiumProperty ShowsGripProperty = AdamantiumProperty.Register(nameof(ShowsGrip),
+        typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(false));
+
     /// <summary>Whether this pane is wanted at all; separate from <see cref="IsNeeded"/> so neither answer erases the
     /// other.</summary>
     public static readonly AdamantiumProperty IsWantedProperty = AdamantiumProperty.Register(nameof(IsWanted),
@@ -203,6 +206,16 @@ public class CanvasPane : ContentControl
     {
         get => GetValue<Boolean>(CanDragProperty);
         set => SetValue(CanDragProperty, value);
+    }
+
+    /// <summary>Whether a <see cref="CanvasPaneKind.Bar"/> shows a grip at its start, beside its content, that carries and
+    /// folds it as other panes' grips do; off by default, a bar being moved by its own background. A wide bar - a toolbar
+    /// of many buttons - is easier to take by a grip than by the gaps between them. A bar shows no snap: docked to a side,
+    /// it would take its whole length from the plane. Other kinds always show their handles.</summary>
+    public Boolean ShowsGrip
+    {
+        get => GetValue<Boolean>(ShowsGripProperty);
+        set => SetValue(ShowsGripProperty, value);
     }
 
     public Boolean IsWanted

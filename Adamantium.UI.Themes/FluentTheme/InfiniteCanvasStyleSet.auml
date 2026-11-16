@@ -361,6 +361,30 @@
                             <Setter TargetName="PART_Plate" Property="Padding" Value="4"/>
                         </PropertyTrigger>
 
+                        <!-- ...unless it asks for its grip: then the handles stand at its start, beside the content. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_Handles" Property="DockPanel.Dock" Value="Left"/>
+                            <Setter TargetName="PART_Handles" Property="VerticalAlignment" Value="Center"/>
+                            <Setter TargetName="PART_Handles" Property="MarginBottom" Value="0"/>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="6"/>
+                            <Setter TargetName="PART_Snap" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
+
+                        <!-- Folded, the grip is all there is: no gap after it. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                                <Condition Property="IsOpen" Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="0"/>
+                        </MultiTrigger>
+
                         <!-- Only a RAIL offers the turn button: it is the one kind whose contents have a direction of
                              their own to argue about. Its plate is a narrow one: a pane catches the mouse across its
                              whole box, so a wide margin is canvas that cannot be drawn on. -->

@@ -120,6 +120,30 @@ public class CanvasViewportTests
             "the corner's pane stood over the bar along the top");
     }
 
+    // A bar has no handles - it is moved by its background - unless it asks for its grip, as a wide toolbar does.
+    [Test]
+    public void ABarAskingForItsGrip_ShowsTheHandles_AndOneThatDoesNot_HidesThem()
+    {
+        UseFluent();
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+        canvas.ApplyCurrentTheme();
+        var window = Lay(canvas);
+        var bar = canvas.GetTemplateChild("PART_ViewBar") as CanvasPane;
+        Assert.That(bar, Is.Not.Null, "the chrome carries no view bar");
+        var handles = bar.GetTemplateChild("PART_Handles") as IUIComponent;
+        Assert.That(handles, Is.Not.Null, "the pane's template has no handles");
+        var hiddenBefore = handles.Visibility;
+
+        bar.ShowsGrip = true;
+        Relay(window, canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hiddenBefore, Is.EqualTo(Visibility.Collapsed), "a bar shows handles it did not ask for");
+            Assert.That(handles.Visibility, Is.EqualTo(Visibility.Visible), "the bar asking for its grip has no handles");
+        });
+    }
+
     private static Window Lay(InfiniteCanvas canvas)
     {
         var window = new Window { Width = WindowWidth, Height = WindowHeight, Content = canvas };

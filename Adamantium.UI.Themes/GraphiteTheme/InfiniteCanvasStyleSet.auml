@@ -305,6 +305,28 @@
                             <Setter TargetName="PART_Plate" Property="Padding" Value="3"/>
                         </PropertyTrigger>
 
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_Handles" Property="DockPanel.Dock" Value="Left"/>
+                            <Setter TargetName="PART_Handles" Property="VerticalAlignment" Value="Center"/>
+                            <Setter TargetName="PART_Handles" Property="MarginBottom" Value="0"/>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="5"/>
+                            <Setter TargetName="PART_Snap" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                                <Condition Property="IsOpen" Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="0"/>
+                        </MultiTrigger>
+
                         <!-- A narrow plate around a rail, and handles that run the way the tools do - see Fluent's set. -->
                         <PropertyTrigger Property="Kind" Value="Rail">
                             <Setter TargetName="PART_Plate" Property="Padding" Value="3"/>
