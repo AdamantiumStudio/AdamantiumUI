@@ -61,7 +61,7 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
     {
         var children = new List<AutomationPeer>(base.ChildrenCore());
         var shown = children.ToHashSet();
-        var offScreen = _canvas.ItemsHere().OfType<ElementItem>()
+        var offScreen = _canvas.ShownItems().OfType<ElementItem>()
             .Where(item => (item.Painted as UIComponent)?.FindAutomationPeer() is not { } peer || !shown.Contains(peer))
             .ToHashSet();
         foreach (var gone in _standIns.Keys.Where(item => !offScreen.Contains(item)).ToList())

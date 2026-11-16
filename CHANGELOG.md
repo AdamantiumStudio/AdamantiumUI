@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.IsShown(item)`: whether an item of the scene is shown on the plane now - every one by default. A
+  derived canvas hides items by overriding it and calling `RefreshShown()` when what it hides changes: a hidden item
+  stays in the scene, in its place in the paint order and in the history's steps, but is not drawn, not reached by a
+  press, a band, the rubber or a tool (`ItemsHere(rect)` leaves it out), and is let go of by the selection - what a view
+  shows of a document, not an edit of it. `ItemsHere()`, the whole document, still holds every item.
 - `PART_Viewport`: the part of an `InfiniteCanvas` template the plane is looked at through
   (`InfiniteCanvas.ViewportElement`, `ViewportSize`, `ViewportOrigin`). The pointer, the camera, the usable bounds,
   fitting and centering, the ground and the chrome are all measured in it, so a template can stand other things beside

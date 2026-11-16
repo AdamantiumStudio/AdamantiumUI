@@ -109,7 +109,7 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
             (size.Width - _world.Width * _scale) / 2,
             (size.Height - _world.Height * _scale) / 2);
 
-        foreach (var item in canvas.ItemsHere())
+        foreach (var item in canvas.ShownItems())
         {
             var box = item.Bounds;
             if (box.Width <= 0 && box.Height <= 0) continue;
@@ -135,7 +135,7 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
         var seen = canvas.VisibleWorld;
         double left = seen.X, top = seen.Y, right = seen.X + seen.Width, bottom = seen.Y + seen.Height;
 
-        foreach (var item in canvas.ItemsHere())
+        foreach (var item in canvas.ShownItems())
         {
             var box = item.Bounds;
 

@@ -373,7 +373,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         var any = false;
         double left = 0, top = 0, right = 0, bottom = 0;
 
-        foreach (var item in ItemsHere())
+        foreach (var item in ShownItems())
         {
             var box = item.Bounds;
             if (box.Width <= 0 && box.Height <= 0 && !any) continue;
@@ -589,9 +589,45 @@ public partial class InfiniteCanvas : ICanvasCamera
     /// Saving a document is the case: a node left three screens away is still in it.</summary>
     public IEnumerable<ICanvasItem> ItemsHere() => Scene?.Items ?? (IEnumerable<ICanvasItem>)Array.Empty<ICanvasItem>();
 
-    /// <summary>What is on the plane inside a world rectangle.</summary>
-    public IEnumerable<ICanvasItem> ItemsHere(Rect world) =>
-        Scene is { } scene ? scene.ItemsIn(world) : Array.Empty<ICanvasItem>();
+    /// <summary>What is shown on the plane inside a world rectangle: what is drawn there, and what a press, a band, a
+    /// rubber or a tool can reach - an item <see cref="IsShown"/> hides is left out.</summary>
+    public IEnumerable<ICanvasItem> ItemsHere(Rect world)
+    {
+        if (Scene is not { } scene)
+        {
+            return Array.Empty<ICanvasItem>();
+        }
+
+        _isShown ??= IsShown;
+        return scene.ItemsIn(world).Where(_isShown);
+    }
+
+    /// <summary>Everything shown on the plane, wherever it is: <see cref="ItemsHere()"/> less what <see cref="IsShown"/>
+    /// hides - what fitting the view to the drawing, a frame catching what lies in it and the map count.</summary>
+    public IEnumerable<ICanvasItem> ShownItems()
+    {
+        _isShown ??= IsShown;
+        return ItemsHere().Where(_isShown);
+    }
+
+    /// <summary>Whether an item of the scene is shown on the plane now; every item by default. An item hidden stays in
+    /// the scene - its place in the paint order, the history's steps that name it - but is not drawn, not reached by a
+    /// press, a band or a tool, and is neither selected nor kept selected: what a view shows of a document, not an edit
+    /// of it. Asked of the scene's own items; a group's children go with their group. A derived canvas that hides some
+    /// calls <see cref="RefreshShown"/> whenever what it hides changes.</summary>
+    protected virtual bool IsShown(ICanvasItem item) => true;
+
+    /// <summary>What <see cref="IsShown"/> says changed: the items it hides now are let go of by the selection, the plane
+    /// is drawn again, <see cref="PlaneChanged"/> is raised and the commands that answer from what is shown ask again.
+    /// </summary>
+    protected void RefreshShown()
+    {
+        Forget();
+        SyncElements();
+        Repaint();
+        PlaneChanged?.Invoke(this, EventArgs.Empty);
+        Refresh();
+    }
 
     /// <summary>Draws what the TOOL is making but has not put on the plane yet - a stroke still under the pen, a shape
     /// being dragged out, the selection band. On top of everything, which is where it is going.</summary>

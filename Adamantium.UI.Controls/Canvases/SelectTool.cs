@@ -232,7 +232,7 @@ public class SelectTool : ICanvasTool
         // frame catching up with it.
         foreach (var item in canvas.Selection)
         {
-            if (item is CanvasFrameItem frame) frame.Catch(canvas.ItemsHere());
+            if (item is CanvasFrameItem frame) frame.Catch(canvas.ShownItems());
         }
     }
 
