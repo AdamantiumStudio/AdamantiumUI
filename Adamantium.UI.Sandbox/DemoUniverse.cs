@@ -45,7 +45,7 @@ namespace Adamantium.UI.Sandbox
         {
             var renderingService = CreateRenderService<RenderingService>(output);
             renderingService.AttachProcessor(new ForwardPlusRenderingProcessor());
-            renderingService.AttachProcessor(new EditorOverlayProcessor(_tools));
+            renderingService.AttachProcessor(new ToolsOverlayProcessor(_tools));
         }
 
         protected override void Initialize()
