@@ -219,7 +219,8 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
                 MinWidth = 0,
                 MinHeight = 0,
                 Padding = new Thickness(iconic ? 0 : 8, 0, iconic ? 0 : 8, 0),
-                ToolTip = Tip(tool)
+                ToolTip = Tip(tool),
+                Focusable = false
             };
 
             // On the TRAILING sides only. Two neighbors still make exactly one gap between them, whichever way the
@@ -267,7 +268,8 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             MinWidth = 0,
             MinHeight = 0,
             Padding = new Thickness(0),
-            Margin = new Thickness(0, 0, gap, gap)
+            Margin = new Thickness(0, 0, gap, gap),
+            Focusable = false
         };
 
         var tip = new Text.TextBlock();
@@ -361,7 +363,8 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
                 HorizontalContentAlignment = HorizontalAlignment.Left,
                 Padding = new Thickness(6, 0, 10, 0),
                 Margin = new Thickness(0, 0, 0, 2),
-                ToolTip = Tip(tool)
+                ToolTip = Tip(tool),
+                Focusable = false
             };
 
             AutomationProperties.SetAutomationId(choice, NameOf(tool));

@@ -382,6 +382,9 @@ All packages share one version.
 
 ### Changed
 
+- The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
+  (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
+  no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.
 - A canvas's panes stand on one solid plate each, lifted by a shadow as a map's plates are - their handles, content
   and a rail's tools, the chosen one too, all on it - so they are seen over whatever is drawn under them, a white
   page included. A lone grip on the plane stands on a plate of its own (`Button.CanvasChrome`).
