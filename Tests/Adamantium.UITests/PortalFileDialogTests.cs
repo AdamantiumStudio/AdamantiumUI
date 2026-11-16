@@ -51,6 +51,23 @@ public class PortalFileDialogTests
         Assert.That(options["directory"].Value, Is.EqualTo(true));
     }
 
+    [Test]
+    public void ASaveDialog_OpensInTheFolderAsked_WhenItIsThere()
+    {
+        var folder = System.IO.Path.GetTempPath().TrimEnd(System.IO.Path.DirectorySeparatorChar);
+
+        var options = PortalFileDialog.SaveOptions(new SaveFileRequest { FileName = "Arena (game).ascene", Folder = folder });
+        var missing = PortalFileDialog.SaveOptions(new SaveFileRequest { Folder = System.IO.Path.Combine(folder, "No such folder") });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(options["current_name"].Value, Is.EqualTo("Arena (game).ascene"));
+            Assert.That(options["current_folder"].Signature, Is.EqualTo("ay"));
+            Assert.That(options["current_folder"].Value, Is.EqualTo(System.Text.Encoding.UTF8.GetBytes(folder + "\0")));
+            Assert.That(missing.ContainsKey("current_folder"), Is.False);
+        });
+    }
+
     private static DBusMessage Response(uint code, string uri) =>
         DBusMessage.MethodCall("x.y", "/x", "x.y", "Response", "ua{sv}", writer =>
         {
