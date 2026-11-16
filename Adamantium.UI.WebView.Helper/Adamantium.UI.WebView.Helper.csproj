@@ -6,7 +6,7 @@
          WinExe, so Windows opens no console for each process Chromium starts. -->
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Platforms>AnyCPU</Platforms>
         <LangVersion>latest</LangVersion>
@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="QuantumBinding.Utils" Version="3.0.2" />
+        <PackageReference Include="QuantumBinding.Utils" Version="3.1.0" />
     </ItemGroup>
 
 </Project>

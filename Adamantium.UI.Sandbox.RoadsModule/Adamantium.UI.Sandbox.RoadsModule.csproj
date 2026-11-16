@@ -3,7 +3,7 @@
     <!-- A module of the sandbox's editor shell, built apart from it: the shell does not reference it - it is installed from
          its file, through the catalog's "Install from file". It brings its own view model and its own tabs. -->
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <Platforms>AnyCPU</Platforms>
         <Configurations>Debug;Release</Configurations>
         <LangVersion>latest</LangVersion>

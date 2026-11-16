@@ -287,7 +287,7 @@ scene comes from the engine the interface is drawn with, and its panel is an ele
 
 Requirements:
 
-- **.NET 10 SDK.**
+- **.NET 11 SDK.**
 - **Windows 10 or 11, x64.**
 - **A GPU and driver with Vulkan 1.4** (the full list is in the
   [engine's requirements](https://github.com/AdamantiumStudio/AdamantiumEngine#requirements)). Neither of the newer

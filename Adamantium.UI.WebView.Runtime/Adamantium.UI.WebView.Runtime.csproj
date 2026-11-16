@@ -5,7 +5,7 @@
          staged that platform's CEF. CEF goes to the package's cef folder: NuGet would copy runtimes/<rid>/native into
          the application a second time. -->
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <PackageId>Adamantium.UI.WebView.Runtime.$(CefRid)</PackageId>
         <IsPackable Condition="'$(CefRid)' != ''">true</IsPackable>
         <IncludeBuildOutput>false</IncludeBuildOutput>

@@ -325,11 +325,19 @@ public class CanvasGraphRunnerTests
 
         var told = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        // Told by the cancellation reaching the work, not by a registration on the token: the wait can unwind inside
+        // Cancel itself, and a registration it disposes on the way out is never called.
         Work(slow).WaitsOnce = async token =>
         {
-            using var _ = token.Register(() => told.TrySetResult(true));
-
-            await Task.Delay(Timeout.Infinite, token);
+            try
+            {
+                await Task.Delay(Timeout.Infinite, token);
+            }
+            catch (System.OperationCanceledException)
+            {
+                told.TrySetResult(true);
+                throw;
+            }
         };
 
         var pass = runner.Settle();

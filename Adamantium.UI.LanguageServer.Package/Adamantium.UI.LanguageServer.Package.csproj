@@ -7,7 +7,7 @@
          would meet the application's. Framework-dependent, as the Rider plugin ships it: the server reads the runtime's
          reference assemblies from the runtime's folder, which a single-file build would hide. -->
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <IsPackable>true</IsPackable>
         <PackageId>Adamantium.UI.LanguageServer</PackageId>
         <Description>The AUML language server, copied to AumlServer beside the application that references it: completion, hover, go to definition, problems, semantic tokens and quick fixes for Adamantium UI markup, from the types the markup's project builds. Speaks the Language Server Protocol over stdio.</Description>

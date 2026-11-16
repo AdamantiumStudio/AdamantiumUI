@@ -75,7 +75,7 @@ tasks.test {
 }
 
 // --- Bundle the AUML language server inside the plugin -----------------------------------------
-// Framework-dependent publish (needs .NET 10 on the user's machine; keeps the server's type
+// Framework-dependent publish (needs .NET 11 on the user's machine; keeps the server's type
 // resolution working — a self-contained single-file build hides the runtime assemblies it needs).
 
 val serverCsproj = file("../../Adamantium.UI.LanguageServer/Adamantium.UI.LanguageServer.csproj")
@@ -128,7 +128,7 @@ tasks.processResources {
 // packaged host is. ADAMANTIUM_DESIGNER_HOST is for projects on the UI's own sources, in a real Rider
 // as well as in the runIde sandbox.
 val designerHostExe = listOf("Debug", "Release")
-    .map { file("../../artifacts/designer-host/$it/net10.0/Adamantium.UI.Designer.Host.exe") }
+    .map { file("../../artifacts/designer-host/$it/net11.0/Adamantium.UI.Designer.Host.exe") }
     .firstOrNull { it.exists() }
 
 tasks.named<JavaExec>("runIde") {

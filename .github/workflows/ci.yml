@@ -23,6 +23,8 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    # Some 8 minutes when well; a hung run is stopped long before GitHub's six hours.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -122,7 +124,8 @@ jobs:
           pids=(); logs=()
           run() {
             local log="$RUNNER_TEMP/$1.log"; shift
-            dotnet test "$@" -c Release --no-build > "$log" 2>&1 &
+            # A test that hangs is stopped after 10 minutes; the blame sequence, uploaded below, says which it was.
+            dotnet test "$@" -c Release --no-build --blame-hang-timeout 10m --blame-hang-dump-type none > "$log" 2>&1 &
             pids+=($!); logs+=("$log")
           }
           xaml=Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj
@@ -142,3 +145,11 @@ jobs:
             cat "${logs[$i]}"
           done
           exit $status
+
+      - name: Blame sequences of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: blame-${{ matrix.name }}
+          path: Tests/*/TestResults/**/Sequence_*.xml
+          if-no-files-found: ignore

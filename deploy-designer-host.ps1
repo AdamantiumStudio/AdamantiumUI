@@ -24,7 +24,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root    = $PSScriptRoot
 $proj    = Join-Path $root 'Adamantium.UI.Designer.Host\Adamantium.UI.Designer.Host.csproj'
-$outDir  = Join-Path $root "artifacts\designer-host\$Configuration\net10.0"
+$outDir  = Join-Path $root "artifacts\designer-host\$Configuration\net11.0"
 $exe     = Join-Path $outDir 'Adamantium.UI.Designer.Host.exe'
 
 Write-Host "Deploying designer host ($Configuration) -> $outDir" -ForegroundColor Cyan
@@ -35,7 +35,7 @@ Start-Sleep -Milliseconds 500
 
 # 2) Build the host + ALL deps into the isolated folder. Key bits:
 #      -p:OutputPath=<isolated>            -> deps build here, NOT into artifacts\bin (no lock).
-#      -p:AppendTargetFrameworkToOutputPath=false -> exe + deps land in ONE folder (no extra \net10.0).
+#      -p:AppendTargetFrameworkToOutputPath=false -> exe + deps land in ONE folder (no extra \net11.0).
 & dotnet build $proj -c $Configuration -nodeReuse:false `
     -p:OutputPath="$outDir\" -p:AppendTargetFrameworkToOutputPath=false
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed (exit $LASTEXITCODE)."; exit 1 }
