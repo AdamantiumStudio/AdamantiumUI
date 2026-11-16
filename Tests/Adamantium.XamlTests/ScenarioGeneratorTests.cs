@@ -195,8 +195,8 @@ public class ScenarioGeneratorTests
     [Platform(Exclude = "Win", Reason = "A virtual monitor is Linux's; Windows hands the line over whole.")]
     public void ArgumentsForAVirtualMonitor_AreSplitAsAProcessSplitsThem(string line)
     {
-        var parse = typeof(System.Diagnostics.Process).GetMethod("ParseArgumentsIntoList",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var parse = typeof(System.Diagnostics.Process).Assembly.GetType("System.Diagnostics.ProcessUtils", true)
+            .GetMethod("ParseArgumentsIntoList", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         var expected = new List<string>();
         parse.Invoke(null, [line, expected]);
 
