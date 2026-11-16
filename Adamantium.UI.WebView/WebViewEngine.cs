@@ -722,6 +722,8 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         }
 
         initialized = true;
+        // Always: Chromium keeps the proxy in the profile, and an earlier run's would otherwise outlive it.
+        ApplyProxy();
     }
 
     private List<KeyValuePair<string, string>> Switches()
@@ -740,6 +742,15 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         {
             switches.Add(new("no-zygote", null));
         }
+
+        // A site or a proxy asking to sign in is asked of the view: Chrome's own prompt is a window of its own, which a
+        // page drawn off screen has none to hang on - it brings the process down.
+        switches.Add(new("disable-chrome-login-prompt", null));
+
+        // An http address goes where it says, as in other embedded web views: Chrome's upgrade to https gives the attempt
+        // three seconds and then falls back to http - and a sign-in asked of the attempt waits for the user longer than
+        // that, so the user's answer went to a request already given up and the page loaded on without it.
+        switches.Add(new(WebViewApp.DisableFeaturesSwitch, "HttpsUpgrades"));
 
         if (ProprietaryCodecs.IsInstalled(CefLibrary.ApplicationFolder))
         {

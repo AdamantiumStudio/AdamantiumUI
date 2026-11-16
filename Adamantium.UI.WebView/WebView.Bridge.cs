@@ -73,6 +73,7 @@ public partial class WebView
             return;
         }
 
+        SignInsLoaded();
         // A search still open searches the document the main frame loaded - not on a frame's load inside it.
         if (IsFindOpen)
         {

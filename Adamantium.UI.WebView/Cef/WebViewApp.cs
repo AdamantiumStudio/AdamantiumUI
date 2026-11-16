@@ -5,7 +5,8 @@ namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>The application CEF is initialized with: it hands CEF the browser process's handler and adds the switches
 /// the browser process starts with - which the processes it starts take from it. Features named in
-/// <see cref="EnableFeaturesSwitch"/> join the ones the application's own command line enables.</summary>
+/// <see cref="EnableFeaturesSwitch"/> or <see cref="DisableFeaturesSwitch"/> join the ones the application's own command
+/// line names.</summary>
 internal sealed unsafe class WebViewApp : CefObject
 {
     private readonly WebViewBrowserProcessHandler browserProcess;
@@ -13,6 +14,9 @@ internal sealed unsafe class WebViewApp : CefObject
 
     /// <summary>Chromium's switch with the comma-separated features to enable.</summary>
     public const string EnableFeaturesSwitch = "enable-features";
+
+    /// <summary>Chromium's switch with the comma-separated features to disable.</summary>
+    public const string DisableFeaturesSwitch = "disable-features";
 
     public WebViewApp(WebViewBrowserProcessHandler browserProcess, IReadOnlyList<KeyValuePair<string, string>> switches)
         : base(sizeof(CefApp))
@@ -69,21 +73,23 @@ internal sealed unsafe class WebViewApp : CefObject
     }
 
     /// <summary>Adds <paramref name="switches"/> to <paramref name="commandLine"/>, the features of
-    /// <see cref="EnableFeaturesSwitch"/> after the ones it enables already.</summary>
+    /// <see cref="EnableFeaturesSwitch"/> and <see cref="DisableFeaturesSwitch"/> after the ones it names already.
+    /// </summary>
     public static void AppendSwitches(CefCommandLine* commandLine, IReadOnlyList<KeyValuePair<string, string>> switches)
     {
         foreach (var (name, value) in switches)
         {
-            AppendSwitch(commandLine, name, name == EnableFeaturesSwitch ? JoinFeatures(commandLine, value) : value);
+            AppendSwitch(commandLine, name,
+                name is EnableFeaturesSwitch or DisableFeaturesSwitch ? JoinFeatures(commandLine, name, value) : value);
         }
     }
 
-    private static string JoinFeatures(CefCommandLine* commandLine, string features)
+    private static string JoinFeatures(CefCommandLine* commandLine, string switchName, string features)
     {
         var name = new CefStringUtf16();
         try
         {
-            CefStrings.Set(&name, EnableFeaturesSwitch);
+            CefStrings.Set(&name, switchName);
             var enabled = commandLine->has_switch(commandLine, &name) != 0
                 ? CefStrings.ReadAndFree(commandLine->get_switch_value(commandLine, &name))
                 : string.Empty;
