@@ -1,3 +1,4 @@
+using System.Linq;
 using Adamantium.Core.Events;
 using Adamantium.Multiverse;
 using Adamantium.Multiverse.Input;
@@ -133,6 +134,55 @@ public class UniverseOutputSubscriptionTests
         });
     }
 
+    // The ribbon takes Alt for its key tips; the universe hears it all the same - Alt with a drag orbits its camera - but
+    // not a key someone else took that is no modifier.
+    [Test]
+    public void AModifierHandledOnTheWay_StillReachesTheUniverse_AnotherKeyDoesNot()
+    {
+        var panel = new RenderTargetPanel();
+        var output = Output(panel);
+
+        Press(panel, Key.LeftAlt, handled: true);
+        Press(panel, Key.W, handled: true);
+
+        Assert.That(output.Input.KeyboardInputs.Select(input => input.Key), Is.EqualTo(new[] { Keys.LeftAlt }));
+    }
+
+    // A key let go reaches the universe whoever handled it: one it saw go down would otherwise stay down there.
+    [Test]
+    public void AKeyLetGo_ReachesTheUniverse_ThoughHandled()
+    {
+        var panel = new RenderTargetPanel();
+        var output = Output(panel);
+
+        var args = new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.LeftAlt, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyUpEvent, Handled = true
+        };
+        panel.RaiseEvent(args);
+
+        Assert.That(output.Input.KeyboardInputs.Select(input => (input.Key, input.InputType)),
+            Is.EqualTo(new[] { (Keys.LeftAlt, InputType.Up) }));
+    }
+
+    // Alt went down over another control; the right button goes down over the view: Alt is held there as the press
+    // comes, so the drag orbits.
+    [Test]
+    public void APressWithAltHeld_HoldsAltInTheUniverse_WhoeverHadTheKey()
+    {
+        var panel = new RenderTargetPanel();
+        var output = Output(panel);
+
+        panel.RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Right,
+            InputModifiers.LeftAlt | InputModifiers.RightMouseButton, default)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent
+        });
+
+        Assert.That(output.Input.KeyboardInputs.Select(input => (input.Key, input.InputType)),
+            Is.EqualTo(new[] { (Keys.LeftAlt, InputType.Down) }));
+    }
+
     private static RenderTargetUniverseOutput Output(RenderTargetPanel panel)
     {
         var output = new RenderTargetUniverseOutput(new EventAggregator(), new OutputContext(panel));
@@ -140,9 +190,13 @@ public class UniverseOutputSubscriptionTests
         return output;
     }
 
-    private static KeyEventArgs Press(IObservableComponent target, Key key = Key.W, InputModifiers modifiers = InputModifiers.None)
+    private static KeyEventArgs Press(IObservableComponent target, Key key = Key.W, InputModifiers modifiers = InputModifiers.None,
+        bool handled = false)
     {
-        var args = new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0) { RoutedEvent = Keyboard.KeyDownEvent };
+        var args = new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent, Handled = handled
+        };
         target.RaiseEvent(args);
         return args;
     }

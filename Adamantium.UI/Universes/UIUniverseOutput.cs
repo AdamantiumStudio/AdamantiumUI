@@ -22,8 +22,6 @@ namespace Adamantium.UI.Universes
         private OutputCursor cursor;
         private IWindow scaleSource;
         private IInputComponent listenedInput;
-        private KeyEventHandler keyDownHandler;
-        private KeyEventHandler keyUpHandler;
         private readonly List<IUIComponent> watchedAncestors = [];
         private readonly object ancestorsLock = new();
         private bool watchingAncestors;
@@ -270,10 +268,8 @@ namespace Adamantium.UI.Universes
             listenedInput = InputComponent;
             // Handled ones too: a modifier key is state the universe has to know - Alt with a drag orbits a camera -
             // even when the ribbon has taken the key for its key tips.
-            keyDownHandler ??= WindowOnKeyDown;
-            keyUpHandler ??= WindowOnKeyUp;
-            listenedInput.AddHandler(Keyboard.KeyDownEvent, keyDownHandler, handledEventsToo: true);
-            listenedInput.AddHandler(Keyboard.KeyUpEvent, keyUpHandler, handledEventsToo: true);
+            listenedInput.AddHandler(Keyboard.KeyDownEvent, new KeyEventHandler(WindowOnKeyDown), handledEventsToo: true);
+            listenedInput.AddHandler(Keyboard.KeyUpEvent, new KeyEventHandler(WindowOnKeyUp), handledEventsToo: true);
             listenedInput.TextInput += WindowOnTextInput;
             listenedInput.PointerPressed += OnPointerPressed;
             listenedInput.PointerReleased += OnPointerReleased;
@@ -316,8 +312,8 @@ namespace Adamantium.UI.Universes
                 return;
             }
 
-            listenedInput.RemoveHandler(Keyboard.KeyDownEvent, keyDownHandler);
-            listenedInput.RemoveHandler(Keyboard.KeyUpEvent, keyUpHandler);
+            listenedInput.RemoveHandler(Keyboard.KeyDownEvent, new KeyEventHandler(WindowOnKeyDown));
+            listenedInput.RemoveHandler(Keyboard.KeyUpEvent, new KeyEventHandler(WindowOnKeyUp));
             listenedInput.TextInput -= WindowOnTextInput;
             listenedInput.PointerPressed -= OnPointerPressed;
             listenedInput.PointerReleased -= OnPointerReleased;
@@ -608,7 +604,29 @@ namespace Adamantium.UI.Universes
                 return;
             }
 
+            HoldModifiers(e.Modifiers);
             OnMouseInput(new MouseInput { InputType = InputType.Down, Button = button, ClickCount = e.ClickCount });
+        }
+
+        // The modifiers held as the button goes down reach the universe whoever had the keyboard when they went down -
+        // Alt pressed over the hierarchy, then the right button over the view, orbits. The press focuses the view, so
+        // their release comes to it.
+        private void HoldModifiers(InputModifiers modifiers)
+        {
+            HoldModifier(modifiers, InputModifiers.LeftAlt, Keys.LeftAlt);
+            HoldModifier(modifiers, InputModifiers.RightAlt, Keys.RightAlt);
+            HoldModifier(modifiers, InputModifiers.LeftControl, Keys.LeftControl);
+            HoldModifier(modifiers, InputModifiers.RightControl, Keys.RightControl);
+            HoldModifier(modifiers, InputModifiers.LeftShift, Keys.LeftShift);
+            HoldModifier(modifiers, InputModifiers.RightShift, Keys.RightShift);
+        }
+
+        private void HoldModifier(InputModifiers modifiers, InputModifiers modifier, Keys key)
+        {
+            if ((modifiers & modifier) != 0 && Input?.IsKeyDown(key) != true)
+            {
+                OnKeyInput(new KeyboardInput { Key = key, InputType = InputType.Down });
+            }
         }
 
         internal static bool TryTranslate(Key key, uint physicalKey, out Keys result)
@@ -645,7 +663,7 @@ namespace Adamantium.UI.Universes
 
         private void WindowOnKeyDown(object sender, KeyEventArgs e)
         {
-            if ((e.Handled && !IsModifier(e.Key)) || !IsUniverseInput(e) || !TryTranslate(e.Key, e.PhysicalKey, out var key))
+            if ((e.Handled && !e.Key.IsModifier()) || !IsUniverseInput(e) || !TryTranslate(e.Key, e.PhysicalKey, out var key))
             {
                 return;
             }
@@ -656,8 +674,5 @@ namespace Adamantium.UI.Universes
                 e.Handled = true;
             }
         }
-
-        private static bool IsModifier(Key key) => key is Key.Alt or Key.LeftAlt or Key.RightAlt or Key.LeftCtrl
-            or Key.RightCtrl or Key.Ctrl or Key.LeftShift or Key.RightShift or Key.Shift;
     }
 }
