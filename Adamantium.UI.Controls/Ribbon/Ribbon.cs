@@ -967,7 +967,7 @@ public class Ribbon : Selector
     private void OnKeyTipKeyUp(object sender, KeyEventArgs e)
     {
         if (e.Key == _heldKey) _heldKey = null;
-        if (e.Key is not (Key.Alt or Key.LeftAlt or Key.RightAlt)) return;
+        if (!e.Key.IsAlt()) return;
 
         _altDown = false;
         if (_altAlone) Toggle();
@@ -975,8 +975,14 @@ public class Ribbon : Selector
         e.Handled = true;
     }
 
-    // Reaching for the pointer means the keyboard route was abandoned - Office drops the badges on any press.
-    private void OnKeyTipPress(object sender, PointerPressedEventArgs e) => _keyTips?.End();
+    // Reaching for the pointer means the keyboard route was abandoned - Office drops the badges on any press. A press
+    // while Alt is held makes Alt half of a gesture - Alt and the right button orbit a 3D view's camera - so its release
+    // shows none either, as a press under Alt cancels the menu bar in Windows.
+    private void OnKeyTipPress(object sender, PointerPressedEventArgs e)
+    {
+        _altAlone = false;
+        _keyTips?.End();
+    }
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {
@@ -985,10 +991,12 @@ public class Ribbon : Selector
         _lastKeyRepeated = e.IsRepeated || e.Key == _heldKey;
         _heldKey = e.Key;
         // Alt toggles the mode on release, and only if nothing was pressed in between (Alt+F4 is a shortcut).
-        if (e.Key is Key.Alt or Key.LeftAlt or Key.RightAlt)
+        if (e.Key.IsAlt())
         {
             _altDown = true;
-            if (!e.IsRepeated) _altAlone = true;
+            // Not on a repeat, the first one included, which the platform flag misses: Alt held through a drag repeats,
+            // and the press that made it a gesture must not be forgotten.
+            if (!_lastKeyRepeated) _altAlone = true;
             e.Handled = true;
             return;
         }
@@ -1011,6 +1019,9 @@ public class Ribbon : Selector
         _lastKeyLetter = KeyChar(e.Key);
         if (_lastKeyLetter != null) e.Handled = true;
     }
+
+    /// <summary>Whether the key tips are up.</summary>
+    internal bool ShowsKeyTips => _keyTips is { IsActive: true };
 
     private void Toggle()
     {
