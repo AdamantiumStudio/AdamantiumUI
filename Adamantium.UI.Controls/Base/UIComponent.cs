@@ -313,10 +313,18 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         if (d is UIComponent component) VisualTreeNotifications.RaiseClipChanged(component);
     }
 
+    // Coerced by IsEnabledCore, as WPF's: what is set or bound states whether the element may be used, and the element
+    // itself - a button whose command cannot run - can only take that away, never overwrite the binding.
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
         typeof(Boolean), typeof(UIComponent),
-        new PropertyMetadata(true, (a, e) =>
-            AutomationEvents.RaisePropertyChanged((UIComponent)a, AutomationProperty.IsEnabled, e.OldValue, e.NewValue)));
+        new PropertyMetadata(true,
+            (a, e) => AutomationEvents.RaisePropertyChanged((UIComponent)a, AutomationProperty.IsEnabled, e.OldValue, e.NewValue),
+            (a, value) => value is true && a is UIComponent { IsEnabledCore: false } ? false : value));
+
+    /// <summary>Whether the element itself allows being used, beside what <see cref="IsEnabled"/> is set or bound to - a
+    /// command source says whether its command can run. A subclass whose answer changes calls
+    /// <c>CoerceValue(IsEnabledProperty)</c>.</summary>
+    protected virtual bool IsEnabledCore => true;
 
     public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
         typeof(Double), typeof(UIComponent),

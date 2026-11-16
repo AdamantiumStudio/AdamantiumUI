@@ -311,10 +311,16 @@ public class ColorPalette : Control
         HasRecentColors = count > 0 && recent is { Count: > 0 };
     }
 
+    // Whether the command can run; a palette with none can be used.
+    private bool _canExecute = true;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canExecute;
+
     private void UpdateCommandState()
     {
         var state = CommandManager.QueryFrom(Command, null, this, null);
-        SetCurrentValue(IsEnabledProperty, state.CanExecute);
+        _canExecute = state.CanExecute;
+        CoerceValue(IsEnabledProperty);
         if (ShowsCommandColor && Command is RoutedCommand)
         {
             SetCurrentValue(SelectedColorProperty, state.Value as Color?);

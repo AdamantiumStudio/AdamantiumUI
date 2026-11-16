@@ -320,10 +320,16 @@ public class DropDown : Selector
         _commandListener?.Detached();
     }
 
+    // Whether the command can run; a list with none can be used.
+    private bool _canExecute = true;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canExecute;
+
     private void UpdateCommandState()
     {
         var state = CommandManager.QueryFrom(Command, null, this, null);
-        SetCurrentValue(IsEnabledProperty, state.CanExecute);
+        _canExecute = state.CanExecute;
+        CoerceValue(IsEnabledProperty);
         if (Command is not RoutedCommand)
         {
             return;

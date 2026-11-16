@@ -1088,16 +1088,27 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// </summary>
     public void CoerceValue(AdamantiumProperty property)
     {
-        var slots = Slots(property);
-        if (slots == null) return;
-
-        object baseValue;
-        lock (slots)
+        var baseValue = AdamantiumProperty.UnsetValue;
+        if (Slots(property) is { } slots)
         {
-            baseValue = slots.BaseValue;
+            lock (slots)
+            {
+                baseValue = slots.BaseValue;
+            }
         }
 
-        if (baseValue == AdamantiumProperty.UnsetValue) return;   // nothing was ever asked for - nothing to re-map
+        // Nothing was ever asked for: the default is what the coercion re-maps, as WPF's does - a control that coerces
+        // its IsEnabled by its command's answer has to be grayed out though nobody ever set IsEnabled.
+        if (baseValue == AdamantiumProperty.UnsetValue)
+        {
+            var metadata = property.GetDefaultMetadata(GetType());
+            if (metadata.CoerceValueCallback != null)
+            {
+                RunSetValueSequence(property, metadata.DefaultValue, ValuePriority.Default, true);
+            }
+
+            return;
+        }
 
         // Through the normal write path with the SAME request at the SAME priority: the coercion runs again and, if the
         // result differs, the change is announced exactly as any other would be. Re-coercing to the same value ends
