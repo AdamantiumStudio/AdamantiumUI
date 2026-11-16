@@ -1452,7 +1452,18 @@ public partial class InfiniteCanvas
     {
         var overGrip = _selection.Count > 0 ? CanvasFrameGesture.CursorFor(HandleAt(screen)) : null;
 
-        Cursor = overGrip ?? OverSelection(screen) ?? Tool?.Cursor ?? Cursors.Arrow;
+        Cursor = overGrip ?? OverSelection(screen) ?? OverContent(screen) ?? Tool?.Cursor ?? Cursors.Arrow;
+    }
+
+    private Cursor OverContent(Vector2<double> screen)
+    {
+        if (Tool is not SelectTool || ContentGesture is not { } content)
+        {
+            return null;
+        }
+
+        var world = ScreenToWorld(screen);
+        return ItemAt(world) != null ? null : content.CursorAt(this, world);
     }
 
     /// <summary>Works out what the pointer should look like at a place on screen, and wears it. Public so that what the
