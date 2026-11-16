@@ -58,6 +58,10 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
     /// that follows what a step touched; null once the history is cleared.</summary>
     public ICanvasStep LastStep { get; private set; }
 
+    /// <summary>What was done with <see cref="LastStep"/>: pushed as a new edit, undone or redone - or the history
+    /// cleared.</summary>
+    public CanvasHistoryChange LastChange { get; private set; }
+
     /// <summary>Forgets everything - a new drawing, or one just loaded.</summary>
     public void Clear()
     {
@@ -66,6 +70,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         _done.Clear();
         _undone.Clear();
         LastStep = null;
+        LastChange = CanvasHistoryChange.Cleared;
         Announce();
     }
 
@@ -78,6 +83,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         step.Apply(scene, forward: false);
         _undone.Add(step);
         LastStep = step;
+        LastChange = CanvasHistoryChange.Undone;
 
         Announce();
         return true;
@@ -92,6 +98,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         step.Apply(scene, forward: true);
         _done.Add(step);
         LastStep = step;
+        LastChange = CanvasHistoryChange.Redone;
 
         Announce();
         return true;
@@ -123,6 +130,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         _done.Add(step);
         _undone.Clear();
         LastStep = step;
+        LastChange = CanvasHistoryChange.Pushed;
         Trim();
 
         Announce();
