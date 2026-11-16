@@ -527,6 +527,8 @@ All packages share one version.
 
 ### Fixed
 
+- Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
+  forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held
   the same brush before and after - "no change", nothing to undo, and nobody following the history told; the step now
   keeps a copy. A picture with no file cleared in the inspector is a step again.
