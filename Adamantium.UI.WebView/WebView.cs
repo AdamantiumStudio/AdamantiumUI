@@ -131,6 +131,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
         TakePopupSurface(GetTemplateChild("PART_PopupSurface") as RenderTargetPanel);
         TakeScriptDialog(GetTemplateChild("PART_ScriptDialog") as WebViewScriptDialog);
+        TakeSignInDialog(GetTemplateChild("PART_SignInDialog") as WebViewSignInDialog);
         pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
         if (pageHost != null)
         {
@@ -325,6 +326,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         DismissPageMenu();
         HidePageTip();
         AnswerScriptDialog(false);
+        RefuseSignIns();
         if (pageMenu != null)
         {
             pageMenu.IsOpen = false;

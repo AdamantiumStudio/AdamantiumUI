@@ -45,6 +45,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private WebViewFrameProducer popupProducer;
     private IGraphicsDevice frameDevice;
     private WebViewScriptDialogRequest askedDialog;
+    private readonly List<WebViewSignInRequest> signInsAsked = [];
     private WebViewContextMenu askedMenu;
     private bool popupShown;
     private bool popupRepaintOwed;
@@ -1271,6 +1272,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>The page went on - navigated, closed: what its dialogs asked is asked no more.</summary>
     internal void OnScriptDialogsReset() => view.ScriptDialogsReset(this);
 
+    /// <summary>A site or a proxy asks to sign in: the view answers it - at once, or once its user has - or it is
+    /// refused.</summary>
+    internal void OnSignInRequested(WebViewSignInRequest request)
+    {
+        if (closing)
+        {
+            request.Refuse();
+            return;
+        }
+
+        signInsAsked.RemoveAll(asked => asked.IsAnswered);
+        signInsAsked.Add(request);
+        if (!view.SignInRequested(this, request))
+        {
+            signInsAsked.Remove(request);
+            request.Refuse();
+        }
+    }
+
     /// <summary>Opens the element at <paramref name="x"/>, <paramref name="y"/> of the view, in device-independent
     /// pixels, in the DevTools' Elements panel: now, if their front end listens, else once it does - while the page
     /// is the same.</summary>
@@ -1794,6 +1814,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         // What the page still asks is answered while CEF is there to hear it: the view may answer only later, CEF gone.
         askedDialog?.Answer(false, null);
         askedDialog = null;
+        foreach (var signIn in signInsAsked)
+        {
+            signIn.Refuse();
+        }
+
+        signInsAsked.Clear();
         askedMenu?.Dismiss();
         askedMenu = null;
         askedFiles?.Cancel();

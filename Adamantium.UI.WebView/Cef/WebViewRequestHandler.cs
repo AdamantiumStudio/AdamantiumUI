@@ -1,10 +1,11 @@
 using System.Runtime.InteropServices;
+using Adamantium.UI.Core;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>A browser's requests: the page about to go somewhere in its main frame, which the view may stop, and a link
-/// it opens elsewhere, which the view may open apart.</summary>
+/// <summary>A browser's requests: the page about to go somewhere in its main frame, which the view may stop, a link it
+/// opens elsewhere, which the view may open apart, and a site or a proxy asking to sign in.</summary>
 internal sealed unsafe class WebViewRequestHandler : CefObject
 {
     private readonly WebViewBrowser browser;
@@ -19,6 +20,7 @@ internal sealed unsafe class WebViewRequestHandler : CefObject
         ((CefRequestHandler*)Native)->on_before_browse = &OnBeforeBrowse;
         ((CefRequestHandler*)Native)->on_open_urlfrom_tab = &OnOpenUrlFromTab;
         ((CefRequestHandler*)Native)->get_resource_request_handler = &GetResourceRequestHandler;
+        ((CefRequestHandler*)Native)->get_auth_credentials = &GetAuthCredentials;
     }
 
     /// <summary>Refuses the page's requests still waiting for the view: the browser closes.</summary>
@@ -50,6 +52,38 @@ internal sealed unsafe class WebViewRequestHandler : CefObject
         CefRefCounting.ReleaseCef(frame);
         CefRefCounting.ReleaseCef(request);
         return handler;
+    }
+
+    // Asked on CEF's IO thread: taken to the UI loop, where the view answers - at once, or once its user has.
+    [UnmanagedCallersOnly]
+    private static int GetAuthCredentials(CefRequestHandler* self, CefBrowser* cefBrowser, CefStringUtf16* originUrl,
+        int isProxy, CefStringUtf16* host, int port, CefStringUtf16* realm, CefStringUtf16* scheme,
+        CefAuthCallback* callback)
+    {
+        var taken = false;
+        WebViewSignInRequest request = null;
+        try
+        {
+            var owner = From<WebViewRequestHandler>(self).browser;
+            var target = new WebSignInTarget(CefStrings.Read(host), port, CefStrings.Read(realm), CefStrings.Read(scheme),
+                isProxy != 0);
+            request = new WebViewSignInRequest(target, CefStrings.Read(originUrl), callback);
+            LoopSignal.Post(() => owner.OnSignInRequested(request));
+            taken = true;
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+            if (request != null)
+            {
+                request.Refuse();
+                taken = true;
+            }
+        }
+
+        CefRefCounting.ReleaseCef(callback);
+        CefRefCounting.ReleaseCef(cefBrowser);
+        return taken ? 1 : 0;
     }
 
     [UnmanagedCallersOnly]

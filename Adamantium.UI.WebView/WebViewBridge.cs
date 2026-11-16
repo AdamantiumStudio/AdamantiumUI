@@ -90,6 +90,10 @@ public sealed class WebViewBridge
     /// refused.</summary>
     public event EventHandler<WebDownloadRequestedEventArgs> DownloadRequested;
 
+    /// <summary>A site or a proxy asks to sign in: a handler may answer or refuse it; left alone, the view answers from
+    /// the engine's kept sign-ins or asks its user.</summary>
+    public event EventHandler<WebSignInRequestedEventArgs> SignInRequested;
+
     /// <summary>The page is about to make a request - its document, a frame's, a script, an image, a fetch: a handler
     /// may answer it, send it elsewhere or refuse it. Listened to, every request of the page waits a turn of the UI
     /// thread; not listened to, none is asked.</summary>
@@ -199,6 +203,8 @@ public sealed class WebViewBridge
     internal void OnPermissionRequested(WebPermissionRequestedEventArgs args) => PermissionRequested?.Invoke(this, args);
 
     internal void OnDownloadRequested(WebDownloadRequestedEventArgs args) => DownloadRequested?.Invoke(this, args);
+
+    internal void OnSignInRequested(WebSignInRequestedEventArgs args) => SignInRequested?.Invoke(this, args);
 
     internal bool OnNewWindowRequested(WebViewNewPage page, WebNewWindowKind kind)
     {

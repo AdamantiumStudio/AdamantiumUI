@@ -722,6 +722,10 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         }
 
         initialized = true;
+        if (proxy != WebViewProxy.System)
+        {
+            ApplyProxy();
+        }
     }
 
     private List<KeyValuePair<string, string>> Switches()
@@ -740,6 +744,10 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         {
             switches.Add(new("no-zygote", null));
         }
+
+        // A site or a proxy asking to sign in is asked of the view: Chrome's own prompt is a window of its own, which a
+        // page drawn off screen has none to hang on - it brings the process down.
+        switches.Add(new("disable-chrome-login-prompt", null));
 
         if (ProprietaryCodecs.IsInstalled(CefLibrary.ApplicationFolder))
         {

@@ -186,6 +186,8 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
 
     public bool ScriptDialogRequested(WebViewBrowser browser, WebViewScriptDialogRequest request) => false;
 
+    public bool SignInRequested(WebViewBrowser browser, WebViewSignInRequest request) => false;
+
     public void ScriptDialogsReset(WebViewBrowser browser)
     {
     }

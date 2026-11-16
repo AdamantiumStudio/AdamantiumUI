@@ -123,6 +123,11 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     /// <summary>How many times the page's dialogs were reset.</summary>
     public int DialogResets { get; private set; }
 
+    public List<WebViewSignInRequest> SignIns { get; } = [];
+
+    /// <summary>Answers a sign-in as it is asked; false refuses it. None: the sign-in is taken and left waiting.</summary>
+    public Func<WebViewSignInRequest, bool> AnswerSignIn { get; set; }
+
     public bool ScriptDialogRequested(WebViewBrowser browser, WebViewScriptDialogRequest request)
     {
         Dialogs.Add(request);
@@ -130,6 +135,12 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     }
 
     public void ScriptDialogsReset(WebViewBrowser browser) => DialogResets++;
+
+    public bool SignInRequested(WebViewBrowser browser, WebViewSignInRequest request)
+    {
+        SignIns.Add(request);
+        return AnswerSignIn?.Invoke(request) ?? true;
+    }
 
     public bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu)
     {

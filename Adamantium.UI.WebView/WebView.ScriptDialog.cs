@@ -13,8 +13,9 @@ public partial class WebView
     private WebViewScriptDialog scriptDialog;
     private WebViewScriptDialogRequest askedDialog;
 
-    // Whether the page waits for its script's dialog to be answered: what the user does goes to the dialog alone.
-    private bool PageWaits => askedDialog != null;
+    // Whether the page waits for its script's dialog, or a sign-in, to be answered: what the user does goes to the
+    // dialog alone.
+    private bool PageWaits => askedDialog != null || askedSignIns.Count > 0;
 
     private void TakeScriptDialog(WebViewScriptDialog dialog)
     {

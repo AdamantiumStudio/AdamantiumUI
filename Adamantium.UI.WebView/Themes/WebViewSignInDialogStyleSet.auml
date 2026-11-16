@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.WebView">
+
+    <!-- A site's or a proxy's sign-in over the page only: the page dimmed under it, a card near its top with who asks, a
+         warning when the password would travel unencrypted, why it asks again, the two fields - their placeholders
+         floating up over what is typed - Remember when the application keeps sign-ins, and the answers. Enter signs in
+         and Esc cancels while the keyboard is in it. Nothing while nothing is asked. -->
+    <Style Selector="WebViewSignInDialog">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebViewSignInDialog">
+                    <Grid Background="{ResourceReference SmokeFillColorDefault}">
+                        <Border HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
+                                Margin="16 32 16 0"
+                                MaxWidth="400"
+                                MinWidth="340"
+                                Padding="20"
+                                CornerRadius="8"
+                                BorderThickness="1"
+                                Background="{ResourceReference SolidBackgroundFillColorBase}"
+                                BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                AutomationProperties.AutomationId="WebSignIn"
+                                AutomationProperties.Name="{TemplateBinding Title}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="{TemplateBinding Title}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="WrapByWords"/>
+                                <TextBlock Text="{TemplateBinding Message}"
+                                           TextWrapping="WrapByWords"
+                                           Foreground="{ResourceReference TextFillColorSecondary}"
+                                           AutomationProperties.AutomationId="WebSignInMessage"/>
+                                <TextBlock x:Name="PART_Insecure"
+                                           Visibility="Collapsed"
+                                           Text="{Localize WebViewStrings.SignInInsecure}"
+                                           TextWrapping="WrapByWords"
+                                           Foreground="{ResourceReference SystemFillColorCaution}"
+                                           AutomationProperties.AutomationId="WebSignInInsecure"/>
+                                <TextBlock x:Name="PART_Error"
+                                           Text="{TemplateBinding Error}"
+                                           TextWrapping="WrapByWords"
+                                           Foreground="{ResourceReference SystemFillColorCritical}"
+                                           AutomationProperties.AutomationId="WebSignInError"/>
+                                <TextBox Text="{TemplateBinding UserName, Mode=TwoWay}"
+                                         Placeholder="{Localize WebViewStrings.UserName}"
+                                         FloatingPlaceholder="True"
+                                         AutomationProperties.AutomationId="WebSignInUser"
+                                         AutomationProperties.Name="{Localize WebViewStrings.UserName}"/>
+                                <PasswordBox Password="{TemplateBinding Password, Mode=TwoWay}"
+                                             Placeholder="{Localize WebViewStrings.Password}"
+                                             FloatingPlaceholder="True"
+                                             AutomationProperties.AutomationId="WebSignInPassword"
+                                             AutomationProperties.Name="{Localize WebViewStrings.Password}"/>
+                                <CheckBox x:Name="PART_Remember"
+                                          Visibility="Collapsed"
+                                          Content="{Localize WebViewStrings.RememberSignIn}"
+                                          IsChecked="{TemplateBinding Remember, Mode=TwoWay}"
+                                          AutomationProperties.AutomationId="WebSignInRemember"/>
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            Spacing="8">
+                                    <Button MinWidth="88"
+                                            Content="{Localize WebViewStrings.Cancel}"
+                                            Command="{TemplateBinding CancelCommand}"
+                                            AutomationProperties.AutomationId="WebSignInCancel"/>
+                                    <Button Classes="Accent"
+                                            MinWidth="88"
+                                            Content="{Localize WebViewStrings.SignIn}"
+                                            Command="{TemplateBinding AcceptCommand}"
+                                            AutomationProperties.AutomationId="WebSignInAccept"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="IsOpen" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsInsecure" Value="True">
+                            <Setter TargetName="PART_Insecure" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="Error" Value="">
+                            <Setter TargetName="PART_Error" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="CanRemember" Value="True">
+                            <Setter TargetName="PART_Remember" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>
