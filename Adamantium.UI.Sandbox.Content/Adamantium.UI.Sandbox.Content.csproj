@@ -3,7 +3,7 @@
 	<!-- The sandbox's content: its models, pictures and fonts. Every file here is cooked or copied into
 	     Content/SandboxContent/ of the sandbox, and SandboxContentAssets has a constant for each. -->
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<Platforms>AnyCPU</Platforms>
 		<Configurations>Debug;Release</Configurations>
 		<AdamantiumContentName>SandboxContent</AdamantiumContentName>

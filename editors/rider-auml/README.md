@@ -12,8 +12,8 @@ server. Built on **LSP4IJ** (installed automatically as a dependency).
   `./gradlew buildPlugin` from the CLI works as well - the wrapper brings Gradle itself.
 - **LSP4IJ** plugin installed in Rider (already done) — needed at runtime; the build also
   references it.
-- **.NET 10 SDK** on PATH — `buildPlugin` publishes the language server automatically
-  (`dotnet publish`) and bundles it inside the plugin. End users need only the **.NET 10 runtime**.
+- **.NET 11 SDK** on PATH — `buildPlugin` publishes the language server automatically
+  (`dotnet publish`) and bundles it inside the plugin. End users need only the **.NET 11 runtime**.
 
 ## 1. Set versions (one-time)
 
@@ -54,7 +54,7 @@ diagnostics should work — **no manual file-type or server configuration**.
 
 - The **language server is bundled inside the plugin**: `buildPlugin` runs `dotnet publish`
   (framework-dependent) and packs the output as `/server/server.zip`; on first use the plugin
-  unpacks it to a per-version cache dir and launches it. End users need only the **.NET 10 runtime**.
+  unpacks it to a per-version cache dir and launches it. End users need only the **.NET 11 runtime**.
 - For local development, set the `ADAMANTIUM_AUML_SERVER` environment variable to a built
   `Adamantium.UI.LanguageServer.exe` to skip the bundled copy.
 - After changing the server, rebuild the plugin (the publish reruns) and bump its version. The cached copy

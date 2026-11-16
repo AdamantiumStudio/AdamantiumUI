@@ -3,7 +3,7 @@
     <!-- What a module of the sandbox's editor shell is, shared by the shell and every module: the shell loads a module's
          assembly beside it, and the module's EditorModule must be the very type the shell knows. -->
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <Platforms>AnyCPU</Platforms>
         <Configurations>Debug;Release</Configurations>
         <LangVersion>latest</LangVersion>

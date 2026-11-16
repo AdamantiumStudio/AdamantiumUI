@@ -41,7 +41,7 @@ public class AumlWorkspaceNoModelTests
         Assert.That(workspace.WhyNoModel(file), Is.EqualTo(
             "Probe has not been built yet: completion, checks and type colors start once it has been built."));
 
-        var output = Path.Combine(_root, "bin", "Debug", "net10.0");
+        var output = Path.Combine(_root, "bin", "Debug", "net11.0");
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "Probe.dll"), string.Empty);
 
@@ -57,7 +57,7 @@ public class AumlWorkspaceNoModelTests
         workspace.ModelsChanged += changed.Set;
         Assert.That(workspace.GetModelForFile(Path.Combine(_root, "MainWindow.auml")), Is.Null);
 
-        var output = Path.Combine(_root, "bin", "Debug", "net10.0");
+        var output = Path.Combine(_root, "bin", "Debug", "net11.0");
         Directory.CreateDirectory(output);
         File.WriteAllText(Path.Combine(output, "Probe.dll"), string.Empty);
 

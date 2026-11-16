@@ -24,7 +24,7 @@
             projects: offered at startup when missing, and installed or updated any time with <b>Tools | Install
             Adamantium Templates</b>.</li>
         </ul>
-        <p><b>Requirements:</b> the .NET 10 SDK and a project that references the <code>Adamantium.UI</code> NuGet
+        <p><b>Requirements:</b> the .NET 11 SDK and a project that references the <code>Adamantium.UI</code> NuGet
         package. The preview runs the designer that package carries on the project's own build, so build the project
         once before previewing. LSP4IJ is installed with this plugin.</p>
     ]]></description>

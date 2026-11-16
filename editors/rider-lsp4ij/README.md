@@ -12,7 +12,7 @@
    ```
 
    Produces:
-   `Adamantium\output\Adamantium.UI.LanguageServer\bin\x64\Debug\net10.0\Adamantium.UI.LanguageServer.exe`
+   `Adamantium\output\Adamantium.UI.LanguageServer\bin\x64\Debug\net11.0\Adamantium.UI.LanguageServer.exe`
 
 2. **Install LSP4IJ:** Rider → Settings → Plugins → Marketplace → search **"LSP4IJ"** (by Red Hat) → Install → restart.
 

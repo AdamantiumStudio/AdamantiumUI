@@ -6,7 +6,7 @@ powered by `Adamantium.UI.LanguageServer` over LSP/stdio.
 
 ## Prerequisites
 
-- **.NET 10 runtime** installed (the server is framework-dependent).
+- **.NET 11 runtime** installed (the server is framework-dependent).
 - **Node.js / npm** (to build the extension).
 - The language server built:
 
@@ -15,7 +15,7 @@ powered by `Adamantium.UI.LanguageServer` over LSP/stdio.
   ```
 
   This produces the exe the extension launches:
-  `Adamantium\output\Adamantium.UI.LanguageServer\bin\x64\Debug\net10.0\Adamantium.UI.LanguageServer.exe`
+  `Adamantium\output\Adamantium.UI.LanguageServer\bin\x64\Debug\net11.0\Adamantium.UI.LanguageServer.exe`
   (override with the `auml.serverPath` setting if your path differs).
 
 ## Run it (Extension Development Host)
