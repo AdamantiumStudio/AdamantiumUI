@@ -120,6 +120,61 @@ public class CanvasViewportTests
             "the corner's pane stood over the bar along the top");
     }
 
+    // A bar has no handles - it is moved by its background - unless it asks for its grip, as a wide toolbar does.
+    [Test]
+    public void ABarAskingForItsGrip_ShowsTheHandles_AndOneThatDoesNot_HidesThem()
+    {
+        UseFluent();
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+        canvas.ApplyCurrentTheme();
+        var window = Lay(canvas);
+        var bar = canvas.GetTemplateChild("PART_ViewBar") as CanvasPane;
+        Assert.That(bar, Is.Not.Null, "the chrome carries no view bar");
+        var handles = bar.GetTemplateChild("PART_Handles") as IUIComponent;
+        Assert.That(handles, Is.Not.Null, "the pane's template has no handles");
+        var hiddenBefore = handles.Visibility;
+
+        bar.ShowsGrip = true;
+        Relay(window, canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hiddenBefore, Is.EqualTo(Visibility.Collapsed), "a bar shows handles it did not ask for");
+            Assert.That(handles.Visibility, Is.EqualTo(Visibility.Visible), "the bar asking for its grip has no handles");
+        });
+    }
+
+    // A centered bar folded to its grip leaves the grip where it stood, under the pointer that folded it, rather than
+    // drawing it in to the middle; opened again, the bar is where it was.
+    [Test]
+    public void ACenteredBarFoldedToItsGrip_LeavesTheGripWhereItStood()
+    {
+        UseFluent();
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+        canvas.ApplyCurrentTheme();
+        var window = Lay(canvas);
+        var bar = canvas.GetTemplateChild("PART_ViewBar") as CanvasPane;
+        Assert.That(bar, Is.Not.Null, "the chrome carries no view bar");
+        bar.ShowsGrip = true;
+        Relay(window, canvas);
+        var open = bar.Bounds;
+
+        bar.IsOpen = false;
+        Relay(window, canvas);
+        var folded = bar.Bounds;
+        bar.IsOpen = true;
+        Relay(window, canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bar.Placement, Is.AnyOf(CanvasPanePlacement.TopCenter, CanvasPanePlacement.BottomCenter),
+                "the view bar is not centered");
+            Assert.That(folded.Width, Is.LessThan(open.Width), "folded, the bar kept its width");
+            Assert.That(folded.X, Is.EqualTo(open.X).Within(0.5), "folded, the grip moved");
+            Assert.That(bar.Bounds.X, Is.EqualTo(open.X).Within(0.5), "opened again, the bar moved");
+        });
+    }
+
     private static Window Lay(InfiniteCanvas canvas)
     {
         var window = new Window { Width = WindowWidth, Height = WindowHeight, Content = canvas };

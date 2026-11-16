@@ -7,6 +7,18 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
+  fold it to the grip - a wide toolbar is easier to take by it than by the gaps between its buttons. A bar is still
+  moved by its background without it, and shows no snap either way. Folded, a pane of no set width keeps the room it
+  had open, as one of a set width did, so the grip stays where it stood.
+- `CanvasHistory.LastStep`, the step a `Changed` is about, and `CanvasPropertyStep.Targets`, the objects it wrote: a
+  listener keeping a copy of the drawing follows an inspector edit undone or redone. `PropertyDefinition.Remembered`:
+  what an undo keeps of a value the line edits in place.
+- `InfiniteCanvas.IsShown(item)`: whether an item of the scene is shown on the plane now - every one by default. A
+  derived canvas hides items by overriding it and calling `RefreshShown()` when what it hides changes: a hidden item
+  stays in the scene, in its place in the paint order and in the history's steps, but is not drawn, not reached by a
+  press, a band, the rubber or a tool (`ItemsHere(rect)` leaves it out), and is let go of by the selection - what a view
+  shows of a document, not an edit of it. `ItemsHere()`, the whole document, still holds every item.
 - `PART_Viewport`: the part of an `InfiniteCanvas` template the plane is looked at through
   (`InfiniteCanvas.ViewportElement`, `ViewportSize`, `ViewportOrigin`). The pointer, the camera, the usable bounds,
   fitting and centering, the ground and the chrome are all measured in it, so a template can stand other things beside
@@ -382,6 +394,9 @@ All packages share one version.
 
 ### Changed
 
+- The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
+  (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
+  no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.
 - A canvas's panes stand on one solid plate each, lifted by a shadow as a map's plates are - their handles, content
   and a rail's tools, the chosen one too, all on it - so they are seen over whatever is drawn under them, a white
   page included. A lone grip on the plane stands on a plate of its own (`Button.CanvasChrome`).
@@ -508,6 +523,9 @@ All packages share one version.
 
 ### Fixed
 
+- A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held
+  the same brush before and after - "no change", nothing to undo, and nobody following the history told; the step now
+  keeps a copy. A picture with no file cleared in the inspector is a step again.
 - A universe hosted in a window hears Ctrl, Shift and Alt even when the ribbon has taken them for its key tips, and every
   key let go, whoever handled it: Alt with a drag in a 3D view now reaches its camera, and a key the universe saw go
   down no longer stays down there. The modifiers held as a button goes down over it reach it too, whoever had the

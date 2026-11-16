@@ -224,17 +224,17 @@
                         <StackPanel x:Name="PART_Handles" Orientation="Horizontal" DockPanel.Dock="Top"
                                     HorizontalAlignment="Left" MarginBottom="4">
                             <Button x:Name="PART_Grip" Width="28" Height="22"
-                                    MinWidth="0" MinHeight="0" Padding="0"
+                                    MinWidth="0" MinHeight="0" Padding="0" Focusable="False"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
                                 <Image Source="{ObservableResource CanvasGripIcon}" Width="11" Height="11"/>
                             </Button>
                             <ToggleButton x:Name="PART_Snap" Width="28" Height="22" MarginLeft="3"
-                                          MinWidth="0" MinHeight="0" Padding="0"
+                                          MinWidth="0" MinHeight="0" Padding="0" Focusable="False"
                                           ToolTip="{Localize CanvasStrings.StickToEdge}">
                                 <Image Source="{ObservableResource CanvasPaneSnapIcon}" Width="11" Height="11"/>
                             </ToggleButton>
                             <Button x:Name="PART_Turn" Width="28" Height="22" MarginLeft="3"
-                                    MinWidth="0" MinHeight="0" Padding="0" Visibility="Collapsed"
+                                    MinWidth="0" MinHeight="0" Padding="0" Visibility="Collapsed" Focusable="False"
                                     ToolTip="{Localize CanvasStrings.ToolsLayout}">
                                 <Image Source="{ObservableResource CanvasPaneTurnIcon}" Width="11" Height="11"/>
                             </Button>
@@ -304,6 +304,28 @@
                             <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Plate" Property="Padding" Value="3"/>
                         </PropertyTrigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_Handles" Property="DockPanel.Dock" Value="Left"/>
+                            <Setter TargetName="PART_Handles" Property="VerticalAlignment" Value="Center"/>
+                            <Setter TargetName="PART_Handles" Property="MarginBottom" Value="0"/>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="5"/>
+                            <Setter TargetName="PART_Snap" Property="Visibility" Value="Collapsed"/>
+                        </MultiTrigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Kind" Value="Bar"/>
+                                <Condition Property="ShowsGrip" Value="true"/>
+                                <Condition Property="IsOpen" Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_Handles" Property="MarginRight" Value="0"/>
+                        </MultiTrigger>
 
                         <!-- A narrow plate around a rail, and handles that run the way the tools do - see Fluent's set. -->
                         <PropertyTrigger Property="Kind" Value="Rail">

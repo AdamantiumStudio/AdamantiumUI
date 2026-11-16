@@ -632,7 +632,7 @@ public class CanvasInspector : Control, ICanvasPart
 
         // TOPMOST FIRST, so the list reads the way the drawing is stacked. A fresh list every time: the scene's own is
         // edited in place and tells a binding nothing.
-        var listed = new List<ICanvasItem>(canvas.ItemsHere());
+        var listed = new List<ICanvasItem>(canvas.ShownItems());
         listed.Reverse();
         ItemCount = listed.Count;
         listed.RemoveAll(item => !canvas.Matches(item));

@@ -1,3 +1,4 @@
+using System.Linq;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Decorators;
@@ -75,6 +76,22 @@ public class CanvasToolRailTests
     // The family takes the LAST button - the loner was stated first, and the rail keeps the order it was given.
     private static ToggleButton FamilyButton(CanvasToolRail rail) =>
         rail.Children[rail.Children.Count - 1] as ToggleButton;
+
+    // A tool picked on the rail is for the canvas: a button that took the keyboard left the canvas's keys - Delete,
+    // Escape, the tools' own letters - with the button, so the canvas wanted another click before they did anything.
+    [Test]
+    public void TheRailsButtons_LeaveTheKeyboardWhereItWas()
+    {
+        var (rail, _, _) = Built();
+        var loner = rail.Children.OfType<ToggleButton>().First();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rail.Children.OfType<ToggleButton>().Select(button => button.Focusable), Has.All.False,
+                "a tool's button takes the keyboard");
+            Assert.That(loner.Focus(), Is.False, "a tool's button took the keyboard when asked");
+        });
+    }
 
     private static void Press(IUIComponent target, Window window)
     {

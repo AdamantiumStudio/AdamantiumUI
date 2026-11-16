@@ -56,6 +56,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private bool _chromeOnGlass;
     private readonly List<ElementItem> _hosted = new();
     private bool _sceneTaken;
+    private Func<ICanvasItem, bool> _isShown;
 
     private CanvasChromeLayer _chromeLayer;
     private CanvasTools _tools;
@@ -491,7 +492,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
                 continue;
             }
 
-            _edited.Add((target, grid.ValueOf(target, about.Property), null));
+            _edited.Add((target, about.Property.Remembered(grid.ValueOf(target, about.Property)), null));
         }
     }
 
@@ -508,7 +509,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         for (var i = 0; i < _edited.Count; i++)
         {
             var (target, was, _) = _edited[i];
-            _edited[i] = (target, was, grid.ValueOf(target, about.Property));
+            _edited[i] = (target, was, about.Property.Remembered(grid.ValueOf(target, about.Property)));
         }
 
         // A COPY: the list is reused by the next write, and a step holding the live one would be rewritten by it.
@@ -1046,7 +1047,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (Scene is not { } scene || _selection.Count == 0) return;
 
-        var shown = Shown();
+        var shown = Ordered();
 
         for (var i = 0; i < _selection.Count; i++)
         {
@@ -1062,7 +1063,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (Scene == null || _selection.Count == 0) return false;
 
-        var shown = Shown();
+        var shown = Ordered();
 
         foreach (var item in _selection)
         {
@@ -1114,8 +1115,6 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         }
     }
 
-    // Where the item actually stands AMONG WHAT CAN BE SEEN - what the stamp would say if nobody had written over it.
-    // Counted the same way the scene writes the number, or every write would look like a request to move.
     private int Placed(ICanvasItem item)
     {
         var at = 0;
@@ -1130,12 +1129,17 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         return -1;
     }
 
-    // Everything of this mode, in the order the scene holds it.
-    private List<ICanvasItem> Shown()
+    private List<ICanvasItem> Ordered()
     {
         var shown = new List<ICanvasItem>();
 
-        foreach (var item in ItemsHere()) shown.Add(item);
+        foreach (var item in ItemsHere())
+        {
+            if (IsShown(item))
+            {
+                shown.Add(item);
+            }
+        }
 
         return shown;
     }
@@ -1578,7 +1582,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         for (var i = _selection.Count - 1; i >= 0; i--)
         {
-            if (there.Contains(_selection[i])) continue;
+            if (there.Contains(_selection[i]) && IsShown(_selection[i])) continue;
 
             _selection.RemoveAt(i);
             gone = true;
@@ -1607,9 +1611,12 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         var probe = new Rect(world.X - reach, world.Y - reach, reach * 2, reach * 2);
 
         ICanvasItem found = null;
-        foreach (var item in ItemsHere(probe))
+        foreach (var item in Scene.ItemsIn(probe))
         {
-            if (item.HitTest(world, reach)) found = item;
+            if (IsShown(item) && item.HitTest(world, reach))
+            {
+                found = item;
+            }
         }
 
         return found;

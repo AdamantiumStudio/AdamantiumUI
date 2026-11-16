@@ -311,6 +311,10 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     /// means the value is replaced.</summary>
     protected internal virtual bool WriteInto(object current, object edited) => false;
 
+    /// <summary>What an undo keeps of a value: the value itself, or a copy of it where <see cref="WriteInto"/> edits it
+    /// in place - kept as it is, the value would hold the edit by the time it is put back.</summary>
+    protected internal virtual object Remembered(object value) => value;
+
     private static void OnIsVisibleChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
         (component as PropertyDefinition)?.LayoutChanged?.Invoke(component, EventArgs.Empty);
 
@@ -698,6 +702,11 @@ public class SolidColorBrushProperty : PropertyDefinition
         return true;
     }
 
+    protected internal override object Remembered(object value) =>
+        value is SolidColorBrush { IsFrozen: false, IsShared: false } brush
+            ? brush.Copy()
+            : value;
+
     // Reached only when the brush would not take the color - it is frozen, it belongs to the theme, or there was no
     // brush there at all. A new one then, because refusing here would be the line quietly doing nothing.
     protected internal override bool TryConvert(object edited, Type target, out object value)
@@ -1059,8 +1068,8 @@ public class ImageSourceProperty : PropertyDefinition
     /// <summary>What the line SHOWS is the FILE, so that is what "the same" means here - two objects showing one file
     /// agree as far as this line is concerned, whatever two objects the pictures themselves are.</summary>
     protected internal override bool SameValue(object left, object right) =>
-        left is ImageSource || right is ImageSource
-            ? PathOf(left) == PathOf(right)
+        PathOf(left) is { } first && PathOf(right) is { } second
+            ? first == second
             : base.SameValue(left, right);
 
     // Nothing is written INTO a picture: a picture is the file it was loaded from, and pointing it at another file is

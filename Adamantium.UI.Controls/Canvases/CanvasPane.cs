@@ -30,6 +30,7 @@ public class CanvasPane : ContentControl
     private bool _captured;
     private bool _keepsOpenRoom = true;
     private double _wide;
+    private double _openFootprint;
     private PointerPressedEventHandler _onPressed;
     private PointerEventHandler _onMoved;
     private PointerReleasedEventHandler _onReleased;
@@ -76,6 +77,9 @@ public class CanvasPane : ContentControl
 
     public static readonly AdamantiumProperty CanDragProperty = AdamantiumProperty.Register(nameof(CanDrag),
         typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty ShowsGripProperty = AdamantiumProperty.Register(nameof(ShowsGrip),
+        typeof(Boolean), typeof(CanvasPane), new PropertyMetadata(false));
 
     /// <summary>Whether this pane is wanted at all; separate from <see cref="IsNeeded"/> so neither answer erases the
     /// other.</summary>
@@ -203,6 +207,16 @@ public class CanvasPane : ContentControl
     {
         get => GetValue<Boolean>(CanDragProperty);
         set => SetValue(CanDragProperty, value);
+    }
+
+    /// <summary>Whether a <see cref="CanvasPaneKind.Bar"/> shows a grip at its start, beside its content, that carries and
+    /// folds it as other panes' grips do; off by default, a bar being moved by its own background. A wide bar - a toolbar
+    /// of many buttons - is easier to take by a grip than by the gaps between them. A bar shows no snap: docked to a side,
+    /// it would take its whole length from the plane. Other kinds always show their handles.</summary>
+    public Boolean ShowsGrip
+    {
+        get => GetValue<Boolean>(ShowsGripProperty);
+        set => SetValue(ShowsGripProperty, value);
     }
 
     public Boolean IsWanted
@@ -367,7 +381,14 @@ public class CanvasPane : ContentControl
             return;
         }
 
-        if (pane.IsOpen) pane.KeepsOpenRoom = true;
+        if (pane.IsOpen)
+        {
+            pane.KeepsOpenRoom = true;
+        }
+        else
+        {
+            pane._openFootprint = pane.DesiredSize.Width;
+        }
 
         pane.CoerceValue(WidthProperty);
         pane.SyncSizer();
@@ -428,9 +449,14 @@ public class CanvasPane : ContentControl
         get
         {
             var asked = GetBaseValue<Double>(WidthProperty);
-            if (IsOpen || !KeepsOpenRoom || Double.IsNaN(asked))
+            if (IsOpen || !KeepsOpenRoom)
             {
                 return DesiredSize.Width;
+            }
+
+            if (Double.IsNaN(asked))
+            {
+                return Math.Max(DesiredSize.Width, _openFootprint);
             }
 
             var margin = EffectiveMargin;
