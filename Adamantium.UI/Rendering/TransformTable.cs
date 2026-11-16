@@ -100,6 +100,13 @@ internal sealed class TransformTable
         var copies = (int)Math.Max(1, device.MaxFramesInFlight);
         if (_gpu == null || _gpuCapacity < _cpu.Length || _copies != copies)
         {
+            // The new copies first: the GPU out of memory, the old ones stay and the next frame asks again.
+            var capacity = _cpu.Length;
+            var made = GpuRing.Make(copies, _ =>
+                Adamantium.Graphics.Buffer.New<NodeSlot>(device, (uint)capacity,
+                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                    MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal));
+
             // Never Dispose here: frames still in flight are reading this buffer. Hand it to the device's deferred queue,
             // which drains it a full pipeline lap later.
             if (_gpu != null)
@@ -110,14 +117,11 @@ internal sealed class TransformTable
                 }
             }
             _copies = copies;
-            _gpu = new Buffer<NodeSlot>[_copies];
-            _gpuCapacity = _cpu.Length;
+            _gpu = made;
+            _gpuCapacity = capacity;
             _uploaded = new int[_copies][];
             for (var i = 0; i < _copies; i++)
             {
-                _gpu[i] = Adamantium.Graphics.Buffer.New<NodeSlot>(device, (uint)_gpuCapacity,
-                    BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-                    MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal);
                 _uploaded[i] = new int[_gpuCapacity];
                 Array.Fill(_uploaded[i], -1);   // nothing in a fresh buffer matches any version
             }

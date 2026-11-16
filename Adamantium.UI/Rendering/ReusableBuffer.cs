@@ -115,12 +115,14 @@ public sealed class ReusableBuffer : IDisposable
                 continue;
             }
 
+            // The new one first: the GPU out of memory, the slot keeps its old buffer and the next frame asks again.
+            var made = Buffer.New(_manager.Device, size, _usage, _memory);
             if (_ring[i] != null)
             {
                 _manager.Device.AddToDeferDisposeQueue(_ring[i]);
             }
 
-            _ring[i] = Buffer.New(_manager.Device, size, _usage, _memory);
+            _ring[i] = made;
             _ring[i].Name = _promoted ? _ringName : _name;
             _slotVersion[i] = -1;
         }

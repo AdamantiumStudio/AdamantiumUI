@@ -357,19 +357,17 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
         var needed = Math.Max(Items.Length, end);
         if (_commands == null || _commands[0].ElementCount < (ulong)end * 4)
         {
+            // The new copies first: the GPU out of memory, the old ones stay and the next frame asks again.
+            var made = GpuRing.Make(Math.Max(1, (int)device.MaxFramesInFlight) + 1, _ =>
+                Adamantium.Graphics.Buffer.New<uint>(device, (uint)needed * 4, BufferUsageFlags.IndirectBuffer,
+                    MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.HostCoherent));
             if (_commands != null)
             {
                 foreach (var old in _commands) device.AddToDeferDisposeQueue(old);
             }
 
             _commandDevice = device;
-            _commands = new Buffer<uint>[Math.Max(1, (int)device.MaxFramesInFlight) + 1];
-            for (var i = 0; i < _commands.Length; i++)
-            {
-                _commands[i] = Adamantium.Graphics.Buffer.New<uint>(device, (uint)needed * 4, BufferUsageFlags.IndirectBuffer,
-                    MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.HostCoherent);
-            }
-
+            _commands = made;
             _commandFrame = ulong.MaxValue;
             _commandCount = 0;   // the new copies hold nothing yet
         }

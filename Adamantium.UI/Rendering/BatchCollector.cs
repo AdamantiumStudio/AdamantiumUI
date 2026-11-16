@@ -220,6 +220,12 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         var copies = (int)Math.Max(1, device.MaxFramesInFlight);
         if (_ring != null && _ring.Length == copies && _gpuCapacity >= Items.Length) return;
 
+        // The new copies first: the GPU out of memory, the old ones stay and the next frame asks again.
+        var capacity = Items.Length;
+        var made = GpuRing.Make(copies, _ =>
+            Adamantium.Graphics.Buffer.New<TItem>(device, (uint)capacity,
+                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal));
         if (_ring != null)
         {
             foreach (var buffer in _ring)
@@ -228,18 +234,15 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
             }
         }
 
-        _ring = new Buffer<TItem>[copies];
+        _ring = made;
         _mirror = new TItem[copies][];
         _mirrorCount = new int[copies];
         for (var i = 0; i < copies; i++)
         {
-            _ring[i] = Adamantium.Graphics.Buffer.New<TItem>(device, (uint)Items.Length,
-                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-                MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal);
-            _mirror[i] = new TItem[Items.Length];
+            _mirror[i] = new TItem[capacity];
             _mirrorCount[i] = 0;   // a fresh buffer holds nothing -> everything differs -> first write sends it all
         }
-        _gpuCapacity = Items.Length;
+        _gpuCapacity = capacity;
     }
 
     // Round-robin per write, not per frame: one walk's copy is read by several replay frames that follow it.

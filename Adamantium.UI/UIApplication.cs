@@ -109,6 +109,13 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private long _publishedFrame;
     private bool _drawFailing;
+    // A frame that failed to draw is not tried again on the next one: the GPU out of memory - held by a game, say - stays
+    // so for a while, and a frame failing every frame would only throw and log for nothing. The wait doubles from the
+    // shortest to the longest while frames keep failing; one that draws ends it.
+    private const int ShortestDrawRetryMs = 100;
+    private const int LongestDrawRetryMs = 2000;
+    private int _drawRetryMs;
+    private long _drawRetryAt;
     private bool _loopFailing;
     private long _presentedFrame;
     private long _requestsAtRecord;
@@ -1883,7 +1890,24 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Inline: cleared once, after every window has drawn, not per window.
         if (!threaded)
         {
-            var drewInline = ExecuteDrawSequence(appTime);
+            if (WaitsToRetryDrawing(Stopwatch.GetTimestamp()))
+            {
+                LoopSignal.Request();
+                return;
+            }
+
+            bool drewInline;
+            try
+            {
+                drewInline = ExecuteDrawSequence(appTime);
+            }
+            catch (Exception exception)
+            {
+                ReportFailedFrame(exception);
+                return;
+            }
+
+            DrawingRecovered();
             if (drewInline)
             {
                 RenderDirty.Clear();
@@ -1941,25 +1965,33 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 }
 
                 now = Stopwatch.GetTimestamp();
-                try
+                if (WaitsToRetryDrawing(now))
                 {
-                    var published = Volatile.Read(ref _publishedFrame);
-                    due = ClaimFrames(now, out var claims);
-                    var unshown = published != Volatile.Read(ref _presentedFrame) && !claims.LeftWaiting
-                                  && (!_withheldSinceShown || !claims.AnyDrawable);
-                    if (due <= now || unshown || _visualRenderer?.HasPendingDraws == true)
-                    {
-                        DrawClaimedFrames(published, claims);
-                        continue;
-                    }
-
-                    // Nothing to draw: what was retired before the scene went still is freed now, not when it moves again.
-                    GraphicsDeviceService?.MainGraphicsDevice?.ReleaseRetired();
+                    due = _drawRetryAt;
                 }
-                catch (Exception ex)
+                else
                 {
-                    ReportFailedFrame(ex);
-                    due = FramePacer.Never;
+                    try
+                    {
+                        var published = Volatile.Read(ref _publishedFrame);
+                        due = ClaimFrames(now, out var claims);
+                        var unshown = published != Volatile.Read(ref _presentedFrame) && !claims.LeftWaiting
+                                      && (!_withheldSinceShown || !claims.AnyDrawable);
+                        if (due <= now || unshown || _visualRenderer?.HasPendingDraws == true)
+                        {
+                            DrawClaimedFrames(published, claims);
+                            continue;
+                        }
+
+                        // Nothing to draw: what was retired before the scene went still is freed now, not when it moves
+                        // again.
+                        GraphicsDeviceService?.MainGraphicsDevice?.ReleaseRetired();
+                    }
+                    catch (Exception ex)
+                    {
+                        ReportFailedFrame(ex);
+                        due = _drawRetryAt;
+                    }
                 }
             }
 
@@ -2019,19 +2051,40 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             Volatile.Write(ref _presentedFrame, drawing);
         }
 
-        _drawFailing = false;
+        DrawingRecovered();
         ReleaseIdleWaiters();
     }
 
-    private void ReportFailedFrame(Exception exception)
+    // A frame drew: frames that were failing are said to draw again, and the next failure waits the shortest time.
+    private void DrawingRecovered()
     {
-        Console.WriteLine(exception);
-        if (!_drawFailing)
+        if (_drawFailing)
         {
-            _drawFailing = true;
-            Serilog.Log.Logger.Error(exception, "A frame failed to draw; frames are not reaching the screen");
+            Serilog.Log.Logger.Information("Frames draw again");
         }
 
+        _drawFailing = false;
+        _drawRetryMs = 0;
+    }
+
+    // Whether frames are failing and the next try is not due yet.
+    private bool WaitsToRetryDrawing(long now) => _drawFailing && now < _drawRetryAt;
+
+    // Said once while frames keep failing, then tried again later and later, not every frame.
+    private void ReportFailedFrame(Exception exception)
+    {
+        _drawRetryMs = Math.Clamp(_drawRetryMs * 2, ShortestDrawRetryMs, LongestDrawRetryMs);
+        _drawRetryAt = Stopwatch.GetTimestamp() + _drawRetryMs * Stopwatch.Frequency / 1000;
+        if (_drawFailing)
+        {
+            return;
+        }
+
+        _drawFailing = true;
+        Console.WriteLine(exception);
+        Serilog.Log.Logger.Error(exception, exception is OutOfDeviceMemoryException
+            ? "A frame failed to draw: the GPU is out of memory, held by another application perhaps; tried again later"
+            : "A frame failed to draw; frames are not reaching the screen");
         UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(exception));
     }
 
