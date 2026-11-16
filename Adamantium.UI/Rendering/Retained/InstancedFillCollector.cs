@@ -187,8 +187,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         {
             if (seg.GpuRing != null && (seg.GpuRing.Length != copies || seg.GpuCapacity < seg.Items.Length))
             {
+                // With its current copy: a new ring the GPU refuses must not leave that pointing at a buffer given back.
                 DeferRing(seg.GpuRing);
                 seg.GpuRing = null;
+                seg.Gpu = null;
             }
             if (seg.GpuRing == null && seg.MeshUploaded)
             {
@@ -209,6 +211,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.GradGpuRing);
                 seg.GradGpuRing = null;
+                seg.GradGpu = null;
             }
             if (seg.GradGpuRing == null && seg.MeshUploaded && seg.GradCount > 0)
             {
@@ -225,6 +228,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.PatGpuRing);
                 seg.PatGpuRing = null;
+                seg.PatGpu = null;
             }
             if (seg.PatGpuRing == null && seg.MeshUploaded && seg.PatCount > 0)
             {
@@ -241,6 +245,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.TexGpuRing);
                 seg.TexGpuRing = null;
+                seg.TexGpu = null;
             }
             if (seg.TexGpuRing == null && seg.MeshUploaded && seg.TexCount > 0)
             {
@@ -257,6 +262,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
             {
                 DeferRing(seg.MatGpuRing);
                 seg.MatGpuRing = null;
+                seg.MatGpu = null;
             }
             if (seg.MatGpuRing == null && seg.MeshUploaded && seg.MatCount > 0)
             {
@@ -1541,23 +1547,45 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         var indices = mesh.Indices;
         var indexed = indices is { Length: > 0 };
 
-        seg ??= new KeySegment();
-        seg.VtxBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer, "shared mesh vertices");
-        seg.VertexCount = (uint)vertices.Length;
+        // All three uploaded before any is kept: the GPU out of memory on the second, the first is let go of at once, not
+        // left on a segment nobody holds - every retry would lose another.
+        Buffer vertexBuffer = null, indexBuffer = null, fringeBuffer = null;
+        try
+        {
+            vertexBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer, "shared mesh vertices");
+            if (indexed)
+            {
+                indexBuffer = Upload(indices, BufferUsageFlags.IndexBuffer, "shared mesh indices");
+            }
 
+            // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
+            if (mesh.Ring is { Length: > 0 } fringe)
+            {
+                fringeBuffer = Upload(fringe, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                    "shared mesh fringe");
+            }
+        }
+        catch
+        {
+            vertexBuffer?.Dispose();
+            indexBuffer?.Dispose();
+            throw;
+        }
+
+        seg ??= new KeySegment();
+        seg.VtxBuffer = vertexBuffer;
+        seg.VertexCount = (uint)vertices.Length;
         seg.Indexed = indexed;
         if (indexed)
         {
-            seg.IdxBuffer = Upload(indices, BufferUsageFlags.IndexBuffer, "shared mesh indices");
+            seg.IdxBuffer = indexBuffer;
             seg.IndexCount = (uint)indices.Length;
         }
 
-        // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
-        if (mesh.Ring is { Length: > 0 } ring)
+        if (fringeBuffer != null)
         {
-            seg.RingBuffer = Upload(ring, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-                "shared mesh fringe");
-            seg.RingVertexCount = (uint)ring.Length * 6;
+            seg.RingBuffer = fringeBuffer;
+            seg.RingVertexCount = (uint)mesh.Ring.Length * 6;
         }
 
         seg.Topology = mesh.Topology;
@@ -1573,9 +1601,17 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     private Buffer Upload<T>(T[] data, BufferUsageFlags usage, string name) where T : unmanaged
     {
         var buffer = Buffer.New<T>(_device, (uint)data.Length, usage, Mem);
-        buffer.Name = name;
-        buffer.SetData(data, 0, (uint)data.Length);
-        return buffer;
+        try
+        {
+            buffer.Name = name;
+            buffer.SetData(data, 0, (uint)data.Length);
+            return buffer;
+        }
+        catch
+        {
+            buffer.Dispose();
+            throw;
+        }
     }
 
     // ---- Retained ARENA surface (see InstancedKeyArena) -------------------------------------------------------------

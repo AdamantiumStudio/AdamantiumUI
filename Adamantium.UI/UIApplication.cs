@@ -1967,6 +1967,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 now = Stopwatch.GetTimestamp();
                 if (WaitsToRetryDrawing(now))
                 {
+                    // What frames gave back is freed meanwhile: the GPU short of memory gets ours back first.
+                    GraphicsDeviceService?.MainGraphicsDevice?.ReleaseRetired();
                     due = _drawRetryAt;
                 }
                 else

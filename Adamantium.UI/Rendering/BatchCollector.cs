@@ -194,6 +194,8 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         var needed = Count + _deferredItems;
         EnsureCpuCapacity(needed + Math.Max(64, needed / 8));
 
+        // The ring before the last frame is let go of: the GPU out of memory, that frame is still whole for a patch.
+        EnsureRing(device);
         _deferredItems = 0;
         Count = 0;
         _segmentStart = 0;
@@ -201,7 +203,6 @@ internal abstract class BatchCollector<TItem> : BatchArena, IPendingBatch where 
         _segments.Clear();
         _indexById.Clear();
         _freeBlocks.Clear();
-        EnsureRing(device);
         if (device.FrameTicket != _writeFrame)
         {
             SelectSlot(device);
