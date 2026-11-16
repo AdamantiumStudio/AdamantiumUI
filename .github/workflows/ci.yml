@@ -124,8 +124,8 @@ jobs:
           pids=(); logs=()
           run() {
             local log="$RUNNER_TEMP/$1.log"; shift
-            # A test that hangs is stopped after 10 minutes and named, with the run's other logs.
-            dotnet test "$@" -c Release --no-build --blame-hang-timeout 10m > "$log" 2>&1 &
+            # A test that hangs is stopped after 10 minutes; the blame sequence, uploaded below, says which it was.
+            dotnet test "$@" -c Release --no-build --blame-hang-timeout 10m --blame-hang-dump-type none > "$log" 2>&1 &
             pids+=($!); logs+=("$log")
           }
           xaml=Tests/Adamantium.XamlTests/Adamantium.XamlTests.csproj
@@ -145,3 +145,11 @@ jobs:
             cat "${logs[$i]}"
           done
           exit $status
+
+      - name: Blame sequences of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: blame-${{ matrix.name }}
+          path: Tests/*/TestResults/**/Sequence_*.xml
+          if-no-files-found: ignore
