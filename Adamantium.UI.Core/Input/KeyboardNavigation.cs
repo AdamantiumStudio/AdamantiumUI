@@ -384,7 +384,7 @@ public static class KeyboardNavigation
 
     private static void OnAltDown(object sender, KeyEventArgs e)
     {
-        if (e.Key is (Key.Alt or Key.LeftAlt or Key.RightAlt) && sender is IObservableComponent { ObservableParent: null })
+        if (e.Key.IsAlt() && sender is IObservableComponent { ObservableParent: null })
         {
             FocusManager.Reveal();
         }

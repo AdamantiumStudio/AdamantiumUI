@@ -106,6 +106,10 @@ internal interface IWebViewBrowserView
     /// <summary>The page went on: a dialog of its still asked is asked no more.</summary>
     void ScriptDialogsReset(WebViewBrowser browser);
 
+    /// <summary>A site or a proxy asks to sign in: the view answers <paramref name="request"/> - at once, or once its
+    /// user has; false leaves it to be refused.</summary>
+    bool SignInRequested(WebViewBrowser browser, WebViewSignInRequest request);
+
     /// <summary>The tooltip the page wants for what is under the pointer; empty for none.</summary>
     void TooltipChanged(WebViewBrowser browser, string text);
 

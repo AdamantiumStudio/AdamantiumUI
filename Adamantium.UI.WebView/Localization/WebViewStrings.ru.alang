@@ -21,4 +21,16 @@
     <Phrase Key="FindNext" Text="Следующее"/>
     <Phrase Key="CloseFind" Text="Закрыть поиск"/>
     <Phrase Key="Matches" Text="{active} из {count}"/>
+    <Phrase Key="SignInTitle" Text="Вход"/>
+    <Phrase Key="ProxySignInTitle" Text="Вход на прокси"/>
+    <Phrase Key="SiteAsksSignIn" Text="{site} просит войти"/>
+    <Phrase Key="SiteAsksSignInTo" Text="{site} просит войти в «{realm}»"/>
+    <Phrase Key="ProxyAsksSignIn" Text="Прокси {proxy} просит войти"/>
+    <Phrase Key="ProxyAsksSignInTo" Text="Прокси {proxy} просит войти в «{realm}»"/>
+    <Phrase Key="SignInInsecure" Text="Соединение с сайтом не защищено: имя и пароль можно перехватить по пути."/>
+    <Phrase Key="WrongSignIn" Text="Имя пользователя или пароль не подошли. Попробуйте ещё раз."/>
+    <Phrase Key="UserName" Text="Имя пользователя"/>
+    <Phrase Key="Password" Text="Пароль"/>
+    <Phrase Key="RememberSignIn" Text="Запомнить"/>
+    <Phrase Key="SignIn" Text="Войти"/>
 </Language>

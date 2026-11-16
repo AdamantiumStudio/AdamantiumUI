@@ -22,22 +22,53 @@ internal sealed class LocalSite : IDisposable
     private readonly int cutAfterBytes;
     private readonly CancellationTokenSource stop = new();
 
+    private readonly WebCredential signIn;
+    private readonly string realm;
+    private readonly bool isProxy;
+    private int refusals;
+
     /// <summary>A site whose files are <paramref name="fileBytes"/> long, sent a piece every
     /// <paramref name="pieceDelayMs"/>; with <paramref name="cutAfterBytes"/>, the connection is dropped after that
     /// many, short of the length it said.</summary>
     public LocalSite(string html, int fileBytes = 64 * 1024, int pieceDelayMs = 0, int cutAfterBytes = 0)
+        : this(html, null, null, false, fileBytes, pieceDelayMs, cutAfterBytes)
+    {
+    }
+
+    private LocalSite(string html, WebCredential signIn, string realm, bool isProxy, int fileBytes = 64 * 1024,
+        int pieceDelayMs = 0, int cutAfterBytes = 0)
     {
         page = Encoding.UTF8.GetBytes(html);
+        this.signIn = signIn;
+        this.realm = realm;
+        this.isProxy = isProxy;
         this.fileBytes = fileBytes;
         this.pieceDelayMs = pieceDelayMs;
         this.cutAfterBytes = cutAfterBytes;
         listener.Start();
-        Origin = "http://127.0.0.1:" + ((IPEndPoint)listener.LocalEndpoint).Port;
+        Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        Origin = "http://127.0.0.1:" + Port;
         _ = Serve();
     }
 
+    /// <summary>A site that lets in only <paramref name="signIn"/>, asked with Basic for <paramref name="realm"/>: a
+    /// request without it is refused with 401.</summary>
+    public static LocalSite SigningIn(string html, WebCredential signIn, string realm) =>
+        new(html, signIn, realm, false);
+
+    /// <summary>A proxy that lets through only <paramref name="signIn"/>, asked with Basic for <paramref name="realm"/>:
+    /// a request without it is refused with 407. Let through, it answers every address with the page itself.</summary>
+    public static LocalSite ProxySigningIn(string html, WebCredential signIn, string realm) =>
+        new(html, signIn, realm, true);
+
     /// <summary>The site's origin, its pages' addresses' start.</summary>
     public string Origin { get; }
+
+    /// <summary>The port it listens on.</summary>
+    public int Port { get; }
+
+    /// <summary>How many requests it refused for want of the sign-in.</summary>
+    public int Refusals => Volatile.Read(ref refusals);
 
     public void Dispose()
     {
@@ -85,8 +116,21 @@ internal sealed class LocalSite : IDisposable
                 }
             }
 
-            var line = Encoding.ASCII.GetString(request, 0, read).Split("\r\n", 2)[0].Split(' ');
+            var text = Encoding.ASCII.GetString(request, 0, read);
+            var line = text.Split("\r\n", 2)[0].Split(' ');
             var path = line.Length > 1 ? line[1] : "/";
+            if (signIn != null && !IsSignedIn(text))
+            {
+                Interlocked.Increment(ref refusals);
+                var status = isProxy ? "407 Proxy Authentication Required" : "401 Unauthorized";
+                var header = isProxy ? "Proxy-Authenticate" : "WWW-Authenticate";
+                var refusal = Encoding.ASCII.GetBytes($"HTTP/1.1 {status}\r\n{header}: Basic realm=\"{realm}\"\r\n" +
+                                                      "Content-Type: text/html\r\nContent-Length: 0\r\n" +
+                                                      "Connection: close\r\n\r\n");
+                await stream.WriteAsync(refusal, stop.Token);
+                return;
+            }
+
             if (path.StartsWith("/download/", StringComparison.Ordinal))
             {
                 await SendFile(stream, path["/download/".Length..]);
@@ -98,6 +142,23 @@ internal sealed class LocalSite : IDisposable
             await stream.WriteAsync(head, stop.Token);
             await stream.WriteAsync(page, stop.Token);
         }
+    }
+
+    // Whether the request carries the sign-in, in the header a site or a proxy reads it from.
+    private bool IsSignedIn(string request)
+    {
+        var header = isProxy ? "Proxy-Authorization: Basic " : "Authorization: Basic ";
+        var expected = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{signIn.UserName}:{signIn.Password}"));
+        foreach (var headerLine in request.Split("\r\n"))
+        {
+            if (headerLine.StartsWith(header, StringComparison.OrdinalIgnoreCase) &&
+                headerLine[header.Length..].Trim() == expected)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // The file's bytes are its offsets, a byte each - checked as they land.

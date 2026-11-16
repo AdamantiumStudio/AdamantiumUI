@@ -21,4 +21,16 @@
     <Phrase Key="FindNext" Text="Next match"/>
     <Phrase Key="CloseFind" Text="Close find bar"/>
     <Phrase Key="Matches" Text="{active} of {count}"/>
+    <Phrase Key="SignInTitle" Text="Sign in"/>
+    <Phrase Key="ProxySignInTitle" Text="Sign in to proxy"/>
+    <Phrase Key="SiteAsksSignIn" Text="{site} asks you to sign in"/>
+    <Phrase Key="SiteAsksSignInTo" Text="{site} asks you to sign in to “{realm}”"/>
+    <Phrase Key="ProxyAsksSignIn" Text="The proxy {proxy} asks you to sign in"/>
+    <Phrase Key="ProxyAsksSignInTo" Text="The proxy {proxy} asks you to sign in to “{realm}”"/>
+    <Phrase Key="SignInInsecure" Text="Your connection to this site is not private: the name and password can be seen on the way."/>
+    <Phrase Key="WrongSignIn" Text="The user name or password was not accepted. Try again."/>
+    <Phrase Key="UserName" Text="User name"/>
+    <Phrase Key="Password" Text="Password"/>
+    <Phrase Key="RememberSignIn" Text="Remember"/>
+    <Phrase Key="SignIn" Text="Sign in"/>
 </Language>

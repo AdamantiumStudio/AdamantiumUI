@@ -45,6 +45,28 @@ public unsafe class WebViewAppTests
         }
     }
 
+    [Test]
+    public void DisabledFeatures_JoinTheOnesTheCommandLineDisables_AndNotTheEnabledOnes()
+    {
+        var commandLine = CefInterop.CefCommandLineCreate();
+        try
+        {
+            WebViewApp.AppendSwitches(commandLine, [new(WebViewApp.EnableFeaturesSwitch, "On")]);
+            WebViewApp.AppendSwitches(commandLine, [new(WebViewApp.DisableFeaturesSwitch, "First")]);
+            WebViewApp.AppendSwitches(commandLine, [new(WebViewApp.DisableFeaturesSwitch, "Second")]);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ReadSwitch(commandLine, WebViewApp.DisableFeaturesSwitch), Is.EqualTo("First,Second"));
+                Assert.That(ReadSwitch(commandLine, WebViewApp.EnableFeaturesSwitch), Is.EqualTo("On"));
+            });
+        }
+        finally
+        {
+            CefRefCounting.ReleaseCef(commandLine);
+        }
+    }
+
     private static string ReadSwitch(CefCommandLine* commandLine, string name)
     {
         var cefName = new CefStringUtf16();

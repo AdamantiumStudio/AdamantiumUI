@@ -526,7 +526,13 @@ All packages share one version.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held
   the same brush before and after - "no change", nothing to undo, and nobody following the history told; the step now
   keeps a copy. A picture with no file cleared in the inspector is a step again.
-
+- A universe hosted in a window hears Ctrl, Shift and Alt even when the ribbon has taken them for its key tips, and every
+  key let go, whoever handled it: Alt with a drag in a 3D view now reaches its camera, and a key the universe saw go
+  down no longer stays down there. The modifiers held as a button goes down over it reach it too, whoever had the
+  keyboard when they went down: Alt pressed over the hierarchy, then the right button over the view.
+- A pointer pressed while Alt is held makes Alt half of a gesture: its release no longer shows the ribbon's key tips,
+  as a press under Alt cancels the menu bar in Windows - however long Alt is held, its repeats included.
+- `Key.IsAlt()` and `Key.IsModifier()`: one list of those keys for the keyboard's handlers.
 - A large `RibbonSplitButton` has its arrow in the middle of its lower half, in every theme, not pressed against the
   rule under the label.
 - `WrapPanel` measures its children within the room it has, as WPF's does: measured without a bound, a child that
