@@ -54,6 +54,10 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 
     public string NextRedo => _undone.Count > 0 ? _undone[^1].Reason : string.Empty;
 
+    /// <summary>The step pushed, undone or redone last - what the latest <see cref="Changed"/> is about, for a listener
+    /// that follows what a step touched; null once the history is cleared.</summary>
+    public ICanvasStep LastStep { get; private set; }
+
     /// <summary>Forgets everything - a new drawing, or one just loaded.</summary>
     public void Clear()
     {
@@ -61,6 +65,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 
         _done.Clear();
         _undone.Clear();
+        LastStep = null;
         Announce();
     }
 
@@ -72,6 +77,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         _done.RemoveAt(_done.Count - 1);
         step.Apply(scene, forward: false);
         _undone.Add(step);
+        LastStep = step;
 
         Announce();
         return true;
@@ -85,6 +91,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
         _undone.RemoveAt(_undone.Count - 1);
         step.Apply(scene, forward: true);
         _done.Add(step);
+        LastStep = step;
 
         Announce();
         return true;
@@ -115,6 +122,7 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 
         _done.Add(step);
         _undone.Clear();
+        LastStep = step;
         Trim();
 
         Announce();

@@ -30,6 +30,7 @@ public class CanvasPane : ContentControl
     private bool _captured;
     private bool _keepsOpenRoom = true;
     private double _wide;
+    private double _openFootprint;
     private PointerPressedEventHandler _onPressed;
     private PointerEventHandler _onMoved;
     private PointerReleasedEventHandler _onReleased;
@@ -380,7 +381,14 @@ public class CanvasPane : ContentControl
             return;
         }
 
-        if (pane.IsOpen) pane.KeepsOpenRoom = true;
+        if (pane.IsOpen)
+        {
+            pane.KeepsOpenRoom = true;
+        }
+        else
+        {
+            pane._openFootprint = pane.DesiredSize.Width;
+        }
 
         pane.CoerceValue(WidthProperty);
         pane.SyncSizer();
@@ -441,9 +449,14 @@ public class CanvasPane : ContentControl
         get
         {
             var asked = GetBaseValue<Double>(WidthProperty);
-            if (IsOpen || !KeepsOpenRoom || Double.IsNaN(asked))
+            if (IsOpen || !KeepsOpenRoom)
             {
                 return DesiredSize.Width;
+            }
+
+            if (Double.IsNaN(asked))
+            {
+                return Math.Max(DesiredSize.Width, _openFootprint);
             }
 
             var margin = EffectiveMargin;

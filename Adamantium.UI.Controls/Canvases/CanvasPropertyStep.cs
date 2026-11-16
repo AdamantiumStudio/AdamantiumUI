@@ -17,9 +17,19 @@ public sealed class CanvasPropertyStep : ICanvasStep
         _definition = definition;
         _values = values;
         Reason = definition?.Header as string ?? "Property";
+        var targets = new List<object>(values?.Count ?? 0);
+        foreach (var value in values ?? [])
+        {
+            targets.Add(value.Target);
+        }
+
+        Targets = targets;
     }
 
     public string Reason { get; }
+
+    /// <summary>The objects the line was written to - what an undo or a redo of this step changes.</summary>
+    public IReadOnlyList<object> Targets { get; }
 
     /// <summary>Whether any of the objects actually took a different value. A line re-typed with the same number in it
     /// must not become a step that undoes to what it already was.</summary>
@@ -29,7 +39,10 @@ public sealed class CanvasPropertyStep : ICanvasStep
         {
             foreach (var (_, was, now) in _values)
             {
-                if (!Equals(was, now)) return true;
+                if (_definition == null ? !Equals(was, now) : !_definition.SameValue(was, now))
+                {
+                    return true;
+                }
             }
 
             return false;
@@ -38,7 +51,10 @@ public sealed class CanvasPropertyStep : ICanvasStep
 
     public void Apply(ICanvasScene scene, bool forward)
     {
-        foreach (var (target, was, now) in _values) _grid.WriteTo(target, _definition, forward ? now : was);
+        foreach (var (target, was, now) in _values)
+        {
+            _grid.WriteTo(target, _definition, _definition?.Remembered(forward ? now : was));
+        }
 
         // Plane objects say only where they are and how big, so tell both the drawing and the panel; the rows are
         // rebuilt, since re-reading returns their stale values.

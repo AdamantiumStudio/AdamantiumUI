@@ -492,7 +492,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
                 continue;
             }
 
-            _edited.Add((target, grid.ValueOf(target, about.Property), null));
+            _edited.Add((target, about.Property.Remembered(grid.ValueOf(target, about.Property)), null));
         }
     }
 
@@ -509,7 +509,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         for (var i = 0; i < _edited.Count; i++)
         {
             var (target, was, _) = _edited[i];
-            _edited[i] = (target, was, grid.ValueOf(target, about.Property));
+            _edited[i] = (target, was, about.Property.Remembered(grid.ValueOf(target, about.Property)));
         }
 
         // A COPY: the list is reused by the next write, and a step holding the live one would be rewritten by it.

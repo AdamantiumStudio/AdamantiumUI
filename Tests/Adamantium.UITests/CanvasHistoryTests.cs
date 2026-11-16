@@ -360,6 +360,55 @@ public class CanvasHistoryTests
         Assert.That(canvas.History.CanUndo, Is.False);
     }
 
+    // A COLOR is written INTO the item's own brush, so the brush held before the write holds the new color after it.
+    // Kept as it was, that step undid to the color it had just been given - and, being "no change", was not a step at
+    // all: nothing to undo, and nobody following the history told the item had changed.
+    [Test]
+    public void AColorWrittenIntoTheBrushIsUndone_AndRedone_ThroughSeveralEdits()
+    {
+        var red = Color.FromRgba(255, 0, 0, 255);
+        var blue = Color.FromRgba(0, 0, 255, 255);
+        var green = Color.FromRgba(0, 160, 0, 255);
+        var scene = new CanvasScene();
+        var item = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 10, 10), new SolidColorBrush(red), 1);
+        scene.Add(item);
+        var canvas = Sized(scene);
+        var stroke = new SolidColorBrushProperty { Header = "Stroke", Binding = new Binding("Stroke") };
+        var grid = new PropertyGrid { Template = Chrome() };
+        var section = new PropertySection { Header = "Shape", Target = item, IsExpanded = true };
+        section.Properties.Add(stroke);
+        grid.Sections.Add(section);
+        grid.Measure(new Size<double>(400, 400), force: true);
+        grid.Arrange(new Rect(0, 0, 400, 400));
+        canvas.Inspector = grid;
+        var told = 0;
+        canvas.History.Changed += (_, _) => told++;
+
+        grid.Write(Row(grid, stroke), blue);
+        var first = told;
+        grid.Write(Row(grid, stroke), green);
+
+        Color? Held() => (item.Stroke as SolidColorBrush)?.Color;
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.GreaterThan(0), "the color written was not a step");
+            Assert.That(Held(), Is.EqualTo(green));
+        });
+
+        canvas.Undo();
+        Assert.That(Held(), Is.EqualTo(blue), "the second edit did not undo to the first");
+        canvas.Undo();
+        Assert.That(Held(), Is.EqualTo(red), "the first edit did not undo to the color before it");
+        canvas.Redo();
+        Assert.That(Held(), Is.EqualTo(blue), "redone, the first edit took the color of the second");
+        canvas.Redo();
+        Assert.That(Held(), Is.EqualTo(green));
+        grid.Write(Row(grid, stroke), red);
+        canvas.Undo();
+        canvas.Undo();
+        Assert.That(Held(), Is.EqualTo(blue), "an edit after a redo changed what the history keeps");
+    }
+
     private static PropertyGrid Built(object target, out NumericProperty thickness)
     {
         thickness = new NumericProperty { Header = "Thickness", Binding = new Binding("Thickness") };
