@@ -14,6 +14,10 @@ All packages share one version.
 - `CanvasHistory.LastStep`, the step a `Changed` is about, and `CanvasPropertyStep.Targets`, the objects it wrote: a
   listener keeping a copy of the drawing follows an inspector edit undone or redone. `PropertyDefinition.Remembered`:
   what an undo keeps of a value the line edits in place.
+- `ICanvasStep.Targets`, what a step changes - for the canvas's own steps the items added, taken away, moved, or put
+  in another place among the others (only those that left the order of the rest) - and `CanvasHistory.LastChange`
+  (`CanvasHistoryChange`): whether the last step was pushed, undone or redone. A listener can tell an edit taken back
+  from one made just now, and what it touched.
 - `InfiniteCanvas.IsShown(item)`: whether an item of the scene is shown on the plane now - every one by default. A
   derived canvas hides items by overriding it and calling `RefreshShown()` when what it hides changes: a hidden item
   stays in the scene, in its place in the paint order and in the history's steps, but is not drawn, not reached by a
@@ -523,6 +527,8 @@ All packages share one version.
 
 ### Fixed
 
+- Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
+  forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held
   the same brush before and after - "no change", nothing to undo, and nobody following the history told; the step now
   keeps a copy. A picture with no file cleared in the inspector is a step again.

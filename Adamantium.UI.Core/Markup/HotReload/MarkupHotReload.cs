@@ -115,6 +115,11 @@ public static class MarkupHotReload
         var content = HashOf(ReadText(fullPath, 1));
         lock (Sync)
         {
+            if (!Files.ContainsKey(fullPath))
+            {
+                return;
+            }
+
             if (Taken.TryGetValue(fullPath, out var taken) && taken != null
                 && (content == taken || HashOf(ReadText(fullPath, 1)) == taken))
             {
@@ -279,6 +284,11 @@ public static class MarkupHotReload
         try
         {
             var diagnostics = new List<string>();
+            if (!IsFollowed(file))
+            {
+                return Forgotten(file, diagnostics);
+            }
+
             var text = ReadText(file.Path, SaveAttempts);
             var edited = text == null ? null : AumlLoader.Lower(text, null, diagnostics, file.Path);
             if (text == null)
@@ -292,7 +302,7 @@ public static class MarkupHotReload
 
             if (edited?.Plan == null || !file.KnowsWhatWasBuilt || diagnostics.Any(IsError) || !file.EnsureBuiltPlan())
             {
-                return Fail(file.Path, diagnostics);
+                return Fail(file, diagnostics);
             }
 
             var applied = new TaskCompletionSource<MarkupReloadReport>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -305,7 +315,7 @@ public static class MarkupHotReload
             catch (TimeoutException)
             {
                 diagnostics.Add("the application's loop did not take the change");
-                return Fail(file.Path, diagnostics);
+                return Fail(file, diagnostics);
             }
         }
         finally
@@ -316,6 +326,11 @@ public static class MarkupHotReload
 
     private static MarkupReloadReport ApplyOnLoop(TrackedMarkup file, LoweredDocument edited, string hash, List<string> diagnostics)
     {
+        if (!IsFollowed(file))
+        {
+            return Forgotten(file, diagnostics);
+        }
+
         int count;
         try
         {
@@ -328,7 +343,7 @@ public static class MarkupHotReload
         catch (Exception exception)
         {
             diagnostics.Add(exception.Message);
-            return Fail(file.Path, diagnostics);
+            return Fail(file, diagnostics);
         }
 
         var report = new MarkupReloadReport(file.Path, true, count, diagnostics);
@@ -338,13 +353,32 @@ public static class MarkupHotReload
         return report;
     }
 
-    private static MarkupReloadReport Fail(string path, List<string> diagnostics)
+    private static MarkupReloadReport Fail(TrackedMarkup file, List<string> diagnostics)
     {
-        Log.Logger.Error("Markup hot reload: {File} was not applied{NewLine}{Messages}", path, Environment.NewLine,
+        if (!IsFollowed(file))
+        {
+            return Forgotten(file, diagnostics);
+        }
+
+        Log.Logger.Error("Markup hot reload: {File} was not applied{NewLine}{Messages}", file.Path, Environment.NewLine,
             string.Join(Environment.NewLine, diagnostics));
-        var report = new MarkupReloadReport(path, false, 0, diagnostics);
+        var report = new MarkupReloadReport(file.Path, false, 0, diagnostics);
         Raise(Failed, report);
         return report;
+    }
+
+    private static bool IsFollowed(TrackedMarkup file)
+    {
+        lock (Sync)
+        {
+            return Files.TryGetValue(file.Path, out var followed) && ReferenceEquals(followed, file);
+        }
+    }
+
+    private static MarkupReloadReport Forgotten(TrackedMarkup file, List<string> diagnostics)
+    {
+        diagnostics.Add("the file is no longer followed");
+        return new MarkupReloadReport(file.Path, false, 0, diagnostics);
     }
 
     private static void Raise(Action<MarkupReloadReport> handlers, MarkupReloadReport report)

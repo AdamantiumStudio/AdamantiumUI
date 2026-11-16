@@ -94,6 +94,55 @@ public class CanvasHistoryTests
         Assert.That(scene.Items, Is.Empty);
     }
 
+    // A step names what it changed - moved, taken away, put in another place in the paint order - and the history names
+    // the step it last pushed, undid or redid, so a listener keeping its own copy of the drawing knows what to look at.
+    [Test]
+    public void AStepNamesWhatItChanged_AndTheHistoryTheStepLastApplied()
+    {
+        var scene = new CanvasScene();
+        var moved = Box(0, 0);
+        var still = Box(20, 0);
+        var gone = Box(40, 0);
+        foreach (var item in new[] { moved, still, gone })
+        {
+            scene.Add(item);
+        }
+
+        var canvas = Sized(scene);
+
+        canvas.BeginEdit("Move");
+        moved.Move(new Vector2<double>(5, 0));
+        canvas.EndEdit();
+        var move = canvas.History.LastStep;
+        canvas.Select(gone, false);
+        canvas.DeleteSelection();
+        var delete = canvas.History.LastStep;
+        var pushed = canvas.History.LastChange;
+        canvas.Undo();
+        var undone = canvas.History.LastStep;
+        var undoneChange = canvas.History.LastChange;
+        canvas.Redo();
+        var redoneChange = canvas.History.LastChange;
+        canvas.Undo();
+        canvas.History.Record(scene, "Order", () => scene.Reset([gone, moved, still]));
+        var order = canvas.History.LastStep;
+        canvas.History.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(move?.Targets, Is.EqualTo(new object[] { moved }), "a move named other items");
+            Assert.That(delete?.Targets, Is.EqualTo(new object[] { gone }), "a delete named other items");
+            Assert.That(undone, Is.SameAs(delete), "the history does not name the step it undid");
+            Assert.That(pushed, Is.EqualTo(CanvasHistoryChange.Pushed));
+            Assert.That(undoneChange, Is.EqualTo(CanvasHistoryChange.Undone));
+            Assert.That(redoneChange, Is.EqualTo(CanvasHistoryChange.Redone));
+            Assert.That(order?.Targets, Is.EqualTo(new object[] { gone }),
+                "carried to another end of the paint order, the item named every item it passed");
+            Assert.That(canvas.History.LastStep, Is.Null, "a cleared history names a step");
+            Assert.That(canvas.History.LastChange, Is.EqualTo(CanvasHistoryChange.Cleared));
+        });
+    }
+
     // A MOVE is put back by traveling, which is exact - not by being resized into its old box.
     [Test]
     public void AMoveIsUndoneExactly()
