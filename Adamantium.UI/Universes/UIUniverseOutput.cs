@@ -22,6 +22,8 @@ namespace Adamantium.UI.Universes
         private OutputCursor cursor;
         private IWindow scaleSource;
         private IInputComponent listenedInput;
+        private KeyEventHandler keyDownHandler;
+        private KeyEventHandler keyUpHandler;
         private readonly List<IUIComponent> watchedAncestors = [];
         private readonly object ancestorsLock = new();
         private bool watchingAncestors;
@@ -266,8 +268,12 @@ namespace Adamantium.UI.Universes
             WatchHostWindow();
             StopListening();
             listenedInput = InputComponent;
-            listenedInput.KeyDown += WindowOnKeyDown;
-            listenedInput.KeyUp += WindowOnKeyUp;
+            // Handled ones too: a modifier key is state the universe has to know - Alt with a drag orbits a camera -
+            // even when the ribbon has taken the key for its key tips.
+            keyDownHandler ??= WindowOnKeyDown;
+            keyUpHandler ??= WindowOnKeyUp;
+            listenedInput.AddHandler(Keyboard.KeyDownEvent, keyDownHandler, handledEventsToo: true);
+            listenedInput.AddHandler(Keyboard.KeyUpEvent, keyUpHandler, handledEventsToo: true);
             listenedInput.TextInput += WindowOnTextInput;
             listenedInput.PointerPressed += OnPointerPressed;
             listenedInput.PointerReleased += OnPointerReleased;
@@ -310,8 +316,8 @@ namespace Adamantium.UI.Universes
                 return;
             }
 
-            listenedInput.KeyDown -= WindowOnKeyDown;
-            listenedInput.KeyUp -= WindowOnKeyUp;
+            listenedInput.RemoveHandler(Keyboard.KeyDownEvent, keyDownHandler);
+            listenedInput.RemoveHandler(Keyboard.KeyUpEvent, keyUpHandler);
             listenedInput.TextInput -= WindowOnTextInput;
             listenedInput.PointerPressed -= OnPointerPressed;
             listenedInput.PointerReleased -= OnPointerReleased;
@@ -616,6 +622,7 @@ namespace Adamantium.UI.Universes
             return TranslationKeys.TryGetValue(key, out result);
         }
 
+        // A key let go reaches the universe whoever handled it: one it saw go down would otherwise stay down there.
         private void WindowOnKeyUp(object sender, KeyEventArgs e)
         {
             if (!TryTranslate(e.Key, e.PhysicalKey, out var key))
@@ -638,7 +645,7 @@ namespace Adamantium.UI.Universes
 
         private void WindowOnKeyDown(object sender, KeyEventArgs e)
         {
-            if (!IsUniverseInput(e) || !TryTranslate(e.Key, e.PhysicalKey, out var key))
+            if ((e.Handled && !IsModifier(e.Key)) || !IsUniverseInput(e) || !TryTranslate(e.Key, e.PhysicalKey, out var key))
             {
                 return;
             }
@@ -649,5 +656,8 @@ namespace Adamantium.UI.Universes
                 e.Handled = true;
             }
         }
+
+        private static bool IsModifier(Key key) => key is Key.Alt or Key.LeftAlt or Key.RightAlt or Key.LeftCtrl
+            or Key.RightCtrl or Key.Ctrl or Key.LeftShift or Key.RightShift or Key.Shift;
     }
 }

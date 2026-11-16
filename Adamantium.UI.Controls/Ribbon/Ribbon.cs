@@ -975,8 +975,14 @@ public class Ribbon : Selector
         e.Handled = true;
     }
 
-    // Reaching for the pointer means the keyboard route was abandoned - Office drops the badges on any press.
-    private void OnKeyTipPress(object sender, PointerPressedEventArgs e) => _keyTips?.End();
+    // Reaching for the pointer means the keyboard route was abandoned - Office drops the badges on any press. A press
+    // while Alt is held makes Alt half of a gesture - Alt and the right button orbit a 3D view's camera - so its release
+    // shows none either, as a press under Alt cancels the menu bar in Windows.
+    private void OnKeyTipPress(object sender, PointerPressedEventArgs e)
+    {
+        _altAlone = false;
+        _keyTips?.End();
+    }
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {
