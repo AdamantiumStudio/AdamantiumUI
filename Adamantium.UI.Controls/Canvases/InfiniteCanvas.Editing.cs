@@ -1163,7 +1163,7 @@ public partial class InfiniteCanvas
 
         // ZoomStep is one standard notch (120) raised to how far the wheel turned, so a hi-res wheel firing many
         // fractional events zooms the same total as a standard one.
-        ZoomAt(e.GetPosition(this), Math.Pow(ZoomStep, e.Delta / 120.0));
+        ZoomAt(e.GetPosition(ViewportElement), Math.Pow(ZoomStep, e.Delta / 120.0));
         e.Handled = true;
     }
 
@@ -1227,7 +1227,7 @@ public partial class InfiniteCanvas
             // wire does. Only where there is nothing: over a thing, a double click is about that thing.
             if (e.ChangedButton == MouseButtons.Left && !_pressIsPlane)
             {
-                var spot = ScreenToWorld(e.GetPosition(this));
+                var spot = ScreenToWorld(e.GetPosition(ViewportElement));
                 var reach = ScreenToWorldLength(4);
                 var box = new Rect(spot.X - reach, spot.Y - reach, reach * 2, reach * 2);
 
@@ -1263,7 +1263,7 @@ public partial class InfiniteCanvas
         {
             _panning = true;
             _panPointer = e.Pointer;
-            _panFrom = e.GetPosition(this);
+            _panFrom = e.GetPosition(ViewportElement);
             _panOffsetFrom = _handOffset;
             _coast.ResetTracking();
 
@@ -1277,7 +1277,7 @@ public partial class InfiniteCanvas
         // and the layer hands that press here through PressFromElement.
         if (!_pressIsPlane && FromGlass(e.OriginalSource)) return;
 
-        var at = e.GetPosition(this);
+        var at = e.GetPosition(ViewportElement);
 
         // A GRIP of the manipulation frame, before any tool sees the press: the frame is the canvas's, so dragging one
         // is the same answer whatever tool is in hand. Only the GRIPS - a press inside the frame still means what the
@@ -1377,7 +1377,7 @@ public partial class InfiniteCanvas
         {
             // From where the drag STARTED, not from the last move: accumulating deltas drifts. On a plane with edges
             // the hand pulls it past them.
-            var wanted = _panOffsetFrom + (e.GetPosition(this) - _panFrom);
+            var wanted = _panOffsetFrom + (e.GetPosition(ViewportElement) - _panFrom);
             if (HasPlaneBounds) MoveByHand(wanted - _handOffset);
             else Travel(_travel + (wanted - Offset));
             _coast.Track(e.Timestamp);
@@ -1385,7 +1385,7 @@ public partial class InfiniteCanvas
             return;
         }
 
-        var pointer = e.GetPosition(this);
+        var pointer = e.GetPosition(ViewportElement);
         _pointer = pointer;
 
         // OVER A PANEL the pointer is the panel's: a crosshair over an inspector says a press there would draw, and it
@@ -1549,7 +1549,7 @@ public partial class InfiniteCanvas
                 return;
             }
 
-            var args = Describe(e.GetPosition(this), e.ChangedButton, 1, e);
+            var args = Describe(e.GetPosition(ViewportElement), e.ChangedButton, 1, e);
             if (_erasing == e.Pointer.Id)
             {
                 _erasing = null;
@@ -1656,7 +1656,9 @@ public partial class InfiniteCanvas
 
         if (e.State != ManipulationState.Delta) return;
 
-        if (e.Scale != 1) ScaleByHand(e.Origin - e.Translation, e.Scale);
+        var origin = e.Origin - ViewportOrigin;
+        if (e.Scale != 1)
+            ScaleByHand(origin - e.Translation, e.Scale);
 
         if (e.Translation != Vector2<double>.Zero) MoveByHand(e.Translation);
 
@@ -1666,7 +1668,7 @@ public partial class InfiniteCanvas
         // pinch's.
         if (e.Contacts >= 2)
         {
-            _zoomCoastAt = e.Origin;
+            _zoomCoastAt = origin;
             _zoomCoast.Track(e.Timestamp);
         }
         else

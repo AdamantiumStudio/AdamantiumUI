@@ -31,8 +31,34 @@ public partial class InfiniteCanvas : ICanvasCamera
     private Double _flightToScale;
     private int _flightRun;
     private bool _flying;
+    private IInputComponent _viewportPart;
 
     bool ICanvasCamera.SnapsToPixels => true;
+
+    /// <summary>What the plane is looked at through: the template's <c>PART_Viewport</c>, or the canvas itself when its
+    /// template names none. Screen points are measured from its corner and the viewport is its size, so a template can
+    /// stand other things beside the plane - a side panel - without the camera, the pointer or the chrome reaching under
+    /// them.</summary>
+    public IInputComponent ViewportElement => _viewportPart ?? this;
+
+    /// <summary>How big the viewport is: the size of <see cref="ViewportElement"/>.</summary>
+    public Size<double> ViewportSize => ViewportElement.RenderSize;
+
+    /// <summary>Where <see cref="ViewportElement"/> stands in the canvas, from the canvas's corner.</summary>
+    public Vector2<double> ViewportOrigin
+    {
+        get
+        {
+            var origin = Vector2<double>.Zero;
+            for (IUIComponent element = _viewportPart; element != null && !ReferenceEquals(element, this);
+                 element = element.VisualParent)
+            {
+                origin += new Vector2<double>(element.Bounds.X, element.Bounds.Y);
+            }
+
+            return origin;
+        }
+    }
 
     public Double FlightSeconds
     {
@@ -45,7 +71,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     public Double EffectiveGridSpacing => Coarsened(GridSpacing);
 
     /// <summary>The piece of the world the viewport is showing.</summary>
-    public Rect VisibleWorld => WorldAcross(RenderSize);
+    public Rect VisibleWorld => WorldAcross(ViewportSize);
 
     /// <summary>The piece of the world a viewport THAT SIZE would show - asked for by whoever knows the size before the
     /// canvas does, which is the arrange pass that sets <see cref="IUIComponent.RenderSize"/> in the first place.
@@ -77,12 +103,12 @@ public partial class InfiniteCanvas : ICanvasCamera
 
     /// <summary>The part of the viewport a person can actually see the plane through: everything a DOCKED pane has
     /// taken is gone from it. The honest answer to "where is the middle", which a minimap or a ruler wants and
-    /// <see cref="Control.RenderSize"/> does not give.</summary>
+    /// <see cref="ViewportSize"/> does not give.</summary>
     public Rect UsableBounds
     {
         get
         {
-            var size = RenderSize;
+            var size = ViewportSize;
             var taken = _chromeLayer?.Inset() ?? new Thickness(0);
 
             var width = Math.Max(1, size.Width - taken.Left - taken.Right);
@@ -131,7 +157,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     /// stand just outside it, a node not yet built has no size to be measured in by.</summary>
     public void BringIntoView(Rect world)
     {
-        var size = RenderSize;
+        var size = ViewportSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
         var topLeft = WorldToScreen(new Vector2<double>(world.X, world.Y));
@@ -155,7 +181,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     /// edges hold; a hand on the camera, the wheel, or the camera placed by code ends the flight where it is.</summary>
     public void FlyTo(Rect world)
     {
-        if (RenderSize.Width <= 0 || RenderSize.Height <= 0 || !Double.IsFinite(world.X) || !Double.IsFinite(world.Y) ||
+        if (ViewportSize.Width <= 0 || ViewportSize.Height <= 0 || !Double.IsFinite(world.X) || !Double.IsFinite(world.Y) ||
             !Double.IsFinite(world.Width) || !Double.IsFinite(world.Height))
         {
             return;
@@ -266,7 +292,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     /// first layout, and a viewport of nothing has no middle.</summary>
     public void Look(Vector2<double> world)
     {
-        if (RenderSize is { Width: > 0, Height: > 0 })
+        if (ViewportSize is { Width: > 0, Height: > 0 })
         {
             CenterOn(world);
             return;
@@ -281,7 +307,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     public void CenterOn(Vector2<double> world)
     {
         StopCoasting();
-        CenterOn(world, RenderSize);
+        CenterOn(world, ViewportSize);
     }
 
     // ...against a viewport SAID rather than read. Inside an arrange pass RenderSize is still what the canvas used to
@@ -536,7 +562,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     {
         base.OnRender(context);
 
-        var size = RenderSize;
+        var size = ViewportSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
         var session = context.ForControl(this);
@@ -544,7 +570,8 @@ public partial class InfiniteCanvas : ICanvasCamera
         // GLASS: no ground at all, so whatever the canvas is laid over shows through. Skipped rather than painted
         // transparent - the ground is one quad over the whole viewport, and a mark-up layer should not pay for a
         // surface it does not have.
-        if (GridStyle != CanvasGridStyle.Transparent) DrawGround(session, size);
+        if (GridStyle != CanvasGridStyle.Transparent) DrawGround(session, new Rect(ViewportOrigin.X, ViewportOrigin.Y,
+            size.Width, size.Height));
     }
 
     // What the canvas draws is drawn in TWO places - here and in the layers - so the two are marked together. Anything
@@ -705,10 +732,10 @@ public partial class InfiniteCanvas : ICanvasCamera
 
     // ONE rectangle for the whole ground: the shader decides per pixel, from the world coordinate under it, whether it
     // is on a mark. A rectangle per mark was about a thousand a frame at 1:1 and could anti-alias none of them.
-    private void DrawGround(IDrawingSession session, Size<double> size)
+    private void DrawGround(IDrawingSession session, Rect viewport)
     {
         _ground.Marks = (CanvasGridMarks)GridStyle;
-        _ground.Offset = Offset;
+        _ground.Offset = Offset + new Vector2<double>(viewport.X, viewport.Y);
         _ground.Scale = Scale;
         // The step ALREADY coarsened - the same number EffectiveGridSpacing reports, so a ruler and a snap agree with
         // what is actually drawn.
@@ -718,7 +745,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         _ground.MarkSize = GridStyle == CanvasGridStyle.Dots ? GridDotSize : GridThickness;
         ColorGround();
 
-        session.DrawRectangle(_ground, new Rect(0, 0, size.Width, size.Height));
+        session.DrawRectangle(_ground, viewport);
     }
 
     private void ColorGround()
@@ -765,7 +792,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         const double padding = 5;
         const double away = 14;
 
-        var room = RenderSize;
+        var room = ViewportSize;
         var box = new Rect(_pointer.X + away, _pointer.Y + away,
             size.Width + padding * 2, size.Height + padding * 2);
 
@@ -992,6 +1019,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     {
         base.OnApplyTemplate();
 
+        _viewportPart = GetTemplateChild("PART_Viewport") as IInputComponent;
         _layers = GetTemplateChild("PART_Layers") as Panel;
 
         _front = GetTemplateChild("PART_Front") as CanvasFrontLayer;
@@ -1051,6 +1079,7 @@ public partial class InfiniteCanvas : ICanvasCamera
             _chromeLayer.Owner = null;
         }
 
+        _viewportPart = null;
         _layers = null;
         _chromeLayer = null;
         _overlay = null;
@@ -1077,7 +1106,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         var onGrip = OnGrip(e.OriginalSource);
         if (!onGrip && !IsChrome(e.OriginalSource)) return;
 
-        _overlayFrom = e.GetPosition(this);
+        _overlayFrom = e.GetPosition(ViewportElement);
         _overlayAt = OverlayPlacement == CanvasOverlayPlacement.Free
             ? OverlayOffset
             : new Vector2<double>(_overlayRoot.Bounds.X, _overlayRoot.Bounds.Y);
@@ -1122,12 +1151,13 @@ public partial class InfiniteCanvas : ICanvasCamera
     {
         if (!_draggingOverlay || _overlayRoot == null) return;
 
-        var wanted = _overlayAt + (e.GetPosition(this) - _overlayFrom);
-        var room = RenderSize;
+        var wanted = _overlayAt + (e.GetPosition(ViewportElement) - _overlayFrom);
+        var room = ViewportSize;
         var size = _overlayRoot.RenderSize;
 
         // A press that has actually MOVED is a drag and no longer a click.
-        if ((e.GetPosition(this) - _overlayFrom).Length() > 3) _overlayMoved = true;
+        if ((e.GetPosition(ViewportElement) - _overlayFrom).Length() > 3)
+            _overlayMoved = true;
 
         // Kept INSIDE the canvas: a panel dragged off the edge is a panel nobody can get back.
         SetCurrentValue(OverlayPlacementProperty, CanvasOverlayPlacement.Free);
@@ -1210,7 +1240,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         _chromeLayer.InvalidateArrange();
     }
 
-    private void SyncElements() => SyncElements(RenderSize);
+    private void SyncElements() => SyncElements(ViewportSize);
 
     /// <summary>Every group opened out, in place. A group holds things - it is moved, resized and selected as one - but
     /// it is not a way of drawing them: each thing draws through its own placement, with its own turn.</summary>
@@ -1410,27 +1440,27 @@ public partial class InfiniteCanvas : ICanvasCamera
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
-        var resized = _viewport != finalSize;
-        _viewport = finalSize;
+        var viewport = _viewportPart?.RenderSize ?? finalSize;
+        var resized = _viewport != viewport;
+        _viewport = viewport;
 
-        // From finalSize, not RenderSize: this IS the pass that sets the latter.
-        if (!_cameraPlaced && finalSize is { Width: > 0, Height: > 0 })
+        if (!_cameraPlaced && viewport is { Width: > 0, Height: > 0 })
         {
             _cameraPlaced = true;
-            SetCurrentValue(OffsetProperty, new Vector2<double>(finalSize.Width / 2, finalSize.Height / 2));
+            SetCurrentValue(OffsetProperty, new Vector2<double>(viewport.Width / 2, viewport.Height / 2));
         }
 
         // A view asked for before there was a viewport - and only once the panels have stopped moving: the middle is
         // measured against the room the docked ones leave, and one folded away by the same saved setup is still at its
         // old size on this pass.
-        if (_lookWanted is { } wanted && finalSize is { Width: > 0, Height: > 0 })
+        if (_lookWanted is { } wanted && viewport is { Width: > 0, Height: > 0 })
         {
             var inset = _chromeLayer?.Inset() ?? new Thickness(0);
 
             if (Same(inset, _lastInset))
             {
                 _lookWanted = null;
-                CenterOn(wanted, finalSize);
+                CenterOn(wanted, viewport);
             }
             else
             {
@@ -1450,7 +1480,7 @@ public partial class InfiniteCanvas : ICanvasCamera
 
         // The controls on the plane are asked for again HERE: "which of them can be seen" is answered from the
         // viewport, and until this pass there is none to answer from.
-        SyncElements(finalSize);
+        SyncElements(viewport);
 
         return size;
     }

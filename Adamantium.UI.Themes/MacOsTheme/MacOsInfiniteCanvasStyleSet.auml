@@ -240,8 +240,7 @@
                             </Button>
                         </StackPanel>
 
-                        <Grid x:Name="PART_BodyRoom"
-                              VerticalAlignment="Top">
+                        <Grid VerticalAlignment="Top">
                             <Border x:Name="PART_Body">
                                 <DockPanel LastChildFill="True">
                                     <!-- Colored outright - see Fluent's set. -->
@@ -250,24 +249,21 @@
                                                       FontSize="12"
                                                       Foreground="{ObservableResource TextFillColorSecondary}"
                                                       MarginBottom="8"/>
-                                    <!-- The content and the rail share the room left - see Fluent's set. -->
-                                    <Grid>
-                                        <ContentPresenter x:Name="PART_ContentPresenter"
-                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                          Content="{TemplateBinding Content}"
-                                                          ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                                        <!-- The tool rail, filled by the canvas - see Fluent's set. Roomier buttons,
-                                             like everything in this theme. -->
-                                        <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
-                                                      VerticalScrollBarVisibility="Hidden"
-                                                      HorizontalScrollBarVisibility="Disabled">
-                                            <CanvasToolRail x:Name="PART_Rail"
-                                                            Canvas="{TemplateBinding Canvas}"
-                                                            Orientation="{TemplateBinding Orientation}"
-                                                            ButtonWidth="32" ButtonHeight="30" IconSize="14" ButtonGap="5"/>
-                                        </ScrollViewer>
-                                    </Grid>
+                                    <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                    <!-- The tool rail, filled by the canvas - see Fluent's set. Roomier buttons, like
+                                         everything in this theme. -->
+                                    <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
+                                                  VerticalScrollBarVisibility="Hidden"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <CanvasToolRail x:Name="PART_Rail"
+                                                        Canvas="{TemplateBinding Canvas}"
+                                                        Orientation="{TemplateBinding Orientation}"
+                                                        ButtonWidth="32" ButtonHeight="30" IconSize="14" ButtonGap="5"/>
+                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
                         </Grid>
@@ -315,22 +311,6 @@
                             <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-
-                        <!-- A side pane: flush, square, bordered where it meets the plane - see Fluent's set. -->
-                        <PropertyTrigger Property="Placement" Value="LeftSide">
-                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Plate" Property="CornerRadius" Value="0"/>
-                            <Setter TargetName="PART_Plate" Property="BorderThickness" Value="0,0,1,0"/>
-                            <Setter TargetName="PART_Plate" Property="Shadow" Value="{x:Null}"/>
-                            <Setter TargetName="PART_BodyRoom" Property="VerticalAlignment" Value="Stretch"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="Placement" Value="RightSide">
-                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Plate" Property="CornerRadius" Value="0"/>
-                            <Setter TargetName="PART_Plate" Property="BorderThickness" Value="1,0,0,0"/>
-                            <Setter TargetName="PART_Plate" Property="Shadow" Value="{x:Null}"/>
-                            <Setter TargetName="PART_BodyRoom" Property="VerticalAlignment" Value="Stretch"/>
                         </PropertyTrigger>
 
                         <PropertyTrigger Property="Orientation" Value="Horizontal">

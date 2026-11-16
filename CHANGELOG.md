@@ -7,12 +7,12 @@ All packages share one version.
 
 ### Added
 
-- `CanvasPanePlacement.LeftSide` and `RightSide`: a canvas pane along a whole side of the canvas, flush with the edge
-  and as tall as it - a side panel that splits the viewport. `InfiniteCanvas.UsableBounds` lies beside it, and every
-  pane placed against an edge or a corner stands in the room left; a free pane and the selection's bar keep the whole
-  canvas. It is not carried, and only its inner edge widens it. The themes draw it square and unlifted, bordered where
-  it meets the plane, with no handles, its content handed the whole height. A pane in a top corner now starts below
-  the bars docked along the top: a toolbar grown wide enough to reach the corner stood under it.
+- `PART_Viewport`: the part of an `InfiniteCanvas` template the plane is looked at through
+  (`InfiniteCanvas.ViewportElement`, `ViewportSize`, `ViewportOrigin`). The pointer, the camera, the usable bounds,
+  fitting and centering, the ground and the chrome are all measured in it, so a template can stand other things beside
+  the plane - a side panel in a grid with a splitter - and nothing reaches under them. A template that names none is
+  its own viewport, as before. A pane in a top corner now starts below the bars docked along the top: a toolbar grown
+  wide enough to reach the corner stood under it.
 
 - `Binding.WorkOnSourceThread` and `BindingEngine.SourceThread` (`ISourceThread`): a binding whose source lives on
   another thread - a game world's - writes it there. What it writes back is handed to the `ISourceThread` the target's

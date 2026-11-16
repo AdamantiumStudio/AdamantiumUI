@@ -284,8 +284,7 @@
                             </Button>
                         </StackPanel>
 
-                        <Grid x:Name="PART_BodyRoom"
-                              VerticalAlignment="Top">
+                        <Grid VerticalAlignment="Top">
                             <Border x:Name="PART_Body">
                                 <DockPanel LastChildFill="True">
                                     <!-- The caption names what the panel is about. Quieter than the rows and colored
@@ -296,27 +295,23 @@
                                                       FontSize="12"
                                                       Foreground="{ObservableResource TextFillColorSecondary}"
                                                       MarginBottom="6"/>
-                                    <!-- The content and the rail share the room left, whichever of the two the kind shows:
-                                         a side pane's content is handed the whole height, as the rail is. -->
-                                    <Grid>
-                                        <ContentPresenter x:Name="PART_ContentPresenter"
-                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                          Content="{TemplateBinding Content}"
-                                                          ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                                        <!-- A rail pane's buttons come from the tools themselves; custom content needs
-                                             another pane kind. One line of them, scrolled along its own direction when
-                                             the room the canvas leaves is short - by the wheel or a finger, with no bar:
-                                             a bar beside thirty-pixel buttons would be wider than the gap it scrolls past. -->
-                                        <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
-                                                      VerticalScrollBarVisibility="Hidden"
-                                                      HorizontalScrollBarVisibility="Disabled">
-                                            <CanvasToolRail x:Name="PART_Rail"
-                                                            Canvas="{TemplateBinding Canvas}"
-                                                            Orientation="{TemplateBinding Orientation}"
-                                                            ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
-                                        </ScrollViewer>
-                                    </Grid>
+                                    <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                    <!-- A rail pane's buttons come from the tools themselves; custom content needs
+                                         another pane kind. One line of them, scrolled along its own direction when the
+                                         room the canvas leaves is short - by the wheel or a finger, with no bar: a bar
+                                         beside thirty-pixel buttons would be wider than the gap it scrolls past. -->
+                                    <ScrollViewer x:Name="PART_RailScroll" Visibility="Collapsed"
+                                                  VerticalScrollBarVisibility="Hidden"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <CanvasToolRail x:Name="PART_Rail"
+                                                        Canvas="{TemplateBinding Canvas}"
+                                                        Orientation="{TemplateBinding Orientation}"
+                                                        ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
+                                    </ScrollViewer>
                                 </DockPanel>
                             </Border>
                         </Grid>
@@ -374,24 +369,6 @@
                             <Setter TargetName="PART_RailScroll" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="PART_Turn" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-
-                        <!-- A SIDE pane is a side of the canvas and not a plate standing on it: flush, square and
-                             unlifted, bordered only where it meets the plane, its body the whole height, and with no
-                             handles - it is neither carried nor folded. -->
-                        <PropertyTrigger Property="Placement" Value="LeftSide">
-                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Plate" Property="CornerRadius" Value="0"/>
-                            <Setter TargetName="PART_Plate" Property="BorderThickness" Value="0,0,1,0"/>
-                            <Setter TargetName="PART_Plate" Property="Shadow" Value="{x:Null}"/>
-                            <Setter TargetName="PART_BodyRoom" Property="VerticalAlignment" Value="Stretch"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="Placement" Value="RightSide">
-                            <Setter TargetName="PART_Handles" Property="Visibility" Value="Collapsed"/>
-                            <Setter TargetName="PART_Plate" Property="CornerRadius" Value="0"/>
-                            <Setter TargetName="PART_Plate" Property="BorderThickness" Value="1,0,0,0"/>
-                            <Setter TargetName="PART_Plate" Property="Shadow" Value="{x:Null}"/>
-                            <Setter TargetName="PART_BodyRoom" Property="VerticalAlignment" Value="Stretch"/>
                         </PropertyTrigger>
 
                         <!-- A rail turned across scrolls across. -->
