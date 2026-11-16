@@ -1533,7 +1533,8 @@ public partial class InfiniteCanvas
                 // When the gesture ends, not while it runs: a pan raises the camera on every mouse move. A plane let go
                 // while still moving coasts on - out past an edge and back on a spring - and is remembered where it
                 // comes to rest; one let go past an edge springs back.
-                var coasts = IsInertiaEnabled && _coast.Release(e.Timestamp);
+                var dragged = PlatformSettings.ExceedsDragThreshold(e.GetPosition(ViewportElement) - _panFrom, this);
+                var coasts = IsInertiaEnabled && dragged && _coast.Release(e.Timestamp);
                 LetGoByHand(coasts, false);
                 if (!coasts && !_edgeCoast.IsActive) RememberLayout();
                 e.Handled = true;

@@ -200,7 +200,22 @@ public class CanvasInertiaTests
         Assert.That(canvas.Offset, Is.EqualTo(letGo));
     }
 
-    private static void MiddleDrag(InfiniteCanvas canvas, int across, int framesBetween = 0)
+    // A click whose hand shook three pixels, one a millisecond - a thousand pixels a second - is no throw: it never went
+    // past the drag threshold.
+    [Test]
+    public void AMiddleClickThatShookAFewPixels_DoesNotCoast()
+    {
+        var canvas = Sized();
+        MiddleDrag(canvas, 1, moves: 3, step: 1);
+
+        var letGo = canvas.Offset;
+        Frames(30);
+
+        Assert.That(canvas.Offset, Is.EqualTo(letGo));
+    }
+
+    private static void MiddleDrag(InfiniteCanvas canvas, int across, int framesBetween = 0, int moves = 5,
+        uint step = Step)
     {
         var held = InputModifiers.MiddleMouseButton;
         uint at = 1000;
@@ -212,9 +227,9 @@ public class CanvasInertiaTests
             Properties = PointerPointProperties.FromMouse(held)
         });
 
-        for (var i = 1; i <= 5; i++)
+        for (var i = 1; i <= moves; i++)
         {
-            at += Step;
+            at += step;
             Frames(framesBetween);
             Mouse.Pointer.ScreenPosition = new PixelPoint(100 + i * across, 100);
             canvas.RaiseEvent(new PointerEventArgs(Mouse.Pointer, held, at)
