@@ -339,11 +339,14 @@ public sealed class CanvasGraphRunner : IDisposable
     {
         if (_closed) return;
 
+        // Owed before the pass is told to stop: what it was working on can unwind inside Cancel itself, up to a Settle
+        // that asks whether anything is owed - and must hear yes.
+        var alreadyScheduled = _scheduled;
+        _scheduled = true;
+
         _inFlight?.Cancel();
 
-        if (_scheduled) return;
-
-        _scheduled = true;
+        if (alreadyScheduled) return;
 
         // ONTO THE LOOP THREAD, where the graph itself lives. A SynchronizationContext here is the DISPATCHER's, and
         // that one marshals onto the message-pump thread - so the pass walked the very sockets and nodes the loop
