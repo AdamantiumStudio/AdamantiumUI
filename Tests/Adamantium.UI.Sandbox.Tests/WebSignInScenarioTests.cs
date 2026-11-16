@@ -55,6 +55,7 @@ public class WebSignInScenarioTests
         await session.Find(By.Id("WebSignInAccept")).InvokeAsync();
         await session.Find(By.Id("WebSignInError")).WaitUntilAsync([Shown], Asked);
         await session.Find(By.Id("WebSignInUser")).ExpectAsync(new Expectation("value", "anna"));
+        await session.Find(By.Id("WebSignInPassword")).WaitUntilAsync([new Expectation("focus", "True")]);
 
         // Esc cancels: the dialog goes, the page keeps the site's refusal.
         await session.Find(By.Id("WebSignInPassword")).PressKeysAsync("Escape");

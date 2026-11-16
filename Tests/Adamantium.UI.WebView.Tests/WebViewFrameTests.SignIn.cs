@@ -111,6 +111,48 @@ public partial class WebViewFrameTests
         });
     }
 
+    // Chromium keeps the proxy in the profile: the system's way set after a server clears it, and pages go straight.
+    [Test]
+    public void TheSystemsWay_ClearsAServerSetBefore()
+    {
+        using var site = new LocalSite("<title>straight</title><body></body>");
+        using var closed = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        closed.Start();
+        var deadPort = ((System.Net.IPEndPoint)closed.LocalEndpoint).Port;
+        closed.Stop();
+        string title = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                engine.Proxy = new WebViewProxy
+                {
+                    Mode = WebViewProxyMode.Server,
+                    Server = "127.0.0.1",
+                    Port = deadPort,
+                    Bypass = ["<-loopback>"]
+                };
+                engine.Proxy = WebViewProxy.System;
+                ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>start</title>", (browser, view) =>
+                {
+                    browser.Navigate(site.Origin + "/");
+                    Pump(() => view.Title == "straight", TimeSpan.FromSeconds(10));
+                    title = view.Title;
+                });
+            });
+        }
+        finally
+        {
+            loop.Run(() => engine.Proxy = WebViewProxy.System);
+        }
+
+        Assert.That(title, Is.EqualTo("straight"), "gone straight, not to the server set before");
+    }
+
+    [Test]
+    public void AServerWithNoHost_IsRefused() =>
+        Assert.Throws<ArgumentException>(() => engine.Proxy = new WebViewProxy { Mode = WebViewProxyMode.Server });
+
     [Test]
     public void ASignInStillAsked_IsRefused_WhenThePageGoes()
     {

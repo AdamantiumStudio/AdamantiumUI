@@ -1,5 +1,6 @@
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -60,8 +61,33 @@ public class WebViewSignInDialog : Control
         AddStyleSetToThemes<WebViewSignInDialogStyleSet>();
     }
 
+    private TextBoxBase userNameField;
+    private TextBoxBase passwordField;
+
     // No peer of its own: the theme's card inside answers for itself, its fields and its buttons.
     protected override AutomationPeer OnCreateAutomationPeer() => null;
+
+    public override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        userNameField = GetTemplateChild("PART_UserName") as TextBoxBase;
+        passwordField = GetTemplateChild("PART_Password") as TextBoxBase;
+    }
+
+    public override void OnRemoveTemplate()
+    {
+        userNameField = null;
+        passwordField = null;
+        base.OnRemoveTemplate();
+    }
+
+    /// <summary>Puts the keyboard where typing starts: the password when the user name is there already, else the user
+    /// name.</summary>
+    public void FocusField()
+    {
+        var field = string.IsNullOrEmpty(UserName) ? userNameField : passwordField ?? userNameField;
+        field?.Focus();
+    }
 
     /// <summary>Enter signs in and Esc cancels while the keyboard is in the dialog; nowhere else.</summary>
     protected override void OnKeyDown(KeyEventArgs e)

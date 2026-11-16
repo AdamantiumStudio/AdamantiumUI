@@ -44,12 +44,14 @@
                                            TextWrapping="WrapByWords"
                                            Foreground="{ResourceReference SystemFillColorCritical}"
                                            AutomationProperties.AutomationId="WebSignInError"/>
-                                <TextBox Text="{TemplateBinding UserName, Mode=TwoWay}"
+                                <TextBox x:Name="PART_UserName"
+                                         Text="{TemplateBinding UserName, Mode=TwoWay}"
                                          Placeholder="{Localize WebViewStrings.UserName}"
                                          FloatingPlaceholder="True"
                                          AutomationProperties.AutomationId="WebSignInUser"
                                          AutomationProperties.Name="{Localize WebViewStrings.UserName}"/>
-                                <PasswordBox Password="{TemplateBinding Password, Mode=TwoWay}"
+                                <PasswordBox x:Name="PART_Password"
+                                             Password="{TemplateBinding Password, Mode=TwoWay}"
                                              Placeholder="{Localize WebViewStrings.Password}"
                                              FloatingPlaceholder="True"
                                              AutomationProperties.AutomationId="WebSignInPassword"

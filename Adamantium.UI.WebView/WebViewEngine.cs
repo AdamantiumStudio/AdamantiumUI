@@ -722,10 +722,8 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         }
 
         initialized = true;
-        if (proxy != WebViewProxy.System)
-        {
-            ApplyProxy();
-        }
+        // Always: Chromium keeps the proxy in the profile, and an earlier run's would otherwise outlive it.
+        ApplyProxy();
     }
 
     private List<KeyValuePair<string, string>> Switches()

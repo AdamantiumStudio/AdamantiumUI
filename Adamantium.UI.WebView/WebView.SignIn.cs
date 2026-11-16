@@ -12,10 +12,17 @@ namespace Adamantium.UI.WebView;
 /// </summary>
 public partial class WebView
 {
+    // How soon after an answer the same asking again means the answer was refused: a server's refusal comes back at
+    // once, while a site asking much later - its session over - asks anew.
+    private const long RetryWindowMs = 10_000;
+
     private readonly List<WebViewSignInRequest> askedSignIns = [];
     private WebViewSignInDialog signInDialog;
-    // Who was last answered while the page loads: asked again before it loaded, the answer was refused.
+    // The last answer while the page loads: who it went to, the name, whether the store gave it, and when.
     private WebSignInTarget answeredSignIn;
+    private string answeredUserName;
+    private bool answeredFromStore;
+    private long answeredAt;
 
     private void TakeSignInDialog(WebViewSignInDialog dialog)
     {
@@ -37,11 +44,35 @@ public partial class WebView
             return false;
         }
 
-        var isRetry = request.Target == answeredSignIn;
+        var isRetry = IsRetry(request.Target);
+        // What the store gave was refused: it is not offered again.
+        if (isRetry && answeredFromStore)
+        {
+            ForgetKept(request.Target);
+        }
+
         if (Bridge is { } bridge)
         {
             var args = new WebSignInRequestedEventArgs(request.Target, request.Address, isRetry);
-            bridge.OnSignInRequested(args);
+            try
+            {
+                bridge.OnSignInRequested(args);
+            }
+            catch (Exception exception)
+            {
+                // The application's handler failed: the user is asked instead.
+                Serilog.Log.Logger.Error(exception, "A sign-in handler threw; the user is asked");
+                args.Cancel = false;
+                args.Credential = null;
+            }
+
+            // The handler may have taken the page away - stopped or replaced its browser - or answered it itself.
+            if (!ReferenceEquals(browser, from) || request.IsAnswered)
+            {
+                request.Refuse();
+                return true;
+            }
+
             if (args.Cancel)
             {
                 request.Refuse();
@@ -50,14 +81,14 @@ public partial class WebView
 
             if (args.Credential != null)
             {
-                Answer(request, args.Credential);
+                Answer(request, args.Credential, false);
                 return true;
             }
         }
 
-        if (!isRetry && Engine?.Credentials?.Find(request.Target) is { } kept)
+        if (!isRetry && FindKept(request.Target) is { } kept)
         {
-            Answer(request, kept);
+            Answer(request, kept, true);
             return true;
         }
 
@@ -78,12 +109,46 @@ public partial class WebView
     // The page loaded: whoever asks from now on asks anew.
     private void SignInsLoaded() => answeredSignIn = null;
 
+    private bool IsRetry(WebSignInTarget target) =>
+        target == answeredSignIn && Environment.TickCount64 - answeredAt < RetryWindowMs;
+
+    // What the store keeps for the target; null for nothing, or a store that failed to say.
+    private WebCredential FindKept(WebSignInTarget target)
+    {
+        if (Engine?.Credentials is not { } store)
+        {
+            return null;
+        }
+
+        try
+        {
+            return store.Find(target);
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "The kept sign-in for {Host} could not be read", target.Host);
+            return null;
+        }
+    }
+
+    private void ForgetKept(WebSignInTarget target)
+    {
+        try
+        {
+            Engine?.Credentials?.Forget(target);
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "The refused sign-in for {Host} could not be forgotten", target.Host);
+        }
+    }
+
     private void ShowSignIn(WebViewSignInRequest request, bool isRetry)
     {
         DismissPageMenu();
         HidePageTip();
         var target = request.Target;
-        var who = target.IsProxy || !IsDefaultPort(target) ? $"{target.Host}:{target.Port}" : target.Host;
+        var who = target.IsProxy || !IsDefaultPort(target, request.Address) ? $"{target.Host}:{target.Port}" : target.Host;
         var named = !string.IsNullOrEmpty(target.Realm);
         signInDialog.SetCurrentValue(WebViewSignInDialog.TitleProperty,
             target.IsProxy ? WebViewStrings.ProxySignInTitle : WebViewStrings.SignInTitle);
@@ -96,12 +161,11 @@ public partial class WebView
         });
         signInDialog.SetCurrentValue(WebViewSignInDialog.IsInsecureProperty, !target.IsProxy && IsPlainHttp(request.Address));
         signInDialog.SetCurrentValue(WebViewSignInDialog.ErrorProperty, isRetry ? WebViewStrings.WrongSignIn : string.Empty);
-        // The name kept for the site, or, asked again, the one just typed: only the password is typed anew.
-        var store = Engine?.Credentials;
-        signInDialog.SetCurrentValue(WebViewSignInDialog.UserNameProperty,
-            store?.Find(target)?.UserName ?? (isRetry ? signInDialog.UserName : string.Empty));
+        // Asked again, the name just sent; else the one kept for the site: only the password is typed anew.
+        var userName = isRetry ? answeredUserName : FindKept(target)?.UserName;
+        signInDialog.SetCurrentValue(WebViewSignInDialog.UserNameProperty, userName ?? string.Empty);
         signInDialog.SetCurrentValue(WebViewSignInDialog.PasswordProperty, string.Empty);
-        signInDialog.SetCurrentValue(WebViewSignInDialog.CanRememberProperty, store?.CanSave == true);
+        signInDialog.SetCurrentValue(WebViewSignInDialog.CanRememberProperty, CanKeep());
         signInDialog.SetCurrentValue(WebViewSignInDialog.RememberProperty, false);
         signInDialog.SetCurrentValue(WebViewSignInDialog.IsOpenProperty, true);
         RaiseSignInCommands();
@@ -109,19 +173,46 @@ public partial class WebView
         {
             if (askedSignIns.Count > 0 && askedSignIns[0] == request && signInDialog != null)
             {
-                KeyboardNavigation.MoveInto(signInDialog);
+                signInDialog.FocusField();
             }
         });
     }
 
-    private static bool IsDefaultPort(WebSignInTarget target) => target.Port is 80 or 443 or 0;
+    // Whether the port is the one the page's scheme goes to anyway, and need not be said.
+    private static bool IsDefaultPort(WebSignInTarget target, string address)
+    {
+        if (target.Port == 0)
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(address, UriKind.Absolute, out var parsed) &&
+               (parsed.Scheme == Uri.UriSchemeHttp && target.Port == 80 ||
+                parsed.Scheme == Uri.UriSchemeHttps && target.Port == 443);
+    }
 
     private static bool IsPlainHttp(string address) =>
         Uri.TryCreate(address, UriKind.Absolute, out var parsed) && parsed.Scheme == Uri.UriSchemeHttp;
 
-    private void Answer(WebViewSignInRequest request, WebCredential credential)
+    private bool CanKeep()
+    {
+        try
+        {
+            return Engine?.Credentials?.CanSave == true;
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "The sign-in store could not say whether it keeps sign-ins");
+            return false;
+        }
+    }
+
+    private void Answer(WebViewSignInRequest request, WebCredential credential, bool fromStore)
     {
         answeredSignIn = request.Target;
+        answeredUserName = credential.UserName;
+        answeredFromStore = fromStore;
+        answeredAt = Environment.TickCount64;
         request.Answer(credential);
     }
 
@@ -139,11 +230,11 @@ public partial class WebView
         if (accepted && signInDialog != null)
         {
             credential = new WebCredential(signInDialog.UserName ?? string.Empty, signInDialog.Password ?? string.Empty);
-            if (signInDialog.Remember && Engine?.Credentials is { CanSave: true } store)
+            if (signInDialog.Remember && CanKeep())
             {
                 try
                 {
-                    store.Save(target, credential);
+                    Engine.Credentials.Save(target, credential);
                 }
                 catch (Exception exception)
                 {
@@ -163,7 +254,7 @@ public partial class WebView
             askedSignIns.RemoveAt(i);
             if (credential != null)
             {
-                Answer(request, credential);
+                Answer(request, credential, false);
             }
             else
             {
@@ -173,7 +264,7 @@ public partial class WebView
 
         if (askedSignIns.Count > 0)
         {
-            ShowSignIn(askedSignIns[0], askedSignIns[0].Target == answeredSignIn);
+            ShowSignIn(askedSignIns[0], IsRetry(askedSignIns[0].Target));
             return;
         }
 
