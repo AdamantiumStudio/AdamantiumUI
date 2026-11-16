@@ -106,8 +106,17 @@ public partial class WebView
         return true;
     }
 
-    // The page loaded: whoever asks from now on asks anew.
-    private void SignInsLoaded() => answeredSignIn = null;
+    // The page loaded, or failed to: whoever asks from now on asks anew, and what was asked before belonged to that
+    // load - or to a request Chromium gave up without saying, which an answer would no longer reach.
+    private void SignInsLoaded()
+    {
+        if (askedSignIns.Count > 0)
+        {
+            RefuseSignIns();
+        }
+
+        answeredSignIn = null;
+    }
 
     private bool IsRetry(WebSignInTarget target) =>
         target == answeredSignIn && Environment.TickCount64 - answeredAt < RetryWindowMs;

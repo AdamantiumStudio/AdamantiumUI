@@ -747,6 +747,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         // page drawn off screen has none to hang on - it brings the process down.
         switches.Add(new("disable-chrome-login-prompt", null));
 
+        // An http address goes where it says, as in other embedded web views: Chrome's upgrade to https gives the attempt
+        // three seconds and then falls back to http - and a sign-in asked of the attempt waits for the user longer than
+        // that, so the user's answer went to a request already given up and the page loaded on without it.
+        switches.Add(new(WebViewApp.DisableFeaturesSwitch, "HttpsUpgrades"));
+
         if (ProprietaryCodecs.IsInstalled(CefLibrary.ApplicationFolder))
         {
             switches.Add(new(WebViewApp.EnableFeaturesSwitch, ProprietaryCodecs.Feature));

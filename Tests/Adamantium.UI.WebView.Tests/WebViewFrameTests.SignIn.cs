@@ -40,6 +40,35 @@ public partial class WebViewFrameTests
         });
     }
 
+    // The owner's case, 16.11: a site out there on http, answered after the user took a while. Chrome's upgrade of the
+    // address to https gave its attempt three seconds, then fell back to http without saying, and the answer went to the
+    // request given up - the page loaded on for ever. Network: a site out there is the only one Chrome would upgrade.
+    [Test]
+    [Explicit("needs the network")]
+    public void ASiteOutThereOnHttp_AnsweredAfterAWhile_LetsThePageIn()
+    {
+        WebViewSignInRequest asked = null;
+        string error = null;
+        var completed = false;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>start</title>", (browser, view) =>
+        {
+            browser.Navigate("http://httpbin.org/basic-auth/anna/secret");
+            Pump(() => view.SignIns.Count > 0, TimeSpan.FromSeconds(15));
+            asked = view.SignIns.FirstOrDefault();
+            Pump(() => view.Error != null, TimeSpan.FromSeconds(5));
+            asked?.Answer(Anna);
+            completed = Pump(() => view.Completed.Any(address => address.Contains("httpbin.org")), TimeSpan.FromSeconds(15));
+            error = view.Error?.Text;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked?.Target.Scheme, Is.EqualTo("basic"));
+            Assert.That(error, Is.Null, "no load failed while the user typed");
+            Assert.That(completed, Is.True, "the page let in");
+        });
+    }
+
     [Test]
     public void AWrongSignIn_IsAskedAgain_AndARefusalLeavesThePageOut()
     {

@@ -33,7 +33,8 @@ public class WebSignInScenarioTests
             new LaunchOptions
             {
                 FreshData = true,
-                VirtualDisplay = true,
+                // A real window: the mouse below comes as Windows' own messages.
+                VirtualDisplay = false,
                 Environment = { ["ADAM_UI_FONT"] = "Content/SandboxContent/Fonts/RobotoFlex-Variable.ttf" }
             });
 
@@ -48,6 +49,24 @@ public class WebSignInScenarioTests
         await session.Find(By.Id("WebSignInError")).ExpectAsync(Hidden);
         await session.Find(By.Id("WebSignInRemember")).ExpectAsync(Hidden);
         await session.Find(By.Id("WebSignInUser")).WaitUntilAsync([new Expectation("focus", "True")]);
+
+        // The mouse comes over the page beside the card, onto the card, over its fields and buttons: the dialog stays,
+        // still asking.
+        if (OperatingSystem.IsWindows())
+        {
+            var page = (await session.Find(By.Id("WebPage")).WaitForAsync()).Bounds;
+            var card = (await session.Find(By.Id("WebSignIn")).WaitForAsync()).Bounds;
+            var accept = (await session.Find(By.Id("WebSignInAccept")).WaitForAsync()).Bounds;
+            var besideX = page[0] + 30;
+            var middleY = card[1] + card[3] / 2;
+            var app = session.Process.Id;
+            await RealMouse.MoveAsync(app, besideX, page[1] + 30, besideX, middleY);
+            await RealMouse.MoveAsync(app, besideX, middleY, card[0] + card[2] / 2, middleY);
+            await RealMouse.MoveAsync(app, card[0] + card[2] / 2, middleY, accept[0] + accept[2] / 2, accept[1] + accept[3] / 2);
+            await Task.Delay(700);
+            await session.WaitForIdleAsync();
+            await session.Find(By.Id("WebSignIn")).ExpectAsync(Shown);
+        }
 
         // A wrong password: asked again, saying why, with the name kept.
         await session.Find(By.Id("WebSignInUser")).TypeAsync("anna");
