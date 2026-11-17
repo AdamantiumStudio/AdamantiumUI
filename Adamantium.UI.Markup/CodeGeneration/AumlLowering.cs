@@ -691,8 +691,8 @@ public class AumlLowering
 
                                 switch (argument.Name)
                                 {
-                                    case "Mode":
-                                        _writer.Add(new AssignStep(self, "Mode",
+                                    case "Mode" or "UpdateSourceTrigger":
+                                        _writer.Add(new AssignStep(self, argument.Name,
                                             new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
                                         break;
                                     case "Converter":
