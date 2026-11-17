@@ -55,8 +55,14 @@ public class RibbonQuickAccessMenuItem : MenuItem
     {
         var target = Target;
         IsInQuickAccess = target != null && Ribbon.IsShownInQuickAccess(target);
-        IsEnabled = target != null && Ribbon.GetCanAddToQuickAccess(target);
+        _canAdd = target != null && Ribbon.GetCanAddToQuickAccess(target);
+        CoerceValue(IsEnabledProperty);
     }
+
+    // Whether the command the menu was opened on can go on the quick access bar.
+    private bool _canAdd;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canAdd;
 
     private void OnPicked(object sender, RoutedEventArgs e)
     {

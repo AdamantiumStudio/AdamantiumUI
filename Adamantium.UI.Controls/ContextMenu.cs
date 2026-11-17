@@ -121,10 +121,10 @@ public class ContextMenu : ItemsControl
         return Size<double>.Zero;
     }
 
-    /// <summary>Puts the keyboard on the menu's first row. What a menu opened BY THE KEYBOARD owes its user - the rows
-    /// are drawn in the overlay, so nothing in the opener's own tree can be stepped into. False while the flyout has
-    /// not been built yet, which is why the caller waits for a layout pass before asking.</summary>
-    internal void MoveKeyboardInsideWhenReady()
+    /// <summary>Puts the keyboard on the menu's first row once its rows are built - called right after opening it. What
+    /// a menu opened BY THE KEYBOARD owes its user: the rows are drawn in the overlay, so nothing in the opener's own
+    /// tree can be stepped into.</summary>
+    public void MoveKeyboardInsideWhenReady()
     {
         if (_popup == null) return;
 

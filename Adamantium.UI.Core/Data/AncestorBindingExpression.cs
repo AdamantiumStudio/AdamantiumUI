@@ -257,6 +257,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         _path ??= WritingHere(new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
         {
             Mode = _def.Mode,
+            UpdateSourceTrigger = _def.UpdateSourceTrigger,
             Converter = _def.Converter,
             ConverterParameter = _def.ConverterParameter,
             FallbackValue = _def.FallbackValue,

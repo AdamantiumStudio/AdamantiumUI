@@ -91,11 +91,17 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         UpdateCanExecute();
     }
 
+    // Whether the row's command can run - or it opens a submenu, which runs nothing; a row with no command can.
+    private bool _canExecute = true;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canExecute;
+
     private void UpdateCanExecute()
     {
         // A PARENT row opens a submenu and runs nothing, so a command on it says nothing about whether it can be used.
         var state = CommandManager.QueryFrom(Command, CommandParameter, this, CommandTarget);
-        IsEnabled = HasItems || state.CanExecute;
+        _canExecute = HasItems || state.CanExecute;
+        CoerceValue(IsEnabledProperty);
         _commandChecks |= state.IsChecked.HasValue;
         if (state.IsChecked is { } on)
         {

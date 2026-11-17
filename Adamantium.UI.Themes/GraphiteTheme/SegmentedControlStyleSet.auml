@@ -39,10 +39,10 @@
         </Setter>
     </Style>
 
-    <!-- A disabled control fades whole: its segments do not inherit its state. -->
+    <!-- A disabled control draws its frame disabled; its segments are disabled with it and draw themselves. -->
     <Style Selector="SegmentedControl">
         <PropertyTrigger Property="IsEnabled" Value="false">
-            <Setter TargetName="Frame" Property="Opacity" Value="0.4"/>
+            <Setter TargetName="Frame" Property="Background" Value="{ResourceReference ControlFillColorDisabled}"/>
         </PropertyTrigger>
     </Style>
 
@@ -104,6 +104,7 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ObservableResource TextFillColorDisabled}"/>
+            <Setter TargetName="Rule" Property="Background" Value="{ThemeResource AccentFillColorDisabled}"/>
         </PropertyTrigger>
     </Style>
 

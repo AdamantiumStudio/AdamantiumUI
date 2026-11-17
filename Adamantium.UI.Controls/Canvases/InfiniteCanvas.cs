@@ -1277,6 +1277,10 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>A double click on empty plane at that point in the world; true when it was answered.</summary>
     protected virtual bool OnEmptyPlaneDoubleClick(Vector2<double> world) => false;
 
+    /// <summary>What the plane's own content offers the <see cref="SelectTool"/> where there is no item - text of a
+    /// document shown under the plane; null for a plane with nothing of its own. Set by a derived canvas.</summary>
+    protected internal ICanvasContentGesture ContentGesture { get; set; }
+
     /// <summary>A plain click of the select tool on empty plane at that point in the world, after it cleared the
     /// selection - what a derived canvas picks by a click on something of its own that is not an item. A click that
     /// extends the selection, which keeps it, is not one.</summary>

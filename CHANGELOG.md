@@ -9,7 +9,13 @@ All packages share one version.
 
 - `SaveFileRequest.Folder`: the folder a save dialog opens in, over the one remembered under its key - on Windows and
   through the portal on Linux.
-
+- `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
+  own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
+  where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
+  a stored place. `InfiniteCanvas.RefreshPointer()` works the cursor out again where the pointer rests, for content
+  under it that changed without the pointer moving.
+- `Ancestor.UpdateSourceTrigger`, `Self.UpdateSourceTrigger`: `{Ancestor ..., Mode=TwoWay, UpdateSourceTrigger=LostFocus}`
+  writes a field back once it is left, as a `{Binding}` does.
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
   fold it to the grip - a wide toolbar is easier to take by it than by the gaps between its buttons. A bar is still
   moved by its background without it, and shows no snap either way. Folded, a pane of no set width keeps the room it
@@ -401,6 +407,14 @@ All packages share one version.
 
 ### Changed
 
+- `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,
+  automation and the theme - and gets back what it was set or bound to once the ancestor is enabled. The ancestor is
+  the one DataContext comes from, so a template's parts and a popup's content follow their control; a window, an
+  overlay one too, does not follow the one under it. The focus leaves an element as it is disabled. A disabled panel
+  used to block only the pointer. It is `PropertyMetadataOptions.FollowsAncestors`, beside `Inherits`: a bool the
+  nearest ancestor holding it can only turn off, its own value kept. `FocusManager.LeaveHidden` is now `LeaveUnusable`.
+- The themes' DataPager and SegmentedControl no longer fade whole when disabled: their buttons and segments are
+  disabled with them and draw themselves so; the pager grays its labels, the segmented control its frame.
 - The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
   (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
   no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.

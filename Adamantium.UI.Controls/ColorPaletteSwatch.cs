@@ -106,12 +106,15 @@ public class ColorPaletteSwatch : ButtonBase
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ColorPaletteSwatchAutomationPeer(this);
 
+    // An empty place - a recent color not picked yet - cannot be picked.
+    protected override bool IsEnabledCore => base.IsEnabledCore && HasColor;
+
     private void Show(Color? color)
     {
         HasColor = color.HasValue;
         Mark(color.HasValue && color == SelectedColor);
         SwatchBrush = color is { } shown ? new SolidColorBrush(shown) : null;
-        SetCurrentValue(IsEnabledProperty, color.HasValue);
+        CoerceValue(IsEnabledProperty);
         AutomationProperties.SetName(this, color is { } named ? $"#{named.R:X2}{named.G:X2}{named.B:X2}" : string.Empty);
     }
 }

@@ -147,6 +147,45 @@ public class CanvasFlightTests
         Assert.That(canvas.Looking, Is.EqualTo(new Vector2<double>(1010, 1010)));
     }
 
+    // A camera flown to: a place gone back to, at the zoom it had - the offset and the scale it is given, reached at the
+    // flight's end, the zoom changed on the way.
+    [Test]
+    public void AFlightToACamera_EndsWithItsOffsetAndScale()
+    {
+        var canvas = Sized();
+        canvas.FlyToCamera(new Vector2<double>(-1500, -800), 2.5);
+        Frames(5);
+        var midway = canvas.Scale;
+        Frames(60);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(midway, Is.GreaterThan(1.0).And.LessThan(2.5), "the zoom jumped instead of flying");
+            Assert.That(canvas.Scale, Is.EqualTo(2.5).Within(1e-9));
+            Assert.That(canvas.Offset.X, Is.EqualTo(-1500).Within(1e-6));
+            Assert.That(canvas.Offset.Y, Is.EqualTo(-800).Within(1e-6));
+        });
+    }
+
+    [Test]
+    public void AFlightToACameraPastTheZoomsLimit_StillLooksAtTheSamePoint()
+    {
+        var canvas = Sized();
+        var middle = Middle(canvas.UsableBounds);
+        var looked = new Vector2<double>(700, 400);
+        var tooNear = canvas.MaxScale * 4;
+        canvas.FlyToCamera(middle - looked * tooNear, tooNear);
+        Frames(60);
+
+        var seen = canvas.ScreenToWorld(middle);
+        Assert.Multiple(() =>
+        {
+            Assert.That(canvas.Scale, Is.EqualTo(canvas.MaxScale).Within(1e-9));
+            Assert.That(seen.X, Is.EqualTo(looked.X).Within(1e-6));
+            Assert.That(seen.Y, Is.EqualTo(looked.Y).Within(1e-6));
+        });
+    }
+
     [Test]
     public void AFlight_KeepsToThePlanesEdges()
     {

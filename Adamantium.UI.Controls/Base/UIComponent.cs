@@ -121,7 +121,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         if (effective != Visibility.Visible)
         {
-            FocusManager.LeaveHidden(component);
+            FocusManager.LeaveUnusable(component);
         }
         else if (KeyboardNavigation.GetTakesFocusWhenShown(component))
         {
@@ -313,10 +313,31 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         if (d is UIComponent component) VisualTreeNotifications.RaiseClipChanged(component);
     }
 
+    // As WPF's: what is set or bound states whether the element may be used; a disabled ancestor (FollowsAncestors) and
+    // the element itself - a button whose command cannot run - can only take that away, never overwrite the binding.
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
         typeof(Boolean), typeof(UIComponent),
-        new PropertyMetadata(true, (a, e) =>
-            AutomationEvents.RaisePropertyChanged((UIComponent)a, AutomationProperty.IsEnabled, e.OldValue, e.NewValue)));
+        new PropertyMetadata(true, PropertyMetadataOptions.FollowsAncestors, OnIsEnabledChanged,
+            (a, value) => value is true && a is UIComponent { IsEnabledCore: false } ? false : value));
+
+    /// <summary>Whether the element itself allows being used, beside what <see cref="IsEnabled"/> is set or bound to - a
+    /// command source says whether its command can run. A subclass whose answer changes calls
+    /// <c>CoerceValue(IsEnabledProperty)</c>.</summary>
+    protected virtual bool IsEnabledCore => true;
+
+    private static void OnIsEnabledChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var component = (UIComponent)a;
+        AutomationEvents.RaisePropertyChanged(component, AutomationProperty.IsEnabled, e.OldValue, e.NewValue);
+
+        // No key reaches a disabled element: the top of the subtree just disabled - all of it by now - sends the focus up
+        // to what can still take it, asked through the same tree, so a popup's content counts as its control's.
+        if (!component.IsEnabled && component.AncestorsAllow(IsEnabledProperty) &&
+            FocusManager.Focused is UIComponent focused && focused.InheritsThrough(component))
+        {
+            FocusManager.LeaveUnusable(focused);
+        }
+    }
 
     public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
         typeof(Double), typeof(UIComponent),

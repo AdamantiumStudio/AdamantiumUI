@@ -487,6 +487,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         {
             if (inheritanceParent == value) return;
 
+            var allowedBefore = AncestorAnswers();
             var type = GetType();
             var inheriting = AdamantiumPropertyMap.GetInheriting(type);
 
@@ -552,8 +553,99 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
                 Array.Clear(before, 0, count);
                 ArrayPool<object>.Shared.Return(before);
             }
+
+            FollowNewAncestors(allowedBefore);
         }
     }
+
+    // What the ancestors answer for each property that follows them, a bit each - read before a move to tell, after it,
+    // whether anything here or below has to read again.
+    private int AncestorAnswers()
+    {
+        if (this is not IFundamentalUIComponent) return 0;
+
+        var following = AdamantiumPropertyMap.FollowingAncestors;
+        var answers = 0;
+        for (var i = 0; i < following.Length; i++)
+        {
+            if (AncestorsAllow(following[i])) answers |= 1 << i;
+        }
+
+        return answers;
+    }
+
+    // Only where the new ancestors answer otherwise: this element, or the nearest holders below an inline.
+    private void FollowNewAncestors(int allowedBefore)
+    {
+        if (this is not IFundamentalUIComponent) return;
+
+        var following = AdamantiumPropertyMap.FollowingAncestors;
+        for (var i = 0; i < following.Length; i++)
+        {
+            var property = following[i];
+            if (AncestorsAllow(property) == ((allowedBefore & (1 << i)) != 0)) continue;
+
+            if (Holds(property))
+            {
+                CoerceValue(property);
+            }
+            else
+            {
+                CoerceHolders(property);
+            }
+        }
+    }
+
+    // Whether this element's type follows its ancestors with the property.
+    private bool Holds(AdamantiumProperty property) => property.GetDefaultMetadata(GetType()) is { FollowsAncestors: true };
+
+    // The nearest holders below, through UI elements only: a brush or a drawing hanging off one holds no UI.
+    private void CollectHolders(AdamantiumProperty property, ref List<AdamantiumComponent> holders)
+    {
+        if (inheritanceChildren == null) return;
+
+        foreach (var child in inheritanceChildren)
+        {
+            if (child is not IFundamentalUIComponent) continue;
+
+            if (child.Holds(property))
+            {
+                (holders ??= []).Add(child);
+            }
+            else
+            {
+                child.CollectHolders(property, ref holders);
+            }
+        }
+    }
+
+    // Collected first and coerced after: a coercion may move elements, which the walk must not see.
+    private void CoerceHolders(AdamantiumProperty property)
+    {
+        List<AdamantiumComponent> holders = null;
+        CollectHolders(property, ref holders);
+        if (holders == null) return;
+
+        foreach (var holder in holders)
+        {
+            holder.CoerceValue(property);
+        }
+    }
+
+    /// <summary>Whether the nearest ancestor holding <paramref name="property"/> allows it
+    /// (<see cref="PropertyMetadataOptions.FollowsAncestors"/>): true with none, and for a window.</summary>
+    protected bool AncestorsAllow(AdamantiumProperty property)
+    {
+        if (this is IRootVisualComponent) return true;
+
+        for (var node = inheritanceParent; node != null; node = node.inheritanceParent)
+        {
+            if (node.Holds(property)) return node.GetValue<bool>(property);
+        }
+
+        return true;
+    }
+
 
     /// <summary>
     /// Gets or sets the value of a <see cref="AdamantiumProperty"/>
@@ -1088,16 +1180,27 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// </summary>
     public void CoerceValue(AdamantiumProperty property)
     {
-        var slots = Slots(property);
-        if (slots == null) return;
-
-        object baseValue;
-        lock (slots)
+        var baseValue = AdamantiumProperty.UnsetValue;
+        if (Slots(property) is { } slots)
         {
-            baseValue = slots.BaseValue;
+            lock (slots)
+            {
+                baseValue = slots.BaseValue;
+            }
         }
 
-        if (baseValue == AdamantiumProperty.UnsetValue) return;   // nothing was ever asked for - nothing to re-map
+        // Nothing was ever asked for: the default is what the coercion re-maps, as WPF's does - a control that coerces
+        // its IsEnabled by its command's answer has to be grayed out though nobody ever set IsEnabled.
+        if (baseValue == AdamantiumProperty.UnsetValue)
+        {
+            var metadata = property.GetDefaultMetadata(GetType());
+            if (metadata.CoerceValueCallback != null || metadata.FollowsAncestors)
+            {
+                RunSetValueSequence(property, metadata.DefaultValue, ValuePriority.Default, true);
+            }
+
+            return;
+        }
 
         // Through the normal write path with the SAME request at the SAME priority: the coercion runs again and, if the
         // result differs, the change is announced exactly as any other would be. Re-coercing to the same value ends
@@ -1108,9 +1211,14 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     private object Coerce(AdamantiumProperty property, PropertyMetadata metadata, object baseValue)
     {
-        if (metadata.CoerceValueCallback == null) return baseValue;
+        if (metadata.CoerceValueCallback == null && !metadata.FollowsAncestors) return baseValue;
 
-        var coerced = metadata.CoerceValueCallback.Invoke(this, baseValue);
+        var coerced = metadata.CoerceValueCallback != null ? metadata.CoerceValueCallback.Invoke(this, baseValue) : baseValue;
+        if (metadata.FollowsAncestors && coerced is true && !AncestorsAllow(property))
+        {
+            coerced = false;
+        }
+
         if (!Equals(coerced, baseValue) && property.ValidateValueCallBack?.Invoke(coerced) == false)
         {
             throw new ArgumentException($"Value {coerced} is incorrect!");
@@ -1205,6 +1313,14 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // two properties assigning each other closed a cycle with no exit (stack overflow). The args are built inside
         // the branch - a property with no callback was allocating one object per write for nobody.
         var slotsMayHaveMoved = false;
+
+        // The holders below first, so the element's own callback finds its whole subtree following it; theirs, if they
+        // change, go on from there.
+        if (metadata.FollowsAncestors && !Equals(oldReadValue, effectiveAfterWrite))
+        {
+            CoerceHolders(property);
+        }
+
         if (metadata.PropertyChangedCallback != null && !Equals(oldReadValue, effectiveAfterWrite))
         {
             metadata.PropertyChangedCallback.Invoke(this,
