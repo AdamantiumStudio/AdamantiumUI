@@ -534,6 +534,9 @@ All packages share one version.
 
 ### Fixed
 
+- `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
+  WPF's do: the themes' caption hides the buttons, a double click on the caption and `Maximize`/`Minimize` do nothing,
+  and on Windows the system's own (Win+Up, the system menu) is off too. `WindowBase.CanMinimize`, `CanMaximize`.
 - Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
   forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held

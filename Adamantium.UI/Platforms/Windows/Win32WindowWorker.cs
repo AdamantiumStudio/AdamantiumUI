@@ -181,9 +181,8 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         // No WS_EX_ACCEPTFILES: the partial WM_DROPFILES path is replaced by a full OLE drop target (registered below),
         // which carries text and arbitrary formats too - and reports drag-over live instead of only the final drop.
         var wndStyleEx = window.Owner == null ? WindowStyleEx.Appwindow : default;
-        var wndStyle = //WindowStyle.Popup |
-            WindowStyle.Overlappedwindow | WindowStyle.Maximizebox | WindowStyle.Minimizebox |
-            WindowStyle.Clipsiblings | WindowStyle.Clipchildren | WindowStyle.Sizeframe;
+        var wndStyle = WithCaptionBoxes(WindowStyle.Overlappedwindow | WindowStyle.Clipsiblings | WindowStyle.Clipchildren |
+                                        WindowStyle.Sizeframe, window.ResizeMode);
 
         // Overlay traits, read here with the rest: native styles are fixed at creation.
         if (window.WindowOpacity < 1.0)
@@ -272,7 +271,23 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
 
     // Runtime ResizeMode change (e.g. toggling grip-resize): refresh the hit-test snapshot. Fires on the loop thread (the
     // property is set there), so reading window.ResizeMode is safe - not the OS message thread that must never lock it.
-    private void WindowOnResizeModeChanged(object sender, EventArgs e) => chromeResizeMode = window.ResizeMode;
+    private void WindowOnResizeModeChanged(object sender, EventArgs e)
+    {
+        chromeResizeMode = window.ResizeMode;
+        if (source == null || source.Handle == IntPtr.Zero) return;
+
+        var style = (WindowStyle)Win32Interop.GetWindowLong(source.Handle, WindowLongType.Style).ToInt64();
+        Win32Interop.SetWindowLong(source.Handle, WindowLongType.Style, new IntPtr((long)WithCaptionBoxes(style, chromeResizeMode)));
+    }
+
+    // The system's maximize and minimize - Win+Up, the system menu, a snap to the top - only where ResizeMode allows them.
+    private static WindowStyle WithCaptionBoxes(WindowStyle style, WindowResizeMode mode)
+    {
+        style &= ~(WindowStyle.Maximizebox | WindowStyle.Minimizebox);
+        if (mode != WindowResizeMode.NoResize) style |= WindowStyle.Minimizebox;
+        if (mode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip) style |= WindowStyle.Maximizebox;
+        return style;
+    }
 
     // The current theme's accent as a Win32 COLORREF (0x00BBGGRR) for the DWM window border. Falls back to the Fluent
     // accent if the theme exposes no solid accent brush.

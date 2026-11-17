@@ -1023,17 +1023,38 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public void DragMove(Vector2<double> grab) => WindowWorkerService?.BeginMoveDrag(grab);
 
     /// <summary>Minimizes the window (title bar minimize button).</summary>
-    public void Minimize() => State = WindowState.Minimized;
+    public void Minimize()
+    {
+        if (CanMinimize) State = WindowState.Minimized;
+    }
 
-    /// <summary>Maximizes the window (title bar maximize button).</summary>
-    public void Maximize() => State = WindowState.Maximized;
+    /// <summary>Maximizes the window (title bar maximize button), when its <see cref="ResizeMode"/> allows it.</summary>
+    public void Maximize()
+    {
+        if (CanMaximize) State = WindowState.Maximized;
+    }
 
     /// <summary>Restores a maximized/minimized window to its normal size (title bar restore button).</summary>
     public void RestoreDown() => State = WindowState.Normal;
 
     /// <summary>Toggles between maximized and normal - the caption double-click / maximize button behavior.</summary>
-    public void ToggleMaximizeRestore() =>
-        State = State == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    public void ToggleMaximizeRestore()
+    {
+        if (State == WindowState.Maximized)
+        {
+            State = WindowState.Normal;
+        }
+        else
+        {
+            Maximize();
+        }
+    }
+
+    /// <summary>Whether the window may be minimized: not with <see cref="WindowResizeMode.NoResize"/>, as WPF's.</summary>
+    public bool CanMinimize => ResizeMode != WindowResizeMode.NoResize;
+
+    /// <summary>Whether the window may be maximized: only when it can be resized.</summary>
+    public bool CanMaximize => ResizeMode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip;
 
     // Caption metrics published by a hosted TitleBar on its arrange (loop thread). Read geometrically by the worker's
     // hit-test (OS message thread) - plain doubles, so a torn read is at worst a one-frame-off hit, never a crash. This

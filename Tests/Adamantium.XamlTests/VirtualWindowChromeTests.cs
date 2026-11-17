@@ -71,6 +71,52 @@ public class VirtualWindowChromeTests
         Assert.That(titleBar.Visibility, Is.EqualTo(Visibility.Visible));
     }
 
+    // As WPF's: a window that cannot be resized has neither button, one that can only be minimized has no maximize.
+    [TestCase("Fluent", WindowResizeMode.NoResize, false, false)]
+    [TestCase("Graphite", WindowResizeMode.NoResize, false, false)]
+    [TestCase("MacOs", WindowResizeMode.NoResize, false, false)]
+    [TestCase("Fluent", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("Graphite", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("MacOs", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("Fluent", WindowResizeMode.CanResize, true, true)]
+    public void TheCaptionButtons_FollowTheResizeMode(string theme, WindowResizeMode mode, bool minimize, bool maximize)
+    {
+        var window = Attached(theme, customChrome: true);
+
+        window.ResizeMode = mode;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        var titleBar = TitleBarOf(window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(titleBar.ShowMinButton, Is.EqualTo(minimize), "minimize");
+            Assert.That(titleBar.ShowMaxRestoreButton, Is.EqualTo(maximize), "maximize");
+            Assert.That(window.CanMinimize, Is.EqualTo(minimize));
+            Assert.That(window.CanMaximize, Is.EqualTo(maximize));
+        });
+    }
+
+    // Nor does a double click on the caption, or code, maximize or minimize a window that may not be.
+    [Test]
+    public void AWindowThatCannotBeResized_IsNeitherMaximizedNorMinimized()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.ResizeMode = WindowResizeMode.NoResize;
+
+        window.ToggleMaximizeRestore();
+        var afterToggle = window.State;
+        window.Maximize();
+        var afterMaximize = window.State;
+        window.Minimize();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterToggle, Is.EqualTo(WindowState.Normal));
+            Assert.That(afterMaximize, Is.EqualTo(WindowState.Normal));
+            Assert.That(window.State, Is.EqualTo(WindowState.Normal));
+        });
+    }
+
     [Test]
     public void WithoutCustomChrome_TheCaptionIsHidden()
     {
