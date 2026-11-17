@@ -128,6 +128,10 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     {
     }
 
+    public void ColorSchemeChanged(WebViewBrowser browser)
+    {
+    }
+
     public bool NavigationStarting(WebViewBrowser browser, string address, bool userGesture, bool isRedirect) => false;
 
     public void NavigationCompleted(WebViewBrowser browser, string address, WebViewLoadError error)

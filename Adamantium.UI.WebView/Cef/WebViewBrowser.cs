@@ -1045,6 +1045,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// application's; a page not made yet is asked as it is.</summary>
     internal void AskColorScheme(WebViewColorScheme colorScheme)
     {
+        view.ColorSchemeChanged(this);
         if (isDevTools)
         {
             return;

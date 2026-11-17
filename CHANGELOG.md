@@ -325,8 +325,10 @@ All packages share one version.
   places it - moved into the view where it would stand past its edge - and takes presses as the list. A script's
   `alert`, `confirm` and `prompt`, and the question before a page is left or loaded again, are asked by
   `WebViewScriptDialog` (`PART_ScriptDialog`, the theme's card) over the page only: the page waits under it, the rest of
-  the window goes on, and the answer goes back to the script. Other popups come later. `PageBackground` (white, as in
-  a browser) shows where a page paints no background of its own; transparent shows what lies under the view. A page
+  the window goes on, and the answer goes back to the script. Other popups come later. `PageBackground` (a `Color?`;
+  null is white, as in a browser) shows where a page paints no background of its own; transparent shows what lies
+  under the view. Left null, it is dark under the page's frames while the pages are asked in the dark scheme, so a
+  frame still on its way - the view just resized, its tabs moved - leaves no white behind. A page
   that opens another by the user's doing - `window.open`, a link to a new tab, one opened with Ctrl, Shift or the
   middle button, the menu's "View page source" and "Open link in new tab" - asks the view model through
   `WebViewBridge.NewWindowRequested`: its `WebViewNewPage`, given to another `WebView`'s `NewPage`, is shown there - for

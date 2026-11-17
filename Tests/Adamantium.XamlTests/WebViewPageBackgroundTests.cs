@@ -15,9 +15,10 @@ namespace Adamantium.XamlTests;
 
 /// <summary>
 /// A WebView's page background lies under the page's frames: it shows where no frame is - before the first, or for a
-/// page Chromium paints none of, as about:blank - not the theme's background under the view. No CEF here: the view has
-/// no engine, so no frame ever comes. The view's own page host is the first in its tree; its DevTools have one too. The
-/// view's look is added to each test's application: the view adds it once a process, to the application there was then.
+/// page Chromium paints none of, as about:blank - not the theme's background under the view. No CEF here: no frame ever
+/// comes, and an engine only answers for its scheme. The view's own page host is the first in its tree; its DevTools
+/// have one too. The view's look is added to each test's application: the view adds it once a process, to the
+/// application there was then.
 /// </summary>
 [TestFixture]
 public class WebViewPageBackgroundTests
@@ -45,6 +46,36 @@ public class WebViewPageBackgroundTests
             Assert.That(byDefault, Is.EqualTo(Colors.White), "white, as in a browser");
             Assert.That(chosen, Is.EqualTo(new Color(30, 60, 90)), "any alpha but none is opaque, as the page's own");
             Assert.That(transparent, Is.Null, "fully transparent shows what lies under the view");
+        });
+    }
+
+    // Left unset, what shows under the page follows the scheme the pages are asked in - no white gap behind a frame on
+    // its way in a dark one; one set is kept. The engine here has no CEF, so it only answers for its scheme.
+    [Test]
+    public async Task UnderThePage_TheGroundFollowsTheScheme_UnlessOneIsSet()
+    {
+        using var engine = new WebViewEngine(new Adamantium.UI.WebView.Tests.NoDevices(), null, new WebViewOptions
+        {
+            ColorScheme = WebViewColorScheme.Dark,
+            ProfileFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName())
+        });
+        var view = new WebView { Engine = engine };
+        await using var session = AutomationSession.InProcess(
+            new Window { Width = 400, Height = 300, ClientWidth = 400, ClientHeight = 300, Content = view });
+        await session.WaitForIdleAsync();
+        var host = PageHost(view);
+        var dark = (host.Background as SolidColorBrush)?.Color;
+
+        view.PageBackground = Colors.White;
+        var set = (host.Background as SolidColorBrush)?.Color;
+        view.PageBackground = null;
+        var followsAgain = (host.Background as SolidColorBrush)?.Color;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dark, Is.EqualTo(new Color(18, 18, 18)), "dark under a dark page");
+            Assert.That(set, Is.EqualTo(Colors.White), "one set is kept, white too");
+            Assert.That(followsAgain, Is.EqualTo(new Color(18, 18, 18)), "and taken away, the scheme is followed again");
         });
     }
 

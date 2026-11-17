@@ -35,13 +35,16 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnAllowSharedTextureChanged));
 
     public static readonly AdamantiumProperty PageBackgroundProperty = AdamantiumProperty.Register(
-        nameof(PageBackground), typeof(Color), typeof(WebView), new PropertyMetadata(Colors.White, OnPageBackgroundChanged));
+        nameof(PageBackground), typeof(Color?), typeof(WebView), new PropertyMetadata(null, OnPageBackgroundChanged));
 
     public static readonly AdamantiumProperty FramePathProperty = AdamantiumProperty.Register(nameof(FramePath),
         typeof(WebViewFramePath), typeof(WebView), new PropertyMetadata(WebViewFramePath.None));
 
     public static readonly AdamantiumProperty FrameRateProperty = AdamantiumProperty.Register(nameof(FrameRate),
         typeof(int), typeof(WebView), new PropertyMetadata(0));
+
+    // Chromium's own ground for a page in the dark scheme.
+    private static readonly Color DarkPageGround = new(18, 18, 18);
 
     private RenderTargetPanel surface;
     private InputUIComponent pageHost;
@@ -100,13 +103,14 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         set => SetValue(AllowSharedTextureProperty, value);
     }
 
-    /// <summary>What shows where a page paints no background of its own, and before it loads: white, as in a browser.
-    /// It lies under the page's frames, so it shows before the first one too, and for a page Chromium paints no frame
-    /// of - an empty one, as about:blank. Fully transparent shows what lies under the view - a page over a scene; any
-    /// other alpha is taken as opaque. Changing it makes the page again.</summary>
-    public Color PageBackground
+    /// <summary>What shows where a page paints no background of its own, and before it loads. It lies under the page's
+    /// frames, so it shows before the first one too, and for a page Chromium paints no frame of - an empty one, as
+    /// about:blank. Fully transparent shows what lies under the view - a page over a scene; any other alpha is taken as
+    /// opaque. Changing it makes the page again. Null, the default: white as in a browser, with dark under the frames
+    /// while the pages are asked in the dark scheme, so a frame still on its way leaves no white behind.</summary>
+    public Color? PageBackground
     {
-        get => GetValue<Color>(PageBackgroundProperty);
+        get => GetValue<Color?>(PageBackgroundProperty);
         set => SetValue(PageBackgroundProperty, value);
     }
 
@@ -222,6 +226,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     private static void OnPageMakerChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
+        view.ShowPageBackground();
         if (e.NewValue == null && view.browser != null)
         {
             return;
@@ -237,7 +242,11 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         var view = (WebView)component;
         view.ShowPageBackground();
-        view.RestartBrowser();
+        // Chromium's ground is made with the page: the page is made again only when that changes.
+        if (((Color?)e.OldValue ?? Colors.White) != ((Color?)e.NewValue ?? Colors.White))
+        {
+            view.RestartBrowser();
+        }
     }
 
     private protected void RestartBrowser()
@@ -253,8 +262,27 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             return;
         }
 
-        var color = PageBackground;
-        host.Background = color.A == 0 ? null : new SolidColorBrush(new Color(color.R, color.G, color.B));
+        var color = GroundUnderPage();
+        if (color.A == 0)
+        {
+            host.Background = null;
+        }
+        else if (host.Background is not SolidColorBrush { Color: var shown } || shown != new Color(color.R, color.G, color.B))
+        {
+            host.Background = new SolidColorBrush(new Color(color.R, color.G, color.B));
+        }
+    }
+
+    // The page background asked for; without one, Chromium's own dark page ground while the pages are asked in the dark.
+    private Color GroundUnderPage() =>
+        PageBackground ?? (Engine?.PagesColorScheme == WebViewColorScheme.Dark ? DarkPageGround : Colors.White);
+
+    void IWebViewBrowserView.ColorSchemeChanged(WebViewBrowser from)
+    {
+        if (ReferenceEquals(browser, from))
+        {
+            ShowPageBackground();
+        }
     }
 
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -294,12 +322,14 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             if (AdoptNewPage(width, height, Scale()) == null)
             {
                 browser = engine.CreateBrowser(AllowSharedTexture, this);
-                browser.Background = PageBackground;
+                // Chromium's own ground is the page's where it paints none, so it stays white in the dark scheme too.
+                browser.Background = PageBackground ?? Colors.White;
                 ResourceInterceptionChanged();
                 BeginBrowser(browser, width, height, Scale(), window?.Handle ?? IntPtr.Zero);
             }
 
             SetCurrentValue(FramePathProperty, browser.FramePath);
+            ShowPageBackground();
             RaiseCommandsChanged();
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);

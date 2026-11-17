@@ -56,6 +56,10 @@ internal sealed class WebViewUnseenView : IWebViewBrowserView
     {
     }
 
+    public void ColorSchemeChanged(WebViewBrowser browser)
+    {
+    }
+
     public bool NavigationStarting(WebViewBrowser browser, string address, bool userGesture, bool isRedirect) =>
         address != WebViewBrowser.Blank;
 

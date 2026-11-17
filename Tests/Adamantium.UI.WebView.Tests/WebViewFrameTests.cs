@@ -714,6 +714,7 @@ public partial class WebViewFrameTests
         string changed = null;
         string heard = null;
         string application = null;
+        var viewTold = 0;
         try
         {
             loop.Run(() =>
@@ -721,6 +722,7 @@ public partial class WebViewFrameTests
                 engine.ColorScheme = WebViewColorScheme.Light;
                 ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>Live</title>", (browser, view) =>
                 {
+                    var toldBefore = view.ColorSchemeChanges;
                     first = Await(browser.EvaluateAsync(ask));
                     Await(browser.EvaluateAsync(
                         "window.heard = ''; matchMedia('(prefers-color-scheme: dark)').onchange = e => window.heard = e.matches ? 'dark' : 'light'; 1"));
@@ -729,6 +731,7 @@ public partial class WebViewFrameTests
                     heard = Await(browser.EvaluateAsync("window.heard"));
                     engine.ColorScheme = WebViewColorScheme.Application;
                     Pump(() => (application = Await(browser.EvaluateAsync(ask))) == "\"light\"", TimeSpan.FromSeconds(5));
+                    viewTold = view.ColorSchemeChanges - toldBefore;
                 });
             });
         }
@@ -739,6 +742,7 @@ public partial class WebViewFrameTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(viewTold, Is.EqualTo(2), "the view is told each time, for what shows under the page");
             Assert.That(first, Is.EqualTo("\"light\""));
             Assert.That(changed, Is.EqualTo("\"dark\""), "asked again at once");
             Assert.That(heard, Is.EqualTo("\"dark\""), "the page heard the change");

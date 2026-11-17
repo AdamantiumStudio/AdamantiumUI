@@ -63,6 +63,9 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     /// <summary>The status text the browser gave last.</summary>
     public string Status { get; private set; }
 
+    /// <summary>How many times the browser said its pages are asked in another color scheme.</summary>
+    public int ColorSchemeChanges { get; private set; }
+
     /// <summary>The load error the browser gave last; null once it said the error was over.</summary>
     public WebViewLoadError Error { get; private set; }
 
@@ -242,6 +245,8 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     }
 
     public void StatusChanged(WebViewBrowser browser, string status) => Status = status;
+
+    public void ColorSchemeChanged(WebViewBrowser browser) => ColorSchemeChanges++;
 
     public void ZoomChanged(WebViewBrowser browser, double factor) => Zoom = factor;
 
