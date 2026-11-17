@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
+  own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
+  where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
+  a stored place.
+
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
   fold it to the grip - a wide toolbar is easier to take by it than by the gaps between its buttons. A bar is still
   moved by its background without it, and shows no snap either way. Folded, a pane of no set width keeps the room it
