@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `SaveFileRequest.Folder`: the folder a save dialog opens in, over the one remembered under its key - on Windows and
+  through the portal on Linux.
 - `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
   own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
   where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to

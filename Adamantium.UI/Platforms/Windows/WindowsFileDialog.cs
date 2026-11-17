@@ -118,6 +118,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         if (types.Length > 0) dialog.SetFileTypes((uint)types.Length, types);
     }
 
+    [SupportedOSPlatform("windows")]
     private static void Prepare(IFileSaveDialog dialog, SaveFileRequest request)
     {
         // Read the flags and ADD to them. Setting them outright would drop the ones a save dialog carries by default -
@@ -135,6 +136,20 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
 
         var types = Filters(request.FileTypes);
         if (types.Length > 0) dialog.SetFileTypes((uint)types.Length, types);
+
+        // After the client GUID: set before it, the folder remembered under the key wins.
+        if (System.IO.Directory.Exists(request.Folder) && ItemOf(System.IO.Path.GetFullPath(request.Folder)) is { } folder)
+        {
+            try { dialog.SetFolder(folder); }
+            finally { Marshal.ReleaseComObject(folder); }
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static IShellItem ItemOf(string path)
+    {
+        var iid = typeof(IShellItem).GUID;
+        return Win32Interop.SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out var item) == 0 ? item : null;
     }
 
     // The owner decides the dialog's monitor: the requested window, else the active one (per-thread, so possibly none),
