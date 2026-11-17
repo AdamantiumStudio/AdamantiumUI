@@ -356,7 +356,13 @@ internal sealed partial class PdfPageInterpreter
             }
 
             var form = annotation.Appearance ?? annotation.ImpliedAppearance;
-            var down = _options.Print ? null : annotation.DownAppearance;
+            var down = _options.Print || _options.PressableAnnotation?.Invoke(annotation) != true
+                ? null
+                : annotation.DownAppearance;
+            if (ReferenceEquals(down, form))
+            {
+                down = null;
+            }
             var start = output.Count;
             if (form != null)
             {
