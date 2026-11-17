@@ -115,6 +115,13 @@ internal sealed class WebViewDevTools
         ready?.Invoke();
     }
 
+    /// <summary>Asks the page in <paramref name="scheme"/> from now on - asked again once its DevTools close too.</summary>
+    public unsafe void AskColorScheme(CefBrowserHost* host, WebViewColorScheme scheme)
+    {
+        colorScheme = scheme;
+        AskColorScheme(host);
+    }
+
     private unsafe void AskColorScheme(CefBrowserHost* host)
     {
         var value = colorScheme switch
