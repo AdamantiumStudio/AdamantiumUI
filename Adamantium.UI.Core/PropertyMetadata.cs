@@ -19,6 +19,9 @@ public class PropertyMetadata
 
    /// <summary>See <see cref="PropertyMetadataOptions.InheritsFromTypeStyle"/>.</summary>
    public bool InheritsFromTypeStyle { get; private set; }
+
+   /// <summary>See <see cref="PropertyMetadataOptions.FollowsAncestors"/>.</summary>
+   public bool FollowsAncestors { get; private set; }
    public bool AffectsMeasure { get; set; }
    public bool AffectsArrange { get; set; }
    public bool AffectsRender { get; set; }
@@ -125,7 +128,9 @@ public class PropertyMetadata
    {
       if (baseMetadata == null) return this;
 
-      var options = stated.HasFlag(Stated.Options) ? MetadataOptions : baseMetadata.MetadataOptions;
+      // An override never takes FollowsAncestors away: elements below rely on every holder above answering.
+      var options = (stated.HasFlag(Stated.Options) ? MetadataOptions : baseMetadata.MetadataOptions)
+                    | (baseMetadata.MetadataOptions & PropertyMetadataOptions.FollowsAncestors);
       var defaultValue = stated.HasFlag(Stated.DefaultValue) ? DefaultValue : baseMetadata.DefaultValue;
       var coerce = stated.HasFlag(Stated.CoerceValueCallback) ? CoerceValueCallback : baseMetadata.CoerceValueCallback;
       var trigger = stated.HasFlag(Stated.UpdateSourceTrigger)
@@ -165,6 +170,10 @@ public class PropertyMetadata
       if ((flags & PropertyMetadataOptions.InheritsFromTypeStyle) > 0)
       {
          InheritsFromTypeStyle = true;
+      }
+      if ((flags & PropertyMetadataOptions.FollowsAncestors) > 0)
+      {
+         FollowsAncestors = true;
       }
       if ((flags & PropertyMetadataOptions.NotDataBindable) > 0)
       {

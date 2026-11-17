@@ -60,5 +60,9 @@ public enum PropertyMetadataOptions
    /// any value set on it. For a property by which a control decides for everything inside it - whether text in a button
    /// selects. Not for looks such as fonts and colors: there an element's own style must win over its container's, which
    /// is why a type style's value does not travel by default.</summary>
-   InheritsFromTypeStyle = 512
+   InheritsFromTypeStyle = 512,
+
+   /// <summary>A bool the nearest ancestor holding it can only turn off, through the tree values are inherited by; the
+   /// element's own value is kept and read again once the ancestor allows. A window follows nobody. IsEnabled.</summary>
+   FollowsAncestors = 1024
 }
