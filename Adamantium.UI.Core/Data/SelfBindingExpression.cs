@@ -33,6 +33,7 @@ public class SelfBindingExpression : BindingExpressionBase
         {
             Source = Target,
             Mode = _def.Mode,
+            UpdateSourceTrigger = _def.UpdateSourceTrigger,
             Converter = _def.Converter,
             ConverterParameter = _def.ConverterParameter,
             FallbackValue = _def.FallbackValue,
