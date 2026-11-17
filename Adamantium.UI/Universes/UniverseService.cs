@@ -239,7 +239,7 @@ public class UniverseService : IUniverseService
                 return;
             }
 
-            Parallel.ForEach(_retired, universe => universe.ShutDown());
+            Parallel.ForEach(_retired, ShutDownLogged);
             foreach (var universe in _retired)
             {
                 if (!universe.IsStopped)
@@ -265,19 +265,20 @@ public class UniverseService : IUniverseService
             _suspended.Clear();
         }
 
-        Parallel.ForEach(all, universe =>
-        {
-            try
-            {
-                universe.ShutDown();
-            }
-            catch (Exception fault)
-            {
-                Serilog.Log.Logger.Error(fault, "A universe failed to shut down");
-            }
-        });
-
+        Parallel.ForEach(all, ShutDownLogged);
         return all.TrueForAll(universe => universe.IsStopped);
+    }
+
+    private static void ShutDownLogged(IUniverse universe)
+    {
+        try
+        {
+            universe.ShutDown();
+        }
+        catch (Exception fault)
+        {
+            Serilog.Log.Logger.Error(fault, "A universe failed to shut down");
+        }
     }
 
     public void CopyOutput(IGraphicsDevice graphicsDevice)
