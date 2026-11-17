@@ -31,13 +31,7 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
 
     public string Save(SaveFileRequest request)
     {
-        var options = Options(request?.FileTypes);
-        if (request?.FileName is { Length: > 0 } name)
-        {
-            options["current_name"] = DBusVariant.String(name);
-        }
-
-        var path = Ask("SaveFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Save", options);
+        var path = Ask("SaveFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Save", SaveOptions(request));
         if (path != null && request?.DefaultExtension is { Length: > 0 } extension && Path.GetExtension(path).Length == 0)
         {
             path += "." + extension;
@@ -55,6 +49,24 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
         && Directory.Exists(path)
             ? path
             : null;
+
+    /// <summary>The options of a save dialog: the filters, the name, and the folder - as bytes ending in a zero.</summary>
+    public static Dictionary<string, DBusVariant> SaveOptions(SaveFileRequest request)
+    {
+        var options = Options(request?.FileTypes);
+        if (request?.FileName is { Length: > 0 } name)
+        {
+            options["current_name"] = DBusVariant.String(name);
+        }
+
+        if (Directory.Exists(request?.Folder))
+        {
+            var folder = Path.GetFullPath(request.Folder);
+            options["current_folder"] = new DBusVariant("ay", System.Text.Encoding.UTF8.GetBytes(folder + "\0"));
+        }
+
+        return options;
+    }
 
     /// <summary>The options of an open dialog that chooses a folder.</summary>
     public static Dictionary<string, DBusVariant> FolderOptions() => new() { ["directory"] = DBusVariant.Boolean(true) };

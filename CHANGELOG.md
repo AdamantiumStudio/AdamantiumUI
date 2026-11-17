@@ -10,6 +10,8 @@ All packages share one version.
 - `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
   scheme, which about:blank is painted in. `WebViewColorScheme.Application` is dark while the application's theme
   variant is dark (or the one the theme takes in the system's dark) and light otherwise, following it as it changes.
+- `SaveFileRequest.Folder`: the folder a save dialog opens in, over the one remembered under its key - on Windows and
+  through the portal on Linux.
 - `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
   own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
   where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
@@ -410,7 +412,14 @@ All packages share one version.
 
 - `WebViewOptions.ColorScheme` is `WebViewColorScheme.Application` by default, not `System`: pages follow the
   application's theme. With no application to follow they are asked in the light scheme; set `System` for the old way.
-
+- `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,
+  automation and the theme - and gets back what it was set or bound to once the ancestor is enabled. The ancestor is
+  the one DataContext comes from, so a template's parts and a popup's content follow their control; a window, an
+  overlay one too, does not follow the one under it. The focus leaves an element as it is disabled. A disabled panel
+  used to block only the pointer. It is `PropertyMetadataOptions.FollowsAncestors`, beside `Inherits`: a bool the
+  nearest ancestor holding it can only turn off, its own value kept. `FocusManager.LeaveHidden` is now `LeaveUnusable`.
+- The themes' DataPager and SegmentedControl no longer fade whole when disabled: their buttons and segments are
+  disabled with them and draw themselves so; the pager grays its labels, the segmented control its frame.
 - The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
   (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
   no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.
@@ -540,6 +549,13 @@ All packages share one version.
 
 ### Fixed
 
+- `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
+  WPF's do: the themes' caption hides the buttons, a double click on the caption and `Maximize`/`Minimize` do nothing,
+  and on Windows the system's own (Win+Up, the system menu, a `WM_SYSCOMMAND` from outside) is refused too; a system
+  frame loses its sizing border. A window maximized when the mode stops allowing it is restored, and one remembered
+  maximized opens at its size. `WindowBase.CanMinimize`, `CanMaximize`. macOS and Wayland do not yet ask the system.
+- The macOS theme's caption and overlay window hide a traffic light's glyph with its light: a hidden button's glyph still
+  showed when the pointer reached the caption.
 - Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
   forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held

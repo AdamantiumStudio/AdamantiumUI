@@ -106,6 +106,14 @@
         <PropertyTrigger Property="ResizeMode" Value="CanResizeWithGrip">
             <Setter TargetName="PART_ResizeGripper" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- No sizing: no maximize, and with NoResize no minimize either (Window.CanMinimize, CanMaximize). -->
+        <PropertyTrigger Property="ResizeMode" Value="NoResize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMinButton" Value="False"/>
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ResizeMode" Value="CanMinimize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
         <!-- Active (focused) window: paint the caption + outline with the accent (like a native title-bar focus highlight).
              Inactive keeps the neutral base caption + subtle stroke (the template/setter defaults). -->
         <PropertyTrigger Property="IsActive" Value="true">

@@ -25,9 +25,9 @@ public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider, 
 
     public WindowState VisualState => _window.State;
 
-    public bool CanMinimize => _window.ResizeMode != WindowResizeMode.NoResize;
+    public bool CanMinimize => _window.CanMinimize;
 
-    public bool CanMaximize => _window.ResizeMode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip;
+    public bool CanMaximize => _window.CanMaximize;
 
     /// <summary>Does what the title bar's buttons do.</summary>
     public void SetVisualState(WindowState state)

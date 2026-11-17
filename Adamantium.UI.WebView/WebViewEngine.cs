@@ -52,8 +52,9 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         this.devices = devices;
         this.application = application;
         this.options = options ?? new WebViewOptions();
-        sitePermissions = new WebViewSitePermissions(this.options.ProfileFolder ?? DefaultProfileFolder());
-        downloadHistory = new WebViewDownloadHistory(this.options.ProfileFolder ?? DefaultProfileFolder());
+        ProfileFolder = this.options.ProfileFolder ?? DefaultProfileFolder();
+        sitePermissions = new WebViewSitePermissions(ProfileFolder);
+        downloadHistory = new WebViewDownloadHistory(ProfileFolder);
         foreach (var kept in downloadHistory.Load())
         {
             downloads.Add(WebDownload.Restore(kept, _ => KeepDownloads()));
@@ -115,6 +116,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     /// one that was coming in as interrupted (<see cref="WebDownloadInterruption.ApplicationClosed"/>). Changes are told
     /// as a collection's, on the UI thread.</summary>
     public IReadOnlyList<WebDownload> Downloads => downloads;
+
+    /// <summary>The folder of the profile - its cookies, cache, site permissions and downloads: the one
+    /// <see cref="WebViewOptions.ProfileFolder"/> named, or the application's own. What tells this profile's kept
+    /// sign-ins from another's in a store the system shares.</summary>
+    public string ProfileFolder { get; }
 
     /// <summary>Takes a download done with off <see cref="Downloads"/> - finished, or kept from an earlier run; its file
     /// stays where it is, the part of one an earlier run left unfinished is deleted. False for one not there, or still
@@ -679,7 +685,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             windowless_rendering_enabled = 1,
             log_severity = CefLogSeverity.Warning,
         };
-        var profile = options.ProfileFolder ?? DefaultProfileFolder();
+        var profile = ProfileFolder;
         CefStrings.Set(&settings.browser_subprocess_path, HelperFile);
         CefStrings.Set(&settings.resources_dir_path, CefLibrary.ApplicationFolder);
         CefStrings.Set(&settings.locales_dir_path, Path.Combine(CefLibrary.ApplicationFolder, "locales"));

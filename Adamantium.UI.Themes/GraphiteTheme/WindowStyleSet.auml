@@ -115,6 +115,14 @@
         <PropertyTrigger Property="ResizeMode" Value="CanResizeWithGrip">
             <Setter TargetName="PART_ResizeGripper" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- No sizing: no maximize, and with NoResize no minimize either (Window.CanMinimize, CanMaximize). -->
+        <PropertyTrigger Property="ResizeMode" Value="NoResize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMinButton" Value="False"/>
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ResizeMode" Value="CanMinimize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
         <!-- Active: the caption's text comes up to full strength and the frame's hairline steps up one. The GROUND does
              not move - see the note at the top of this file. -->
         <PropertyTrigger Property="IsActive" Value="true">

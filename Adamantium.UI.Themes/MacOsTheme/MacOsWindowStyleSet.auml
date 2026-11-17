@@ -96,6 +96,14 @@
         <PropertyTrigger Property="ResizeMode" Value="CanResizeWithGrip">
             <Setter TargetName="PART_ResizeGripper" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- No sizing: no maximize, and with NoResize no minimize either (Window.CanMinimize, CanMaximize). -->
+        <PropertyTrigger Property="ResizeMode" Value="NoResize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMinButton" Value="False"/>
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ResizeMode" Value="CanMinimize">
+            <Setter TargetName="PART_TitleBar" Property="ShowMaxRestoreButton" Value="False"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsThemeChanging" Value="true">
             <Setter TargetName="PART_ThemeOverlay" Property="Visibility" Value="Visible"/>
             <Setter TargetName="PART_ThemeSpinner" Property="IsActive" Value="True"/>

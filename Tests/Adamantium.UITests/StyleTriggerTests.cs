@@ -355,7 +355,8 @@ public class StyleTriggerTests
         var host = new Button();
         host.Template = TwoPartTemplate("Group", "Glyph");
 
-        var trigger = new PropertyTrigger { SourceName = "Group", Property = "IsEnabled", Value = false };
+        // Not IsEnabled: a disabled host disables its parts too, so it could not tell the two apart.
+        var trigger = new PropertyTrigger { SourceName = "Group", Property = "IsHitTestVisible", Value = false };
         trigger.Add(new Setter { TargetName = "Glyph", Property = "Opacity", Value = "0.5" });
         trigger.Apply(new PartContext(host, theme: null));
 
@@ -363,15 +364,15 @@ public class StyleTriggerTests
         var glyph = (Border)host.GetTemplateChild("Glyph");
         Assert.That(glyph.Opacity, Is.EqualTo(1).Within(0.001), "inactive before the condition holds");
 
-        host.IsEnabled = false;
+        host.IsHitTestVisible = false;
         Assert.That(glyph.Opacity, Is.EqualTo(1).Within(0.001),
             "the HOST's own property must not answer for a trigger that names a source");
 
-        host.IsEnabled = true;
-        group.IsEnabled = false;
+        host.IsHitTestVisible = true;
+        group.IsHitTestVisible = false;
         Assert.That(glyph.Opacity, Is.EqualTo(0.5).Within(0.001), "the named part is what the trigger watches");
 
-        group.IsEnabled = true;
+        group.IsHitTestVisible = true;
         Assert.That(glyph.Opacity, Is.EqualTo(1).Within(0.001), "...and it lets go when the part goes back");
     }
 

@@ -150,12 +150,10 @@
     <!-- DisplayMode: everything is visible by default and triggers hide parts, one boolean flag each (a trigger matches
          whole values). See DataPager. -->
     <Style Selector="DataPager">
-        <!-- DISABLED, said ONCE for the whole row. IsEnabled is not an inheriting property here, so the buttons and
-             fields inside never learn they are off and go on looking live - while input is dead, because hit-testing
-             prunes the whole subtree of a disabled element. Opacity is the statement that reaches all of it, drawn
-             glyphs included. -->
+        <!-- DISABLED: the buttons and fields inside are disabled with the pager and draw themselves so; the labels
+             between them are the pager's to gray. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
-            <Setter TargetName="Chrome" Property="Opacity" Value="0.4"/>
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorDisabled}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsFirstLast" Value="false">
             <Setter TargetName="PART_FirstPage" Property="Visibility" Value="Collapsed"/>

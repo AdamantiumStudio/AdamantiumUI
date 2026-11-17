@@ -112,6 +112,17 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       // takes it away for the type that had it.
       CanInherit |= metadata.Inherits;
       InheritsFromTypeStyle |= metadata.InheritsFromTypeStyle;
+      if (metadata.FollowsAncestors)
+      {
+         if (PropertyType != typeof(bool) || metadata.Inherits)
+         {
+            throw new InvalidOperationException(
+               $"'{Name}' cannot follow its ancestors: only a bool property that does not inherit can.");
+         }
+
+         AdamantiumPropertyMap.NoteFollowingAncestors(this);
+      }
+
       metadataCache.Clear();   // a previously-resolved (base-walked) entry may now resolve to this newer, more-derived one
       // ...and an override can ADD inheritance for a derived type, so the per-type "which of my properties inherit" answer
       // is stale too. Static-init only, so this never runs hot.
