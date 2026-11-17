@@ -1452,12 +1452,33 @@ public partial class InfiniteCanvas
     {
         var overGrip = _selection.Count > 0 ? CanvasFrameGesture.CursorFor(HandleAt(screen)) : null;
 
-        Cursor = overGrip ?? OverSelection(screen) ?? Tool?.Cursor ?? Cursors.Arrow;
+        Cursor = overGrip ?? OverSelection(screen) ?? OverContent(screen) ?? Tool?.Cursor ?? Cursors.Arrow;
+    }
+
+    private Cursor OverContent(Vector2<double> screen)
+    {
+        if (Tool is not SelectTool || ContentGesture is not { } content)
+        {
+            return null;
+        }
+
+        var world = ScreenToWorld(screen);
+        return ItemAt(world) != null ? null : content.CursorAt(this, world);
     }
 
     /// <summary>Works out what the pointer should look like at a place on screen, and wears it. Public so that what the
     /// pointer PROMISES can be asked without a mouse: it is a promise about what the next press will do.</summary>
     public void ShowPointerAt(Vector2<double> screen) => ShowPointer(screen);
+
+    /// <summary>Works the pointer's look out again where it rests: for a derived canvas whose content under it changed
+    /// without the pointer moving.</summary>
+    protected internal void RefreshPointer()
+    {
+        if (_pointerInside && !_panning)
+        {
+            ShowPointer(_pointer);
+        }
+    }
 
     // What is under the pointer WITHIN the selection: one of its points, or the thing itself. The only thing that says
     // so on a LINE, which has no box to say it by being drawn.
