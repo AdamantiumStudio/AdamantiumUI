@@ -2,25 +2,26 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary><c>UpdateSourceTrigger</c> on a {Binding} is the binding's: written in markup, it reaches the binding.
-/// </summary>
+/// <summary><c>UpdateSourceTrigger</c> on a {Binding}, an {Ancestor} or a {Self} is the binding's: written in markup, it
+/// reaches the binding.</summary>
 [TestFixture]
 public class AumlUpdateSourceTriggerTests
 {
-    private const string View = AumlCodegenHarness.WindowHeader +
-                                "><TextBox Text=\"{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}\"/></Window>";
-
-    [Test]
-    public void ItIsSetOnTheBinding_AndTheCodeCompiles()
+    [TestCase("{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}")]
+    [TestCase("{Ancestor Window, Title, Mode=TwoWay, UpdateSourceTrigger=LostFocus}")]
+    [TestCase("{Self Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}")]
+    public void ItIsSetOnTheBinding_AndTheCodeCompiles(string binding)
     {
-        var code = AumlCodegenHarness.Generate(View, out var errors);
+        var view = AumlCodegenHarness.WindowHeader + $"><TextBox Text=\"{binding}\"/></Window>";
+
+        var code = AumlCodegenHarness.Generate(view, out var errors);
 
         Assert.Multiple(() =>
         {
             Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
-            Assert.That(AumlCodegenHarness.Warnings(View), Is.Empty);
+            Assert.That(AumlCodegenHarness.Warnings(view), Is.Empty);
             Assert.That(code, Does.Contain("UpdateSourceTrigger = global::Adamantium.UI.Core.Data.UpdateSourceTrigger.LostFocus"));
-            Assert.That(AumlCodegenHarness.Compile(View), Is.Empty);
+            Assert.That(AumlCodegenHarness.Compile(view), Is.Empty);
         });
     }
 }

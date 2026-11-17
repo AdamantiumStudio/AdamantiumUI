@@ -28,6 +28,9 @@ public class Ancestor : MarkupExtension
 
     public BindingMode Mode { get; set; } = BindingMode.OneWay;
 
+    /// <summary>When a TwoWay write reaches the ancestor, like a {Binding}'s: LostFocus for a field applied once left.</summary>
+    public UpdateSourceTrigger UpdateSourceTrigger { get; set; }
+
     /// <summary>Optional converter applied to the source value (and back on a TwoWay write), like a {Binding} converter.</summary>
     public IValueConverter Converter { get; set; }
 

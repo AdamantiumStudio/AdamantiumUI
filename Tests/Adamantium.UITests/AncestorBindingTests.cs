@@ -140,6 +140,49 @@ public class AncestorBindingTests
     }
 
     [Test]
+    public void Ancestor_UpdateSourceTrigger_HoldsTheWriteUntilAsked()
+    {
+        var panel = new StackPanel { Width = 5 };
+        var leaf = new TextBlock();
+        panel.AddLogicalChild(leaf);
+
+        var expression = new Ancestor
+        {
+            AncestorType = typeof(StackPanel), Path = "Width", Mode = BindingMode.TwoWay,
+            UpdateSourceTrigger = UpdateSourceTrigger.Explicit, Logical = true
+        }.Apply(leaf, "Width");
+        leaf.Width = 99;
+        var held = panel.Width;
+        expression.UpdateSource();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(held, Is.EqualTo(5d), "not written until asked");
+            Assert.That(panel.Width, Is.EqualTo(99d));
+        });
+    }
+
+    [Test]
+    public void Self_UpdateSourceTrigger_HoldsTheWriteUntilAsked()
+    {
+        var block = new TextBlock { Width = 5 };
+
+        var expression = new Self
+        {
+            Path = "Width", Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit
+        }.Apply(block, "Height");
+        block.Height = 99;
+        var held = block.Width;
+        expression.UpdateSource();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(held, Is.EqualTo(5d), "not written until asked");
+            Assert.That(block.Width, Is.EqualTo(99d));
+        });
+    }
+
+    [Test]
     public void Ancestor_Status_PathError_WhenNoMatchingAncestor()
     {
         var panel = new StackPanel();                 // NOT a Grid
