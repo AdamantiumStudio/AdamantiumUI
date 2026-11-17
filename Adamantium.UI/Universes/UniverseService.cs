@@ -50,9 +50,20 @@ public class UniverseService : IUniverseService
         var universe = (T)Activator.CreateInstance(typeof(T), args);
         universe.InitializeUniverse();
         var key = new UniverseKey(name, wnd, service, universe);
+        bool closed;
         lock (_locker)
         {
-            _universes.Add(key);
+            closed = _closed;
+            if (!closed)
+            {
+                _universes.Add(key);
+            }
+        }
+
+        if (closed)
+        {
+            universe.ShutDown();
+            throw new OperationCanceledException("The application is shutting down.");
         }
 
         if (service != null && wnd != null)
@@ -76,9 +87,19 @@ public class UniverseService : IUniverseService
             }
             catch
             {
+                bool closed;
                 lock (_locker)
                 {
-                    _retired.Add(made);
+                    closed = _closed;
+                    if (!closed)
+                    {
+                        _retired.Add(made);
+                    }
+                }
+
+                if (closed)
+                {
+                    made.ShutDown();
                 }
 
                 throw;
@@ -118,8 +139,10 @@ public class UniverseService : IUniverseService
             .OfType<WindowRenderService>()
             .FirstOrDefault(x => ReferenceEquals(x.Window, window));
 
+        bool closed;
         lock (_locker)
         {
+            closed = _closed;
             var index = _universes.FindIndex(x => ReferenceEquals(x.Universe, universe));
             if (index >= 0)
             {
@@ -127,7 +150,7 @@ public class UniverseService : IUniverseService
             }
         }
 
-        if (service != null)
+        if (!closed && service != null)
         {
             StartLoop(universe);
         }
