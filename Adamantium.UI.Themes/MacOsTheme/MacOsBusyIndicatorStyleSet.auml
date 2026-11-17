@@ -3,7 +3,8 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- The macOS spinner: a still wheel of gray spokes with a fade running around it, one eighth of a cycle apart.
-         RotationCenterY is tied to BusySize, so the size is set here; the named class variants stay Fluent's. -->
+         The wheel is drawn on a 40 by 40 field and scaled to whatever size the indicator is given - a tab's 16 too;
+         drawn at its own size, it overflowed a smaller indicator and turned about a point outside it. -->
 
     <Style Selector="BusyIndicator">
         <Setter Property="Width" Value="{ResourceReference BusySize}"/>
@@ -13,60 +14,64 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="BusyIndicator">
-                    <Grid>
-                        <Rectangle x:Name="Spoke1" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}"/>
-                        <Rectangle x:Name="Spoke2" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="45" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke3" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="90" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke4" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="135" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke5" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="180" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke6" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="225" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke7" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="270" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                        <Rectangle x:Name="Spoke8" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
-                                   HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   Fill="{ObservableResource TextFillColorSecondary}">
-                            <Rectangle.RenderTransform>
-                                <Transform RotationAngle="315" RotationCenterX="2" RotationCenterY="18"/>
-                            </Rectangle.RenderTransform>
-                        </Rectangle>
-                    </Grid>
+                    <Viewbox>
+                        <!-- Each spoke turns about the field's middle: 2 in from the top plus 18 down is 20 of 40, and
+                             2 across is half its width of 4. -->
+                        <Grid Width="40" Height="40">
+                            <Rectangle x:Name="Spoke1" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}"/>
+                            <Rectangle x:Name="Spoke2" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="45" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke3" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="90" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke4" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="135" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke5" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="180" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke6" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="225" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke7" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="270" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Rectangle x:Name="Spoke8" Width="4" Height="11" CornerRadius="2" Margin="0 2 0 0"
+                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                       Fill="{ObservableResource TextFillColorSecondary}">
+                                <Rectangle.RenderTransform>
+                                    <Transform RotationAngle="315" RotationCenterX="2" RotationCenterY="18"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Grid>
+                    </Viewbox>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
