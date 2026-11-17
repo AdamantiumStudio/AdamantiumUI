@@ -305,4 +305,54 @@ public class CanvasToolRailTests
             Assert.That(new InfiniteCanvas().Say("InputName"), Is.EqualTo("InputName"), "no phrases: the key as it is");
         });
     }
+
+    [Test]
+    public void AColumnOfButtons_IsAsWideAsAButton_WithGapsOnlyBetweenThem()
+    {
+        var canvas = new InfiniteCanvas();
+        canvas.Tools.Add(new Nothing { Name = "A1", Group = "A" });
+        canvas.Tools.Add(new Nothing { Name = "A2", Group = "A" });
+        canvas.Tools.Add(new Nothing { Name = "B1", Group = "B" });
+        canvas.Tools.Add(new Nothing { Name = "B2", Group = "B" });
+        var rail = new CanvasToolRail
+        {
+            Canvas = canvas, Orientation = Orientation.Vertical, ButtonWidth = 32, ButtonHeight = 30, ButtonGap = 5,
+        };
+        var host = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left };
+        host.Children.Add(rail);
+        var window = new Window { Width = 400, Height = 300, Content = host };
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rail.Children, Has.Count.EqualTo(2));
+            Assert.That(rail.DesiredSize.Width, Is.EqualTo(32), "a gap beside the column");
+            Assert.That(rail.DesiredSize.Height, Is.EqualTo(65), "two buttons and one gap between them");
+            Assert.That(rail.Children[1].Bounds.Y, Is.EqualTo(35));
+            Assert.That(rail.Children[1].Bounds.X, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void AWrapPanel_PutsItsSpacingBetweenNeighborsAndLines_Only()
+    {
+        var panel = new WrapPanel { ItemSpacing = 4, WrapSpacing = 6, Width = 50 };
+        for (var item = 0; item < 3; item++)
+        {
+            panel.Children.Add(new Border { Width = 20, Height = 10 });
+        }
+
+        var host = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left };
+        host.Children.Add(panel);
+        var window = new Window { Width = 400, Height = 300, Content = host };
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.Children[1].Bounds.X, Is.EqualTo(24), "the gap between the first two");
+            Assert.That(panel.Children[2].Bounds.X, Is.EqualTo(0), "the third wraps: 20 + 4 + 20 + 4 + 20 > 50");
+            Assert.That(panel.Children[2].Bounds.Y, Is.EqualTo(16), "below the first line and the line gap");
+            Assert.That(panel.DesiredSize.Height, Is.EqualTo(26), "two lines and one gap, none after the last");
+        });
+    }
 }
