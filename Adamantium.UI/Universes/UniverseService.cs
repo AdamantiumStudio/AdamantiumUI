@@ -22,6 +22,8 @@ public class UniverseService : IUniverseService
 
     private readonly List<IUniverse> _suspended = [];
 
+    private readonly List<IUniverse> _stopping = [];
+
     private bool _suspending;
 
     private bool _closed;
@@ -162,7 +164,8 @@ public class UniverseService : IUniverseService
         lock (_locker)
         {
             _suspending = true;
-            holding = [.. _universes.Select(x => x.Universe), .. _retired];
+            _stopping.RemoveAll(universe => universe.IsStopped);
+            holding = [.. _universes.Select(x => x.Universe), .. _retired, .. _stopping];
             _suspended.AddRange(holding);
         }
 
@@ -230,27 +233,34 @@ public class UniverseService : IUniverseService
     {
         lock (_locker)
         {
-            for (int i = 0; i < _retired.Count; i++)
+            _stopping.RemoveAll(universe => universe.IsStopped);
+            foreach (var universe in _retired)
             {
-                _retired[i].ShutDown();
+                universe.ShutDown();
+                if (!universe.IsStopped)
+                {
+                    _stopping.Add(universe);
+                }
             }
+
             _retired.Clear();
         }
     }
 
-    public void ShutDownAll()
+    public bool ShutDownAll()
     {
         List<IUniverse> all;
         lock (_locker)
         {
             _closed = true;
-            all = [.. _universes.Select(x => x.Universe), .. _retired];
+            all = [.. _universes.Select(x => x.Universe), .. _retired, .. _stopping];
             _universes.Clear();
             _retired.Clear();
+            _stopping.Clear();
             _suspended.Clear();
         }
 
-        foreach (var universe in all)
+        Parallel.ForEach(all, universe =>
         {
             try
             {
@@ -260,7 +270,9 @@ public class UniverseService : IUniverseService
             {
                 Serilog.Log.Logger.Error(fault, "A universe failed to shut down");
             }
-        }
+        });
+
+        return all.TrueForAll(universe => universe.IsStopped);
     }
 
     public void CopyOutput(IGraphicsDevice graphicsDevice)

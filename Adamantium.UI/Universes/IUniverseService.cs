@@ -31,9 +31,9 @@ public interface IUniverseService
     /// <summary>Shuts down the universes removed since the last call, waiting for their loops to end.</summary>
     public void RetireRemoved();
 
-    /// <summary>Shuts down every universe, removed or not, for the application's exit; one made after it is shut down as
-    /// it comes.</summary>
-    public void ShutDownAll();
+    /// <summary>Shuts down every universe for the application's exit, together; false when one did not stop in time and
+    /// still holds the devices it draws with.</summary>
+    public bool ShutDownAll();
 
     /// <summary>Holds every universe's own loop between two frames - for remaking the devices they draw with - until
     /// <see cref="ResumeLoops"/>.</summary>
