@@ -363,6 +363,7 @@ internal sealed partial class PdfPageInterpreter
             {
                 down = null;
             }
+
             var start = output.Count;
             if (form != null)
             {
