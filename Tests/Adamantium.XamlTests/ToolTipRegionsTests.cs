@@ -16,8 +16,8 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>Tooltips of an element's parts (<see cref="IToolTipRegions"/>): the card shows under the part the pointer
-/// rests on and says what that part says, another part brings its own, leaving the parts takes it away, a press keeps it
+/// <summary>Tooltips of an element's parts (<see cref="IToolTipRegions"/>): the card shows under the pointer, stays put
+/// within the part and says what that part says, another part brings its own, leaving the parts takes it away, a press keeps it
 /// away until another part, and a child with a tip of its own wins over the parts under it.</summary>
 [TestFixture]
 public class ToolTipRegionsTests
@@ -126,6 +126,13 @@ public class ToolTipRegionsTests
         return (await Tip()).Name;
     }
 
+    private async Task<Vector2<double>> TipAt()
+    {
+        var parts = (await Parts.WaitForAsync()).Bounds;
+        var tip = (await Tip()).Bounds;
+        return new Vector2<double>(tip[0] - parts[0], tip[1] - parts[1]);
+    }
+
     private async Task Quiet()
     {
         for (var attempt = 0; attempt < 5; attempt++)
@@ -136,30 +143,60 @@ public class ToolTipRegionsTests
     }
 
     [Test]
-    public async Task APartRestedOn_ShowsItsTip_UnderThatPart()
+    public async Task APartRestedOn_ShowsItsTip_UnderThePointer_AndKeepsItThereWithinThePart()
     {
         await Parts.HoverAsync(50, 30);
         var tip = await Tip();
+        await Quiet();
+        var at = await TipAt();
+        await Parts.HoverAsync(90, 40);
+        await Quiet();
+        var after = await TipAt();
 
         Assert.Multiple(() =>
         {
             Assert.That(tip.Name, Is.EqualTo("first"));
-            Assert.That(Card.PlacementRectangle, Is.EqualTo(First), "the card stands under the whole element");
+            Assert.That(at.X, Is.EqualTo(50).Within(1), "the card starts at the pointer");
+            Assert.That(at.Y, Is.EqualTo(50).Within(1), "the card stands just under the pointer");
+            Assert.That(after, Is.EqualTo(at), "the card stays where it opened while the pointer moves within the part");
         });
     }
 
     [Test]
-    public async Task AnotherPart_BringsItsOwnTip()
+    public async Task APlainTipAfterAPartsTip_StandsUnderItsElementAgain()
+    {
+        await Parts.HoverAsync(50, 30);
+        await Tip();
+
+        await _session.Find(By.Id("Own")).HoverAsync();
+        var text = await TipSaying("own");
+        await Quiet();
+        var at = await TipAt();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text, Is.EqualTo("own"));
+            Assert.That(Card.Placement, Is.EqualTo(PlacementMode.Bottom));
+            Assert.That(at.Y, Is.InRange(150, 160), "the card is just under the button, whose bottom is at 150");
+            Assert.That(at.X, Is.LessThan(50), "the card is centered under the button, whose middle is at 50");
+        });
+    }
+
+    [Test]
+    public async Task AnotherPart_BringsItsOwnTip_UnderThePointer()
     {
         await Parts.HoverAsync(50, 30);
         await Tip();
 
         await Parts.HoverAsync(250, 30);
+        var text = await TipSaying("second");
+        await Quiet();
+        var at = await TipAt();
 
-        Assert.Multiple(async () =>
+        Assert.Multiple(() =>
         {
-            Assert.That(await TipSaying("second"), Is.EqualTo("second"));
-            Assert.That(Card.PlacementRectangle, Is.EqualTo(Second));
+            Assert.That(text, Is.EqualTo("second"));
+            Assert.That(at.X, Is.EqualTo(250).Within(1));
         });
     }
 

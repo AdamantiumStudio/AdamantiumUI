@@ -8,10 +8,10 @@ All packages share one version.
 ### Added
 
 - Tooltips of an element's parts, as a Win32 window has a tool per rectangle: `IToolTipRegions` says what to show at a
-  point and for which part, set with `ToolTipService.ToolTipRegions`. The card shows under that part after the usual
-  delay, moves on to another part's tip, and goes when the pointer leaves the parts. A press keeps it away until another
-  part, and a child with a tip of its own wins over the parts under it. `ToolTipService.RefreshToolTipRegions` asks again
-  when what is under a still pointer moves. `Popup.PlacementRectangle` places a popup against a part of its target.
+  point and for which part, set with `ToolTipService.ToolTipRegions`. The card shows under the pointer after the usual
+  delay, stays put while the pointer moves within the part, moves on to another part's tip, and goes when the pointer
+  leaves the parts. A press keeps it away until another part, and a child with a tip of its own wins over the parts
+  under it. `ToolTipService.RefreshToolTipRegions` asks again when what is under a still pointer moves.
 - Automation hovers a point of an element: `AutomationElement.HoverAsync(x, y)`, `hover <selector> <x,y>` in
   `adam-auto`, and `At` on a scenario's `Hover`.
 - `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its

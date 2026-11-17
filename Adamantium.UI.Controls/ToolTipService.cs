@@ -61,6 +61,9 @@ public static class ToolTipService
     public static PlacementMode GetPlacement(AdamantiumComponent element) => element.GetValue<PlacementMode>(PlacementProperty);
     public static void SetPlacement(AdamantiumComponent element, PlacementMode value) => element.SetValue(PlacementProperty, value);
 
+    private const double CardGap = 4;
+    private const double UnderPointer = 20;
+
     // Shared, one tooltip at a time (like WPF's PopupControlService). Built lazily - on the first show, or as an
     // element's parts are set - so nothing is created for an app that never uses a tooltip.
     private static Popup _popup;
@@ -205,7 +208,7 @@ public static class ToolTipService
             return;
         }
 
-        if (ReferenceEquals(_pending, input))
+        if (_pending != null)
         {
             Hide();
         }
@@ -310,6 +313,15 @@ public static class ToolTipService
         Show(_pending);
     }
 
+    private static double VerticalScaleOf(IInputComponent owner)
+    {
+        var world = owner.WorldTransform;
+        var top = Vector3F.TransformCoordinate(new Vector3F(0, 0, 0), world);
+        var bottom = Vector3F.TransformCoordinate(new Vector3F(0, 1, 0), world);
+        var scale = Vector3F.Distance(top, bottom);
+        return scale > 1e-6 ? scale : 1;
+    }
+
     internal static void Show(IInputComponent owner)
     {
         // A tip that reads as nothing - a command with no label and no key - is no card at all.
@@ -328,9 +340,16 @@ public static class ToolTipService
         // The themed ToolTip control renders both a string (via its template's ContentPresenter) and a UI element as-is.
         _toolTip.Content = tip;
 
+        var placement = regional ? PlacementMode.Relative : GetPlacement((AdamantiumComponent)owner);
+        if (_popup.IsOpen && (_popup.Placement != placement || !ReferenceEquals(_popup.PlacementTarget, owner)))
+        {
+            _popup.IsOpen = false;
+        }
+
         _popup.PlacementTarget = owner as UIComponent;
-        _popup.PlacementRectangle = regional ? _region : Rect.Empty;
-        _popup.Placement = GetPlacement((AdamantiumComponent)owner);
+        _popup.HorizontalOffset = regional ? _regionsPoint.X : 0;
+        _popup.VerticalOffset = regional ? _regionsPoint.Y + UnderPointer / VerticalScaleOf(owner) : CardGap;
+        _popup.Placement = placement;
         _popup.DataContext = (owner as UIComponent)?.DataContext;   // so bindings in a content tooltip resolve
         _popup.IsOpen = true;
     }
@@ -349,7 +368,6 @@ public static class ToolTipService
 
         _popup.IsOpen = false;
         _popup.PlacementTarget = null;
-        _popup.PlacementRectangle = Rect.Empty;
         _popup.DataContext = null;
         _toolTip.Content = null;
 
@@ -395,7 +413,7 @@ public static class ToolTipService
         _toolTip = new ToolTip { IsHitTestVisible = false };
         // Neither a press elsewhere nor Escape is the card's: the service takes it away as the hover ends, and an Escape
         // it answered was one an open menu under it never had.
-        _popup = new Popup { Child = _toolTip, VerticalOffset = 4, KeepOpen = true, DismissOnEscape = false };
+        _popup = new Popup { Child = _toolTip, VerticalOffset = CardGap, KeepOpen = true, DismissOnEscape = false };
 
         _timer = new DispatcherTimer();
         _timer.Tick += OnTimerTick;
