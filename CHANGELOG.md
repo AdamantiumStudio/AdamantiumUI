@@ -8,8 +8,8 @@ All packages share one version.
 ### Added
 
 - `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
-  scheme, which about:blank is painted in. `WebViewColorScheme.Application`, now the default of
-  `WebViewOptions.ColorScheme`, is dark while the application's theme variant is dark and light otherwise, following it.
+  scheme, which about:blank is painted in. `WebViewColorScheme.Application` is dark while the application's theme
+  variant is dark (or the one the theme takes in the system's dark) and light otherwise, following it as it changes.
 - `Ancestor.UpdateSourceTrigger`, `Self.UpdateSourceTrigger`: `{Ancestor ..., Mode=TwoWay, UpdateSourceTrigger=LostFocus}`
   writes a field back once it is left, as a `{Binding}` does.
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
@@ -402,6 +402,9 @@ All packages share one version.
   later keeps the floor without the ink being recorded again. An arrow's heads grow with its shaft.
 
 ### Changed
+
+- `WebViewOptions.ColorScheme` is `WebViewColorScheme.Application` by default, not `System`: pages follow the
+  application's theme. With no application to follow they are asked in the light scheme; set `System` for the old way.
 
 - The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
   (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail

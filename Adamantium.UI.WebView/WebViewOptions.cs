@@ -12,7 +12,7 @@ public sealed class WebViewOptions
     public string Locale { get; set; }
 
     /// <summary>The color scheme pages are asked in at first; the application's by default. Changed later through
-    /// <see cref="WebViewEngine.ColorScheme"/>. Only the page is asked: not a frame of another site inside it, drawn by a
-    /// process of its own, nor the DevTools beside it.</summary>
+    /// <see cref="WebViewEngine.ColorScheme"/>. The page is asked directly; Chromium's own scheme - about:blank, its own
+    /// pages, and what else of the profile follows it, as a frame of another site or the DevTools - is set to match.</summary>
     public WebViewColorScheme ColorScheme { get; set; } = WebViewColorScheme.Application;
 }

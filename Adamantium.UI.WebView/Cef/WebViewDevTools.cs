@@ -115,11 +115,15 @@ internal sealed class WebViewDevTools
         ready?.Invoke();
     }
 
-    /// <summary>Asks the page in <paramref name="scheme"/> from now on - asked again once its DevTools close too.</summary>
+    /// <summary>Asks the page in <paramref name="scheme"/> from now on. While its DevTools are open the page is asked once
+    /// they close: asked now, their own emulated media would be swept away.</summary>
     public unsafe void AskColorScheme(CefBrowserHost* host, WebViewColorScheme scheme)
     {
         colorScheme = scheme;
-        AskColorScheme(host);
+        if (frontEnd == null)
+        {
+            AskColorScheme(host);
+        }
     }
 
     private unsafe void AskColorScheme(CefBrowserHost* host)

@@ -1,3 +1,4 @@
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.WebView.Cef;
@@ -8,6 +9,7 @@ namespace Adamantium.UI.WebView;
 public sealed unsafe partial class WebViewEngine
 {
     private WebViewColorScheme colorScheme;
+    private WebViewColorScheme schemeAsked;
     private IThemeManager followedThemes;
     private ITheme followedTheme;
 
@@ -24,15 +26,27 @@ public sealed unsafe partial class WebViewEngine
             }
 
             colorScheme = value;
-            AskColorSchemeAgain();
+            AskColorSchemeIfChanged();
         }
     }
 
     /// <summary>The scheme pages are asked in now: the application's taken as light or dark.</summary>
     internal WebViewColorScheme PagesColorScheme =>
         colorScheme != WebViewColorScheme.Application ? colorScheme
-        : followedTheme?.CurrentVariant == ThemeVariant.Dark ? WebViewColorScheme.Dark
+        : IsDark(followedThemes?.CurrentTheme) ? WebViewColorScheme.Dark
         : WebViewColorScheme.Light;
+
+    // Dark: the theme's dark variant, by the common name or the one the theme says it takes in the system's dark.
+    private static bool IsDark(ITheme theme)
+    {
+        if (theme == null)
+        {
+            return false;
+        }
+
+        var variant = theme.CurrentVariant;
+        return variant == ThemeVariant.Dark || (!theme.SystemDarkVariant.IsUnspecified && variant == theme.SystemDarkVariant);
+    }
 
     // The theme and its variant are followed for as long as the engine lives, whatever the scheme: set to the
     // application's later, it is right at once.
@@ -78,28 +92,28 @@ public sealed unsafe partial class WebViewEngine
         }
     }
 
-    private void OnApplicationThemeChanged(object sender, ThemeChangedEventArgs e)
-    {
-        var before = PagesColorScheme;
-        FollowTheme(followedThemes?.CurrentTheme);
-        if (PagesColorScheme != before)
+    // Told on whatever thread changed it - the system's dark mode comes on the window's own thread on Windows - and
+    // answered on the UI loop, where CEF's work runs.
+    private void OnApplicationThemeChanged(object sender, ThemeChangedEventArgs e) =>
+        LoopSignal.Post(() =>
         {
-            AskColorSchemeAgain();
-        }
-    }
+            FollowTheme(followedThemes?.CurrentTheme);
+            AskColorSchemeIfChanged();
+        });
 
     private void OnApplicationThemePropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {
-        if (e.Property.Name == nameof(ITheme.CurrentVariant) && colorScheme == WebViewColorScheme.Application)
+        if (e.Property == Theme.CurrentVariantProperty)
         {
-            AskColorSchemeAgain();
+            LoopSignal.Post(AskColorSchemeIfChanged);
         }
     }
 
-    // Chromium's own scheme - what about:blank and its own pages are painted in - and every page open now.
-    private void AskColorSchemeAgain()
+    // Chromium's own scheme - what about:blank and its own pages are painted in - and every page open now, when the
+    // scheme they are asked in is another.
+    private void AskColorSchemeIfChanged()
     {
-        if (!initialized || shutDown)
+        if (!initialized || shutDown || PagesColorScheme == schemeAsked)
         {
             return;
         }
@@ -107,7 +121,7 @@ public sealed unsafe partial class WebViewEngine
         ApplyChromeColorScheme();
         foreach (var browser in browsers)
         {
-            browser.AskColorScheme(PagesColorScheme);
+            browser.AskColorScheme(schemeAsked);
         }
     }
 
@@ -118,6 +132,7 @@ public sealed unsafe partial class WebViewEngine
             return;
         }
 
+        schemeAsked = PagesColorScheme;
         var context = CefInterop.CefRequestContextGetGlobalContext();
         if (context == null)
         {
@@ -126,7 +141,7 @@ public sealed unsafe partial class WebViewEngine
 
         try
         {
-            var variant = PagesColorScheme switch
+            var variant = schemeAsked switch
             {
                 WebViewColorScheme.Light => CefColorVariant.Light,
                 WebViewColorScheme.Dark => CefColorVariant.Dark,
