@@ -290,7 +290,7 @@ public class PopupLayer
         var unbounded = double.PositiveInfinity;
         if (popup.EffectiveTarget is not { } target) return new Size<double>(unbounded, unbounded);
 
-        var box = TargetBox(target);
+        var box = TargetBox(target, popup.PlacementRectangle);
         return popup.Placement switch
         {
             PlacementMode.Top => new Size<double>(unbounded, Math.Max(0, box.Y + popup.VerticalOffset)),
@@ -301,15 +301,15 @@ public class PopupLayer
         };
     }
 
-    private static Rect TargetBox(IUIComponent target)
+    private static Rect TargetBox(IUIComponent target, Rect part)
     {
         var world = target.WorldTransform;
-        var size = target.RenderSize;
+        var area = part.IsEmpty ? new Rect(0, 0, target.RenderSize.Width, target.RenderSize.Height) : part;
         double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
-        Take(0, 0);
-        Take(size.Width, 0);
-        Take(0, size.Height);
-        Take(size.Width, size.Height);
+        Take(area.X, area.Y);
+        Take(area.Right, area.Y);
+        Take(area.X, area.Bottom);
+        Take(area.Right, area.Bottom);
         return new Rect(minX, minY, maxX - minX, maxY - minY);
 
         void Take(double x, double y)
@@ -334,7 +334,7 @@ public class PopupLayer
         double tx = 0, ty = 0, tw = 0, th = 0;
         if (popup.EffectiveTarget is { } target)
         {
-            var box = TargetBox(target);
+            var box = TargetBox(target, popup.PlacementRectangle);
             tx = box.X; ty = box.Y; tw = box.Width; th = box.Height;
         }
 

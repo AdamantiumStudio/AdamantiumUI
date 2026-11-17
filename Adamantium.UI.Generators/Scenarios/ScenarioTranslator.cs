@@ -103,7 +103,9 @@ public static class ScenarioTranslator
             "Unselect" => $"{Target(step)}.RemoveFromSelectionAsync()",
             "Click" => $"{Target(step)}.ClickAsync()",
             "RightClick" => $"{Target(step)}.RightClickAsync()",
-            "Hover" => $"{Target(step)}.HoverAsync()",
+            "Hover" => step.Attribute("At") == null
+                ? $"{Target(step)}.HoverAsync()"
+                : $"{Target(step)}.HoverAsync({Pair(step, "At")})",
             "Expand" => $"{Target(step)}.ExpandAsync()",
             "Collapse" => $"{Target(step)}.CollapseAsync()",
             "ContextMenu" => $"{Target(step)}.ShowContextMenuAsync()",

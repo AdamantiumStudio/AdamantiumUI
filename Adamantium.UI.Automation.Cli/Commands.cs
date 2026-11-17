@@ -112,7 +112,7 @@ internal static class Commands
         "unselect" => target.RemoveFromSelectionAsync(),
         "click" => target.ClickAsync(),
         "rclick" => target.RightClickAsync(),
-        "hover" => target.HoverAsync(),
+        "hover" => arguments.At(1) is { } point ? HoverAsync(target, point) : target.HoverAsync(),
         "expand" => target.ExpandAsync(),
         "collapse" => target.CollapseAsync(),
         "context-menu" => target.ShowContextMenuAsync(),
@@ -253,6 +253,12 @@ internal static class Commands
                 : throw new AutomationException($"'{text}': expected key=value.");
         }).ToList();
         return expected.Count > 0 ? expected : throw new AutomationException("expect <selector> <key>=<value>...");
+    }
+
+    private static Task HoverAsync(AutomationElement target, string at)
+    {
+        var point = Pair(at);
+        return target.HoverAsync(point.X, point.Y);
     }
 
     // Over its middle, or over the point --at names in its own units.

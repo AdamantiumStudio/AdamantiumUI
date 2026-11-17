@@ -630,6 +630,9 @@ public sealed class AutomationExecutor
             case AutomationCommand.RightClick:
                 InputSimulator.Click(OwnerOf(peer), Label(peer), MouseButtons.Right);
                 break;
+            case AutomationCommand.Hover when request.Value != null:
+                InputSimulator.Hover(OwnerOf(peer), Label(peer), Point(request.Value));
+                break;
             case AutomationCommand.Hover when peer is IElementPartPeer part:
                 InputSimulator.Hover(part.Element, Label(peer), MiddleOf(part, peer));
                 break;

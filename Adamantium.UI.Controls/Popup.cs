@@ -41,6 +41,9 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(PlacementMode), typeof(Popup), new PropertyMetadata(PlacementMode.Bottom));
 
+    public static readonly AdamantiumProperty PlacementRectangleProperty = AdamantiumProperty.Register(
+        nameof(PlacementRectangle), typeof(Rect), typeof(Popup), new PropertyMetadata(Rect.Empty));
+
     public static readonly AdamantiumProperty PlacementAlignmentProperty = AdamantiumProperty.Register(nameof(PlacementAlignment),
         typeof(PlacementAlignment), typeof(Popup), new PropertyMetadata(PlacementAlignment.Center));
 
@@ -147,6 +150,14 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         get => GetValue<PlacementMode>(PlacementProperty);
         set => SetValue(PlacementProperty, value);
+    }
+
+    /// <summary>The part of <see cref="PlacementTarget"/> the popup is placed against, in the target's own units - a
+    /// link inside a page, say; empty for the whole target, the default.</summary>
+    public Rect PlacementRectangle
+    {
+        get => GetValue<Rect>(PlacementRectangleProperty);
+        set => SetValue(PlacementRectangleProperty, value);
     }
 
     /// <summary>How the popup lines up with the target's side it opens on. Centered by default.</summary>
