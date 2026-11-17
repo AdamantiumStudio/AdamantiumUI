@@ -561,6 +561,9 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas tool rail's buttons sit in the middle of their pane: each had a gap after it on both sides, so a column was a
+  gap wider than its buttons and stood that much left of the middle (5 pixels in the macOS theme). The gaps are now the
+  panel's, between buttons only.
 - The macOS theme's `BusyIndicator` scales its wheel to the size it is given: smaller than the theme's own - a tab's
   16 - the spokes overflowed it and turned about a point outside it.
 - `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
