@@ -198,12 +198,13 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             order.Add(group);
         }
 
-        var gap = ButtonGap;
+        ItemSpacing = ButtonGap;
+        WrapSpacing = ButtonGap;
         foreach (var entry in order)
         {
             if (entry is string name)
             {
-                Children.Add(FamilyButton(name, families[name], gap));
+                Children.Add(FamilyButton(name, families[name]));
                 continue;
             }
 
@@ -222,12 +223,6 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
                 ToolTip = Tip(tool),
                 Focusable = false
             };
-
-            // On the TRAILING sides only. Two neighbors still make exactly one gap between them, whichever way the
-            // rail runs and wherever it wraps - but the first button's left and top edges stay flush, so the column of
-            // tools lines up with the pane's own handles above it. Half a gap on every side put the tools two pixels
-            // right of the handles, which reads as crooked and is.
-            button.Margin = new Thickness(0, 0, gap, gap);
 
             AutomationProperties.SetAutomationId(button, NameOf(tool));
             Say(button, AutomationProperties.NameProperty, NameOf(tool));
@@ -259,7 +254,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
     // The button that stands for a whole family, and the list it opens. A ToggleButton like the rest, so a family
     // holding the tool in hand is marked exactly as a lone tool would be - what is in hand should be visible without
     // opening anything.
-    private ToggleButton FamilyButton(string name, List<ICanvasTool> family, double gap)
+    private ToggleButton FamilyButton(string name, List<ICanvasTool> family)
     {
         var button = new ToggleButton
         {
@@ -268,7 +263,6 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             MinWidth = 0,
             MinHeight = 0,
             Padding = new Thickness(0),
-            Margin = new Thickness(0, 0, gap, gap),
             Focusable = false
         };
 

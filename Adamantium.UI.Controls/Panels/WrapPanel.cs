@@ -274,10 +274,31 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       set => SetValue(ItemHeightProperty, value);
    }
 
+   public static readonly AdamantiumProperty ItemSpacingProperty = AdamantiumProperty.Register(nameof(ItemSpacing),
+      typeof(Double), typeof(WrapPanel), new PropertyMetadata(0d, PropertyMetadataOptions.AffectsMeasure|PropertyMetadataOptions.AffectsArrange));
+
+   public static readonly AdamantiumProperty WrapSpacingProperty = AdamantiumProperty.Register(nameof(WrapSpacing),
+      typeof(Double), typeof(WrapPanel), new PropertyMetadata(0d, PropertyMetadataOptions.AffectsMeasure|PropertyMetadataOptions.AffectsArrange));
+
+   /// <summary>The gap between two neighbors on one line, with explicit children; none before the first or after the
+   /// last.</summary>
+   public Double ItemSpacing
+   {
+      get => GetValue<Double>(ItemSpacingProperty);
+      set => SetValue(ItemSpacingProperty, value);
+   }
+
+   /// <summary>The gap between two lines, with explicit children; none before the first or after the last.</summary>
+   public Double WrapSpacing
+   {
+      get => GetValue<Double>(WrapSpacingProperty);
+      set => SetValue(WrapSpacingProperty, value);
+   }
+
    public WrapPanel()
    { }
 
-   // ---- Plain container layout (a WrapPanel used with explicit Children; behavior unchanged) -----------------
+   // ---- Plain container layout (a WrapPanel used with explicit Children) -----------------
    protected override Size<double> MeasurePlain(Size<double> availableSize)
    {
       Size<double> desiredSize = new Size<double>();
@@ -314,6 +335,10 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          childAvailableHeight = itemHeight;
       }
 
+      var itemSpacing = ItemSpacing;
+      var lineSpacing = WrapSpacing;
+      var lines = 0;
+      var inLine = 0;
       foreach (var child in Children)
       {
          child.Measure(new Size<double>(childAvailableWidth, childAvailableHeight));
@@ -333,46 +358,59 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          // grow once per COMPLETED line, i.e. only when a child wraps to the next one (plus a final flush after the loop).
          // The previous code accumulated lineSize into desiredSize on EVERY child, so a single row of N items reported a
          // height of sum(item heights) instead of the row's height - inflating the panel ~N× (the huge empty WrapPanel).
+         if (child.Visibility == Visibility.Collapsed)
+         {
+            continue;
+         }
+
+         var gap = inLine > 0 ? itemSpacing : 0;
          if (Orientation == Orientation.Horizontal)
          {
-            if (lineSize.Width + childSize.Width > availableSize.Width)   // wrap (matches ArrangePlain's <= "fits")
+            if (inLine > 0 && lineSize.Width + gap + childSize.Width > availableSize.Width)   // wrap (as ArrangePlain)
             {
                desiredSize.Width = Math.Max(desiredSize.Width, lineSize.Width);
-               desiredSize.Height += lineSize.Height;
+               desiredSize.Height += lineSize.Height + (lines > 0 ? lineSpacing : 0);
+               lines++;
                lineSize = childSize;
+               inLine = 1;
             }
             else
             {
-               lineSize.Width += childSize.Width;
+               lineSize.Width += gap + childSize.Width;
                lineSize.Height = Math.Max(lineSize.Height, childSize.Height);
+               inLine++;
             }
          }
          else
          {
-            if (lineSize.Height + childSize.Height > availableSize.Height)
+            if (inLine > 0 && lineSize.Height + gap + childSize.Height > availableSize.Height)
             {
                desiredSize.Height = Math.Max(desiredSize.Height, lineSize.Height);
-               desiredSize.Width += lineSize.Width;
+               desiredSize.Width += lineSize.Width + (lines > 0 ? lineSpacing : 0);
+               lines++;
                lineSize = childSize;
+               inLine = 1;
             }
             else
             {
-               lineSize.Height += childSize.Height;
+               lineSize.Height += gap + childSize.Height;
                lineSize.Width = Math.Max(lineSize.Width, childSize.Width);
+               inLine++;
             }
          }
       }
 
       // Flush the final (in-progress) line.
+      var lastGap = lines > 0 && inLine > 0 ? lineSpacing : 0;
       if (Orientation == Orientation.Horizontal)
       {
          desiredSize.Width = Math.Max(desiredSize.Width, lineSize.Width);
-         desiredSize.Height += lineSize.Height;
+         desiredSize.Height += lineSize.Height + lastGap;
       }
       else
       {
          desiredSize.Height = Math.Max(desiredSize.Height, lineSize.Height);
-         desiredSize.Width += lineSize.Width;
+         desiredSize.Width += lineSize.Width + lastGap;
       }
 
       return desiredSize;
@@ -383,9 +421,17 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       double accumulated = 0;
       var lineSize = new Size<double>();
       int firstChildInLineindex = 0;
+      var itemSpacing = ItemSpacing;
+      var lineSpacing = WrapSpacing;
+      var inLine = 0;
       for (int i = 0; i < Children.Count; i++)
       {
          var child = Children[i];
+         if (child.Visibility == Visibility.Collapsed)
+         {
+            continue;
+         }
+
          var childSize = child.DesiredSize;
          if (!Double.IsNaN(ItemWidth))
          {
@@ -395,36 +441,42 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          {
             childSize.Height = ItemHeight;
          }
+
+         var gap = inLine > 0 ? itemSpacing : 0;
          if (Orientation == Orientation.Horizontal)
          {
-            if (lineSize.Width + childSize.Width <= finalSize.Width)
+            if (inLine == 0 || lineSize.Width + gap + childSize.Width <= finalSize.Width)
             {
-               lineSize.Width += childSize.Width;
+               lineSize.Width += gap + childSize.Width;
                lineSize.Height = Math.Max(lineSize.Height, childSize.Height);
+               inLine++;
             }
             else
             {
                var controlsInLine = GetControlsBetween(firstChildInLineindex, i);
                ArrangeLine(accumulated, lineSize.Height, controlsInLine);
-               accumulated += lineSize.Height;
+               accumulated += lineSize.Height + lineSpacing;
                lineSize = childSize;
                firstChildInLineindex = i;
+               inLine = 1;
             }
          }
          else
          {
-            if (lineSize.Height + childSize.Height <= finalSize.Height)
+            if (inLine == 0 || lineSize.Height + gap + childSize.Height <= finalSize.Height)
             {
-               lineSize.Height += childSize.Height;
+               lineSize.Height += gap + childSize.Height;
                lineSize.Width = Math.Max(lineSize.Width, childSize.Width);
+               inLine++;
             }
             else
             {
                var controlsInLine = GetControlsBetween(firstChildInLineindex, i);
                ArrangeLine(accumulated, lineSize.Width, controlsInLine);
-               accumulated += lineSize.Width;
+               accumulated += lineSize.Width + lineSpacing;
                lineSize = childSize;
                firstChildInLineindex = i;
+               inLine = 1;
             }
          }
       }
@@ -448,8 +500,22 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    {
       bool isHorizontal = (Orientation == Orientation.Horizontal);
       double accumulatedY = 0;
+      var spacing = ItemSpacing;
+      var placed = false;
       foreach (var control in controls)
       {
+         if (control.Visibility == Visibility.Collapsed)
+         {
+            control.Arrange(new Rect(isHorizontal ? accumulatedY : accumulated, isHorizontal ? accumulated : accumulatedY, 0, 0));
+            continue;
+         }
+
+         if (placed)
+         {
+            accumulatedY += spacing;
+         }
+
+         placed = true;
          var childSize = control.DesiredSize;
          if (!Double.IsNaN(ItemWidth))
          {
