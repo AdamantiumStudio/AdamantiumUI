@@ -1934,7 +1934,10 @@ public partial class RenderCache
                 // stroke batch, which draws a run of them under one pipeline. The ribbon reaches past the element's box
                 // by up to a miter's length, and the overlap tests have to see that far. Copies of a clone run draw
                 // their own, as each must blend over the copy before it.
-                var strokeBounds = LogicalBounds(unit.Component, wt).Inflate(batchStroke.LocalReach * WorldScale(wt));
+                // Under a perspective the top-left 2x2 is no scale: the reach grows by the corners' own.
+                var strokeBounds = wt.M14 != 0f || wt.M24 != 0f
+                    ? LeanedLogicalBounds(unit.Component, wt, batchStroke.LocalReach)
+                    : LogicalBounds(unit.Component, wt).Inflate(batchStroke.LocalReach * WorldScale(wt));
                 if (ClipGroupChanged(scissor, unit.Component) || OverlapsLaterLayer(BatchLayer.Stroke, strokeBounds, unit.Component))
                 {
                     FlushBatches(device, fullScissor, ref scissorNarrowed);

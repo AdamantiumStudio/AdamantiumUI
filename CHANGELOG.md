@@ -423,6 +423,12 @@ All packages share one version.
 
 ### Changed
 
+- A leaned map draws far cheaper. A geometry given its triangles - a map's tile, cut with its edge - under one color
+  fills from them and its ring rather than from curves the shader walks at every pixel of every layer (a leaned map at
+  160 frames instead of 76, 1.9 ms of the GPU a frame instead of 8.5); another brush keeps its curves. Strokes under a
+  perspective join the stroke batch instead of a draw a contour: the shader reads their width and dashes off the plane
+  as the matrix is now, the feather comes in the record, and the overlap tests take their corners divided by w. A
+  stroke's least projected scale reads the extent kept with its contours rather than walking every point.
 - `WebViewOptions.ColorScheme` is `WebViewColorScheme.Application` by default, not `System`: pages follow the
   application's theme. With no application to follow they are asked in the light scheme; set `System` for the old way.
 - `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,

@@ -427,7 +427,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     private FrozenMesh _bodyCutFor;
 
     private static FrozenMesh FillOf(GeometryPayload payload) =>
-        payload.Brush != null ? FrozenMesh.From(payload.Geometry, payload.Outline) : null;
+        payload.Brush != null ? FrozenMesh.From(payload.Geometry, payload.Outline, payload.FillsFromTriangles) : null;
 
     private void EnsureBody()
     {
@@ -601,7 +601,9 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
 
         // Geometry change: rewrite the body's buffers in place (no new component / no Vulkan allocation - the resize/
         // animation fast path). The brush is a cheap repoint, applied either way.
-        if (rebuild || _frozenMesh == null && inputPayload.Brush != null)
+        // A fill drawn from triangles for one color and from curves for another is made again when the brush turns.
+        if (rebuild || _frozenMesh == null && inputPayload.Brush != null ||
+            inputPayload.FillsFromTriangles != Payload.FillsFromTriangles)
         {
             // Tessellated already, on the record thread that built inputPayload - the applier must not rebuild it here.
             _frozenMesh = FillOf(inputPayload);

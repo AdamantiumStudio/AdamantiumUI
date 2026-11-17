@@ -347,6 +347,38 @@ public partial class RenderCache
         _haloRunsByUnit[unit] = runs;
     }
 
+    // What overlaps anything: the box of a draw whose place the overlap tests cannot work out.
+    private static readonly Rect Everywhere = new(-1e7, -1e7, 2e7, 2e7);
+
+    // A unit's box under a perspective, its corners divided by w, grown by `reach` local units along its longest axis
+    // there; everywhere with a corner behind the eye.
+    private Rect LeanedLogicalBounds(IUIComponent component, Matrix4x4F t, float reach)
+    {
+        var size = ApplySnap(component).RenderSize;
+        var right = (float)size.Width;
+        var bottom = (float)size.Height;
+        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        var longest = 0f;
+        for (var corner = 0; corner < 4; corner++)
+        {
+            var x = (corner & 1) != 0 ? right : 0f;
+            var y = (corner & 2) != 0 ? bottom : 0f;
+            var w = x * t.M14 + y * t.M24 + t.M44;
+            if (!(w > 1e-6f)) return Everywhere;
+            var screenX = (x * t.M11 + y * t.M21 + t.M41) / w;
+            var screenY = (x * t.M12 + y * t.M22 + t.M42) / w;
+            minX = MathF.Min(minX, screenX);
+            maxX = MathF.Max(maxX, screenX);
+            minY = MathF.Min(minY, screenY);
+            maxY = MathF.Max(maxY, screenY);
+            var alongX = new Vector2<float>((t.M11 - screenX * t.M14) / w, (t.M12 - screenY * t.M14) / w);
+            var alongY = new Vector2<float>((t.M21 - screenX * t.M24) / w, (t.M22 - screenY * t.M24) / w);
+            longest = MathF.Max(longest, MathF.Max(alongX.Length(), alongY.Length()));
+        }
+
+        return new Rect(minX, minY, maxX - minX, maxY - minY).Inflate(reach * longest);
+    }
+
     // A unit's own viewport (local 0,0..RenderSize) in window-logical space - what ResolveScissor clips against, reused
     // here for the batches' paint-order overlap test.
     private Rect LogicalBounds(IUIComponent component, Matrix4x4F worldTransform)

@@ -17,6 +17,10 @@ internal struct StrokeRecord
     public const uint WindowThickness = 8;
     public const uint Bends = 16;
 
+    /// <summary>Under a perspective: the width is the plane's as the matrix is now; the feather scales from
+    /// <see cref="LeanedFringe"/> by how the plane did since <see cref="LeanedPlane"/>.</summary>
+    public const uint Leaned = 32;
+
     public Matrix4x4F Local;
     public ulong Points;
 
@@ -32,8 +36,12 @@ internal struct StrokeRecord
     public uint Caps;
     public uint RoundSegments;
     public uint JoinType;
-    private uint _pad0;
-    private uint _pad1;
+
+    /// <summary>The feather in local units with <see cref="Leaned"/>: a pixel where the stroke lies farthest.</summary>
+    public float LeanedFringe;
+
+    /// <summary>The plane's scale <see cref="LeanedFringe"/> was worked out at.</summary>
+    public float LeanedPlane;
 
     /// <summary>.x thickness, .y least device thickness (0 none), .z dash offset, .w piece salt.</summary>
     public Vector4F Pen;

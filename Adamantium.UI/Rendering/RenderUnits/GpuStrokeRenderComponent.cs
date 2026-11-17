@@ -390,6 +390,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             for (var i = 0; i < parts.Count; i++)
                 if (!Matches(_contours[i], valid, parts[i].Start, parts[i].Count)) return false;
 
+            // Before a refit, which measures the new extent; the far pixel is taken again over it.
+            _localBounds = bounds;
+            _farPixelKnown = false;
             for (var i = 0; i < parts.Count; i++)
             {
                 var c = _contours[i];
@@ -415,7 +418,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 SetPattern(c, _pen);
             }
 
-            _localBounds = bounds;
             Adopt(pen);
             return true;
         }
@@ -425,6 +427,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             if (!Matches(_contours[i], valid, i, 1))
                 return false;
 
+        _localBounds = bounds;
+        _farPixelKnown = false;
         for (var i = 0; i < valid.Count; i++)
         {
             var c = _contours[i];
@@ -440,7 +444,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             SetPattern(c, _pen);
         }
 
-        _localBounds = bounds;
         Adopt(pen);
         return true;
     }
@@ -573,8 +576,15 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private float ComputeFringe()
     {
         if (!AnalyticAa.Enabled) return 0f;   // AA off: no feather - the ribbon stays a hard +/-HalfThickness band
+        var farPixel = FarPixel();
+        return farPixel > 0f ? farPixel : 1.0f;
+    }
+
+    // A device pixel in local units where the stroke lies farthest; 0 when its scale there is none.
+    private float FarPixel()
+    {
         var deviceScale = DeviceScale();
-        return deviceScale > 1e-4f ? 1.0f / deviceScale : 1.0f;
+        return deviceScale > 1e-4f ? 1.0f / deviceScale : 0f;
     }
 
     // Device pixels per geometry-local unit, the least over the stroke under a perspective.
@@ -626,21 +636,14 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // The least local->window scale over the corners of the contours' extent, w-divided as the rasterizer divides.
+    // The extent is the one kept with the contours, not walked again: a batch's record asks every frame.
     private float LeastProjectedScale(Matrix4x4F t)
     {
-        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
-        foreach (var c in _contours)
-        {
-            for (var i = 0; i + 1 < c.PointsData.Length; i += 2)
-            {
-                minX = MathF.Min(minX, c.PointsData[i]);
-                maxX = MathF.Max(maxX, c.PointsData[i]);
-                minY = MathF.Min(minY, c.PointsData[i + 1]);
-                maxY = MathF.Max(maxY, c.PointsData[i + 1]);
-            }
-        }
-
-        if (minX > maxX) return ProjectedScaleAt(t, 0f, 0f);
+        var minX = _localBounds.X;
+        var minY = _localBounds.Y;
+        var maxX = minX + _localBounds.Z;
+        var maxY = minY + _localBounds.W;
+        if (_contours.Count == 0 || !(maxX >= minX) || !(maxY >= minY)) return ProjectedScaleAt(t, 0f, 0f);
 
         var least = float.MaxValue;
         foreach (var (x, y) in (ReadOnlySpan<(float, float)>)[(minX, minY), (maxX, minY), (minX, maxY), (maxX, maxY)])
@@ -759,16 +762,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     /// <summary>Whether a <see cref="StrokeBatchCollector"/> can draw this stroke: a brush of one color - a gradient, a
-    /// pattern or a picture is shaded per stroke - under a transform with no perspective.</summary>
-    internal bool CanBatch
-    {
-        get
-        {
-            if (IsDisposed || _contours.Count == 0 || !TryFlatColor(_pen.Brush, out _)) return false;
-            var t = RenderData?.TransformMatrix ?? Matrix4x4F.Identity;
-            return t.M14 == 0f && t.M24 == 0f;
-        }
-    }
+    /// pattern or a picture is shaded per stroke. Under a perspective its record carries the width worked out here.
+    /// </summary>
+    internal bool CanBatch => !IsDisposed && _contours.Count > 0 && TryFlatColor(_pen.Brush, out _);
 
     /// <summary>How far past its points the ribbon can reach, in its local units: a miter's point up to its limit in
     /// half-widths of the feathered ribbon - four at least, for the caps - and the feather on top.</summary>
@@ -826,8 +822,36 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             DashOffsetOf(c), record.Pen.W);
         record.Window = new Vector4F(TrimStartValue, TrimEndValue, record.Window.Z, record.Window.W);
         record.Color = color;
+
+        // Under a perspective the far pixel is worked out here, once for the matrix, with the plane's scale it was taken at:
+        // the shader follows the plane from there as a slot moves.
+        var t = RenderData?.TransformMatrix ?? Matrix4x4F.Identity;
+        var leaned = t.M14 != 0f || t.M24 != 0f;
+        if (leaned)
+        {
+            var renderScale = RenderData.RenderScale;
+            if (!_farPixelKnown || _farPixelFor != t || _farPixelRenderScale != renderScale)
+            {
+                _farPixelFor = t;
+                _farPixelRenderScale = renderScale;
+                _farPixelKnown = true;
+                _farPixel = FarPixel();
+                _farPixelPlane = PlaneScale(t);
+            }
+
+            record.Flags |= StrokeRecord.Leaned;
+        }
+
+        record.LeanedFringe = leaned ? _farPixel : 0f;
+        record.LeanedPlane = leaned ? _farPixelPlane : 0f;
         return true;
     }
+
+    private Matrix4x4F _farPixelFor;
+    private double _farPixelRenderScale;
+    private bool _farPixelKnown;
+    private float _farPixel;
+    private float _farPixelPlane;
 
     /// <summary>Whether its brush flows with the shared noise clock.</summary>
     internal bool DrawsMoving => _pen.Brush is NoiseBrush { Animate: true };
