@@ -39,7 +39,7 @@
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
                                         MarginLeft="{ResourceReference TrafficLightsInset}"
                                         Spacing="{ResourceReference TrafficLightGap}">
-                                    <Grid>
+                                    <Grid x:Name="CloseCell">
                                         <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"
                                                 AutomationProperties.AutomationId="Close"
                                                 AutomationProperties.Name="{Localize WindowStrings.Close}"/>
@@ -118,7 +118,8 @@
 
     <Style Selector="OverlayWindow">
         <PropertyTrigger Property="CanClose" Value="false">
-            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
+            <!-- The cell, glyph and all: the glyph beside a hidden button would still show on hover. -->
+            <Setter TargetName="CloseCell" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="CanPin" Value="true">
             <Setter TargetName="PinCell" Property="Visibility" Value="Visible"/>

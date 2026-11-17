@@ -36,9 +36,9 @@ public class MacOsOverlayCaptionTests
         _themes.SetTheme(theme);
     }
 
-    private static OverlayWindow Built(bool canPin)
+    private static OverlayWindow Built(bool canPin, bool canClose = true)
     {
-        var window = new OverlayWindow { Title = "probe", CanPin = canPin, CanClose = true };
+        var window = new OverlayWindow { Title = "probe", CanPin = canPin, CanClose = canClose };
         window.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
@@ -80,5 +80,21 @@ public class MacOsOverlayCaptionTests
         TestContext.WriteLine($"pin cell without CanPin -> visibility={cell?.Visibility}");
         Assert.That(cell, Is.Not.Null, "the caption has a pin cell");
         Assert.That(cell.Visibility, Is.Not.EqualTo(Visibility.Visible));
+    }
+
+    // The same for close: its glyph goes with the light, and the pin then starts the row.
+    [Test]
+    public void WithoutCanClose_TheCloseLightGoesWithItsGlyph()
+    {
+        var window = Built(canPin: true, canClose: false);
+
+        var close = (UIComponent)window.GetTemplateChild("CloseCell");
+        var pin = (UIComponent)window.GetTemplateChild("PinCell");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(close.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(pin.Bounds.X, Is.EqualTo(0), "the pin starts the row");
+        });
     }
 }
