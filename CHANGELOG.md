@@ -542,6 +542,8 @@ All packages share one version.
 
 ### Fixed
 
+- The macOS theme's `BusyIndicator` scales its wheel to the size it is given: smaller than the theme's own - a tab's
+  16 - the spokes overflowed it and turned about a point outside it.
 - `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
   WPF's do: the themes' caption hides the buttons, a double click on the caption and `Maximize`/`Minimize` do nothing,
   and on Windows the system's own (Win+Up, the system menu, a `WM_SYSCOMMAND` from outside) is refused too; a system
