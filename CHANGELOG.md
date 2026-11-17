@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- A PDF page draws a link the file gives no appearance by its border (`BS`, `Border`, `C`), as Acrobat does: the
+  appearance the engine builds for it (`PdfAnnotation.ImpliedAppearance`) is drawn as any other.
 - Tooltips of an element's parts, as a Win32 window has a tool per rectangle: `IToolTipRegions` says what to show at a
   point and for which part, set with `ToolTipService.ToolTipRegions`. The card shows under the pointer after the usual
   delay, stays put while the pointer moves within the part, moves on to another part's tip, and goes when the pointer
