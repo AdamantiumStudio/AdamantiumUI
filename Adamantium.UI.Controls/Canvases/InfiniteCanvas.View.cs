@@ -16,7 +16,8 @@ namespace Adamantium.UI.Controls.Canvases;
 // the chrome standing over it.
 public partial class InfiniteCanvas : ICanvasCamera
 {
-    /// <summary>How long <see cref="FlyTo"/> takes, in seconds; 0 puts the camera there at once.</summary>
+    /// <summary>How long <see cref="FlyTo"/> and <see cref="FlyToCamera"/> take, in seconds; 0 puts the camera there at
+    /// once.</summary>
     public static readonly AdamantiumProperty FlightSecondsProperty = AdamantiumProperty.Register(nameof(FlightSeconds),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.4, null,
             static (_, value) => value is Double seconds && Double.IsFinite(seconds) ? Math.Max(0, seconds) : 0.4));
@@ -202,6 +203,36 @@ public partial class InfiniteCanvas : ICanvasCamera
         var offset = scale < Scale
             ? roomMiddle - new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2) * scale
             : Offset + IntoView(world, room);
+        Fly(offset, scale, restarted);
+    }
+
+    /// <summary>Flies the camera, over <see cref="FlightSeconds"/>, to stand at <paramref name="offset"/> and
+    /// <paramref name="scale"/> - a place gone to and gone back to, such as a link's or the one before it. The scale is
+    /// held to the zoom's limits and the plane's edges hold; a hand on the camera ends the flight where it is.</summary>
+    public void FlyToCamera(Vector2<double> offset, double scale)
+    {
+        if (ViewportSize.Width <= 0 || ViewportSize.Height <= 0 || !Double.IsFinite(offset.X) ||
+            !Double.IsFinite(offset.Y) || !Double.IsFinite(scale) || scale <= 0)
+        {
+            return;
+        }
+
+        var restarted = _flight.IsActive;
+        StopZoom();
+        var allowed = Math.Clamp(scale, MinScale, MaxScale);
+        if (allowed != scale)
+        {
+            var usable = UsableBounds;
+            var middle = new Vector2<double>(usable.X + usable.Width / 2, usable.Y + usable.Height / 2);
+            var looked = (middle - offset) * (1.0 / scale);
+            offset = middle - looked * allowed;
+        }
+
+        Fly(offset, allowed, restarted);
+    }
+
+    private void Fly(Vector2<double> offset, Double scale, bool restarted)
+    {
         offset = ClampToPlane(offset, scale);
         if (scale == Scale && (offset - Offset).Length() < 0.01) return;
 

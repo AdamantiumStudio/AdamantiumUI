@@ -10,6 +10,11 @@ All packages share one version.
 - `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
   scheme, which about:blank is painted in. `WebViewColorScheme.Application` is dark while the application's theme
   variant is dark (or the one the theme takes in the system's dark) and light otherwise, following it as it changes.
+- `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
+  own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
+  where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
+  a stored place. `InfiniteCanvas.RefreshPointer()` works the cursor out again where the pointer rests, for content
+  under it that changed without the pointer moving.
 - `Ancestor.UpdateSourceTrigger`, `Self.UpdateSourceTrigger`: `{Ancestor ..., Mode=TwoWay, UpdateSourceTrigger=LostFocus}`
   writes a field back once it is left, as a `{Binding}` does.
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and

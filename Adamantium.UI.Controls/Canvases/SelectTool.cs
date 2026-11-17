@@ -23,9 +23,10 @@ public class SelectTool : ICanvasTool
     private Vector2<double> _applied;
     private Rect? _band;
     private bool _bandExtends;
+    private ICanvasContentGesture _content;
 
     /// <summary>A gesture here lives inside one press, so nothing outlives the button.</summary>
-    public bool IsBusy => Wires.IsBusy;
+    public bool IsBusy => Wires.IsBusy || _content is { IsBusy: true };
 
     /// <summary>How a rail shows this tool. Settable, so an application that wants another name, another picture or
     /// another key says so on the tool it built rather than anywhere else.</summary>
@@ -97,6 +98,15 @@ public class SelectTool : ICanvasTool
             return;
         }
 
+        // The plane's own content next - text under the plane - and a band only where it offers nothing.
+        if (canvas.ContentGesture is { } content && content.Press(canvas, e))
+        {
+            _content = content;
+            canvas.CapturePointer();
+            e.Handled = true;
+            return;
+        }
+
         // Nothing under the pointer: a band. It does not clear the selection YET - a press that turns out to be a click
         // on empty space clears it on RELEASE, so that a band started by accident over a group does not lose the group
         // before it has selected anything.
@@ -111,6 +121,13 @@ public class SelectTool : ICanvasTool
     {
         if (Wires.Move(canvas, e.Pointer))
         {
+            e.Handled = true;
+            return;
+        }
+
+        if (_content != null)
+        {
+            _content.Move(canvas, e);
             e.Handled = true;
             return;
         }
@@ -162,6 +179,14 @@ public class SelectTool : ICanvasTool
         canvas.ReleasePointer();
         Drop(canvas);
 
+        if (_content is { } content)
+        {
+            _content = null;
+            content.Release(canvas, e);
+            e.Handled = true;
+            return;
+        }
+
         if (_band is { } band)
         {
             _band = null;
@@ -212,6 +237,8 @@ public class SelectTool : ICanvasTool
     public void Cancel(InfiniteCanvas canvas)
     {
         Wires.Cancel(canvas);
+        _content?.Cancel(canvas);
+        _content = null;
 
         _band = null;
         _grip = CanvasHandle.None;
