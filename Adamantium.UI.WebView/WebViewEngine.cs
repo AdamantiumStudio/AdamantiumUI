@@ -61,10 +61,13 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         }
 
         pumpTimer = new Timer(_ => OnPumpTimer());
+        colorScheme = this.options.ColorScheme;
         if (application != null)
         {
             application.UIThreadExiting += OnUIThreadExiting;
         }
+
+        FollowApplicationTheme();
 
         devices.DeviceChangeBegin += OnDeviceChanging;
         devices.DeviceChangeEnd += OnDeviceChanged;
@@ -245,9 +248,6 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     /// <summary>Whether the download Chromium numbers <paramref name="id"/> was given up here, interrupted: Chromium keeps
     /// it to resume, and is answered no each time it tries.</summary>
     internal bool IsDownloadGivenUp(uint id) => downloadsGivenUp.Contains(id);
-
-    /// <summary>The color scheme every page is asked in (<see cref="WebViewOptions.ColorScheme"/>).</summary>
-    internal WebViewColorScheme ColorScheme => options.ColorScheme;
 
     /// <summary>Refuses the downloads <paramref name="browser"/> asked about and the application has not answered: the
     /// page goes, and an answer coming later would start a download nobody hears of.</summary>
@@ -621,6 +621,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             application.UIThreadExiting -= OnUIThreadExiting;
         }
 
+        StopFollowingApplicationTheme();
         if (initialized)
         {
             // Kept as they are now: closing, Chromium cancels what comes in, which the next run lists as interrupted.
@@ -730,6 +731,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         initialized = true;
         // Always: Chromium keeps the proxy in the profile, and an earlier run's would otherwise outlive it.
         ApplyProxy();
+        ApplyChromeColorScheme();
     }
 
     private List<KeyValuePair<string, string>> Switches()

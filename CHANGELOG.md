@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
+  scheme, which about:blank is painted in. `WebViewColorScheme.Application` is dark while the application's theme
+  variant is dark (or the one the theme takes in the system's dark) and light otherwise, following it as it changes.
 - `SaveFileRequest.Folder`: the folder a save dialog opens in, over the one remembered under its key - on Windows and
   through the portal on Linux.
 - `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
@@ -407,6 +410,8 @@ All packages share one version.
 
 ### Changed
 
+- `WebViewOptions.ColorScheme` is `WebViewColorScheme.Application` by default, not `System`: pages follow the
+  application's theme. With no application to follow they are asked in the light scheme; set `System` for the old way.
 - `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,
   automation and the theme - and gets back what it was set or bound to once the ancestor is enabled. The ancestor is
   the one DataContext comes from, so a template's parts and a popup's content follow their control; a window, an

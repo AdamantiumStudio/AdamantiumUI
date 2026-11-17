@@ -11,8 +11,8 @@ public sealed class WebViewOptions
     /// <summary>The language pages are asked in, as "en-US"; null takes the system's.</summary>
     public string Locale { get; set; }
 
-    /// <summary>The color scheme pages are asked in; the system's by default. In the system's dark one Chromium paints
-    /// about:blank dark. Read for each page as it is made, and asked again once its DevTools close. Only the page is
-    /// asked: not a frame of another site inside it, drawn by a process of its own, nor the DevTools beside it.</summary>
-    public WebViewColorScheme ColorScheme { get; set; }
+    /// <summary>The color scheme pages are asked in at first; the application's by default. Changed later through
+    /// <see cref="WebViewEngine.ColorScheme"/>. The page is asked directly; Chromium's own scheme - about:blank, its own
+    /// pages, and what else of the profile follows it, as a frame of another site or the DevTools - is set to match.</summary>
+    public WebViewColorScheme ColorScheme { get; set; } = WebViewColorScheme.Application;
 }
