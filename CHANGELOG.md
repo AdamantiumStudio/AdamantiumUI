@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `PdfPageDrawing.Pressing` and `CanPress`: the page with an annotation drawn by its down appearance (`AP` `D`) in
+  place of its normal one, read with the page and swapped without reading it again; nothing is pressed for print.
 - A PDF page draws a link the file gives no appearance by its border (`BS`, `Border`, `C`), as Acrobat does: the
   appearance the engine builds for it (`PdfAnnotation.ImpliedAppearance`) is drawn as any other.
 - `WrapPanel.ItemSpacing` and `WrapPanel.WrapSpacing`: the gaps between neighbors on a line and between lines, with

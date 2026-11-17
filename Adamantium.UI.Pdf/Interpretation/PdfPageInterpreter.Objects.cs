@@ -350,21 +350,39 @@ internal sealed partial class PdfPageInterpreter
                 ? (annotation.Flags & 4) != 0 && (annotation.Flags & 2) == 0
                 : (annotation.Flags & (2 | 32)) == 0;
             if (!shown || _options.SkipAnnotation?.Invoke(annotation) == true ||
-                (annotation.Appearance ?? annotation.ImpliedAppearance) is not { } form ||
                 !_optionalContent.IsVisible(annotation.Dictionary["OC"]))
             {
                 continue;
             }
 
-            _state = InitialState(pageMatrix);
-            var resources = _document.Resolve(form.Dictionary["Resources"]) is PdfDictionary own
-                ? new PdfResources(own, _document)
-                : new PdfResources(page.Resources, _document);
-            if (EnterForm(form, resources, annotation.AppearanceTransform(form).Then(pageMatrix), PdfFrameKind.Form,
-                    output, _state.Copy()))
+            var form = annotation.Appearance ?? annotation.ImpliedAppearance;
+            var down = _options.Print ? null : annotation.DownAppearance;
+            var start = output.Count;
+            if (form != null)
             {
-                Walk();
+                DrawAppearance(page, annotation, form, pageMatrix, output);
             }
+
+            if (down != null)
+            {
+                var downSteps = new List<PdfDrawStep>();
+                DrawAppearance(page, annotation, down, pageMatrix, downSteps);
+                _pressable.Add(new PdfPressableSteps(annotation.Dictionary, start, output.Count, downSteps));
+            }
+        }
+    }
+
+    private void DrawAppearance(PdfPage page, PdfAnnotation annotation, PdfStream form, PdfMatrix pageMatrix,
+        List<PdfDrawStep> output)
+    {
+        _state = InitialState(pageMatrix);
+        var resources = _document.Resolve(form.Dictionary["Resources"]) is PdfDictionary own
+            ? new PdfResources(own, _document)
+            : new PdfResources(page.Resources, _document);
+        if (EnterForm(form, resources, annotation.AppearanceTransform(form).Then(pageMatrix), PdfFrameKind.Form,
+                output, _state.Copy()))
+        {
+            Walk();
         }
     }
 }
