@@ -182,6 +182,20 @@ public partial class WebViewFrameTests
     public void AServerWithNoHost_IsRefused() =>
         Assert.Throws<ArgumentException>(() => engine.Proxy = new WebViewProxy { Mode = WebViewProxyMode.Server });
 
+    // Null given for a text or the list is taken as none: the engine can always pass them on.
+    [Test]
+    public void AProxyGivenNulls_TakesThemAsNone()
+    {
+        var proxy = new WebViewProxy { Server = null, Bypass = null, ScriptAddress = null };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(proxy.Server, Is.Empty);
+            Assert.That(proxy.Bypass, Is.Empty);
+            Assert.That(proxy.ScriptAddress, Is.Empty);
+        });
+    }
+
     [Test]
     public void ASignInStillAsked_IsRefused_WhenThePageGoes()
     {

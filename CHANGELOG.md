@@ -14,6 +14,11 @@ All packages share one version.
   under it. `ToolTipService.RefreshToolTipRegions` asks again when what is under a still pointer moves.
 - Automation hovers a point of an element: `AutomationElement.HoverAsync(x, y)`, `hover <selector> <x,y>` in
   `adam-auto`, and `At` on a scenario's `Hover`.
+- `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
+  scheme, which about:blank is painted in. `WebViewColorScheme.Application` is dark while the application's theme
+  variant is dark (or the one the theme takes in the system's dark) and light otherwise, following it as it changes.
+- `SaveFileRequest.Folder`: the folder a save dialog opens in, over the one remembered under its key - on Windows and
+  through the portal on Linux.
 - `ICanvasContentGesture` (`InfiniteCanvas.ContentGesture`): a derived canvas offers the select tool a gesture of its
   own content, such as selecting a document's text. A press is offered to it after the items and before the band, and
   where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
@@ -329,8 +334,10 @@ All packages share one version.
   places it - moved into the view where it would stand past its edge - and takes presses as the list. A script's
   `alert`, `confirm` and `prompt`, and the question before a page is left or loaded again, are asked by
   `WebViewScriptDialog` (`PART_ScriptDialog`, the theme's card) over the page only: the page waits under it, the rest of
-  the window goes on, and the answer goes back to the script. Other popups come later. `PageBackground` (white, as in
-  a browser) shows where a page paints no background of its own; transparent shows what lies under the view. A page
+  the window goes on, and the answer goes back to the script. Other popups come later. `PageBackground` (a `Color?`;
+  null is white, as in a browser) shows where a page paints no background of its own; transparent shows what lies
+  under the view. Left null, it is dark under the page's frames while the pages are asked in the dark scheme, so a
+  frame still on its way - the view just resized, its tabs moved - leaves no white behind. A page
   that opens another by the user's doing - `window.open`, a link to a new tab, one opened with Ctrl, Shift or the
   middle button, the menu's "View page source" and "Open link in new tab" - asks the view model through
   `WebViewBridge.NewWindowRequested`: its `WebViewNewPage`, given to another `WebView`'s `NewPage`, is shown there - for
@@ -412,6 +419,16 @@ All packages share one version.
 
 ### Changed
 
+- `WebViewOptions.ColorScheme` is `WebViewColorScheme.Application` by default, not `System`: pages follow the
+  application's theme. With no application to follow they are asked in the light scheme; set `System` for the old way.
+- `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,
+  automation and the theme - and gets back what it was set or bound to once the ancestor is enabled. The ancestor is
+  the one DataContext comes from, so a template's parts and a popup's content follow their control; a window, an
+  overlay one too, does not follow the one under it. The focus leaves an element as it is disabled. A disabled panel
+  used to block only the pointer. It is `PropertyMetadataOptions.FollowsAncestors`, beside `Inherits`: a bool the
+  nearest ancestor holding it can only turn off, its own value kept. `FocusManager.LeaveHidden` is now `LeaveUnusable`.
+- The themes' DataPager and SegmentedControl no longer fade whole when disabled: their buttons and segments are
+  disabled with them and draw themselves so; the pager grays its labels, the segmented control its frame.
 - The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
   (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
   no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.
@@ -541,6 +558,15 @@ All packages share one version.
 
 ### Fixed
 
+- The macOS theme's `BusyIndicator` scales its wheel to the size it is given: smaller than the theme's own - a tab's
+  16 - the spokes overflowed it and turned about a point outside it.
+- `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
+  WPF's do: the themes' caption hides the buttons, a double click on the caption and `Maximize`/`Minimize` do nothing,
+  and on Windows the system's own (Win+Up, the system menu, a `WM_SYSCOMMAND` from outside) is refused too; a system
+  frame loses its sizing border. A window maximized when the mode stops allowing it is restored, and one remembered
+  maximized opens at its size. `WindowBase.CanMinimize`, `CanMaximize`. macOS and Wayland do not yet ask the system.
+- The macOS theme's caption and overlay window hide a traffic light's glyph with its light: a hidden button's glyph still
+  showed when the pointer reached the caption.
 - Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
   forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held

@@ -51,7 +51,7 @@ public partial class WebViewFrameTests
         {
             devices = new GraphicsDeviceService(new GraphicsDeviceFactory(), false, GraphicsSettings.CreateDefault());
             devices.CreateMainDevice("WebViewFrameTests");
-            options = new WebViewOptions { ProfileFolder = profile };
+            options = new WebViewOptions { ProfileFolder = profile, ColorScheme = WebViewColorScheme.System };
             engine = new WebViewEngine(devices, null, options);
         });
     }
@@ -677,27 +677,76 @@ public partial class WebViewFrameTests
         const string ask = "matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'";
         string asked = null;
         string askedNext = null;
-        options.ColorScheme = scheme;
         try
         {
-            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>Scheme</title>", (browser, view) =>
+            loop.Run(() =>
             {
-                asked = Await(browser.EvaluateAsync(ask));
-                var completed = view.Completed.Count;
-                browser.Navigate("data:text/html,<title>Next</title>");
-                Pump(() => view.Completed.Count > completed, TimeSpan.FromSeconds(10));
-                askedNext = Await(browser.EvaluateAsync("document.title + ':' + (" + ask + ")"));
-            }));
+                engine.ColorScheme = scheme;
+                ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>Scheme</title>", (browser, view) =>
+                {
+                    asked = Await(browser.EvaluateAsync(ask));
+                    var completed = view.Completed.Count;
+                    browser.Navigate("data:text/html,<title>Next</title>");
+                    Pump(() => view.Completed.Count > completed, TimeSpan.FromSeconds(10));
+                    askedNext = Await(browser.EvaluateAsync("document.title + ':' + (" + ask + ")"));
+                });
+            });
         }
         finally
         {
-            options.ColorScheme = WebViewColorScheme.System;
+            loop.Run(() => engine.ColorScheme = WebViewColorScheme.System);
         }
 
         Assert.Multiple(() =>
         {
             Assert.That(asked, Is.EqualTo("\"" + expected + "\""));
             Assert.That(askedNext, Is.EqualTo("\"Next:" + expected + "\""), "the next page is asked so too");
+        });
+    }
+
+    // Changed while a page is open, the scheme reaches it at once - a page listening for it hears the change. With no
+    // application to follow, the application's scheme is the light one.
+    [Test]
+    public void ThePagesOpen_AreAskedAgain_WhenTheSchemeChanges()
+    {
+        const string ask = "matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'";
+        string first = null;
+        string changed = null;
+        string heard = null;
+        string application = null;
+        var viewTold = 0;
+        try
+        {
+            loop.Run(() =>
+            {
+                engine.ColorScheme = WebViewColorScheme.Light;
+                ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>Live</title>", (browser, view) =>
+                {
+                    var toldBefore = view.ColorSchemeChanges;
+                    first = Await(browser.EvaluateAsync(ask));
+                    Await(browser.EvaluateAsync(
+                        "window.heard = ''; matchMedia('(prefers-color-scheme: dark)').onchange = e => window.heard = e.matches ? 'dark' : 'light'; 1"));
+                    engine.ColorScheme = WebViewColorScheme.Dark;
+                    Pump(() => (changed = Await(browser.EvaluateAsync(ask))) == "\"dark\"", TimeSpan.FromSeconds(5));
+                    heard = Await(browser.EvaluateAsync("window.heard"));
+                    engine.ColorScheme = WebViewColorScheme.Application;
+                    Pump(() => (application = Await(browser.EvaluateAsync(ask))) == "\"light\"", TimeSpan.FromSeconds(5));
+                    viewTold = view.ColorSchemeChanges - toldBefore;
+                });
+            });
+        }
+        finally
+        {
+            loop.Run(() => engine.ColorScheme = WebViewColorScheme.System);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(viewTold, Is.EqualTo(2), "the view is told each time, for what shows under the page");
+            Assert.That(first, Is.EqualTo("\"light\""));
+            Assert.That(changed, Is.EqualTo("\"dark\""), "asked again at once");
+            Assert.That(heard, Is.EqualTo("\"dark\""), "the page heard the change");
+            Assert.That(application, Is.EqualTo("\"light\""), "no application: light");
         });
     }
 

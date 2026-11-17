@@ -47,6 +47,9 @@ internal interface IWebViewBrowserView
     /// <summary>What the page puts in a status line: the address of the link under the pointer; empty for none.</summary>
     void StatusChanged(WebViewBrowser browser, string status);
 
+    /// <summary>The pages are asked in another color scheme now; what shows under the page follows.</summary>
+    void ColorSchemeChanged(WebViewBrowser browser);
+
     /// <summary>The page is about to go to <paramref name="address"/> in its main frame: true keeps it where it is.
     /// </summary>
     bool NavigationStarting(WebViewBrowser browser, string address, bool userGesture, bool isRedirect);

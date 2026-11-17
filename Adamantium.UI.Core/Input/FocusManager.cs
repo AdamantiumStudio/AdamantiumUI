@@ -137,18 +137,17 @@ public static class FocusManager
       AnnounceFocusMove(previous, null, NavigationMethod.Unspecified, InputModifiers.None);
    }
 
-   /// <summary>Moves the focus out of <paramref name="hidden"/>, which has just stopped being shown, onto the nearest
-   /// ancestor that can hold it - so keys go on reaching something on screen, as they reach a game's surface again once
-   /// the menu laid over it closes. With no ancestor to take it the focus is let go of, so no key reaches a hidden
-   /// element.</summary>
-   public static void LeaveHidden(IUIComponent hidden)
+   /// <summary>Moves the focus out of <paramref name="element"/>, which has just been hidden or disabled, onto the nearest
+   /// ancestor that can hold it - so keys go on reaching something usable, as they reach a game's surface again once
+   /// the menu laid over it closes. With no ancestor to take it the focus is let go of.</summary>
+   public static void LeaveUnusable(IUIComponent element)
    {
-      if (Focused == null || !IsWithin(Focused, hidden))
+      if (Focused == null || !IsWithin(Focused, element))
       {
          return;
       }
 
-      for (var node = hidden.VisualParent; node != null; node = node.VisualParent)
+      for (var node = element.VisualParent; node != null; node = node.VisualParent)
       {
          if (node is IInputComponent candidate && CanFocus(candidate))
          {

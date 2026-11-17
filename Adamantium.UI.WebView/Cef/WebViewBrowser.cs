@@ -1041,6 +1041,26 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
+    /// <summary>Asks the page again in <paramref name="colorScheme"/> - not DevTools, which are no page of the
+    /// application's; a page not made yet is asked as it is.</summary>
+    internal void AskColorScheme(WebViewColorScheme colorScheme)
+    {
+        view.ColorSchemeChanged(this);
+        if (isDevTools)
+        {
+            return;
+        }
+
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.AskColorScheme(host, colorScheme);
+        CefRefCounting.ReleaseCef(host);
+    }
+
     /// <summary>Finds <paramref name="text"/> on the page and marks its matches, the current one apart: a search
     /// started anew when <paramref name="findNext"/> is false, else the next match, or the previous one when
     /// <paramref name="forward"/> is false. Chromium tells how many it found through <see cref="OnFindResult"/>.
@@ -1589,7 +1609,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         {
             var host = Host();
             scriptsPending = true;
-            devTools.Attach(host, view.ScriptsForNewDocuments(this), engine.ColorScheme, GoWhereWanted);
+            devTools.Attach(host, view.ScriptsForNewDocuments(this), engine.PagesColorScheme, GoWhereWanted);
             CefRefCounting.ReleaseCef(host);
         }
 

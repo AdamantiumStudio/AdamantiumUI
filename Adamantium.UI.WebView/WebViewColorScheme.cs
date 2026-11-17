@@ -11,5 +11,9 @@ public enum WebViewColorScheme
     Light,
 
     /// <summary>Dark, whatever the system's.</summary>
-    Dark
+    Dark,
+
+    /// <summary>The application's: dark while its theme's variant is dark, light otherwise, following it as it
+    /// changes.</summary>
+    Application
 }

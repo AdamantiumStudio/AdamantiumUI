@@ -181,9 +181,8 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         // No WS_EX_ACCEPTFILES: the partial WM_DROPFILES path is replaced by a full OLE drop target (registered below),
         // which carries text and arbitrary formats too - and reports drag-over live instead of only the final drop.
         var wndStyleEx = window.Owner == null ? WindowStyleEx.Appwindow : default;
-        var wndStyle = //WindowStyle.Popup |
-            WindowStyle.Overlappedwindow | WindowStyle.Maximizebox | WindowStyle.Minimizebox |
-            WindowStyle.Clipsiblings | WindowStyle.Clipchildren | WindowStyle.Sizeframe;
+        var wndStyle = WithCaptionBoxes(WindowStyle.Overlappedwindow | WindowStyle.Clipsiblings | WindowStyle.Clipchildren |
+                                        WindowStyle.Sizeframe, window.ResizeMode, chromeCustom);
 
         // Overlay traits, read here with the rest: native styles are fixed at creation.
         if (window.WindowOpacity < 1.0)
@@ -272,7 +271,40 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
 
     // Runtime ResizeMode change (e.g. toggling grip-resize): refresh the hit-test snapshot. Fires on the loop thread (the
     // property is set there), so reading window.ResizeMode is safe - not the OS message thread that must never lock it.
-    private void WindowOnResizeModeChanged(object sender, EventArgs e) => chromeResizeMode = window.ResizeMode;
+    private void WindowOnResizeModeChanged(object sender, EventArgs e)
+    {
+        chromeResizeMode = window.ResizeMode;
+        if (source == null || source.Handle == IntPtr.Zero) return;
+
+        var style = (WindowStyle)Win32Interop.GetWindowLong(source.Handle, WindowLongType.Style).ToInt64();
+        Win32Interop.SetWindowLong(source.Handle, WindowLongType.Style,
+            new IntPtr((long)WithCaptionBoxes(style, chromeResizeMode, chromeCustom)));
+        // A frame cached by the system takes the new style only when told to.
+        Win32Interop.SetWindowPos(source.Handle, IntPtr.Zero, 0, 0, 0, 0,
+            SetWindowPosFlags.Nomove | SetWindowPosFlags.Nosize | SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate |
+            SetWindowPosFlags.Framechanged);
+    }
+
+    private static bool AllowsMaximize(WindowResizeMode mode) =>
+        mode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip;
+
+    // The system's maximize and minimize - Win+Up, the system menu - only where ResizeMode allows them; a system frame of
+    // a window that cannot be resized has no sizing border, as WPF's. A custom frame keeps it for its shadow and edges,
+    // whose resizing the hit-test refuses.
+    private static WindowStyle WithCaptionBoxes(WindowStyle style, WindowResizeMode mode, bool customChrome)
+    {
+        style &= ~(WindowStyle.Maximizebox | WindowStyle.Minimizebox);
+        if (mode != WindowResizeMode.NoResize) style |= WindowStyle.Minimizebox;
+        if (AllowsMaximize(mode)) style |= WindowStyle.Maximizebox;
+        if (!customChrome)
+        {
+            style = mode is WindowResizeMode.NoResize or WindowResizeMode.CanMinimize
+                ? style & ~WindowStyle.Sizeframe
+                : style | WindowStyle.Sizeframe;
+        }
+
+        return style;
+    }
 
     // The current theme's accent as a Win32 COLORREF (0x00BBGGRR) for the DWM window border. Falls back to the Fluent
     // accent if the theme exposes no solid accent brush.
@@ -1027,6 +1059,13 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
             case SystemCommands.MOVE:
                 Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, (int)p.X, (int)p.Y, (int)window.Width,
                     (int)window.Height, SetWindowPosFlags.Asyncwindowpos | SetWindowPosFlags.Nosize);
+                break;
+            // Sent by anyone - the shell, another process - though the style offers neither: refused as the buttons are.
+            case SystemCommands.MAXIMIZE when !AllowsMaximize(chromeResizeMode):
+            case SystemCommands.MINIMIZE when chromeResizeMode == WindowResizeMode.NoResize:
+            // SC_SIZE carries the edge in its low bits.
+            case var sizing when ((uint)sizing & 0xFFF0) == (uint)SystemCommands.SIZE &&
+                                 chromeResizeMode is WindowResizeMode.NoResize or WindowResizeMode.CanMinimize:
                 break;
             case SystemCommands.MAXIMIZE:
                 chromeState = WindowState.Maximized;

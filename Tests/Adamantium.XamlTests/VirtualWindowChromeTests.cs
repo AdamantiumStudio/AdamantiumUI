@@ -2,6 +2,7 @@ using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Universes;
@@ -69,6 +70,103 @@ public class VirtualWindowChromeTests
         Assert.That(titleBar, Is.Not.Null, "the window template was not applied");
         Assert.That(titleBar.Title, Is.EqualTo("Preview"));
         Assert.That(titleBar.Visibility, Is.EqualTo(Visibility.Visible));
+    }
+
+    // As WPF's: a window that cannot be resized has neither button, one that can only be minimized has no maximize.
+    [TestCase("Fluent", WindowResizeMode.NoResize, false, false)]
+    [TestCase("Graphite", WindowResizeMode.NoResize, false, false)]
+    [TestCase("MacOs", WindowResizeMode.NoResize, false, false)]
+    [TestCase("Fluent", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("Graphite", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("MacOs", WindowResizeMode.CanMinimize, true, false)]
+    [TestCase("Fluent", WindowResizeMode.CanResize, true, true)]
+    [TestCase("Graphite", WindowResizeMode.CanResizeWithGrip, true, true)]
+    public void TheCaptionButtons_FollowTheResizeMode(string theme, WindowResizeMode mode, bool minimize, bool maximize)
+    {
+        var window = Attached(theme, customChrome: true);
+
+        window.ResizeMode = mode;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        var titleBar = TitleBarOf(window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(titleBar.ShowMinButton, Is.EqualTo(minimize), "minimize");
+            Assert.That(titleBar.ShowMaxRestoreButton, Is.EqualTo(maximize), "maximize");
+            Assert.That(window.CanMinimize, Is.EqualTo(minimize));
+            Assert.That(window.CanMaximize, Is.EqualTo(maximize));
+        });
+    }
+
+    // On macOS the glyphs light up when the pointer reaches the caption; a hidden light takes its glyph along, and both
+    // come back once the mode allows the button again.
+    [TestCase(WindowResizeMode.NoResize, false, false)]
+    [TestCase(WindowResizeMode.CanMinimize, true, false)]
+    [TestCase(WindowResizeMode.CanResize, true, true)]
+    public void AHiddenTrafficLight_ShowsNoGlyphOnHover(WindowResizeMode mode, bool minimize, bool zoom)
+    {
+        var window = Attached("MacOs", customChrome: true);
+        window.ResizeMode = WindowResizeMode.NoResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        window.ResizeMode = mode;
+        var titleBar = TitleBarOf(window);
+
+        titleBar.SetValue(InputUIComponent.IsPointerOverProperty, true);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((UIComponent)titleBar.GetTemplateChild("CloseGlyph")).Opacity, Is.EqualTo(1), "the glyphs light");
+            Assert.That(CellShown("CloseCell"), Is.True, "close");
+            Assert.That(CellShown("MinimizeCell"), Is.EqualTo(minimize), "minimize");
+            Assert.That(CellShown("ZoomCell"), Is.EqualTo(zoom), "zoom");
+        });
+
+        bool CellShown(string cellName) =>
+            ((UIComponent)titleBar.GetTemplateChild(cellName)).Visibility == Visibility.Visible;
+    }
+
+    // Resizable again, the buttons come back; maximized when it stops being allowed, it is restored.
+    [Test]
+    public void TheCaptionButtons_ComeBack_AndAMaximizedWindowIsRestored()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.Maximize();
+        window.ResizeMode = WindowResizeMode.NoResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var restored = window.State;
+
+        window.ResizeMode = WindowResizeMode.CanResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        var titleBar = TitleBarOf(window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored, Is.EqualTo(WindowState.Normal), "no longer allowed maximized");
+            Assert.That(titleBar.ShowMinButton, Is.True);
+            Assert.That(titleBar.ShowMaxRestoreButton, Is.True);
+        });
+    }
+
+    // Nor does a double click on the caption, or code, maximize or minimize a window that may not be.
+    [Test]
+    public void AWindowThatCannotBeResized_IsNeitherMaximizedNorMinimized()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.ResizeMode = WindowResizeMode.NoResize;
+
+        window.ToggleMaximizeRestore();
+        var afterToggle = window.State;
+        window.Maximize();
+        var afterMaximize = window.State;
+        window.Minimize();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterToggle, Is.EqualTo(WindowState.Normal));
+            Assert.That(afterMaximize, Is.EqualTo(WindowState.Normal));
+            Assert.That(window.State, Is.EqualTo(WindowState.Normal));
+        });
     }
 
     [Test]

@@ -13,6 +13,9 @@ public sealed class SaveFileRequest
     /// <summary>The name to start with, extension included - what the user overtypes rather than composes.</summary>
     public string FileName { get; init; }
 
+    /// <summary>The folder to open in, over the one remembered under <see cref="Key"/>; unset or missing, that one.</summary>
+    public string Folder { get; init; }
+
     /// <summary>Extension to append when the user types a name without one, WITHOUT the dot.</summary>
     public string DefaultExtension { get; init; }
 
