@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WebViewEngine.ColorScheme` can be set while pages are open: they are asked again at once, and so is Chromium's own
+  scheme, which about:blank is painted in. `WebViewColorScheme.Application`, now the default of
+  `WebViewOptions.ColorScheme`, is dark while the application's theme variant is dark and light otherwise, following it.
 - `Ancestor.UpdateSourceTrigger`, `Self.UpdateSourceTrigger`: `{Ancestor ..., Mode=TwoWay, UpdateSourceTrigger=LostFocus}`
   writes a field back once it is left, as a `{Binding}` does.
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
