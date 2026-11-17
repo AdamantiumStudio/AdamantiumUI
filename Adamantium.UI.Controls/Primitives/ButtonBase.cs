@@ -178,10 +178,16 @@ public abstract class ButtonBase : ContentControl
         _commandListener?.Detached();
     }
 
+    // Whether the command can run; a button with none can.
+    private bool _canExecute = true;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canExecute;
+
     private void UpdateCanExecute()
     {
         var state = CommandManager.QueryFrom(Command, CommandParameter, this, CommandTarget);
-        IsEnabled = state.CanExecute;
+        _canExecute = state.CanExecute;
+        CoerceValue(IsEnabledProperty);
         OnCommandState(state);
     }
 

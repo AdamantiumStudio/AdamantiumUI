@@ -943,7 +943,7 @@ public class Ribbon : Selector
         if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text)) return;
 
         // With Alt held a letter is a shortcut, not a key tip, and autorepeat is not a new keystroke; both are swallowed.
-        if (_altDown || _lastKeyRepeated)
+        if (_altDown || _altAlone.LastWasRepeat)
         {
             e.Handled = true;
             return;
@@ -957,21 +957,18 @@ public class Ribbon : Selector
     }
 
     private char? _lastKeyLetter;
-    private bool _lastKeyRepeated;
-    private Key? _heldKey;   // the key that has not come back up - see OnKeyTipKey
 
-    // Alt went down with nothing pressed since - so its RELEASE is a request for key tips rather than half a shortcut.
-    private bool _altAlone;
+    // Alt pressed and released alone - a request for key tips rather than half a shortcut.
+    private readonly AltPressedAlone _altAlone = new();
     private bool _altDown;
 
     private void OnKeyTipKeyUp(object sender, KeyEventArgs e)
     {
-        if (e.Key == _heldKey) _heldKey = null;
+        var completes = _altAlone.KeyUp(e);
         if (!e.Key.IsAlt()) return;
 
         _altDown = false;
-        if (_altAlone) Toggle();
-        _altAlone = false;
+        if (completes) Toggle();
         e.Handled = true;
     }
 
@@ -980,29 +977,21 @@ public class Ribbon : Selector
     // shows none either, as a press under Alt cancels the menu bar in Windows.
     private void OnKeyTipPress(object sender, PointerPressedEventArgs e)
     {
-        _altAlone = false;
+        _altAlone.Cancel();
         _keyTips?.End();
     }
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {
-        // The platform flag misses the first autorepeat, so an unreleased key also counts as a repeat. Set before any
-        // early return.
-        _lastKeyRepeated = e.IsRepeated || e.Key == _heldKey;
-        _heldKey = e.Key;
-        // Alt toggles the mode on release, and only if nothing was pressed in between (Alt+F4 is a shortcut).
+        // Alt toggles the mode on release, and only if nothing was pressed in between (Alt+F4 is a shortcut). Followed
+        // before any early return: it also says whether this key repeats.
+        _altAlone.KeyDown(e);
         if (e.Key.IsAlt())
         {
             _altDown = true;
-            // Not on a repeat, the first one included, which the platform flag misses: Alt held through a drag repeats,
-            // and the press that made it a gesture must not be forgotten.
-            if (!_lastKeyRepeated) _altAlone = true;
             e.Handled = true;
             return;
         }
-
-        // Something else went down while Alt was held: that is a shortcut, so the release must not show key tips.
-        _altAlone = false;
 
         if (_keyTips is not { IsActive: true }) return;
 

@@ -74,8 +74,16 @@ public class SegmentedControlItem : ContentControl, ISelectable
     private static void OnCommandParameterChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
         (a as SegmentedControlItem)?.UpdateCanExecute();
 
-    private void UpdateCanExecute() => SetCurrentValue(IsEnabledProperty,
-        CommandManager.QueryFrom(Command, CommandParameter, this, null).CanExecute);
+    // Whether the command can run; a segment with none can be picked.
+    private bool _canExecute = true;
+
+    protected override bool IsEnabledCore => base.IsEnabledCore && _canExecute;
+
+    private void UpdateCanExecute()
+    {
+        _canExecute = CommandManager.QueryFrom(Command, CommandParameter, this, null).CanExecute;
+        CoerceValue(IsEnabledProperty);
+    }
 
     internal void RunCommand() => CommandManager.ExecuteFrom(Command, CommandParameter, this, null);
 
