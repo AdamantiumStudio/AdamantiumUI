@@ -349,7 +349,8 @@ internal sealed partial class PdfPageInterpreter
             var shown = _options.Print
                 ? (annotation.Flags & 4) != 0 && (annotation.Flags & 2) == 0
                 : (annotation.Flags & (2 | 32)) == 0;
-            if (!shown || _options.SkipAnnotation?.Invoke(annotation) == true || annotation.Appearance is not { } form ||
+            if (!shown || _options.SkipAnnotation?.Invoke(annotation) == true ||
+                (annotation.Appearance ?? annotation.ImpliedAppearance) is not { } form ||
                 !_optionalContent.IsVisible(annotation.Dictionary["OC"]))
             {
                 continue;

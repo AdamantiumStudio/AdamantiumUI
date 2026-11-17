@@ -245,6 +245,26 @@ public class PdfObjectDrawingTests
     }
 
     [Test]
+    public void ALinkWithNoAppearance_IsDrawnByItsBorder_AndOneWithNoBorderIsNot()
+    {
+        var bordered = new TestPdf { PageExtra = "/Annots [5 0 R]" };
+        bordered.Add("<< /Type /Annot /Subtype /Link /Rect [100 50 120 60] /Border [0 0 1] /C [0 0 1] >>");
+        var plain = new TestPdf { PageExtra = "/Annots [5 0 R]" };
+        plain.Add("<< /Type /Annot /Subtype /Link /Rect [100 50 120 60] /Border [0 0 0] >>");
+
+        var drawn = Draw(bordered, "").Session.All<DrawnGeometry>().Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(drawn.Pen, Is.Not.Null, "the border is stroked");
+            Assert.That(((SolidColorBrush)drawn.Pen.Brush).Color.B, Is.EqualTo(255), "in the link's blue");
+            Assert.That(((SolidColorBrush)drawn.Pen.Brush).Color.R, Is.EqualTo(0));
+            Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((100.0, 50.0)), "in the link's rectangle");
+            Assert.That(Draw(plain, "").Session.All<DrawnGeometry>(), Is.Empty);
+        });
+    }
+
+    [Test]
     public void APageIsBuiltOffTheUIThread()
     {
         var pdf = new TestPdf();
