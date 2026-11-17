@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `WrapPanel.ItemSpacing` and `WrapPanel.WrapSpacing`: the gaps between neighbors on a line and between lines, with
+  explicit children - none before the first or after the last. A collapsed child takes no place and no gap.
+
 - Tooltips of an element's parts, as a Win32 window has a tool per rectangle: `IToolTipRegions` says what to show at a
   point and for which part, set with `ToolTipService.ToolTipRegions`. The card shows under the pointer after the usual
   delay, stays put while the pointer moves within the part, moves on to another part's tip, and goes when the pointer
@@ -558,6 +561,9 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas tool rail's buttons sit in the middle of their pane: each had a gap after it on both sides, so a column was a
+  gap wider than its buttons and stood that much left of the middle (5 pixels in the macOS theme). The gaps are now the
+  panel's, between buttons only.
 - The macOS theme's `BusyIndicator` scales its wheel to the size it is given: smaller than the theme's own - a tab's
   16 - the spokes overflowed it and turned about a point outside it.
 - `WindowResizeMode.NoResize` and `CanMinimize` keep a window from being maximized - and with `NoResize` minimized - as
