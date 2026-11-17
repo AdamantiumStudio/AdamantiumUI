@@ -234,9 +234,14 @@ public class UniverseService : IUniverseService
         lock (_locker)
         {
             _stopping.RemoveAll(universe => universe.IsStopped);
+            if (_retired.Count == 0)
+            {
+                return;
+            }
+
+            Parallel.ForEach(_retired, universe => universe.ShutDown());
             foreach (var universe in _retired)
             {
-                universe.ShutDown();
                 if (!universe.IsStopped)
                 {
                     _stopping.Add(universe);
