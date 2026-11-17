@@ -84,6 +84,50 @@ public class IsEnabledFromAncestorsTests
         for (var pass = 0; pass < 3; pass++) WindowExtension.UpdateTree(_window);
     }
 
+    // The option is the property system's, IsEnabled only its first user: any bool declared so follows its holders above.
+    private sealed class Lamp : Border
+    {
+        public static readonly AdamantiumProperty IsLitProperty = AdamantiumProperty.Register(nameof(IsLit), typeof(bool),
+            typeof(Lamp), new PropertyMetadata(true, PropertyMetadataOptions.FollowsAncestors));
+
+        public bool IsLit
+        {
+            get => GetValue<bool>(IsLitProperty);
+            set => SetValue(IsLitProperty, value);
+        }
+    }
+
+    [Test]
+    public void APropertyFollowingItsAncestors_IsOffUnderOneThatIsOff_AndKeepsItsOwnValue()
+    {
+        var inner = new Lamp { IsLit = true };
+        var outer = new Lamp { Child = new StackPanel { Children = { inner } } };
+        InAWindow(outer);
+
+        outer.IsLit = false;
+        Assert.That(inner.IsLit, Is.False, "the lamp above is off - through a panel that holds no such property");
+        outer.IsLit = true;
+        Assert.That(inner.IsLit, Is.True, "its own value back");
+    }
+
+    [Test]
+    public void APropertyFollowingItsAncestors_ReadsAgainWhenMoved()
+    {
+        var inner = new Lamp();
+        var off = new Lamp { IsLit = false, Child = new StackPanel() };
+        var on = new Lamp { Child = new StackPanel() };
+        InAWindow(off, on);
+
+        ((StackPanel)off.Child).Children.Add(inner);
+        Settle();
+        Assert.That(inner.IsLit, Is.False, "under the lamp that is off");
+
+        ((StackPanel)off.Child).Children.Remove(inner);
+        ((StackPanel)on.Child).Children.Add(inner);
+        Settle();
+        Assert.That(inner.IsLit, Is.True, "under the lamp that is on");
+    }
+
     [Test]
     public void AFieldInADisabledPanel_IsDisabled_AndEnabledAgainWithThePanel()
     {

@@ -90,6 +90,29 @@ public static class AdamantiumPropertyMap
    /// it per instance (the component constructor) neither goes through an interface nor asks its Count separately.</summary>
    internal static AdamantiumProperty[] GetRegisteredArray(Type type) => Flattened.GetOrAdd(type, FlattenRegistered);
 
+   private static readonly Lock FollowingLock = new();
+   private static AdamantiumProperty[] _followingAncestors = [];
+
+   /// <summary>The properties some type declares <see cref="PropertyMetadataOptions.FollowsAncestors"/> for: coerced
+   /// again when an element's inheritance parent changes.</summary>
+   internal static AdamantiumProperty[] FollowingAncestors => Volatile.Read(ref _followingAncestors);
+
+   internal static void NoteFollowingAncestors(AdamantiumProperty property)
+   {
+      lock (FollowingLock)
+      {
+         if (Array.IndexOf(_followingAncestors, property) >= 0) return;
+
+         // A move reads what the ancestors answer for each as one bit of an int.
+         if (_followingAncestors.Length == 31)
+         {
+            throw new InvalidOperationException("No more than 31 properties can follow their ancestors.");
+         }
+
+         Volatile.Write(ref _followingAncestors, [.. _followingAncestors, property]);
+      }
+   }
+
    /// <summary>Drops the cached inheriting sets - a metadata override can add inheritance for a derived type.</summary>
    internal static void InvalidateInheriting() => Inheriting.Clear();
 

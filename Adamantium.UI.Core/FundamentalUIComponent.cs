@@ -896,9 +896,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         set => SetValue(NameProperty, value);
     }
 
-    // An element that is no UI element itself - an inline, a behavior - passes it on to the UI elements below it.
-    protected override void OnInheritanceAncestorsChanged() => TellInheritorsAncestorsChanged();
-
     /// <summary>Where this element is shown while another holds it: a presenter showing a control's content, a list's
     /// panel showing its containers. It inherits values from there; null while shown by what holds it.</summary>
     internal AdamantiumComponent ShownIn { get; private set; }
