@@ -53,7 +53,7 @@
                                  template. Lifted here, one trigger lights all three. -->
                             <StackPanel x:Name="PART_ButtonsPanel" Orientation="Horizontal" VerticalAlignment="Center"
                                     Spacing="{ResourceReference TrafficLightGap}">
-                                <Grid>
+                                <Grid x:Name="CloseCell">
                                     <Button x:Name="PART_CloseButton" Classes="TrafficLight CloseLight" Focusable="False"
                                             AutomationProperties.AutomationId="Close"
                                             AutomationProperties.Name="{Localize WindowStrings.Close}"/>
@@ -61,7 +61,7 @@
                                             Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid>
+                                <Grid x:Name="MinimizeCell">
                                     <Button x:Name="PART_MinButton" Classes="TrafficLight MinimizeLight" Focusable="False"
                                             AutomationProperties.AutomationId="Minimize"
                                             AutomationProperties.Name="{Localize WindowStrings.Minimize}"/>
@@ -69,7 +69,7 @@
                                             Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
-                                <Grid>
+                                <Grid x:Name="ZoomCell">
                                     <Button x:Name="PART_MaxButton" Classes="TrafficLight ZoomLight" Focusable="False"
                                             AutomationProperties.AutomationId="Maximize"
                                             AutomationProperties.Name="{Localize WindowStrings.Maximize}"/>
@@ -154,15 +154,17 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A hidden button takes its glyph along: the glyph lies beside it, so hiding the button alone left it to show on
+         hover. -->
     <Style Selector="TitleBar">
         <PropertyTrigger Property="ShowMinButton" Value="false">
-            <Setter TargetName="PART_MinButton" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="MinimizeCell" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowMaxRestoreButton" Value="false">
-            <Setter TargetName="PART_MaxButton" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="ZoomCell" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowCloseButton" Value="false">
-            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="CloseCell" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowTitle" Value="false">
             <Setter TargetName="PART_Title" Property="Visibility" Value="Collapsed"/>

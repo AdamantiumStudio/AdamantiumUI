@@ -2,6 +2,7 @@ using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Universes;
@@ -95,6 +96,34 @@ public class VirtualWindowChromeTests
             Assert.That(window.CanMinimize, Is.EqualTo(minimize));
             Assert.That(window.CanMaximize, Is.EqualTo(maximize));
         });
+    }
+
+    // On macOS the glyphs light up when the pointer reaches the caption; a hidden light takes its glyph along, and both
+    // come back once the mode allows the button again.
+    [TestCase(WindowResizeMode.NoResize, false, false)]
+    [TestCase(WindowResizeMode.CanMinimize, true, false)]
+    [TestCase(WindowResizeMode.CanResize, true, true)]
+    public void AHiddenTrafficLight_ShowsNoGlyphOnHover(WindowResizeMode mode, bool minimize, bool zoom)
+    {
+        var window = Attached("MacOs", customChrome: true);
+        window.ResizeMode = WindowResizeMode.NoResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        window.ResizeMode = mode;
+        var titleBar = TitleBarOf(window);
+
+        titleBar.SetValue(InputUIComponent.IsPointerOverProperty, true);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((UIComponent)titleBar.GetTemplateChild("CloseGlyph")).Opacity, Is.EqualTo(1), "the glyphs light");
+            Assert.That(CellShown("CloseCell"), Is.True, "close");
+            Assert.That(CellShown("MinimizeCell"), Is.EqualTo(minimize), "minimize");
+            Assert.That(CellShown("ZoomCell"), Is.EqualTo(zoom), "zoom");
+        });
+
+        bool CellShown(string cellName) =>
+            ((UIComponent)titleBar.GetTemplateChild(cellName)).Visibility == Visibility.Visible;
     }
 
     // Resizable again, the buttons come back; maximized when it stops being allowed, it is restored.

@@ -539,6 +539,8 @@ All packages share one version.
   and on Windows the system's own (Win+Up, the system menu, a `WM_SYSCOMMAND` from outside) is refused too; a system
   frame loses its sizing border. A window maximized when the mode stops allowing it is restored, and one remembered
   maximized opens at its size. `WindowBase.CanMinimize`, `CanMaximize`. macOS and Wayland do not yet ask the system.
+- The macOS theme's caption and overlay window hide a traffic light's glyph with its light: a hidden button's glyph still
+  showed when the pointer reached the caption.
 - Markup hot reload no longer lists or applies files it stopped following: a watcher's report racing `Reset` added a
   forgotten file to `ChangedFiles`, and a save on its way reached the instance and reported itself afterwards.
 - A color picked in a canvas inspector is a step to undo. It is written into the item's own brush, so the step held
