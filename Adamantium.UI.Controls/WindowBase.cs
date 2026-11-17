@@ -601,8 +601,11 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private static void ResizeModeChangedCallback(AdamantiumComponent adamantiumComponent, AdamantiumPropertyChangedEventArgs e)
     {
-        if (adamantiumComponent is WindowBase component)
-            component.ResizeModeChanged?.Invoke(component, EventArgs.Empty);
+        if (adamantiumComponent is not WindowBase component) return;
+
+        component.ResizeModeChanged?.Invoke(component, EventArgs.Empty);
+        // Maximized when it stopped being allowed: back to its size, or it is left with no button to restore it.
+        if (!component.CanMaximize && component.State == WindowState.Maximized) component.RestoreDown();
     }
 
     // MahApps-style caption command bars, forwarded to the TitleBar by the default Window template. Bind a view-model's
@@ -1189,7 +1192,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             ClientWidth = remembered.ClientWidth;
             ClientHeight = remembered.ClientHeight;
             Position = WindowPlacer.Restore(remembered, screens, SizeOn(home)) ?? Position;
-            _opensMaximized = remembered.IsMaximized;
+            _opensMaximized = remembered.IsMaximized && CanMaximize;
             return;
         }
 

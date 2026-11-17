@@ -79,6 +79,7 @@ public class VirtualWindowChromeTests
     [TestCase("Graphite", WindowResizeMode.CanMinimize, true, false)]
     [TestCase("MacOs", WindowResizeMode.CanMinimize, true, false)]
     [TestCase("Fluent", WindowResizeMode.CanResize, true, true)]
+    [TestCase("Graphite", WindowResizeMode.CanResizeWithGrip, true, true)]
     public void TheCaptionButtons_FollowTheResizeMode(string theme, WindowResizeMode mode, bool minimize, bool maximize)
     {
         var window = Attached(theme, customChrome: true);
@@ -93,6 +94,28 @@ public class VirtualWindowChromeTests
             Assert.That(titleBar.ShowMaxRestoreButton, Is.EqualTo(maximize), "maximize");
             Assert.That(window.CanMinimize, Is.EqualTo(minimize));
             Assert.That(window.CanMaximize, Is.EqualTo(maximize));
+        });
+    }
+
+    // Resizable again, the buttons come back; maximized when it stops being allowed, it is restored.
+    [Test]
+    public void TheCaptionButtons_ComeBack_AndAMaximizedWindowIsRestored()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.Maximize();
+        window.ResizeMode = WindowResizeMode.NoResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var restored = window.State;
+
+        window.ResizeMode = WindowResizeMode.CanResize;
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        var titleBar = TitleBarOf(window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(restored, Is.EqualTo(WindowState.Normal), "no longer allowed maximized");
+            Assert.That(titleBar.ShowMinButton, Is.True);
+            Assert.That(titleBar.ShowMaxRestoreButton, Is.True);
         });
     }
 

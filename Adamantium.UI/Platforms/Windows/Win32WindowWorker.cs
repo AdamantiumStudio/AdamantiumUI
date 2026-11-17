@@ -182,7 +182,7 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         // which carries text and arbitrary formats too - and reports drag-over live instead of only the final drop.
         var wndStyleEx = window.Owner == null ? WindowStyleEx.Appwindow : default;
         var wndStyle = WithCaptionBoxes(WindowStyle.Overlappedwindow | WindowStyle.Clipsiblings | WindowStyle.Clipchildren |
-                                        WindowStyle.Sizeframe, window.ResizeMode);
+                                        WindowStyle.Sizeframe, window.ResizeMode, chromeCustom);
 
         // Overlay traits, read here with the rest: native styles are fixed at creation.
         if (window.WindowOpacity < 1.0)
@@ -277,15 +277,32 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         if (source == null || source.Handle == IntPtr.Zero) return;
 
         var style = (WindowStyle)Win32Interop.GetWindowLong(source.Handle, WindowLongType.Style).ToInt64();
-        Win32Interop.SetWindowLong(source.Handle, WindowLongType.Style, new IntPtr((long)WithCaptionBoxes(style, chromeResizeMode)));
+        Win32Interop.SetWindowLong(source.Handle, WindowLongType.Style,
+            new IntPtr((long)WithCaptionBoxes(style, chromeResizeMode, chromeCustom)));
+        // A frame cached by the system takes the new style only when told to.
+        Win32Interop.SetWindowPos(source.Handle, IntPtr.Zero, 0, 0, 0, 0,
+            SetWindowPosFlags.Nomove | SetWindowPosFlags.Nosize | SetWindowPosFlags.Nozorder | SetWindowPosFlags.Noactivate |
+            SetWindowPosFlags.Framechanged);
     }
 
-    // The system's maximize and minimize - Win+Up, the system menu, a snap to the top - only where ResizeMode allows them.
-    private static WindowStyle WithCaptionBoxes(WindowStyle style, WindowResizeMode mode)
+    private static bool AllowsMaximize(WindowResizeMode mode) =>
+        mode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip;
+
+    // The system's maximize and minimize - Win+Up, the system menu - only where ResizeMode allows them; a system frame of
+    // a window that cannot be resized has no sizing border, as WPF's. A custom frame keeps it for its shadow and edges,
+    // whose resizing the hit-test refuses.
+    private static WindowStyle WithCaptionBoxes(WindowStyle style, WindowResizeMode mode, bool customChrome)
     {
         style &= ~(WindowStyle.Maximizebox | WindowStyle.Minimizebox);
         if (mode != WindowResizeMode.NoResize) style |= WindowStyle.Minimizebox;
-        if (mode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip) style |= WindowStyle.Maximizebox;
+        if (AllowsMaximize(mode)) style |= WindowStyle.Maximizebox;
+        if (!customChrome)
+        {
+            style = mode is WindowResizeMode.NoResize or WindowResizeMode.CanMinimize
+                ? style & ~WindowStyle.Sizeframe
+                : style | WindowStyle.Sizeframe;
+        }
+
         return style;
     }
 
@@ -1042,6 +1059,13 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
             case SystemCommands.MOVE:
                 Win32Interop.SetWindowPos(window.Handle, IntPtr.Zero, (int)p.X, (int)p.Y, (int)window.Width,
                     (int)window.Height, SetWindowPosFlags.Asyncwindowpos | SetWindowPosFlags.Nosize);
+                break;
+            // Sent by anyone - the shell, another process - though the style offers neither: refused as the buttons are.
+            case SystemCommands.MAXIMIZE when !AllowsMaximize(chromeResizeMode):
+            case SystemCommands.MINIMIZE when chromeResizeMode == WindowResizeMode.NoResize:
+            // SC_SIZE carries the edge in its low bits.
+            case var sizing when ((uint)sizing & 0xFFF0) == (uint)SystemCommands.SIZE &&
+                                 chromeResizeMode is WindowResizeMode.NoResize or WindowResizeMode.CanMinimize:
                 break;
             case SystemCommands.MAXIMIZE:
                 chromeState = WindowState.Maximized;
