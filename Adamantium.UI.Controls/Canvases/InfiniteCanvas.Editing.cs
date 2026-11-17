@@ -1470,6 +1470,16 @@ public partial class InfiniteCanvas
     /// pointer PROMISES can be asked without a mouse: it is a promise about what the next press will do.</summary>
     public void ShowPointerAt(Vector2<double> screen) => ShowPointer(screen);
 
+    /// <summary>Works the pointer's look out again where it rests: for a derived canvas whose content under it changed
+    /// without the pointer moving.</summary>
+    protected internal void RefreshPointer()
+    {
+        if (_pointerInside && !_panning)
+        {
+            ShowPointer(_pointer);
+        }
+    }
+
     // What is under the pointer WITHIN the selection: one of its points, or the thing itself. The only thing that says
     // so on a LINE, which has no box to say it by being drawn.
     private Cursor OverSelection(Vector2<double> screen)
