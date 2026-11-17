@@ -13,6 +13,9 @@ public class Self : MarkupExtension
 
     public BindingMode Mode { get; set; } = BindingMode.OneWay;
 
+    /// <summary>When a TwoWay write reaches the source, like a {Binding}'s.</summary>
+    public UpdateSourceTrigger UpdateSourceTrigger { get; set; }
+
     public IValueConverter Converter { get; set; }
 
     public object ConverterParameter { get; set; }

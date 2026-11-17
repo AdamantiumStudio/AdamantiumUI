@@ -12,7 +12,8 @@ All packages share one version.
   where no item is, the cursor is the one it asks for. `InfiniteCanvas.FlyToCamera(offset, scale)` flies the camera to
   a stored place. `InfiniteCanvas.RefreshPointer()` works the cursor out again where the pointer rests, for content
   under it that changed without the pointer moving.
-
+- `Ancestor.UpdateSourceTrigger`, `Self.UpdateSourceTrigger`: `{Ancestor ..., Mode=TwoWay, UpdateSourceTrigger=LostFocus}`
+  writes a field back once it is left, as a `{Binding}` does.
 - `CanvasPane.ShowsGrip`: a bar (`CanvasPaneKind.Bar`) shows the grip other panes have at its start, to carry it and
   fold it to the grip - a wide toolbar is easier to take by it than by the gaps between its buttons. A bar is still
   moved by its background without it, and shows no snap either way. Folded, a pane of no set width keeps the room it
