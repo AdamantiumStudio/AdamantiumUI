@@ -121,7 +121,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
         if (effective != Visibility.Visible)
         {
-            FocusManager.LeaveHidden(component);
+            FocusManager.LeaveUnusable(component);
         }
         else if (KeyboardNavigation.GetTakesFocusWhenShown(component))
         {
@@ -313,18 +313,68 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         if (d is UIComponent component) VisualTreeNotifications.RaiseClipChanged(component);
     }
 
-    // Coerced by IsEnabledCore, as WPF's: what is set or bound states whether the element may be used, and the element
-    // itself - a button whose command cannot run - can only take that away, never overwrite the binding.
+    // Coerced as WPF's: what is set or bound states whether the element may be used, and the element itself - a button
+    // whose command cannot run - or a disabled ancestor can only take that away, never overwrite the binding.
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
         typeof(Boolean), typeof(UIComponent),
-        new PropertyMetadata(true,
-            (a, e) => AutomationEvents.RaisePropertyChanged((UIComponent)a, AutomationProperty.IsEnabled, e.OldValue, e.NewValue),
-            (a, value) => value is true && a is UIComponent { IsEnabledCore: false } ? false : value));
+        new PropertyMetadata(true, OnIsEnabledChanged,
+            (a, value) => value is true && a is UIComponent component && (!component.IsEnabledCore || !component.AncestorAllowsUse())
+                ? false
+                : value));
 
     /// <summary>Whether the element itself allows being used, beside what <see cref="IsEnabled"/> is set or bound to - a
     /// command source says whether its command can run. A subclass whose answer changes calls
     /// <c>CoerceValue(IsEnabledProperty)</c>.</summary>
     protected virtual bool IsEnabledCore => true;
+
+    // The nearest element above - through the tree DataContext comes down: templates, popups, panels - decides. A window
+    // does not follow the one it stands over.
+    private bool AncestorAllowsUse()
+    {
+        if (this is IRootVisualComponent) return true;
+
+        for (var node = InheritanceParent; node != null; node = node.InheritanceParent)
+        {
+            if (node is UIComponent above) return above.IsEnabled;
+        }
+
+        return true;
+    }
+
+    // A change reaches the nearest elements below, each coercing its own; theirs, if it changes, goes on from there.
+    private static void OnIsEnabledChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var component = (UIComponent)a;
+        AutomationEvents.RaisePropertyChanged(component, AutomationProperty.IsEnabled, e.OldValue, e.NewValue);
+
+        List<AdamantiumComponent> below = null;
+        component.CollectInheritors(0, static (element, _) => element is UIComponent, ref below);
+        if (below != null)
+        {
+            foreach (var element in below)
+            {
+                element.CoerceValue(IsEnabledProperty);
+            }
+        }
+
+        // No key reaches a disabled element: once the whole subtree is disabled, its top sends the focus up to what can
+        // still take it - asked through the same tree, so a popup's content counts as its control's.
+        if (!component.IsEnabled && component.AncestorAllowsUse() &&
+            FocusManager.Focused is UIComponent focused && focused.InheritsThrough(component))
+        {
+            FocusManager.LeaveUnusable(focused);
+        }
+    }
+
+    // Under other ancestors the answer may differ: coerced again only where it can - this one or the one above disabled.
+    // What changes goes on down from OnIsEnabledChanged, so the elements below are not told here. Taken out of the tree,
+    // it keeps its value until it is put somewhere again.
+    protected override void OnInheritanceAncestorsChanged()
+    {
+        if (InheritanceParent == null) return;
+
+        if (!IsEnabled || !AncestorAllowsUse()) CoerceValue(IsEnabledProperty);
+    }
 
     public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
         typeof(Double), typeof(UIComponent),

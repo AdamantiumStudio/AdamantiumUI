@@ -398,6 +398,14 @@ All packages share one version.
 
 ### Changed
 
+- `IsEnabled` follows the ancestors, as WPF's: an element under a disabled one is disabled itself - to the keyboard,
+  automation and the theme - and gets back what it was set or bound to once the ancestor is enabled. The ancestor is
+  the one DataContext comes from, so a template's parts and a popup's content follow their control; a window, an
+  overlay one too, does not follow the one under it. The focus leaves an element as it is disabled. A disabled panel
+  used to block only the pointer. `AdamantiumComponent.OnInheritanceAncestorsChanged` is called when the element's
+  inheritance parent, or one above it, changes. `FocusManager.LeaveHidden` is now `LeaveUnusable`.
+- The themes' DataPager and SegmentedControl no longer fade whole when disabled: their buttons and segments are
+  disabled with them and draw themselves so; the pager grays its labels, the segmented control its frame.
 - The buttons of a canvas's tool rail - a tool's, a family's and the rows of a family's list - and a pane's handles
   (move, stick to an edge, turn) leave the keyboard where it was, as a toolbar's buttons do: a tool picked on the rail
   no longer took the focus from the canvas, whose keys then did nothing until it was clicked again.

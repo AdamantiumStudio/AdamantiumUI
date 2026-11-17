@@ -552,6 +552,32 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
                 Array.Clear(before, 0, count);
                 ArrayPool<object>.Shared.Return(before);
             }
+
+            OnInheritanceAncestorsChanged();
+        }
+    }
+
+    /// <summary>Called when <see cref="InheritanceParent"/>, or one above it, is another - a value that follows its
+    /// ancestors without inheriting, as IsEnabled does, is coerced again here.</summary>
+    protected virtual void OnInheritanceAncestorsChanged()
+    {
+    }
+
+    /// <summary>Tells the elements below that their ancestors changed - each of them a UI element; a brush, a drawing
+    /// or a transform hanging off this one has nothing to coerce.</summary>
+    private protected void TellInheritorsAncestorsChanged()
+    {
+        if (!TrySnapshotInheritanceChildren(out var single, out var children)) return;
+
+        if (single != null)
+        {
+            if (single is IFundamentalUIComponent) single.OnInheritanceAncestorsChanged();
+            return;
+        }
+
+        foreach (var child in children)
+        {
+            if (child is IFundamentalUIComponent) child.OnInheritanceAncestorsChanged();
         }
     }
 
