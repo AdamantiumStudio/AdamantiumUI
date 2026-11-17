@@ -44,6 +44,7 @@ public static class Program
           invoke | toggle | select | expand | collapse <selector>   act on the first match by what it can do
           select <selector> --add | unselect <selector>       add to a selection of many, or take out of it
           click | rclick | hover <selector>                   or by input made inside the application
+          hover <selector> <x,y>                              the pointer over a point of it, in its own units
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
           touch <selector> tap | hold | drag <x1,y1> <x2,y2>  a finger on it, inside the application; hold is a
                                                               long press, the touch way of a right click

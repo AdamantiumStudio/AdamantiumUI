@@ -312,6 +312,10 @@ public sealed class AutomationElement
     /// <summary>Moves the pointer over its middle, by input simulated inside the application.</summary>
     public Task HoverAsync() => RunAsync(AutomationCommand.Hover);
 
+    /// <summary>Moves the pointer over a point of it, in its own units, by input simulated inside the application.</summary>
+    public Task HoverAsync(double x, double y) =>
+        RunAsync(AutomationCommand.Hover, FormattableString.Invariant($"{x},{y}"));
+
     /// <summary>A left-button drag across it from one point to another, in its own units, by input simulated inside the
     /// application.</summary>
     public Task DragAsync(double fromX, double fromY, double toX, double toY) =>
