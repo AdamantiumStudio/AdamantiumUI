@@ -41,6 +41,17 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     public static readonly AdamantiumProperty DescriptionProperty = AdamantiumProperty.Register(nameof(Description),
         typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
+    /// <summary>What the editor says while it is empty - the value an empty one stands for, such as a name taken from
+    /// the system. Objects that disagree say that instead.</summary>
+    public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
+        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
+
+    public String Placeholder
+    {
+        get => GetValue<String>(PlaceholderProperty);
+        set => SetValue(PlaceholderProperty, value);
+    }
+
     /// <summary>Whether the row's tip is its own VALUE rather than the description. For a line holding something longer
     /// than its cell - a path, an address - the one question asked of it is what it actually says, and the description
     /// is a sentence the reader has already read. Falls back to the description while the value is empty.</summary>

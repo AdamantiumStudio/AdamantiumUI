@@ -1786,6 +1786,29 @@ public class PropertyGridTests
         Assert.That(((NumericUpDown)row.Editor).Placeholder, Is.Null, "they agree now - there is nothing to say");
     }
 
+    // A line's own placeholder - what an empty one stands for - shows in its editor; objects that disagree say that.
+    [Test]
+    public void ALinesPlaceholderShowsInItsEditor_UntilTheObjectsDisagree()
+    {
+        var first = new Target { Name = string.Empty };
+        var second = new Target { Name = string.Empty };
+        var name = new StringProperty { Header = "Name", Binding = new Binding("Name"), Placeholder = "From the system" };
+        var grid = MultiGrid(name, first, second);
+        TemplateRows(grid);
+        var agreed = ((TextBox)RowOf(grid, name).Editor).Placeholder;
+
+        second.Name = "Other";
+        grid.SelectedObjects = new[] { first, second };
+        TemplateRows(grid);
+        var mixed = ((TextBox)RowOf(grid, name).Editor).Placeholder;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(agreed, Is.EqualTo("From the system"));
+            Assert.That(mixed, Is.EqualTo(grid.MixedText), "the objects' disagreement is what an empty editor says");
+        });
+    }
+
     // The point of the whole thing: the caption appears ONLY where the objects really hold different values. A row they
     // all agree on shows that value, however many of them are selected.
     [Test]

@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `PropertyDefinition.Placeholder`: what a line's editor says while it is empty - the value an empty one stands for,
+  such as a name taken from the system. Objects that disagree still say so instead.
+
 - `InfiniteCanvas.BuiltInInspectorSections` and `BuiltInToolSections`: the inspector sections a control built on the
   canvas ships, set by its style. The inspector lays them over the theme's and under the application's
   `InspectorSections` and `ToolSections`, so an application adding its own sets no longer takes the control's away.

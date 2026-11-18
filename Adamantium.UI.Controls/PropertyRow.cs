@@ -668,10 +668,11 @@ public class PropertyRow : Control
 
     // An empty editor says nothing on its own, and "nothing" is not what happened - the objects disagree, and for a
     // number it is not even a state the property can be in. So the editor's own prompt says which it is, and it goes
-    // the moment they agree. ONLY then: a row whose objects hold one value shows that value like any other row.
+    // the moment they agree. ONLY then: a row whose objects hold one value shows that value like any other row, its
+    // own placeholder while empty.
     internal void MarkMixed()
     {
-        var prompt = IsMixed ? Owner?.MixedText : null;
+        var prompt = IsMixed ? Owner?.MixedText : Definition?.Placeholder;
 
         switch (_editor)
         {
