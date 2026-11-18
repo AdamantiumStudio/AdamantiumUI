@@ -3,6 +3,7 @@ using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.Pdf.Document;
+using Adamantium.Pdf.Graphics;
 using Adamantium.Pdf.Writing;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -18,8 +19,8 @@ namespace Adamantium.UI.Pdf;
 /// written from the curves the GPU fills and strokes it by, in its own units under the matrix it is drawn with, so
 /// widths, dashes and ends are the drawing's own; ink and arrows are filled as their passes shape them, each in one
 /// piece; text by its glyphs' outlines. Solid brushes only: pictures, colored meshes and any other brush have no place
-/// in such a drawing and are left out. A group's clip cuts what is drawn in it, and its opacity fades each thing drawn
-/// in it rather than the group as one; its mask, text clip and blend mode are not written.</summary>
+/// in such a drawing and are left out. A group's clip cuts what is drawn in it; its opacity and blend mode act on each
+/// thing drawn in it rather than on the group as one; its mask and text clip are not written.</summary>
 public sealed class PdfContentSession : IDrawingSession
 {
     private const double Kappa = 0.5522847498307936;
@@ -205,6 +206,11 @@ public sealed class PdfContentSession : IDrawingSession
         _content.SaveState();
         _groupOpacities.Push(_opacity);
         _opacity *= Math.Clamp(options.Opacity, 0, 1);
+        if (options.BlendMode != BlendMode.Normal)
+        {
+            _content.BlendMode(ToPdf(options.BlendMode));
+        }
+
         if (options.Clip is { } clip && clip.CurvesForDrawing is { } curves)
         {
             var place = Through(options.ClipPlacement?.Matrix ?? options.ClipTransform);
@@ -216,6 +222,26 @@ public sealed class PdfContentSession : IDrawingSession
 
         return this;
     }
+
+    private static PdfBlendMode ToPdf(BlendMode mode) => mode switch
+    {
+        BlendMode.Multiply => PdfBlendMode.Multiply,
+        BlendMode.Screen => PdfBlendMode.Screen,
+        BlendMode.Overlay => PdfBlendMode.Overlay,
+        BlendMode.Darken => PdfBlendMode.Darken,
+        BlendMode.Lighten => PdfBlendMode.Lighten,
+        BlendMode.ColorDodge => PdfBlendMode.ColorDodge,
+        BlendMode.ColorBurn => PdfBlendMode.ColorBurn,
+        BlendMode.HardLight => PdfBlendMode.HardLight,
+        BlendMode.SoftLight => PdfBlendMode.SoftLight,
+        BlendMode.Difference => PdfBlendMode.Difference,
+        BlendMode.Exclusion => PdfBlendMode.Exclusion,
+        BlendMode.Hue => PdfBlendMode.Hue,
+        BlendMode.Saturation => PdfBlendMode.Saturation,
+        BlendMode.Color => PdfBlendMode.Color,
+        BlendMode.Luminosity => PdfBlendMode.Luminosity,
+        _ => PdfBlendMode.Normal,
+    };
 
     public IDrawingSession PopGroup()
     {
