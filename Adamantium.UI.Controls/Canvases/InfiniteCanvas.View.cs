@@ -846,13 +846,17 @@ public partial class InfiniteCanvas : ICanvasCamera
     // crossing it is about.
     private void DrawReadout(IDrawingSession session, Vector2<double> world)
     {
-        if (!ShowsPointerReadout || !_pointerInside || ReadoutSize <= 0) return;
+        // A point of the drawing caught says what kind it is, whether or not the plate shows where the pointer is.
+        var kind = string.IsNullOrEmpty(_snapKind) ? null : _snapKind;
+        if ((!ShowsPointerReadout && kind == null) || !_pointerInside || ReadoutSize <= 0) return;
         if (HandleBrush is not { } plate || SelectionBrush is not SolidColorBrush ink) return;
 
         // Invariant, so the decimal separator is a point whatever the machine's language is: under a comma locale the
         // pair read as one number with too many digits.
-        var text = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.##}; {1:0.##}",
-            world.X, world.Y);
+        var where = ShowsPointerReadout
+            ? string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.##}; {1:0.##}", world.X, world.Y)
+            : null;
+        var text = kind == null ? where : where == null ? kind : kind + "   " + where;
         var size = ShapeReadout(text);
         if (size.Width <= 0 || size.Height <= 0) return;
 

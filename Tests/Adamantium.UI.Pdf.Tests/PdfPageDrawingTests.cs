@@ -52,6 +52,22 @@ public class PdfPageDrawingTests
         Assert.That(ay, Is.EqualTo(expectedY).Within(1e-4));
     }
 
+    // The paths a page draws are given out - outline, place, stroked or filled - for a measurement to snap to.
+    [Test]
+    public void ThePathsDrawnAreGivenOut_WithWhereTheyStand()
+    {
+        var document = new TestPdf().Open("0 0 10 20 re f 5 5 m 50 5 l S");
+        var paths = PdfPageDrawing.Build(document, document.Pages[0]).CollectPaths();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(paths, Has.Count.EqualTo(2));
+            Assert.That(paths[0].IsFilled && !paths[0].IsStroked, Is.True, "the box is filled only");
+            Assert.That(paths[1].IsStroked && !paths[1].IsFilled, Is.True, "the line is stroked only");
+            Assert.That(At(paths[0].Matrix, 0, 0), Is.EqualTo((0.0, 100.0)), "not in the page's points, y down");
+        });
+    }
+
     [Test]
     public void TheCropBoxIsThePage()
     {

@@ -41,6 +41,22 @@ public sealed class PdfPageDrawing : Drawing
 
     internal IReadOnlyList<PdfDrawStep> Steps => _steps;
 
+    /// <summary>The paths the page's content draws, in the order drawn - what a measurement snaps to; not the covers a
+    /// pattern or a mask lays. Made anew each call, so called once a sheet.</summary>
+    public IReadOnlyList<PdfDrawnPath> CollectPaths()
+    {
+        var paths = new List<PdfDrawnPath>();
+        foreach (var step in _steps)
+        {
+            if (step is PdfGeometryStep { IsPagePath: true, Geometry: not null } drawn)
+            {
+                paths.Add(new PdfDrawnPath(drawn.Geometry, drawn.Matrix, drawn.Stroke != null, drawn.Fill != null));
+            }
+        }
+
+        return paths;
+    }
+
     public static PdfPageDrawing Build(PdfDocument document, PdfPage page, PdfPageDrawingOptions options = null,
         CancellationToken cancellation = default)
     {
