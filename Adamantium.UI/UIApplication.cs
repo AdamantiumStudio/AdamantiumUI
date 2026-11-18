@@ -2341,21 +2341,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             loop.Join(UIThreadExitingWaitMs);
         }
 
-        if (KeepsDevicesOnExit)
-        {
-            Log.Logger.Warning("The graphics devices are left to the process's end: something still draws with them");
-            return;
-        }
-
         if (GraphicsDeviceService is IDisposable disposableDevice)
         {
             disposableDevice?.Dispose();
         }
     }
-
-    /// <summary>Set while shutting down when something still draws with the devices - a universe stuck in a frame: they
-    /// are not freed then, and go with the process.</summary>
-    protected bool KeepsDevicesOnExit { get; set; }
 
     /// <summary>
     /// Calling this method will pause running service

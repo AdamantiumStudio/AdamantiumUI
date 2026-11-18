@@ -22,8 +22,6 @@ public class UniverseService : IUniverseService
 
     private readonly List<IUniverse> _suspended = [];
 
-    private readonly List<IUniverse> _stopping = [];
-
     private bool _suspending;
 
     private bool _closed;
@@ -141,10 +139,8 @@ public class UniverseService : IUniverseService
             .OfType<WindowRenderService>()
             .FirstOrDefault(x => ReferenceEquals(x.Window, window));
 
-        bool closed;
         lock (_locker)
         {
-            closed = _closed;
             var index = _universes.FindIndex(x => ReferenceEquals(x.Universe, universe));
             if (index >= 0)
             {
@@ -152,7 +148,7 @@ public class UniverseService : IUniverseService
             }
         }
 
-        if (!closed && service != null)
+        if (service != null)
         {
             StartLoop(universe);
         }
@@ -164,8 +160,7 @@ public class UniverseService : IUniverseService
         lock (_locker)
         {
             _suspending = true;
-            _stopping.RemoveAll(universe => universe.IsStopped);
-            holding = [.. _universes.Select(x => x.Universe), .. _retired, .. _stopping];
+            holding = [.. _universes.Select(x => x.Universe), .. _retired];
             _suspended.AddRange(holding);
         }
 
@@ -193,10 +188,15 @@ public class UniverseService : IUniverseService
 
     private void StartLoop(IUniverse universe)
     {
-        universe.StartHostedLoop();
         bool hold;
         lock (_locker)
         {
+            if (_closed)
+            {
+                return;
+            }
+
+            universe.StartHostedLoop();
             hold = _suspending && !_suspended.Contains(universe);
             if (hold)
             {
@@ -233,40 +233,30 @@ public class UniverseService : IUniverseService
     {
         lock (_locker)
         {
-            _stopping.RemoveAll(universe => universe.IsStopped);
-            if (_retired.Count == 0)
+            for (int i = 0; i < _retired.Count; i++)
             {
-                return;
+                _retired[i].ShutDown();
             }
-
-            Parallel.ForEach(_retired, ShutDownLogged);
-            foreach (var universe in _retired)
-            {
-                if (!universe.IsStopped)
-                {
-                    _stopping.Add(universe);
-                }
-            }
-
             _retired.Clear();
         }
     }
 
-    public bool ShutDownAll()
+    public void ShutDownAll()
     {
         List<IUniverse> all;
         lock (_locker)
         {
             _closed = true;
-            all = [.. _universes.Select(x => x.Universe), .. _retired, .. _stopping];
+            all = [.. _universes.Select(x => x.Universe), .. _retired];
             _universes.Clear();
             _retired.Clear();
-            _stopping.Clear();
             _suspended.Clear();
         }
 
-        Parallel.ForEach(all, ShutDownLogged);
-        return all.TrueForAll(universe => universe.IsStopped);
+        foreach (var universe in all)
+        {
+            ShutDownLogged(universe);
+        }
     }
 
     private static void ShutDownLogged(IUniverse universe)

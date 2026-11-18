@@ -564,10 +564,8 @@ All packages share one version.
 
 - A multiverse application shuts down every universe on its exit - shown, removed or still being made
   (`IUniverseService.ShutDownAll`, on `ShuttingDown`) - before the devices they draw with are freed; before, a
-  universe still running when the main window closed was never stopped. They stop together, waiting a bounded time;
-  when one stays stuck in a frame, the devices are left to the process's end rather than freed under it
-  (`UIApplication.KeepsDevicesOnExit`). A universe that does not stop when removed is still held for a device
-  recreation and the exit.
+  universe still running when the main window closed was never stopped. One made after the exit is shut down as it
+  comes.
 - A canvas tool rail's buttons sit in the middle of their pane: each had a gap after it on both sides, so a column was a
   gap wider than its buttons and stood that much left of the middle (5 pixels in the macOS theme). The gaps are now the
   panel's, between buttons only.

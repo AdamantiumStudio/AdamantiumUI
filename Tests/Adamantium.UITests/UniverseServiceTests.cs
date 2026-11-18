@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.UI.Universes;
@@ -17,11 +18,10 @@ public class UniverseServiceTests
         var removed = await service.CreateUniverseAsync("removed", () => RecordingUniverse.Make(out _));
         service.RemoveUniverse(removed);
 
-        var stopped = service.ShutDownAll();
+        service.ShutDownAll();
 
         Assert.Multiple(() =>
         {
-            Assert.That(stopped, Is.True);
             Assert.That(Calls(live).Count(call => call == "ShutDown"), Is.EqualTo(1));
             Assert.That(Calls(removed).Count(call => call == "ShutDown"), Is.EqualTo(1));
             Assert.That(service.Universes, Is.Empty);
@@ -45,28 +45,6 @@ public class UniverseServiceTests
         Assert.That(service.Universes, Is.Empty);
     }
 
-    [Test]
-    public async Task AUniverseStuckWhenRemoved_IsStillHeldForTheDevices_AndOnExitSaysNotAllStopped()
-    {
-        var service = new UniverseService();
-        var stuck = await service.CreateUniverseAsync("stuck", () => RecordingUniverse.Make(out _));
-        var recorder = (RecordingUniverse)(object)stuck;
-        recorder.IsStuck = true;
-        service.RemoveUniverse(stuck);
-        service.RetireRemoved();
-
-        service.SuspendLoops();
-        service.ResumeLoops();
-        var stopped = service.ShutDownAll();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(recorder.Calls, Does.Contain("SuspendHostedLoop"), "a stopping universe went unheld for the devices");
-            Assert.That(recorder.Calls.Count(call => call == "ShutDown"), Is.EqualTo(2), "the exit asked it again");
-            Assert.That(stopped, Is.False, "a universe still drawing was said stopped");
-        });
-    }
-
-    private static System.Collections.Generic.List<string> Calls(object universe) =>
+    private static List<string> Calls(object universe) =>
         ((RecordingUniverse)universe).Calls;
 }

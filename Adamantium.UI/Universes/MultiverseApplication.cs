@@ -26,10 +26,7 @@ public abstract class MultiverseApplication : UIApplication
 
     private void OnApplicationShuttingDown(object sender, EventArgs e)
     {
-        if (!UniverseService.ShutDownAll())
-        {
-            KeepsDevicesOnExit = true;
-        }
+        UniverseService.ShutDownAll();
     }
 
     private void UniverseServiceOnUniverseAdded(IUniverse obj)
