@@ -41,10 +41,11 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     public static readonly AdamantiumProperty DescriptionProperty = AdamantiumProperty.Register(nameof(Description),
         typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
-    /// <summary>What the editor says while it is empty - the value an empty one stands for, such as a name taken from
-    /// the system. Objects that disagree say that instead.</summary>
+    /// <summary>What an editor that has a placeholder - a field, a number, a drop-down, a date - says while it is empty:
+    /// the value an empty one stands for, such as a name taken from the system. Objects that disagree say that instead.
+    /// </summary>
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
-        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null));
+        typeof(String), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
 
     public String Placeholder
     {

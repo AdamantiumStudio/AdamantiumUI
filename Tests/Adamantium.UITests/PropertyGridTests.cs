@@ -1796,6 +1796,8 @@ public class PropertyGridTests
         var grid = MultiGrid(name, first, second);
         TemplateRows(grid);
         var agreed = ((TextBox)RowOf(grid, name).Editor).Placeholder;
+        name.Placeholder = "Said again";
+        var changed = ((TextBox)RowOf(grid, name).Editor).Placeholder;
 
         second.Name = "Other";
         grid.SelectedObjects = new[] { first, second };
@@ -1805,6 +1807,7 @@ public class PropertyGridTests
         Assert.Multiple(() =>
         {
             Assert.That(agreed, Is.EqualTo("From the system"));
+            Assert.That(changed, Is.EqualTo("Said again"), "a placeholder changed with the grid open did not show");
             Assert.That(mixed, Is.EqualTo(grid.MixedText), "the objects' disagreement is what an empty editor says");
         });
     }
