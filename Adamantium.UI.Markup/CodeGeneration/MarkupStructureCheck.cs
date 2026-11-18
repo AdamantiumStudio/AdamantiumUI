@@ -295,6 +295,8 @@ internal sealed class MarkupStructureCheck
         return dataContext.Values[0] switch
         {
             AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" } binding when PathOf(binding) is { } path => Read(path, context, null),
+            // A binding written as an element gives a value of a type not known here, not itself.
+            AumlAstObjectNode { TypeReference.Name: "Binding" or "MultiBinding" } => null,
             AumlAstObjectNode element => TypeOf(element),
             _ => null
         };

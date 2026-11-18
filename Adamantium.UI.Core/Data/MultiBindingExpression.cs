@@ -48,7 +48,17 @@ public class MultiBindingExpression : BindingExpressionBase
 
    // Children share our Target (so they resolve against the same DataContext) but have NO target property — their
    // values feed our converter. A child may be any kind of binding, a MultiBinding too, which is what enables nesting.
-   private BindingExpressionBase CreateChild(BindingBase childBinding) => childBinding?.CreateExpression(Target, null);
+   // Feeding the element's own DataContext, they read the one it inherits, as a plain Binding of it does.
+   private BindingExpressionBase CreateChild(BindingBase childBinding)
+   {
+      var child = childBinding?.CreateExpression(Target, null);
+      if (child != null)
+      {
+         child.FeedsDataContext = ReadsInheritedContext;
+      }
+
+      return child;
+   }
 
    private void OnChildValueChanged(BindingExpressionBase child)
    {

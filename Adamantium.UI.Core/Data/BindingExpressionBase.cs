@@ -63,6 +63,14 @@ public abstract class BindingExpressionBase
 
    public AdamantiumProperty TargetProperty { get; set; }
 
+   /// <summary>Whether this feeds a binding of its element's own DataContext - a MultiBinding's child - and so reads the
+   /// DataContext the element inherits, not the one it is making.</summary>
+   internal bool FeedsDataContext { get; set; }
+
+   /// <summary>Whether the value read is the one the element inherits: a binding of its DataContext, or a child of one.
+   /// </summary>
+   internal bool ReadsInheritedContext => FeedsDataContext || TargetProperty == FundamentalUIComponent.DataContextProperty;
+
    internal ValuePriority Priority { get; set; } = ValuePriority.Binding;
 
    internal Style OwnerStyle { get; set; }

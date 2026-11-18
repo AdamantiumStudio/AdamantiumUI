@@ -285,7 +285,7 @@ public class BindingExpression : BindingExpressionBase
    private object ContextRoot()
    {
       var element = DataContextSource;
-      if (element == null || !ReferenceEquals(element, Target) || TargetProperty != FundamentalUIComponent.DataContextProperty)
+      if (element == null || !ReferenceEquals(element, Target) || !ReadsInheritedContext)
       {
          return element?.DataContext;
       }
@@ -455,6 +455,12 @@ public class BindingExpression : BindingExpressionBase
             {
                AwaitAttach(anchor);
             }
+         }
+         // Reading the context the element inherits before the element stands anywhere: read again once it does.
+         else if (!named && Binding.Source == null && _contextOwner == null && ReadsInheritedContext
+                  && AnchorElement(Target) is { IsAttachedToVisualTree: false } waiting)
+         {
+            AwaitAttach(waiting);
          }
 
          return;
