@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `CanvasHistory.Remap` with `ICanvasRemap`: a plane laid out anew under its things - a document's sheets turned or
+  moved - carries the history over instead of forgetting it. Each step is asked for itself on the new plane
+  (`ICanvasStep.Remapped`): the canvas's own steps and the inspector's take the new copies of their items and the
+  places carried along. A step that cannot follow is forgotten with everything that leans on it, and `Changed` is not
+  raised.
+
 - `PropertyDefinition.Placeholder`: what a line's editor says while it is empty - the value an empty one stands for,
   such as a name taken from the system. Objects that disagree still say so instead.
 

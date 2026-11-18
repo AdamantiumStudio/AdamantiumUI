@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
@@ -530,5 +531,57 @@ public class CanvasHistoryTests
         canvas.Redo();
 
         Assert.That(canvas.Selection, Is.Empty);
+    }
+
+    // THE PLANE LAID OUT ANEW - a document's sheets turned - puts its things down again as new copies elsewhere. The
+    // history follows: an undo moves the new copy back to where the old one was, carried along.
+    [Test]
+    public void AHistoryCarriedToAPlaneLaidOutAnew_UndoesOnTheNewCopies()
+    {
+        var scene = new CanvasScene();
+        var item = Box(0, 0);
+        scene.Add(item);
+        var canvas = Sized(scene);
+        canvas.History.Record(scene, "Move", () => item.Move(new Vector2<double>(10, 0)));
+        var announced = 0;
+        canvas.History.Changed += (_, _) => announced++;
+
+        var copy = Box(110, 0);
+        scene.Reset([copy]);
+        canvas.History.Remap(new ShiftedRemap(new Dictionary<ICanvasItem, ICanvasItem> { [item] = copy },
+            new Vector2<double>(100, 0)));
+        canvas.Undo();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(announced, Is.EqualTo(1), "carrying the history over was announced as a change of the drawing");
+            Assert.That(scene.Items, Is.EqualTo(new ICanvasItem[] { copy }), "the undo brought back the old copy");
+            Assert.That(copy.Bounds.X, Is.EqualTo(100).Within(1e-9), "not moved back to where the old one was, carried");
+        });
+    }
+
+    // ...and a step holding something that has no copy now cannot follow: it goes, with everything done before it.
+    [Test]
+    public void AStepThatCannotFollow_IsForgottenWithEverythingBeforeIt()
+    {
+        var scene = new CanvasScene();
+        var gone = Box(0, 0);
+        var kept = Box(40, 0);
+        scene.Add(gone);
+        scene.Add(kept);
+        var canvas = Sized(scene);
+        canvas.History.Record(scene, "Move gone", () => gone.Move(new Vector2<double>(5, 0)));
+        canvas.History.Record(scene, "Take gone", () => scene.Remove(gone));
+        canvas.History.Record(scene, "Move kept", () => kept.Move(new Vector2<double>(5, 0)));
+
+        canvas.History.Remap(new ShiftedRemap(new Dictionary<ICanvasItem, ICanvasItem> { [kept] = kept },
+            new Vector2<double>(0, 0)));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(canvas.History.NextUndo, Is.EqualTo("Move kept"));
+            Assert.That(canvas.Undo(), Is.True);
+            Assert.That(canvas.History.CanUndo, Is.False, "steps holding what has no copy were kept");
+        });
     }
 }
