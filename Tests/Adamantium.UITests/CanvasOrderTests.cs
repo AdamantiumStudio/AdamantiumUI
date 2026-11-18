@@ -571,6 +571,38 @@ public class CanvasOrderTests
         Assert.That(glass.Rectangles, Is.Not.Empty, "the band round several things drew no box");
     }
 
+    // A THING WITH NO FRAME BUT OUTLINES OF ITS OWN - a mark on two lines of text - is marked by them, an edge a side;
+    // held with another, the one frame round both is drawn instead.
+    [Test]
+    public void AThingWithNoFrameIsMarkedByItsOwnOutlines()
+    {
+        var canvas = Canvas();
+        canvas.SelectionBrush = Brushes.DodgerBlue;
+        IReadOnlyList<IReadOnlyList<Vector2<double>>> lines =
+        [
+            [new(0, 0), new(100, 0), new(100, 10), new(0, 10)],
+            [new(0, 20), new(60, 20), new(60, 30), new(0, 30)],
+        ];
+        var marked = new OutlinedCanvasItem(lines, new Rect(0, 0, 100, 30));
+        var other = new OutlinedCanvasItem(lines, new Rect(0, 0, 100, 30));
+        canvas.Scene.Add(marked);
+        canvas.Scene.Add(other);
+
+        canvas.Select(marked, false);
+        var alone = new Rendering.RecordingDrawingSession();
+        canvas.DrawChrome(alone, new CanvasPlacements());
+
+        canvas.SelectMany(new List<ICanvasItem> { marked, other }, false);
+        var together = new Rendering.RecordingDrawingSession();
+        canvas.DrawChrome(together, new CanvasPlacements());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(alone.Rectangles, Has.Count.EqualTo(8), "the outlines were not drawn an edge a side");
+            Assert.That(together.Rectangles, Has.Count.EqualTo(4), "two things held were not framed as one");
+        });
+    }
+
     // ...AND FOLLOWS IT UP. Raised to the top, the thing has nothing drawn over it any more and the frame comes with it.
     [Test]
     public void TheFrameFollowsWhatItIsRoundToTheTop()

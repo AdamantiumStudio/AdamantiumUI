@@ -65,6 +65,10 @@ public interface ICanvasItem : INotifyPropertyChanged
     /// application control).</summary>
     ICanvasItem Copy() => null;
 
+    /// <summary>What marks it selected when it is selected alone and has no frame: closed outlines in world units, such
+    /// as the lines of text a mark lies on; null for none.</summary>
+    IReadOnlyList<IReadOnlyList<Vector2<double>>> SelectionOutlines => null;
+
     /// <summary>The one color this item reads as, or null; each item knows where its own color lives.</summary>
     Color? Paint => null;
 

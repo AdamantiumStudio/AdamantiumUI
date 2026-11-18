@@ -943,6 +943,10 @@ public partial class InfiniteCanvas : ICanvasCamera
                     drawing.PartBy(() => Edge(bounds, turn, side)));
             }
         }
+        else if (_selection.Count == 1 && _selection[0].SelectionOutlines is { } outlines)
+        {
+            DrawSelectionOutlines(drawing, outlines);
+        }
 
         if (HandleSize <= 0) return;
 
@@ -1022,10 +1026,32 @@ public partial class InfiniteCanvas : ICanvasCamera
         return turned.Apply(point, about);
     }
 
-    private Matrix4x4F Edge(Rect bounds, CanvasTransform? turn, int edge)
+    // An item with no frame marked by its own outlines, each edge a pixel wide wherever the camera puts it.
+    private void DrawSelectionOutlines(CanvasDrawing drawing, IReadOnlyList<IReadOnlyList<Vector2<double>>> outlines)
     {
-        var from = FrameCorner(bounds, turn, edge);
-        var to = FrameCorner(bounds, turn, (edge + 1) % 4);
+        foreach (var outline in outlines)
+        {
+            if (outline == null || outline.Count < 2)
+            {
+                continue;
+            }
+
+            for (var corner = 0; corner < outline.Count; corner++)
+            {
+                var from = outline[corner];
+                var to = outline[(corner + 1) % outline.Count];
+                drawing.Session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
+                    drawing.PartBy(() => Segment(WorldToScreen(from), WorldToScreen(to))));
+            }
+        }
+    }
+
+    private Matrix4x4F Edge(Rect bounds, CanvasTransform? turn, int edge) =>
+        Segment(FrameCorner(bounds, turn, edge), FrameCorner(bounds, turn, (edge + 1) % 4));
+
+    // A unit edge stretched from one screen point to another.
+    private Matrix4x4F Segment(Vector2<double> from, Vector2<double> to)
+    {
         var along = to - from;
         var length = Math.Sqrt(along.X * along.X + along.Y * along.Y);
 
