@@ -10,6 +10,9 @@ All packages share one version.
 - `ICanvasItem.SelectionOutlines`: an item with no frame - with no grips, not turned and not framed with others -
   says what marks it selected, as closed outlines in world units (the lines of text a mark lies on). The canvas
   draws them a pixel wide in the selection's color, over the item, wherever the camera puts them.
+- `PdfContentSession` writes a group's blend mode into the appearance, so a highlight drawn multiplied into the sheet
+  is saved multiplied into the page. A PDF page draws text markups the file gives no appearance - highlight,
+  underline, strikeout, squiggle - by the one the engine builds for them.
 - `PdfPageDrawing.Pressing` and `CanPress`: the page with an annotation drawn by its down appearance (`AP` `D`) in
   place of its normal one, read with the page and swapped without reading it again - for the annotations
   `PdfPageDrawingOptions.PressableAnnotation` names, none by default; nothing is pressed for print.
