@@ -534,12 +534,14 @@ public partial class InfiniteCanvas
         if (yes) done?.Invoke();
     }
 
-    /// <summary>Also takes down a question it is still waiting on: the window is its own, made for that one answer.
-    /// </summary>
+    /// <summary>Also takes down a question it is still waiting on: the window is its own, made for that one answer; and
+    /// lets go of the built-in inspector sections no panel is showing.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
         Answered(false);
+        BuiltInInspectorSections?.Discard(shownToo: false);
+        BuiltInToolSections?.Discard(shownToo: false);
     }
 
     /// <summary>How far a pasted or duplicated copy is put from the original, in WORLD units. Far enough to see that

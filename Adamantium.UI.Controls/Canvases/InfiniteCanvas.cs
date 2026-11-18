@@ -403,11 +403,11 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         typeof(ICanvasScene), typeof(InfiniteCanvas),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSceneChanged));
 
-    /// <summary>The application's inspector sections, laid over the theme's: a known kind is replaced, a new kind added. See
-    /// <see cref="ToolSections"/> for tools.</summary>
+    /// <summary>The application's inspector sections, laid over the theme's and the control's built-in ones: a known kind
+    /// is replaced, a new kind added. See <see cref="ToolSections"/> for tools.</summary>
     public static readonly AdamantiumProperty InspectorSectionsProperty = AdamantiumProperty.Register(
         nameof(InspectorSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, OnSectionsChanged));
 
     public CanvasInspectorSections InspectorSections
     {
@@ -419,7 +419,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// tool's <see cref="ICanvasTool.Name"/>.</summary>
     public static readonly AdamantiumProperty ToolSectionsProperty = AdamantiumProperty.Register(
         nameof(ToolSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, OnSectionsChanged));
 
     public CanvasInspectorSections ToolSections
     {
@@ -431,7 +431,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// under the application's <see cref="InspectorSections"/>, which stay the application's.</summary>
     public static readonly AdamantiumProperty BuiltInInspectorSectionsProperty = AdamantiumProperty.Register(
         nameof(BuiltInInspectorSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, OnBuiltInSectionsChanged));
 
     public CanvasInspectorSections BuiltInInspectorSections
     {
@@ -442,12 +442,25 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>The same for the tools' page, under the application's <see cref="ToolSections"/>.</summary>
     public static readonly AdamantiumProperty BuiltInToolSectionsProperty = AdamantiumProperty.Register(
         nameof(BuiltInToolSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, OnBuiltInSectionsChanged));
 
     public CanvasInspectorSections BuiltInToolSections
     {
         get => GetValue<CanvasInspectorSections>(BuiltInToolSectionsProperty);
         set => SetValue(BuiltInToolSectionsProperty, value);
+    }
+
+    /// <summary>Raised when any of the inspector's sets is handed in anew, so a panel shows it at once.</summary>
+    internal event EventHandler SectionsChanged;
+
+    private static void OnSectionsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.SectionsChanged?.Invoke(component, EventArgs.Empty);
+
+    // The control's own sets are the canvas's: the ones replaced are let go once the panel has moved off them.
+    private static void OnBuiltInSectionsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        OnSectionsChanged(component, e);
+        (e.OldValue as CanvasInspectorSections)?.Discard(shownToo: true);
     }
 
     // WHAT CAN BE CHOSEN, for the lines that offer a choice. On the CANVAS rather than on whatever panel is showing

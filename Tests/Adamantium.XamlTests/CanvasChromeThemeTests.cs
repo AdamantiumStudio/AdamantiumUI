@@ -660,14 +660,19 @@ public class CanvasChromeThemeTests
         Settle(window);
         var before = Headers(canvas);
 
+        // Handed in anew with the picture still held: shown at once, not at the next pick.
         canvas.InspectorSections = SetsFor("Image", "App's own");
-        canvas.Select(null, false);
-        canvas.Select(picture, false);
         Settle(window);
         var replaced = Headers(canvas);
 
+        canvas.ClearSelection();
+        canvas.BuiltInToolSections = SetsFor(null, "Board's tools");
+        Settle(window);
+        var tools = Headers(canvas);
+
         Assert.Multiple(() =>
         {
+            Assert.That(tools, Does.Contain("Board's tools"), "the control's own tool set never reached the panel");
             Assert.That(before, Does.Contain("Board's"), "the control's own set never reached the panel");
             Assert.That(before, Does.Not.Contain("Picture"), "the control's set did not replace the theme's for its kind");
             Assert.That(before, Does.Contain("App's"), "the application's set was not laid over");
