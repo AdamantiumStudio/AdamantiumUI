@@ -63,27 +63,18 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
     public CanvasHistoryChange LastChange { get; private set; }
 
     /// <summary>Carries every step over to a plane laid out anew, the newest first; one that cannot follow is forgotten
-    /// with everything that leans on it. Nothing is undone or done, so <see cref="Changed"/> is not raised.</summary>
+    /// with everything that leans on it. Announced as <see cref="CanvasHistoryChange.Remapped"/>: nothing was done.
+    /// </summary>
     public void Remap(ICanvasRemap remap)
     {
         if (remap == null || (_done.Count == 0 && _undone.Count == 0)) return;
 
-        var undoable = CanUndo;
-        var redoable = CanRedo;
         var last = LastStep;
         LastStep = null;
         Carry(_done, remap, last);
         Carry(_undone, remap, last);
-
-        if (undoable != CanUndo)
-        {
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(CanUndo)));
-        }
-
-        if (redoable != CanRedo)
-        {
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(CanRedo)));
-        }
+        LastChange = CanvasHistoryChange.Remapped;
+        Announce();
     }
 
     // From the end, which is the next to take back either way: a step that cannot follow takes with it the ones before

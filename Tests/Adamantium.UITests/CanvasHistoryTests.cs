@@ -550,11 +550,16 @@ public class CanvasHistoryTests
         scene.Reset([copy]);
         canvas.History.Remap(new ShiftedRemap(new Dictionary<ICanvasItem, ICanvasItem> { [item] = copy },
             new Vector2<double>(100, 0)));
+        var change = canvas.History.LastChange;
         canvas.Undo();
 
         Assert.Multiple(() =>
         {
-            Assert.That(announced, Is.EqualTo(1), "carrying the history over was announced as a change of the drawing");
+            Assert.That(change, Is.EqualTo(CanvasHistoryChange.Remapped), "the carrying over was not told as such");
+        });
+        Assert.Multiple(() =>
+        {
+            Assert.That(announced, Is.EqualTo(2), "the carrying over and the undo were not both announced");
             Assert.That(scene.Items, Is.EqualTo(new ICanvasItem[] { copy }), "the undo brought back the old copy");
             Assert.That(copy.Bounds.X, Is.EqualTo(100).Within(1e-9), "not moved back to where the old one was, carried");
         });
