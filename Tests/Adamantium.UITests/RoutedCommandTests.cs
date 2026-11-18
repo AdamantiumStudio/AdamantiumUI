@@ -44,6 +44,26 @@ public class RoutedCommandTests
         Assert.That(ran, Is.EqualTo(new object[] { inner }));
     }
 
+    // A binding that answers by where the command came from is asked from there again just before it runs.
+    [Test]
+    public void ABindingAnsweringByTheSource_IsAskedFromItAgainBeforeTheRun()
+    {
+        var (outer, _, field) = Tree();
+        var ran = 0;
+        CommandManager.GetCommandBindings(outer).Add(new CommandBinding(Shout, (_, _) => ran++,
+            (_, e) => e.CanExecute = ReferenceEquals(e.OriginalSource, field)));
+
+        var canRun = Shout.Query(null, field).CanExecute;
+        var didRun = Shout.Execute(null, field);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(canRun, Is.True, "asked from the button");
+            Assert.That(didRun, Is.True, "asked again from it, so run");
+            Assert.That(ran, Is.EqualTo(1));
+        });
+    }
+
     [Test]
     public void AnElementsOwnBinding_GoesBeforeItsClassBinding_AndAClassBindingServesDerivedTypes()
     {

@@ -589,6 +589,9 @@ All packages share one version.
 
 ### Fixed
 
+- A routed command about to run asks its binding again from where it came (`OriginalSource`, `Source`): a binding that
+  answered by where the command came from - a button in an item's template - was asked from nowhere and the command
+  did not run.
 - A `TreeView` choosing several nodes (`Extended`, `Multiple`) keeps them all chosen when one of them is pressed: a drag
   from it carries them together, as in a file manager and as a `ListBox` did. Let go where it was pressed, that node
   alone is chosen - or, with Ctrl, it is taken out; let go after a drag, the choice stays. The press used to choose the
