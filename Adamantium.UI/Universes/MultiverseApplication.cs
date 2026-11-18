@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Core;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.ECS;
@@ -20,6 +21,12 @@ public abstract class MultiverseApplication : UIApplication
         EntityWorld.ServiceManager.OnDrawStarted += ServiceManagerOnDrawStarted;
         EntityWorld.ServiceManager.OnDrawFinished += ServiceManagerOnOnDrawFinished;
         UniverseService.OnUniverseAdded += UniverseServiceOnUniverseAdded;
+        ShuttingDown += OnApplicationShuttingDown;
+    }
+
+    private void OnApplicationShuttingDown(object sender, EventArgs e)
+    {
+        UniverseService.ShutDownAll();
     }
 
     private void UniverseServiceOnUniverseAdded(IUniverse obj)

@@ -24,6 +24,8 @@ public class UniverseService : IUniverseService
 
     private bool _suspending;
 
+    private bool _closed;
+
     private readonly EntityWorld _world;
 
     public UniverseService(EntityWorld world = null)
@@ -48,9 +50,20 @@ public class UniverseService : IUniverseService
         var universe = (T)Activator.CreateInstance(typeof(T), args);
         universe.InitializeUniverse();
         var key = new UniverseKey(name, wnd, service, universe);
+        bool closed;
         lock (_locker)
         {
-            _universes.Add(key);
+            closed = _closed;
+            if (!closed)
+            {
+                _universes.Add(key);
+            }
+        }
+
+        if (closed)
+        {
+            universe.ShutDown();
+            throw new OperationCanceledException("The application is shutting down.");
         }
 
         if (service != null && wnd != null)
@@ -74,9 +87,19 @@ public class UniverseService : IUniverseService
             }
             catch
             {
+                bool closed;
                 lock (_locker)
                 {
-                    _retired.Add(made);
+                    closed = _closed;
+                    if (!closed)
+                    {
+                        _retired.Add(made);
+                    }
+                }
+
+                if (closed)
+                {
+                    made.ShutDown();
                 }
 
                 throw;
@@ -85,16 +108,24 @@ public class UniverseService : IUniverseService
             return made;
         }, cancellationToken);
 
+        bool closed;
         lock (_locker)
         {
-            if (cancellationToken.IsCancellationRequested)
+            closed = _closed;
+            if (!closed && cancellationToken.IsCancellationRequested)
             {
                 _retired.Add(universe);
             }
-            else
+            else if (!closed)
             {
                 _universes.Add(new UniverseKey(name, null, null, universe));
             }
+        }
+
+        if (closed)
+        {
+            universe.ShutDown();
+            throw new OperationCanceledException("The application is shutting down.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -157,10 +188,15 @@ public class UniverseService : IUniverseService
 
     private void StartLoop(IUniverse universe)
     {
-        universe.StartHostedLoop();
         bool hold;
         lock (_locker)
         {
+            if (_closed)
+            {
+                return;
+            }
+
+            universe.StartHostedLoop();
             hold = _suspending && !_suspended.Contains(universe);
             if (hold)
             {
@@ -202,6 +238,36 @@ public class UniverseService : IUniverseService
                 _retired[i].ShutDown();
             }
             _retired.Clear();
+        }
+    }
+
+    public void ShutDownAll()
+    {
+        List<IUniverse> all;
+        lock (_locker)
+        {
+            _closed = true;
+            all = [.. _universes.Select(x => x.Universe), .. _retired];
+            _universes.Clear();
+            _retired.Clear();
+            _suspended.Clear();
+        }
+
+        foreach (var universe in all)
+        {
+            ShutDownLogged(universe);
+        }
+    }
+
+    private static void ShutDownLogged(IUniverse universe)
+    {
+        try
+        {
+            universe.ShutDown();
+        }
+        catch (Exception fault)
+        {
+            Serilog.Log.Logger.Error(fault, "A universe failed to shut down");
         }
     }
 
