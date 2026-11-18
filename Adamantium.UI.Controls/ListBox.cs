@@ -469,6 +469,7 @@ public class ListBox : Selector
             }
 
             listItem.IsSelected = IsItemSelected(item);   // recycled containers inherit the new item's selection state
+            listItem.ForgetPress();
         }
         else
         {

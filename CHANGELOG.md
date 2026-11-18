@@ -580,6 +580,12 @@ All packages share one version.
 
 ### Fixed
 
+- A `TreeView` choosing several nodes (`Extended`, `Multiple`) keeps them all chosen when one of them is pressed: a drag
+  from it carries them together, as in a file manager and as a `ListBox` did. Let go where it was pressed, that node
+  alone is chosen - or, with Ctrl, it is taken out; let go after a drag, the choice stays. The press used to choose the
+  node alone at once, so a drag took only it. A tree, a list and a table wait for a press's release one way: the
+  keys held as it came count, a press let go away from where it came - a drag a drag source took - is no click, and
+  a row given other data forgets it. A finger held on a chosen node or row keeps the choice for the menu.
 - A `MultiBinding` of an element's own `DataContext` reads the context the element inherits, as a plain `Binding` of it
   does, and reads it again once the element stands in a tree; its children read the element's own DataContext - the
   one they were making - and stayed null. The markup check no longer takes such a binding for an object of the

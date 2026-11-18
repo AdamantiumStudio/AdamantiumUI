@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows" Description="A tree that chooses several nodes keeps them all chosen when one of them is pressed and dragged - a drag carries them together, as in a file manager; pressed and let go where it was, that node alone is chosen.">
+  <Select Target="id=GalleryTabs/id=Trees" />
+  <Wait Target="id=Files/type=TreeItem" Timeout="20s" />
+  <Expand Target="id=SelectionMode" />
+  <Select Target="id=SelectionMode/name=Extended" />
+  <Expand Target='id=Files/name="C:\\"' />
+  <Scroll Target='id=Files/name="C:\\"/name=Windows' />
+  <Click Target='id=Files/name="C:\\"/name=Windows' />
+  <Select Target='id=Files/name="C:\\"/name=Users' Add="true" />
+  <Expect Target='id=Files/name="C:\\"/name=Windows' Selected="True" />
+  <Expect Target='id=Files/name="C:\\"/name=Users' Selected="True" />
+  <!-- A drag from one of them: both stay chosen. -->
+  <Drag Target='id=Files/name="C:\\"/name=Windows' From="40,10" To="40,60" />
+  <Expect Target='id=Files/name="C:\\"/name=Windows' Selected="True" />
+  <Expect Target='id=Files/name="C:\\"/name=Users' Selected="True" />
+  <!-- Pressed and let go where it was: that one alone. -->
+  <Click Target='id=Files/name="C:\\"/name=Windows' />
+  <Expect Target='id=Files/name="C:\\"/name=Windows' Selected="True" />
+  <Expect Target='id=Files/name="C:\\"/name=Users' Selected="False" />
+</Scenario>

@@ -131,7 +131,7 @@ public class DataGridRow : Panel
     public int Number { get; private set; }
     private readonly Stack<DataGridCell> _pool = new();
     private readonly List<int> _leaving = new();
-    private readonly TouchTap _tap = new();
+    private readonly RowTap _tap = new();
     private int _tapColumn;
 
     public DataGridRow()
@@ -693,7 +693,8 @@ public class DataGridRow : Panel
 
         // A finger picks a cell on its tap, so scrolling the table through this row selects nothing; a finger's second
         // tap still opens the cell. Dragging a finger scrolls - it does not sweep a selection.
-        if (e.ClickCount < 2 && _tap.Begin(e, this))
+        // Measured in the table, so the table scrolling under a still finger is no drag.
+        if (e.ClickCount < 2 && _tap.Begin(e, (IInputComponent)Owner ?? this))
         {
             _tapColumn = columnIndex;
             return;
@@ -723,7 +724,7 @@ public class DataGridRow : Panel
     {
         if (e.HoldingState == HoldingState.Started && _tap.End(e) && Owner != null && _tapColumn < Owner.Columns.Count)
         {
-            SelectCell(_tapColumn, e.Modifiers);
+            SelectCell(_tapColumn, _tap.Modifiers);
         }
     }
 
@@ -751,7 +752,7 @@ public class DataGridRow : Panel
         base.OnPointerReleased(e);
         if (_tap.End(e) && Owner != null && _tapColumn < Owner.Columns.Count)
         {
-            SelectCell(_tapColumn, e.Modifiers);
+            SelectCell(_tapColumn, _tap.Modifiers);
             if (Owner.Columns[_tapColumn].TogglesOnClick) Owner.ToggleFromRow(this, _tapColumn);
             return;
         }
