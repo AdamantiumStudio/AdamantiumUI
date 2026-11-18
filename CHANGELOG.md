@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `ICanvasItem.SelectionOutlines`: an item with no frame - selected alone, with no grips and not turned - says what
+  marks it selected, as closed outlines in world units (the lines of text a mark lies on). The canvas draws them a
+  pixel wide in the selection's color, over the item, wherever the camera puts them.
 - `PdfPageDrawing.Pressing` and `CanPress`: the page with an annotation drawn by its down appearance (`AP` `D`) in
   place of its normal one, read with the page and swapped without reading it again - for the annotations
   `PdfPageDrawingOptions.PressableAnnotation` names, none by default; nothing is pressed for print.
