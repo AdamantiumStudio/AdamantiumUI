@@ -237,6 +237,29 @@ public class PdfContentSessionTests
         Assert.That((state?["ca"] as PdfReal)?.Value, Is.EqualTo(0.25).Within(1e-9));
     }
 
+    // A highlight multiplied into the page stays multiplied in the saved appearance; a plain group names no blend.
+    [Test]
+    public void AGroupsBlendMode_IsAGraphicsStateTheFormNames()
+    {
+        var content = new PdfContentBuilder();
+        var session = new PdfContentSession(content, PdfMatrix.Identity);
+        session.PushGroup(new DrawingGroupOptions { BlendMode = BlendMode.Multiply });
+        session.PushGroup(new DrawingGroupOptions());
+        session.DrawRectangle(new SolidColorBrush(Red), new Rect(0, 0, 10, 10));
+        session.PopGroup();
+        session.PopGroup();
+
+        var form = content.ToFormXObject(new PdfRectangle(0, 0, 10, 10));
+        var resources = form.Dictionary["Resources"] as PdfDictionary;
+        var states = resources?["ExtGState"] as PdfDictionary;
+        Assert.Multiple(() =>
+        {
+            Assert.That(((states?["BM0"] as PdfDictionary)?["BM"] as PdfName)?.Value, Is.EqualTo("Multiply"));
+            Assert.That(states?.Count, Is.EqualTo(1));
+            Assert.That(Encoding.ASCII.GetString(content.ToContent()), Does.StartWith("q\n/BM0 gs\nq\n"));
+        });
+    }
+
     [Test]
     public void APopWithNoGroupIsAnError()
     {

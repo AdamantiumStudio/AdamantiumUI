@@ -265,6 +265,26 @@ public class PdfObjectDrawingTests
     }
 
     [Test]
+    public void AHighlightWithNoAppearance_IsFilledInItsColor_MultipliedIntoThePage()
+    {
+        var pdf = new TestPdf { PageExtra = "/Annots [5 0 R]" };
+        pdf.Add("<< /Type /Annot /Subtype /Highlight /Rect [100 50 120 60] /C [1 1 0] /CA 0.5 " +
+                "/QuadPoints [100 60 120 60 100 50 120 50] >>");
+
+        var (_, session) = Draw(pdf, "");
+        var drawn = session.All<DrawnGeometry>().Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(session.All<OpenedGroup>().Any(group => group.Options.BlendMode == BlendMode.Multiply),
+                "multiplied into the page");
+            Assert.That(((SolidColorBrush)drawn.Brush).Color.B, Is.EqualTo(0), "in the highlight's yellow");
+            Assert.That(((SolidColorBrush)drawn.Brush).Color.R, Is.EqualTo(255));
+            Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((100.0, 50.0)), "over its area");
+        });
+    }
+
+    [Test]
     public void APressedAnnotation_IsDrawnByItsDownAppearance_InPlaceOfItsNormalOne()
     {
         var pdf = new TestPdf { PageExtra = "/Annots [5 0 R 8 0 R]" };
