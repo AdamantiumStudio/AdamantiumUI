@@ -14,6 +14,10 @@ public sealed class PdfPageDrawingOptions
     /// <summary>Annotations not to draw, though they are shown - those the caller draws itself.</summary>
     public Func<PdfAnnotation, bool> SkipAnnotation { get; init; }
 
+    /// <summary>Annotations the caller presses: their down appearances are read with the page for
+    /// <see cref="PdfPageDrawing.Pressing"/>. None by default.</summary>
+    public Func<PdfAnnotation, bool> PressableAnnotation { get; init; }
+
     /// <summary>Whether the page is drawn for print: optional content and annotations as they are printed, not as they
     /// are shown.</summary>
     public bool Print { get; init; }

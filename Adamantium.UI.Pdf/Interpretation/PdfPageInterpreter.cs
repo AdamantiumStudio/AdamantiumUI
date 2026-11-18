@@ -43,6 +43,7 @@ internal sealed partial class PdfPageInterpreter
     private readonly Dictionary<PdfStream, ReadOnlyMemory<byte>?> _streams = new(ReferenceEqualityComparer.Instance);
     private readonly List<string> _problems = [];
     private readonly HashSet<string> _toldOperators = [];
+    private readonly List<PdfPressableSteps> _pressable = [];
     private PdfGraphicsState _state;
     private int _openGroups;
     private int _streamsEntered;
@@ -65,6 +66,10 @@ internal sealed partial class PdfPageInterpreter
     }
 
     public IReadOnlyList<string> Problems => _problems;
+
+    /// <summary>The annotations drawn with a down appearance: where each is among the draws, and its draws pressed.
+    /// </summary>
+    public IReadOnlyList<PdfPressableSteps> Pressable => _pressable;
 
     public List<PdfDrawStep> Draw(PdfPage page)
     {

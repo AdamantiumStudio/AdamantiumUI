@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Adamantium.Pdf.Annotations;
 using Adamantium.Pdf.Document;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -19,12 +20,17 @@ namespace Adamantium.UI.Pdf;
 public sealed class PdfPageDrawing : Drawing
 {
     private readonly IReadOnlyList<PdfDrawStep> _steps;
+    private readonly IReadOnlyList<PdfPressableSteps> _pressable;
+    private readonly PdfPressableSteps _pressed;
 
-    private PdfPageDrawing(IReadOnlyList<PdfDrawStep> steps, Rect bounds, IReadOnlyList<string> problems)
+    private PdfPageDrawing(IReadOnlyList<PdfDrawStep> steps, Rect bounds, IReadOnlyList<string> problems,
+        IReadOnlyList<PdfPressableSteps> pressable, PdfPressableSteps pressed)
     {
         _steps = steps;
         Bounds = bounds;
         Problems = problems;
+        _pressable = pressable;
+        _pressed = pressed;
     }
 
     public override Rect Bounds { get; }
@@ -42,14 +48,56 @@ public sealed class PdfPageDrawing : Drawing
         ArgumentNullException.ThrowIfNull(page);
         var interpreter = new PdfPageInterpreter(document, options ?? PdfPageDrawingOptions.Default, cancellation);
         var steps = interpreter.Draw(page);
-        return new PdfPageDrawing(steps, new Rect(0, 0, page.Width, page.Height), interpreter.Problems);
+        return new PdfPageDrawing(steps, new Rect(0, 0, page.Width, page.Height), interpreter.Problems,
+            interpreter.Pressable, null);
+    }
+
+    /// <summary>Whether <paramref name="annotation"/> was drawn with a down appearance to show while it is pressed.
+    /// </summary>
+    public bool CanPress(PdfAnnotation annotation) => PressableOf(annotation) != null;
+
+    /// <summary>The page with <paramref name="annotation"/> drawn by its down appearance in place of its normal one;
+    /// with none pressed for one with no down appearance, or null.</summary>
+    public PdfPageDrawing Pressing(PdfAnnotation annotation)
+    {
+        var pressable = annotation == null ? null : PressableOf(annotation);
+        return ReferenceEquals(pressable, _pressed)
+            ? this
+            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable);
     }
 
     public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
-        foreach (var step in _steps)
+        if (_pressed == null)
         {
-            step.Draw(session, transform);
+            Draw(session, transform, _steps, 0, _steps.Count);
+            return;
+        }
+
+        Draw(session, transform, _steps, 0, _pressed.Start);
+        Draw(session, transform, _pressed.Down, 0, _pressed.Down.Count);
+        Draw(session, transform, _steps, _pressed.End, _steps.Count);
+    }
+
+    private PdfPressableSteps PressableOf(PdfAnnotation annotation)
+    {
+        foreach (var pressable in _pressable)
+        {
+            if (ReferenceEquals(pressable.Annotation, annotation.Dictionary))
+            {
+                return pressable;
+            }
+        }
+
+        return null;
+    }
+
+    private static void Draw(IDrawingSession session, Matrix4x4F transform, IReadOnlyList<PdfDrawStep> steps, int from,
+        int to)
+    {
+        for (var index = from; index < to; index++)
+        {
+            steps[index].Draw(session, transform);
         }
     }
 }

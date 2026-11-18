@@ -265,6 +265,45 @@ public class PdfObjectDrawingTests
     }
 
     [Test]
+    public void APressedAnnotation_IsDrawnByItsDownAppearance_InPlaceOfItsNormalOne()
+    {
+        var pdf = new TestPdf { PageExtra = "/Annots [5 0 R 8 0 R]" };
+        pdf.Add("<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /AP << /N 6 0 R /D 7 0 R >> >>");
+        pdf.AddStream("/Type /XObject /Subtype /Form /BBox [0 0 1 1]", "1 0 0 rg 0 0 1 1 re f");
+        pdf.AddStream("/Type /XObject /Subtype /Form /BBox [0 0 1 1]", "0 0 1 rg 0 0 1 1 re f");
+        pdf.Add("<< /Type /Annot /Subtype /Square /Rect [20 0 30 10] /AP << /N 6 0 R >> >>");
+        var document = pdf.Open("");
+        var pressable = new PdfPageDrawingOptions { PressableAnnotation = _ => true };
+        var page = PdfPageDrawing.Build(document, document.Pages[0], pressable);
+        var annotations = document.Pages[0].Annotations;
+
+        var pressed = page.Pressing(annotations[0]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(page.CanPress(annotations[0]), Is.True);
+            Assert.That(page.CanPress(annotations[1]), Is.False, "the square has no down appearance");
+            Assert.That(Blues(page), Is.EqualTo(new byte[] { 0, 0 }), "drawn normal: both red");
+            Assert.That(Blues(pressed), Is.EqualTo(new byte[] { 255, 0 }), "the link blue in its own place");
+            Assert.That(Blues(pressed.Pressing(null)), Is.EqualTo(new byte[] { 0, 0 }));
+            Assert.That(page.Pressing(annotations[1]), Is.SameAs(page));
+            Assert.That(PdfPageDrawing.Build(document, document.Pages[0]).CanPress(annotations[0]), Is.False,
+                "down appearances are read only for what the caller presses");
+            Assert.That(PdfPageDrawing.Build(document, document.Pages[0],
+                    new PdfPageDrawingOptions { Print = true, PressableAnnotation = _ => true })
+                .CanPress(annotations[0]), Is.False, "nothing is pressed on paper");
+        });
+    }
+
+    private static byte[] Blues(PdfPageDrawing page)
+    {
+        var session = new RecordingSession();
+        page.Render(session, Matrix4x4<float>.Identity, null);
+        Assert.That(session.Depth, Is.Zero, "every group is closed");
+        return session.All<DrawnGeometry>().Select(drawn => ((SolidColorBrush)drawn.Brush).Color.B).ToArray();
+    }
+
+    [Test]
     public void APageIsBuiltOffTheUIThread()
     {
         var pdf = new TestPdf();
