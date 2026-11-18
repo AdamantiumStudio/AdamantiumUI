@@ -939,8 +939,7 @@ public partial class InfiniteCanvas : ICanvasCamera
             for (var edge = 0; edge < 4; edge++)
             {
                 var side = edge;
-                session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
-                    drawing.PartBy(() => Edge(bounds, turn, side)));
+                DrawEdge(drawing, () => Edge(bounds, turn, side));
             }
         }
         else if (_selection.Count == 1 && _selection[0].SelectionOutlines is { } outlines)
@@ -980,16 +979,28 @@ public partial class InfiniteCanvas : ICanvasCamera
             CanvasTransform? turn = item is ICanvasTransformed { Transform.IsSomething: true } turned
                 ? turned.Transform
                 : null;
+
+            // An item with outlines of its own is marked by them here too, unless it is turned.
+            if (turn == null && item.Handles == CanvasHandles.None && item.SelectionOutlines is { } outlines)
+            {
+                DrawSelectionOutlines(drawing, outlines);
+                continue;
+            }
+
             for (var edge = 0; edge < 4; edge++)
             {
                 var side = edge;
-                drawing.Session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
-                    drawing.PartBy(() => Edge(box, turn, side)));
+                DrawEdge(drawing, () => Edge(box, turn, side));
             }
         }
     }
 
     private static readonly Rect UnitEdge = new(0, -0.5, 1, 1);
+
+    // One edge of the selection's marks, a pixel wide, carried by the placement it is given.
+    private void DrawEdge(CanvasDrawing drawing, Func<Matrix4x4F> where) =>
+        drawing.Session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
+            drawing.PartBy(where));
 
     // The POINTS of a single selected item that has them, in screen pixels like every other grip.
     private void DrawPointHandles(CanvasDrawing drawing, Pen pen, Brush brush)
@@ -1036,12 +1047,13 @@ public partial class InfiniteCanvas : ICanvasCamera
                 continue;
             }
 
-            for (var corner = 0; corner < outline.Count; corner++)
+            // Closed round, but two points are one edge, not the same edge twice.
+            var edges = outline.Count > 2 ? outline.Count : 1;
+            for (var corner = 0; corner < edges; corner++)
             {
                 var from = outline[corner];
                 var to = outline[(corner + 1) % outline.Count];
-                drawing.Session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
-                    drawing.PartBy(() => Segment(WorldToScreen(from), WorldToScreen(to))));
+                DrawEdge(drawing, () => Segment(WorldToScreen(from), WorldToScreen(to)));
             }
         }
     }

@@ -603,6 +603,30 @@ public class CanvasOrderTests
         });
     }
 
+    // ...and where things held are each framed on their own - marks on separate sheets - each is marked by its outlines.
+    [Test]
+    public void ThingsFramedEachOnTheirOwnAreMarkedByTheirOutlines()
+    {
+        var canvas = Canvas(new SeparatelyFramedBoard());
+        canvas.SelectionBrush = Brushes.DodgerBlue;
+        IReadOnlyList<IReadOnlyList<Vector2<double>>> lines =
+        [
+            [new(0, 0), new(100, 0), new(100, 10), new(0, 10)],
+            [new(0, 20), new(60, 20)],
+        ];
+        var one = new OutlinedCanvasItem(lines, new Rect(0, 0, 100, 20));
+        var other = new OutlinedCanvasItem(lines, new Rect(0, 0, 100, 20));
+        canvas.Scene.Add(one);
+        canvas.Scene.Add(other);
+
+        canvas.SelectMany(new List<ICanvasItem> { one, other }, false);
+        var glass = new Rendering.RecordingDrawingSession();
+        canvas.DrawChrome(glass, new CanvasPlacements());
+
+        // Four edges round the line and one along the stroke, for each.
+        Assert.That(glass.Rectangles, Has.Count.EqualTo(10), "each was not marked by its own outlines");
+    }
+
     // ...AND FOLLOWS IT UP. Raised to the top, the thing has nothing drawn over it any more and the frame comes with it.
     [Test]
     public void TheFrameFollowsWhatItIsRoundToTheTop()
