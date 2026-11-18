@@ -10,6 +10,9 @@ All packages share one version.
 - `InfiniteCanvas.BuiltInInspectorSections` and `BuiltInToolSections`: the inspector sections a control built on the
   canvas ships, set by its style. The inspector lays them over the theme's and under the application's
   `InspectorSections` and `ToolSections`, so an application adding its own sets no longer takes the control's away.
+- `ICanvasItem.SelectionOutlines`: an item with no frame - with no grips, not turned and not framed with others -
+  says what marks it selected, as closed outlines in world units (the lines of text a mark lies on). The canvas
+  draws them a pixel wide in the selection's color, over the item, wherever the camera puts them.
 - `PdfContentSession` writes a group's blend mode into the appearance, so a highlight drawn multiplied into the sheet
   is saved multiplied into the page. A PDF page draws text markups the file gives no appearance - highlight,
   underline, strikeout, squiggle - by the one the engine builds for them.
