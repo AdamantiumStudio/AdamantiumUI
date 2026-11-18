@@ -619,7 +619,7 @@ public class CanvasInspector : Control, ICanvasPart
 
     // The settings sections for the tool in hand, matched by the tool's own name, so an added tool can have settings.
     private void ReadTool() =>
-        Fill(_tools, Sections(ToolSetsKey, Canvas?.ToolSections, ref _toolSections), Names(Canvas?.Tool));
+        Fill(_tools, ToolSets(), Names(Canvas?.Tool));
 
     private void ReadStructure()
     {
@@ -703,7 +703,7 @@ public class CanvasInspector : Control, ICanvasPart
         // whole imported drawing could not be painted.
         var lines = Fill(_grid, SelectionWanted(chosen));
 
-        Fill(_tools, Sections(ToolSetsKey, Canvas?.ToolSections, ref _toolSections), Names(Canvas?.Tool));
+        Fill(_tools, ToolSets(), Names(Canvas?.Tool));
 
         // Show whichever was reached for last, the tool or the selection.
         var anything = many > 0;
@@ -721,20 +721,29 @@ public class CanvasInspector : Control, ICanvasPart
     /// <summary>...and the same for the page shown while nothing is selected - what the TOOL in hand is set by.</summary>
     public const string ToolSetsKey = "CanvasToolSections";
 
-    // The theme's default sections with the canvas's own laid over, kept once built: the resource is not shared, and a
-    // fresh set per repaint would reset what the user opened.
-    private CanvasInspectorSections Sections(string key, CanvasInspectorSections mine, ref CanvasInspectorSections kept)
+    // The theme's default sections, then the control's built-in ones, then the application's, each laid over the one
+    // before; the default kept once built: the resource is not shared, and a fresh set per repaint would reset what the
+    // user opened.
+    private CanvasInspectorSections Sections(string key, CanvasInspectorSections builtIn, CanvasInspectorSections mine,
+        ref CanvasInspectorSections kept)
     {
         kept ??= UIAppContext.Current?.ResourceManager?.FindResource(this, key) as CanvasInspectorSections;
 
-        if (kept == null) return mine;
+        var layered = kept == null ? builtIn : kept.With(builtIn);
+        if (layered == null)
+        {
+            return mine;
+        }
 
         // THE LAYING-OVER IS DONE EVERY TIME, and only the default is kept. What an application hands in can be bound,
         // and a binding arrives after the panel has been built - so a merge done once would be a merge done before the
         // application had said anything. It costs a list of references; the SECTIONS in it are the same objects either
         // way, which is what matters: they are what a person has opened and folded.
-        return mine == null ? kept : kept.With(mine);
+        return mine == null ? layered : layered.With(mine);
     }
+
+    private CanvasInspectorSections ToolSets() =>
+        Sections(ToolSetsKey, Canvas?.BuiltInToolSections, Canvas?.ToolSections, ref _toolSections);
 
     // What was built from the resource, until a new template says a new theme is in - that one can ship a different
     // default, and what was kept was not written for it.
@@ -796,7 +805,8 @@ public class CanvasInspector : Control, ICanvasPart
 
     private IReadOnlyList<PropertySection> SelectionWanted(IReadOnlyList<ICanvasItem> chosen)
     {
-        var wanted = Wanted(Sections(SelectionSetsKey, Canvas?.InspectorSections, ref _selectionSections), Names(chosen));
+        var wanted = Wanted(Sections(SelectionSetsKey, Canvas?.BuiltInInspectorSections, Canvas?.InspectorSections,
+            ref _selectionSections), Names(chosen));
         if (wanted == null)
         {
             return null;

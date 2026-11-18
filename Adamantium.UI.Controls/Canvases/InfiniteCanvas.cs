@@ -427,6 +427,29 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(ToolSectionsProperty, value);
     }
 
+    /// <summary>The inspector sections a control built on the canvas ships, set by its style: laid over the theme's and
+    /// under the application's <see cref="InspectorSections"/>, which stay the application's.</summary>
+    public static readonly AdamantiumProperty BuiltInInspectorSectionsProperty = AdamantiumProperty.Register(
+        nameof(BuiltInInspectorSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
+        new PropertyMetadata(null));
+
+    public CanvasInspectorSections BuiltInInspectorSections
+    {
+        get => GetValue<CanvasInspectorSections>(BuiltInInspectorSectionsProperty);
+        set => SetValue(BuiltInInspectorSectionsProperty, value);
+    }
+
+    /// <summary>The same for the tools' page, under the application's <see cref="ToolSections"/>.</summary>
+    public static readonly AdamantiumProperty BuiltInToolSectionsProperty = AdamantiumProperty.Register(
+        nameof(BuiltInToolSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
+        new PropertyMetadata(null));
+
+    public CanvasInspectorSections BuiltInToolSections
+    {
+        get => GetValue<CanvasInspectorSections>(BuiltInToolSectionsProperty);
+        set => SetValue(BuiltInToolSectionsProperty, value);
+    }
+
     // WHAT CAN BE CHOSEN, for the lines that offer a choice. On the CANVAS rather than on whatever panel is showing
     // them: these are the kinds of thing this plane deals in, they are the same however the panel is dressed, and a
     // set of lines held as a resource can reach them through the canvas it is pointed at. A panel that kept its own

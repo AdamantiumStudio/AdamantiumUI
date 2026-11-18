@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.BuiltInInspectorSections` and `BuiltInToolSections`: the inspector sections a control built on the
+  canvas ships, set by its style. The inspector lays them over the theme's and under the application's
+  `InspectorSections` and `ToolSections`, so an application adding its own sets no longer takes the control's away.
 - `PdfPageDrawing.Pressing` and `CanPress`: the page with an annotation drawn by its down appearance (`AP` `D`) in
   place of its normal one, read with the page and swapped without reading it again - for the annotations
   `PdfPageDrawingOptions.PressableAnnotation` names, none by default; nothing is pressed for print.

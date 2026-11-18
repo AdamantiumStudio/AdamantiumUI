@@ -641,6 +641,56 @@ public class CanvasChromeThemeTests
         });
     }
 
+    // A CONTROL BUILT ON THE CANVAS ships its own sets, laid over the theme's; the application's InspectorSections lie
+    // over both, so an application adding a line does not take the control's away - nor replacing one, the theme's.
+    [Test]
+    public void AControlsBuiltInSetsLieBetweenTheThemesAndTheApplications()
+    {
+        var canvas = Built("Fluent");
+        canvas.BuiltInInspectorSections = SetsFor("Image", "Board's");
+        canvas.InspectorSections = SetsFor("ElementItem", "App's");
+        var scene = new CanvasScene();
+        canvas.Scene = scene;
+        var picture = new ElementItem(new Image { Width = 80, Height = 60 }, new Rect(0, 0, 80, 60));
+        scene.Add(picture);
+
+        var window = new Window { Width = 1000, Height = 700, Content = canvas };
+        Settle(window);
+        canvas.Select(picture, false);
+        Settle(window);
+        var before = Headers(canvas);
+
+        canvas.InspectorSections = SetsFor("Image", "App's own");
+        canvas.Select(null, false);
+        canvas.Select(picture, false);
+        Settle(window);
+        var replaced = Headers(canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Does.Contain("Board's"), "the control's own set never reached the panel");
+            Assert.That(before, Does.Not.Contain("Picture"), "the control's set did not replace the theme's for its kind");
+            Assert.That(before, Does.Contain("App's"), "the application's set was not laid over");
+            Assert.That(before, Does.Contain("Layer"), "the theme's lines every kind gets were lost");
+            Assert.That(replaced, Does.Contain("App's own"), "the application could not replace the control's set");
+            Assert.That(replaced, Does.Not.Contain("Board's"), "the control's set stood over the application's");
+        });
+    }
+
+    private static CanvasInspectorSections SetsFor(string kind, string header)
+    {
+        var sections = new CanvasInspectorSections();
+        var set = new CanvasSectionSet { For = kind };
+        set.Sections.Add(new PropertySection { Header = header, IsExpanded = true });
+        set.Sections[0].Properties.Add(new StringProperty
+        {
+            Header = "Note",
+            Binding = new Adamantium.UI.Core.Data.Binding("Label")
+        });
+        sections.Sets.Add(set);
+        return sections;
+    }
+
     // SEVERAL THINGS AT ONCE still have SOMETHING in common - where they stand, if nothing else. A panel that went
     // blank the moment a band was drawn round a drawing would read as a panel that had lost its contents, and the one
     // thing a person does right after selecting several is move them about.
