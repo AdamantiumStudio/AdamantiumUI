@@ -10,7 +10,8 @@ public class CanvasSectionSets : TrackingCollection<CanvasSectionSet>
 }
 
 /// <summary>What a canvas's inspector shows: <see cref="CanvasSectionSet"/>s in written order, general before particular.
-/// An application's own list is laid over the theme default (<see cref="InfiniteCanvas.InspectorSections"/>).</summary>
+/// A control's built-in list (<see cref="InfiniteCanvas.BuiltInInspectorSections"/>) is laid over the theme default, and
+/// the application's own (<see cref="InfiniteCanvas.InspectorSections"/>) over both.</summary>
 [PerTarget]
 public class CanvasInspectorSections : AdamantiumComponent
 {
@@ -57,6 +58,26 @@ public class CanvasInspectorSections : AdamantiumComponent
         }
 
         return merged;
+    }
+
+    /// <summary>Lets go of the sections, all of them or only those no panel is showing.</summary>
+    internal void Discard(bool shownToo)
+    {
+        foreach (var set in Sets)
+        {
+            if (set == null)
+            {
+                continue;
+            }
+
+            foreach (var section in set.Sections)
+            {
+                if (shownToo || section.VisualParent == null)
+                {
+                    DiscardedVisuals.PublishSubtree(section);
+                }
+            }
+        }
     }
 
     private static CanvasSectionSet Named(CanvasInspectorSections among, string what)
