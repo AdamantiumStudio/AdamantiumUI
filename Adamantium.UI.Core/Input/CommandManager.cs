@@ -416,7 +416,11 @@ public static class CommandManager
     {
         if (Find(sender, e.Command) is { } binding)
         {
-            var asked = new CanExecuteRoutedEventArgs(e.Command, e.Parameter);
+            // Asked as the run will be: from where the command came, so a binding that looks there answers the same.
+            var asked = new CanExecuteRoutedEventArgs(e.Command, e.Parameter)
+            {
+                OriginalSource = e.OriginalSource, Source = e.Source,
+            };
             binding.Ask(sender, asked);
             if (asked.Handled)
             {
