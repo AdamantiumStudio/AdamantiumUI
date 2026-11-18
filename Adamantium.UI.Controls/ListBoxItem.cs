@@ -46,18 +46,18 @@ public class ListBoxItem : ContentControl, ISelectable
     public ListBoxItem()
     {
         AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+        // Handled moves too: a drag source in the row takes the moves of the drag that ends the waiting press.
+        AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler((_, e) => _tap.Move(e)), true);
     }
 
-    // A finger held on a row picks it before the lift opens the menu, so the menu is about the row it was held on.
+    // A finger held on a row picks it before the lift opens the menu, so the menu is about the row it was held on - a row
+    // already selected keeping the selection, so the menu can act on all of it.
     private void OnHolding(object sender, HoldingEventArgs e)
     {
-        if (e.HoldingState != HoldingState.Started || !_deferSelect)
+        if (e.HoldingState == HoldingState.Started && _tap.End(e) && !IsSelected)
         {
-            return;
+            OwnerListBox?.SelectFromContainer(this, _tap.Modifiers);
         }
-
-        _deferSelect = false;
-        OwnerListBox?.SelectFromContainer(this, e.Modifiers);
     }
 
     public bool IsSelected
@@ -99,8 +99,10 @@ public class ListBoxItem : ContentControl, ISelectable
     // Multi-select drag support: a plain click on an ALREADY-selected item defers the selection COLLAPSE until mouse-up, so
     // the whole selection survives long enough to be dragged. If the pointer moves first (a drag begins) the collapse is
     // canceled and the selection is kept; a release without moving applies it (the ordinary "click picks just this one").
-    private bool _deferSelect;
-    private Vector2<double> _downPoint;
+    private readonly RowTap _tap = new();
+
+    // A press waiting on the row's old item does not land on the next one it shows.
+    internal void ForgetPress() => _tap.Cancel();
 
     private ListBox OwnerListBox => this.GetVisualAncestors().OfType<ListBox>().FirstOrDefault();
 
@@ -126,29 +128,13 @@ public class ListBoxItem : ContentControl, ISelectable
         // (plain -> collapse to one, Ctrl -> toggle off). Shift stays immediate (it extends the range, not a drag gesture).
         // A finger always waits for its tap: a press that turns into scrolling the list must select nothing.
         var noShift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) == 0;
-        if (owner != null && (e.Pointer.Type == PointerType.Touch ||
-                              noShift && IsSelected && owner.SelectionMode is SelectionMode.Extended or SelectionMode.Multiple))
+        if (owner != null && _tap.Begin(e, owner,
+                noShift && IsSelected && owner.SelectionMode is SelectionMode.Extended or SelectionMode.Multiple))
         {
-            _deferSelect = true;
-            _downPoint = e.GetPosition(owner);
             return;
         }
+
         owner?.SelectFromContainer(this, e.Modifiers);
-    }
-
-    protected override void OnPointerMoved(PointerEventArgs e)
-    {
-        base.OnPointerMoved(e);
-        if (!_deferSelect)
-        {
-            return;
-        }
-
-        var owner = OwnerListBox;
-        if (owner != null && PlatformSettings.ExceedsDragThreshold(e.GetPosition(owner) - _downPoint, owner))
-        {
-            _deferSelect = false;
-        }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -161,10 +147,9 @@ public class ListBoxItem : ContentControl, ISelectable
 
         e.Handled = true;
         IsPressed = false;
-        if (_deferSelect)
+        if (_tap.End(e))
         {
-            _deferSelect = false;
-            OwnerListBox?.SelectFromContainer(this, e.Modifiers);
+            OwnerListBox?.SelectFromContainer(this, _tap.Modifiers);
         }
     }
 

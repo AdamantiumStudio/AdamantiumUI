@@ -844,6 +844,14 @@ public class TreeView : ItemsControl
         }
     }
 
+    // Whether a press on the node keeps the choice as it is until its release - a plain one or with Ctrl, not Shift, which
+    // reaches a range: the node is chosen, and a drag from it carries all the chosen, as a file manager does (and as a
+    // ListBox does).
+    internal bool KeepsChoiceForDrag(TreeViewItem container, InputModifiers modifiers) =>
+        SelectionMode is TreeViewSelectionMode.Extended or TreeViewSelectionMode.Multiple
+        && container.Row is { } row && _selectedRows.Contains(row)
+        && (modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) == 0;
+
     internal void OnItemClicked(TreeViewItem container, InputModifiers modifiers)
     {
         if (container.Row is not { } row)

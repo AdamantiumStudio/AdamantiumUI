@@ -73,34 +73,38 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
         FocusableProperty.OverrideMetadata(typeof(TreeViewItem), new PropertyMetadata(true));
     }
 
-    private readonly TouchTap _tap = new();
+    private readonly RowTap _tap = new();
 
     public TreeViewItem()
     {
         AddHandler(Gestures.HoldingEvent, new HoldingEventHandler(OnHolding));
+        // Handled ones too: a drag source in the row takes the moves of the drag that ends the waiting press, and a part
+        // of the header may take its release.
+        AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler((_, e) => _tap.Move(e)), true);
+        AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnReleased), true);
     }
 
-    // A finger held on a node picks it before the lift opens the menu, so the menu is about the node it was held on.
+    // A finger held on a node picks it before the lift opens the menu, so the menu is about the node it was held on - a
+    // node among those chosen keeping the choice, as the right button does.
     private void OnHolding(object sender, HoldingEventArgs e)
     {
-        if (e.HoldingState == HoldingState.Started && _tap.End(e))
+        if (e.HoldingState != HoldingState.Started || !_tap.End(e))
         {
-            FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
+            return;
+        }
+
+        if (Row is not { IsSelected: true })
+        {
+            FindOwnerTreeView()?.OnItemClicked(this, _tap.Modifiers);
         }
     }
 
-    protected override void OnPointerMoved(PointerEventArgs e)
+    // The left button's release - or a finger's - ends a waiting press as a click; another button's does not.
+    private void OnReleased(object sender, PointerReleasedEventArgs e)
     {
-        base.OnPointerMoved(e);
-        _tap.Move(e);
-    }
-
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
-    {
-        base.OnPointerReleased(e);
-        if (_tap.End(e))
+        if (e.ChangedButton == MouseButtons.Left && _tap.End(e))
         {
-            FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
+            FindOwnerTreeView()?.OnItemClicked(this, _tap.Modifiers);
         }
     }
 
@@ -163,6 +167,8 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     {
         // Hover belonged to the previous row and no Leave will come; the next mouse move relights it if needed.
         IsPointerOverHeader = false;
+        // A press waiting on the row's old node does not land on its new one.
+        _tap.Cancel();
 
         Row = row;
         DataContext = row.Node;
@@ -257,15 +263,18 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
 
             return;
         }
-        // A finger selects on its tap, so scrolling the tree through this node selects nothing.
-        if (_tap.Begin(e, this))
+        // A finger selects on its tap, so scrolling the tree through this node selects nothing; a press on a chosen node
+        // waits for its release too, as it may start a drag of all the chosen.
+        // Measured in the tree, so the tree scrolling under a still pointer is no drag.
+        var owner = FindOwnerTreeView();
+        if (_tap.Begin(e, (IInputComponent)owner ?? this, owner?.KeepsChoiceForDrag(this, e.Modifiers) == true))
         {
             return;
         }
 
         // Route the click (with its Ctrl/Shift modifiers) to the owner TreeView - the Single/Multiple/Extended policy lives
         // there, since it must reach across rows to clear or range-select the others.
-        FindOwnerTreeView()?.OnItemClicked(this, e.Modifiers);
+        owner?.OnItemClicked(this, e.Modifiers);
     }
 
     // The TreeView hosting this node; its SelectionMode decides the click policy and it owns the flat-list expansion.
