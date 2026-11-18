@@ -121,17 +121,28 @@ struct StrokeRecord
     float* Pattern;
     uint PointCount;
     uint PatternCount;
-    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness and dashes in window units, 16 bends
+    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness and dashes in window units, 16 bends,
+                             // 32 leaned (a perspective: the width the plane's, the feather scaled by it)
     uint Caps;               // start | end << 4 | dash start << 8 | dash end << 12
     uint RoundSegments;
     uint JoinType;
-    uint Pad0;
-    uint Pad1;
+    float LeanedFringe;      // with flag 32, in local units
+    float LeanedPlane;       // with flag 32, the plane's scale LeanedFringe was worked out at
     float4 Pen;             // .x thickness, .y least device thickness (0 none), .z dash offset, .w piece salt
     float4 Window;           // .x trim start, .y trim end, .z transform slot, .w opacity slot (-1 none)
     float4 Color;            // straight RGBA, the element's own alpha folded in
     float4 Extra;            // .x rounded clip slot (-1 none), .y the record's owner, .z miter limit
 };
+
+// Window units per local unit of the plane under `m` where its w is 1; a move within the plane keeps it
+// (GpuStrokeRenderComponent.PlaneScale).
+float PlaneScale(float4x4 m)
+{
+    float d = m[0][0] * (m[1][1] * m[3][3] - m[3][1] * m[1][3])
+            - m[1][0] * (m[0][1] * m[3][3] - m[3][1] * m[0][3])
+            + m[3][0] * (m[0][1] * m[1][3] - m[1][1] * m[0][3]);
+    return sqrt(abs(d));
+}
 
 StrokeRecord* Records;
 float RenderScale;           // device pixels per window unit
@@ -157,7 +168,8 @@ StrokeRecord LoadRecord(uint index)
     StrokeRecord* records = Records;
     StrokeRecord r = records[index];
     NodeSlot* nodes = Transforms;
-    Wvp = mul(mul(r.Local, nodes[(uint)r.Window.z].World), Projection);
+    float4x4 localToWindow = mul(r.Local, nodes[(uint)r.Window.z].World);
+    Wvp = mul(localToWindow, Projection);
 
     Points = r.Points;
     Controls = r.Controls;
@@ -184,9 +196,24 @@ StrokeRecord LoadRecord(uint index)
     StrokeColor = r.Color;
     PieceSalt = r.Pen.w;
 
+    // Under a perspective: the width and dashes are the plane's as the slot is now; the far pixel, the feather and the
+    // least width with it, follows the plane's change since the record was described.
+    if ((r.Flags & 32u) != 0u)
+    {
+        float plane = max(PlaneScale(localToWindow), 1e-6);
+        float farPixel = r.LeanedFringe * r.LeanedPlane / plane;
+        float leanedThickness = r.Pen.x;
+        DashScale = (r.Flags & 8u) != 0u ? 1.0 / plane : 1.0;
+        leanedThickness *= DashScale;
+        if (r.Pen.y > 0.0) leanedThickness = max(leanedThickness, r.Pen.y * farPixel);
+        HalfThickness = leanedThickness * 0.5;
+        Fringe = AntiAlias != 0u ? farPixel : 0.0;
+        return r;
+    }
+
     // The width in local units, worked out from the matrix as it is now: a camera that moved the slot moved the record
-    // with it, and a line measured in the window's units or held to a least width keeps it - its dashes too. A record is
-    // flat (a stroke under a perspective is drawn on its own), so its scale is the same at every point.
+    // with it, and a line measured in the window's units or held to a least width keeps it - its dashes too. A flat
+    // record's scale is the same at every point.
     float2* points = r.Points;
     float device = max(DevicePixelScale(Wvp, r.PointCount > 0u ? points[0] : float2(0.0, 0.0)), 1e-6);
     float thickness = r.Pen.x;

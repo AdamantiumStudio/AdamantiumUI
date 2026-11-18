@@ -64,14 +64,15 @@ internal sealed class FrozenMesh
     /// curves - for the distance field a halo bakes; made on first use.</summary>
     public List<(Vector2<double>[] Points, bool IsClosed)> Loops => _loops ??= _fill?.Loops ?? _outline?.FillLoops();
 
-    /// <summary>The fill of a processed geometry as the geometry keeps it ready, its curves those
-    /// <paramref name="recorded"/> where they were made on the record thread - made even while curves are switched off
-    /// when it has no triangles, as they are all it can be drawn from. Null if it has nothing to draw.</summary>
-    public static FrozenMesh From(Core.Media.Geometry geometry, PathCurves recorded = null)
+    /// <summary>The fill of a processed geometry, with its curves (<paramref name="recorded"/> when made already) unless
+    /// it is drawn <paramref name="fromTriangles"/>; null if it has nothing to draw.</summary>
+    public static FrozenMesh From(Core.Media.Geometry geometry, PathCurves recorded = null, bool fromTriangles = false)
     {
         var fill = geometry.FillForDrawing;
         var outline = recorded ??
-                      (InstancedFillCollector.CurvesEnabled || fill == null ? geometry.CurvesForDrawing : null);
+                      (InstancedFillCollector.CurvesEnabled && !(fromTriangles && fill != null) || fill == null
+                          ? geometry.CurvesForDrawing
+                          : null);
         var curves = outline != null ? CurveFill.From(outline) : null;
         if (fill == null && curves == null)
         {

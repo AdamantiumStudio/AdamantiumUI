@@ -40,7 +40,11 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
 
     /// <summary>The outline as curves, made on the record thread with their tiles for a fill drawn from them; null when
     /// the fill is not drawn from curves.</summary>
-    internal Core.Media.Curves.PathCurves Outline { get; } = OutlineOf(geometry, brush != null);
+    internal Core.Media.Curves.PathCurves Outline { get; } = OutlineOf(geometry, brush);
+
+    /// <summary>Whether the fill is drawn from the triangles and ring the geometry was given - one color over a map's
+    /// tile; another brush keeps the curves, as its edge has no ring.</summary>
+    internal bool FillsFromTriangles { get; } = FromTriangles(geometry, brush);
 
     /// <summary>What the geometry held WHEN THIS PAYLOAD WAS RECORDED. The instance is not enough: a Polygon reopens its
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
@@ -58,9 +62,13 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
         return g;
     }
 
-    private static Core.Media.Curves.PathCurves OutlineOf(Geometry g, bool filled)
+    // Straight edges need no curves, and the curve shader costs a leaned map's every pixel of every layer.
+    private static bool FromTriangles(Geometry g, Brush brush) =>
+        brush is SolidColorBrush && g is { TrianglesAreGiven: true, ContoursAreFillBoundary: true };
+
+    private static Core.Media.Curves.PathCurves OutlineOf(Geometry g, Brush brush)
     {
-        if (g == null || !filled || !Retained.InstancedFillCollector.Enabled ||
+        if (g == null || brush == null || FromTriangles(g, brush) || !Retained.InstancedFillCollector.Enabled ||
             !Retained.InstancedFillCollector.CurvesEnabled)
         {
             return null;
