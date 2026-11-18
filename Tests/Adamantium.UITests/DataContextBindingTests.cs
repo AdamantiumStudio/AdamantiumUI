@@ -70,6 +70,44 @@ public class DataContextBindingTests
         Assert.That(panel.DataContext, Is.SameAs(second));
     }
 
+    // Its children read the parent's context too, and follow it: not the element's own, which they are making.
+    [Test]
+    public void AMultiBindingOnDataContext_ReadsAndFollowsTheParentsContext()
+    {
+        var first = new Item { Name = "first" };
+        var shell = new Shell { Picked = first };
+        var panel = new Border();
+        var multi = new MultiBinding { Converter = new PickedOf(), IsImmediate = true };
+        multi.Bindings.Add(new Binding());
+        multi.Bindings.Add(new Binding(nameof(Shell.Picked)));
+        panel.SetBinding("DataContext", multi);
+        var parent = new StackPanel { DataContext = shell };
+        parent.Children.Add(panel);
+        var window = new Window { Width = 200, Height = 100, Content = parent };
+        Settle(window);
+        var shown = panel.DataContext;
+        var second = new Item { Name = "second" };
+
+        shell.Picked = second;
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.SameAs(first));
+            Assert.That(panel.DataContext, Is.SameAs(second));
+        });
+    }
+
+    // The first value's pick, the second only telling it changed.
+    private sealed class PickedOf : IMultiValueConverter
+    {
+        public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            values is [Shell shell, ..] ? shell.Picked : null;
+
+        public object[] ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new System.NotSupportedException();
+    }
+
     [Test]
     public void ABindingOnDataContext_FollowsTheParentsContext()
     {

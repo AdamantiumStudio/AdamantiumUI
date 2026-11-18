@@ -577,6 +577,10 @@ All packages share one version.
 
 ### Fixed
 
+- A `MultiBinding` of an element's own `DataContext` reads the context the element inherits, as a plain `Binding` of it
+  does, and reads it again once the element stands in a tree; its children read the element's own DataContext - the
+  one they were making - and stayed null. The markup check no longer takes such a binding for an object of the
+  `MultiBinding` type when it checks the paths under it.
 - A multiverse application shuts down every universe on its exit - shown, removed or still being made
   (`IUniverseService.ShutDownAll`, on `ShuttingDown`) - before the devices they draw with are freed; before, a
   universe still running when the main window closed was never stopped. One made after the exit is shut down as it

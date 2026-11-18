@@ -77,6 +77,7 @@ public class BindingPathTests
     [TestCase("<TextBlock Text=\"{Binding}\"/>")]
     [TestCase("<TextBlock x:Name=\"Other\"/><TextBlock Text=\"{Binding Nope, ElementName=Other}\"/>")]
     [TestCase("<Grid DataContext=\"{Binding Settings}\"><TextBlock Text=\"{Binding Volume}\"/></Grid>")]
+    [TestCase("<Grid><Grid.DataContext><MultiBinding><Binding Path=\"Settings\"/></MultiBinding></Grid.DataContext><TextBlock Text=\"{Binding Anything}\"/></Grid>")]
     [TestCase("<ItemsControl><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text=\"{Binding Anything}\"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>")]
     [TestCase("<ItemsControl><ItemsControl.ItemTemplate><DataTemplate x:DataType=\"vm:Item\"><TextBlock Text=\"{Binding Label}\"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>")]
     public void APathItsSourceHas_OrOneTheBuildCannotKnow_Passes(string body)
