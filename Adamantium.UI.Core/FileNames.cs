@@ -41,7 +41,8 @@ public static class FileNames
         var stem = Path.GetFileNameWithoutExtension(safe);
         var extension = Path.GetExtension(safe);
         // An extension that long is no kind of file; cut, it could become one ("x.exe" + spaces + "pdf").
-        if (extension.Length > Limit / 2)
+        var kindDropped = extension.Length > Limit / 2;
+        if (kindDropped)
         {
             stem = safe;
             extension = string.Empty;
@@ -54,16 +55,14 @@ public static class FileNames
             stem = "_" + stem;
         }
 
-        if (stem.Length + extension.Length > Limit)
+        // A dropped kind keeps room for the '_' that stops what is left from reading as one.
+        var room = kindDropped ? Limit - 1 : Limit - extension.Length;
+        if (stem.Length > room)
         {
-            stem = TrimEnds(Cut(stem, Limit - extension.Length - 1));
+            stem = TrimEnds(Cut(stem, room));
         }
 
-        // A cut never leaves a kind the name did not end with.
-        var made = stem + extension;
-        return Path.GetExtension(made).Equals(extension, StringComparison.OrdinalIgnoreCase)
-            ? made
-            : stem + "_" + extension;
+        return kindDropped && Path.GetExtension(stem).Length > 0 ? stem + "_" : stem + extension;
     }
 
     /// <summary><paramref name="name"/> numbered, as a second file of the same name is: "report (2).pdf".</summary>

@@ -46,7 +46,7 @@ public class UntrustedFilesTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(safe, Has.Length.LessThanOrEqualTo(FileNames.Limit).And.Length.GreaterThan(FileNames.Limit - 5));
+            Assert.That(safe, Has.Length.EqualTo(FileNames.Limit));
             Assert.That(safe, Does.EndWith(".pdf"));
         });
     }
@@ -56,11 +56,13 @@ public class UntrustedFilesTests
     {
         var longExtension = FileNames.MakeSafe("report.exe" + new string(' ', 97) + "pdf", "attachment");
         var longStem = FileNames.MakeSafe(new string('a', 190) + ".exe" + new string(' ', 20) + "x.pdf", "attachment");
+        var droppedAtTheLimit = FileNames.MakeSafe("a." + new string('b', 198), "attachment");
 
         Assert.Multiple(() =>
         {
             Assert.That(Path.GetExtension(longExtension), Is.Not.EqualTo(".exe"));
             Assert.That(Path.GetExtension(longStem), Is.EqualTo(".pdf"));
+            Assert.That(droppedAtTheLimit, Has.Length.LessThanOrEqualTo(FileNames.Limit));
         });
     }
 
@@ -222,32 +224,40 @@ public class UntrustedFilesTests
     public void OnUnix_AProgramByItsContent_IsNotOpened_WhateverItsName()
     {
         var folder = Directory.CreateTempSubdirectory("adam-untrusted-").FullName;
-        var platform = FileManager.Platform;
-        var recording = new RecordingPlatform();
         try
         {
-            var windowsProgram = Path.Combine(folder, "invoice");
-            var linuxProgram = Path.Combine(folder, "invoice.dat");
-            var launcher = Path.Combine(folder, "readme");
-            var text = Path.Combine(folder, "notes");
-            File.WriteAllBytes(windowsProgram, "MZ\u0090\0"u8.ToArray());
-            File.WriteAllBytes(linuxProgram, "\u007FELF\u0002"u8.ToArray());
-            File.WriteAllText(launcher, "# made by hand\n[Desktop Entry]\nExec=sh -c evil\n");
-            File.WriteAllText(text, "just notes");
-            FileManager.Platform = recording;
+            string Written(string name, byte[] content)
+            {
+                var path = Path.Combine(folder, name);
+                File.WriteAllBytes(path, content);
+                return path;
+            }
+
+            var windowsProgram = Written("invoice", "MZ\u0090\0"u8.ToArray());
+            var linuxProgram = Written("invoice.dat", "\u007FELF\u0002"u8.ToArray());
+            var shortcut = Written("letter", [0x4C, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00, 0x00]);
+            var launcher = Written("readme", "# made by hand\n[Desktop Entry]\nExec=sh -c evil\n"u8.ToArray());
+            var link = Written("site", "[InternetShortcut]\nURL=file:///evil\n"u8.ToArray());
+            var text = Written("notes", "just notes"u8.ToArray());
 
             Assert.Multiple(() =>
             {
-                Assert.That(FileManager.OpenUntrustedItem(windowsProgram, null), Is.False, "Wine would run it");
-                Assert.That(FileManager.OpenUntrustedItem(linuxProgram, null), Is.False);
-                Assert.That(FileManager.OpenUntrustedItem(launcher, null), Is.False);
-                Assert.That(FileManager.OpenUntrustedItem(text, null), Is.True);
-                Assert.That(recording.Opened, Is.EqualTo(new[] { text }));
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(windowsProgram), Is.True,
+                    "Wine would run it");
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(linuxProgram), Is.True);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(shortcut), Is.True);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(launcher), Is.True);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(link), Is.True);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(text), Is.False);
+                if (OperatingSystem.IsLinux())
+                {
+                    Assert.That(new Adamantium.UI.Platforms.Linux.DesktopFileManager().OpenUntrustedItem(windowsProgram,
+                        IntPtr.Zero), Is.False, "refused before xdg-open");
+                }
             });
         }
         finally
         {
-            FileManager.Platform = platform;
             Directory.Delete(folder, true);
         }
     }

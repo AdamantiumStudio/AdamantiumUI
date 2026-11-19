@@ -10,7 +10,7 @@ All packages share one version.
 - Files from outside, such as a PDF's attachments. `FileManager.OpenUntrustedItem` opens one only after the system's
   checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy and the
   scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to run, and
-  not when its content is a program. `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs,
+  not when its content is a program, a shortcut or a launcher (the desktop goes by content there). `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs,
   scripts, shortcuts, installers, disk images): the system's list on Windows and a shared one everywhere; those are
   never opened, nor are links. `FileManager.MarkUntrusted` marks a file saved from outside.
   `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or

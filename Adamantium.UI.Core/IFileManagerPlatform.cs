@@ -16,7 +16,8 @@ public interface IFileManagerPlatform
     bool IsDangerousToOpen(string fileName);
 
     /// <summary>Opens a file that came from outside, at <paramref name="path"/>, a full path, after the desktop's own
-    /// checks, its warnings shown over <paramref name="ownerWindow"/>; false when it was not opened.</summary>
+    /// checks, its warnings shown over <paramref name="ownerWindow"/>, marked first; false when it was not opened - also
+    /// when its content is a program and the desktop picks the application by content.</summary>
     bool OpenUntrustedItem(string path, IntPtr ownerWindow);
 
     /// <summary>Marks the file at <paramref name="path"/>, a full path, as come from outside, as browsers mark downloads;

@@ -44,10 +44,10 @@ public static class FileManager
 
     /// <summary>Opens a file that came from outside - an attachment, a download - after the desktop's own checks: marked
     /// as from the internet, the system's policy asked, its warning shown over <paramref name="owner"/>. False when it is
-    /// not there, is a link, is <see cref="IsDangerousToOpen">dangerous to open</see>, is a program by its content or was
-    /// not opened. Called on the UI thread.</summary>
+    /// not there, is a link, is <see cref="IsDangerousToOpen">dangerous to open</see>, is a program by its content where
+    /// the desktop goes by content, or was not opened. Called on the UI thread.</summary>
     public static bool OpenUntrustedItem(string path, IWindow owner) =>
-        FullPathOfAFile(path) is { } full && !IsDangerousToOpen(full) && !IsAProgramByContent(full) &&
+        FullPathOfAFile(path) is { } full && !IsDangerousToOpen(full) &&
         Platform.OpenUntrustedItem(full, owner?.Handle ?? IntPtr.Zero);
 
     /// <summary>Marks a file saved from outside, at <paramref name="path"/>, as browsers mark downloads, so the system
@@ -75,45 +75,6 @@ public static class FileManager
             return null;
         }
     }
-
-    // Linux and macOS pick the application by content when the name says nothing they know: a Windows program with no
-    // extension goes to Wine, which needs no right to run. Windows goes by the extension alone.
-    private static bool IsAProgramByContent(string path)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return false;
-        }
-
-        try
-        {
-            Span<byte> start = stackalloc byte[ContentChecked];
-            using var file = File.OpenRead(path);
-            start = start[..file.ReadAtLeast(start, start.Length, throwOnEndOfStream: false)];
-            foreach (var magic in ProgramStarts)
-            {
-                if (start.StartsWith(magic))
-                {
-                    return true;
-                }
-            }
-
-            return start.IndexOf("[Desktop Entry]"u8) >= 0 || start.IndexOf("[KDE Desktop Entry]"u8) >= 0;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            return true;
-        }
-    }
-
-    private const int ContentChecked = 1024;
-
-    // Windows and Linux programs, scripts, Mach-O (both byte orders, 32 and 64 bits) and fat binaries.
-    private static readonly byte[][] ProgramStarts =
-    [
-        "MZ"u8.ToArray(), [0x7F, (byte)'E', (byte)'L', (byte)'F'], "#!"u8.ToArray(), [0xCA, 0xFE, 0xBA, 0xBE],
-        [0xFE, 0xED, 0xFA, 0xCE], [0xFE, 0xED, 0xFA, 0xCF], [0xCE, 0xFA, 0xED, 0xFE], [0xCF, 0xFA, 0xED, 0xFE]
-    ];
 
     // Kinds that run code when opened wherever an interpreter for them is installed, whatever the system says of them -
     // Windows' own list misses Python, Java and more, Linux and macOS keep none. Disk images mount past the system's

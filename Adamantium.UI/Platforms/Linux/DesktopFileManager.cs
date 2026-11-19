@@ -140,11 +140,12 @@ internal sealed class DesktopFileManager : IFileManagerPlatform
     // Linux desktops keep no list of their own; FileManager's shared one is all there is.
     public bool IsDangerousToOpen(string fileName) => false;
 
-    // Without the right to run, xdg-open can only hand the file to an application.
-    public bool OpenUntrustedItem(string path, IntPtr ownerWindow) => MarkUntrusted(path) && OpenItem(path);
+    // Without the right to run and not a program by content, xdg-open can only hand the file to an application.
+    public bool OpenUntrustedItem(string path, IntPtr ownerWindow) =>
+        !UnixUntrustedFiles.IsAProgramByContent(path) && MarkUntrusted(path) && OpenItem(path);
 
     // Linux desktops read no mark from outside; taking away the right to run is all there is.
-    public bool MarkUntrusted(string path) => ExecutionRight.TakeAway(path);
+    public bool MarkUntrusted(string path) => UnixUntrustedFiles.TakeAwayExecution(path);
 
     // xdg-open asks the desktop which application opens the file, as the file manager would.
     public bool OpenItem(string path)
