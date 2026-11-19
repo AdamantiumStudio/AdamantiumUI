@@ -18,4 +18,7 @@ public enum CanvasHistoryChange
 
     /// <summary>Every step was forgotten.</summary>
     Cleared,
+
+    /// <summary>The steps were carried over to a plane laid out anew; nothing was done or taken back.</summary>
+    Remapped,
 }

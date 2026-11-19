@@ -16,4 +16,8 @@ public interface ICanvasStep
     /// <summary>What it changes - the items it adds, takes away, moves or writes - for a listener that follows what a
     /// step touched (<see cref="CanvasHistory.LastStep"/>); nothing by default.</summary>
     IReadOnlyList<object> Targets => [];
+
+    /// <summary>This step on a plane laid out anew: its items and their places carried over, or null when it cannot
+    /// follow - it is then forgotten, with everything done before it.</summary>
+    ICanvasStep Remapped(ICanvasRemap remap) => null;
 }
