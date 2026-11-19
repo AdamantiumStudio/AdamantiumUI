@@ -2225,15 +2225,16 @@ public partial class RenderCache
 
         // Ancestors first: an element sliding inside another that slides composes its world from the outer one's NEW one.
         _byDepth ??= (a, b) => DepthOf(a.Owner).CompareTo(DepthOf(b.Owner));
+        _depthThisFrame.Clear();
         _compositedBuf.Sort(_byDepth);
+        _depthThisFrame.Clear();
 
         _compositedOwners.Clear();
         foreach (var entry in _compositedBuf)
         {
             if (entry.Channel == CompositorChannel.Transform)
             {
-                ApplyCompositedTransform(device, entry);
-                if (entry.Owner != null) _compositedOwners.Add(entry.Owner);
+                if (ApplyCompositedTransform(device, entry)) _compositedOwners.Add(entry.Owner);
             }
             else if (entry.Channel == CompositorChannel.Opacity) ApplyCompositedOpacity(device, entry);
             else ApplyCompositedPaint(device, entry);
@@ -2293,16 +2294,24 @@ public partial class RenderCache
         }
     }
 
+    // Through the snapshots alone, worked out once a frame per owner: an owner not drawn here has none, and is not read
+    // live just to be sorted.
     private int DepthOf(IUIComponent c)
     {
+        if (c == null) return 0;
+        if (_depthThisFrame.TryGetValue(c, out var known)) return known;
+
         var depth = 0;
-        for (var at = c; at != null; at = ApplySnap(at).RenderParent)
+        for (var at = c; at != null; at = _applySnap.TryGetValue(at, out var snap) ? snap.RenderParent : null)
         {
             depth++;
         }
 
+        _depthThisFrame[c] = depth;
         return depth;
     }
+
+    private readonly Dictionary<IUIComponent, int> _depthThisFrame = new();
 
     // OPACITY: the twin of the transform write below, four bytes instead of sixty-four. The element's alpha goes into its
     // opacity slot and every instance under it composes it at draw time, so a fading subtree costs one write however large
@@ -2312,15 +2321,16 @@ public partial class RenderCache
     {
         if (entry.Owner is not { } owner || _transformTable == null) return;
 
-        // An owner whose snapshot this cache does not hold - hidden, mid re-capture, or another window's - is not read
-        // live to find its slot. One it gave a slot of its own keeps fading in it; any other is not its to fade.
-        if (!_applySnap.ContainsKey(owner))
+        // An owner whose snapshot this cache does not hold - hidden, mid re-capture, another window's, or one only read
+        // live - is not read live again to find its slot. One it gave a slot of its own keeps fading in it; any other is
+        // not its to fade. Not marked applied: the window that draws it may still need the loop's mirror.
+        if (!_applySnap.TryGetValue(owner, out var snap) || _readLive.Contains(owner))
         {
-            if (_fadeOwners.TryGetValue(owner, out var held))
+            if (_fadeOwners.TryGetValue(owner, out var held) &&
+                _transformTable.TryGetOpacitySlot(owner.RenderId, out var current) && current == held)
             {
                 _transformTable.SetAlpha(device, held, entry.Alpha);
                 ApplyCopyFades(device, owner, entry);
-                entry.MarkApplied();
             }
 
             return;
@@ -2345,18 +2355,18 @@ public partial class RenderCache
 
         // Keep the snapshot's own value in step, so EffectiveOpacity (which the slot-blind families still bake with)
         // reads the alpha the compositor just applied.
-        if (_applySnap.TryGetValue(owner, out var snap))
-            _applySnap[owner] = new LayoutSnapshot(snap.LocalTransform, snap.RenderSize, snap.ClipToBounds,
-                snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii);
+        _applySnap[owner] = new LayoutSnapshot(snap.LocalTransform, snap.RenderSize, snap.ClipToBounds,
+            snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii);
     }
 
     // TRANSFORM: one 64-byte matrix write moves the whole node, and it lands in TWO places. The transform table is what the
     // GPU reads (the retained instances draw in the new place). The frozen SNAPSHOT is what every compose helper here reads
     // (World, NodeOf, ResolveScissor), so overwriting LocalTransform makes a walk that runs this frame agree with the
     // compositor instead of re-baking the element back where it was.
-    private void ApplyCompositedTransform(IGraphicsDevice device, Compositor.Entry entry)
+    // False when this cache does not draw the owner and so moved nothing.
+    private bool ApplyCompositedTransform(IGraphicsDevice device, Compositor.Entry entry)
     {
-        var owner = entry.Owner;
+        if (entry.Owner is not { } owner) return false;
 
         LayoutSnapshot snap;
         Matrix4x4F parentWorld;
@@ -2376,13 +2386,18 @@ public partial class RenderCache
             snap = fb.Snap;
             parentWorld = fb.ParentWorld;
         }
-        else return;   // never applied yet (its motion-node promotion isn't recorded here); the loop mirror re-records.
+        else
+        {
+            // Not drawn here, or never applied yet (its motion-node promotion isn't recorded); the loop mirror re-records.
+            return false;
+        }
 
         var world = snap.RenderParent != null ? entry.Local * parentWorld : entry.Local;
         _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode, snap.RenderParent, snap.Opacity, snap.SelfOpacity);
         _worldCache[owner] = world;   // set directly: the _applySnap chain may be mid-recapture, so don't recompose off it
         _transformTable.SetMatrix(device, AcquireLiveSlot(device, owner.RenderId), world);
         entry.MarkApplied();   // tell the loop thread the render thread is drawing this - so its mirror stops re-baking it
+        return true;
     }
 
     // PAINT: Tick already republished the brush's snapshot; here every slot that paints with it is re-baked from that
