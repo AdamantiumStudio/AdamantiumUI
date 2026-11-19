@@ -339,6 +339,19 @@ public class NumericUpDown : RangeLimitsBase
         set => SetValue(RepeatIntervalProperty, value);
     }
 
+    /// <summary>Puts the caret in the number with all of it selected, so what is typed replaces it. False before the
+    /// template, or while the text itself cannot take focus.</summary>
+    public bool FocusText()
+    {
+        if (_text == null || !_text.Focus())
+        {
+            return false;
+        }
+
+        _text.SelectAll();
+        return true;
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();

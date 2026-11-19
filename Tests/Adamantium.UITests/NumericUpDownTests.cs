@@ -249,6 +249,39 @@ public class NumericUpDownTests
     }
 
     [Test]
+    public void FocusingTheText_PutsTheCaretInIt_WithTheWholeNumberSelected()
+    {
+        var box = new NumericUpDown { Maximum = 1000, Value = 250, Template = Template() };
+        var window = new Window { Width = 200, Height = 60, Content = box };
+        try
+        {
+            for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+            var text = TextOf(box);
+
+            var focused = box.FocusText();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(focused, Is.True);
+                Assert.That(text.IsFocused, Is.True, "the caret is not in the number");
+                Assert.That(Selected(text), Is.EqualTo(text.Text), "typing would not replace the number");
+            });
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [Test]
+    public void FocusingTheText_BeforeTheTemplate_SaysItCouldNot()
+    {
+        var box = new NumericUpDown();
+
+        Assert.That(box.FocusText(), Is.False);
+    }
+
+    [Test]
     public void BothButtonsWorkWhileTheBoxIsEmpty()
     {
         var box = NewBox();

@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `NumericUpDown.FocusText`: puts the caret in the number with all of it selected, so what is typed replaces it - for
+  a field that asks for a value the moment it opens.
 - `InfiniteCanvas.RepaintGlass`: draws again only the glass - what a tool is making and the pointer's marks - not the
   layers under it.
 - Snapping to what a canvas shows: a derived canvas answers `TrySnapToContent` with a point of its drawing - a corner,
@@ -611,6 +613,9 @@ All packages share one version.
   text entry inside answers them first for its own text; a tool in the middle of something takes the key and nothing
   happens; with nothing to take back the key goes on up to a canvas around it or the application's own undo. Ctrl held
   never picks a tool by its letter.
+- A tooltip follows the theme and its variant: the one card every tooltip is shown on, kept out of every window between
+  tips, came back in the theme the application started with - a dark card on a light theme. Anything kept out of every
+  window while another theme came in is restyled as it joins a window again.
 - A canvas tool from another library shows what it is making as the pointer moves: the canvas draws the glass again
   after each pointer event, key or text a tool handled and after a tool or one of its pointers is cancelled, not only
   when the tool asked. A
