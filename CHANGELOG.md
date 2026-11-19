@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- Snapping to what a canvas shows: a derived canvas answers `TrySnapToContent` with a point of its drawing - a corner,
+  the middle of a line - and the kind of point it is. `TrySnap` asks it before the grid for a tool that wants it
+  (`ICanvasTool.SnapsToContent`, false by default, so ink and moves follow the hand), and the tool gets the point in
+  `CanvasPointerEventArgs.World`; Alt held in the gesture lets it go. The kind is said on the pointer's plate, shown
+  for it even when the plate's coordinates are off. A move is asked once for the mark and the tool together.
+- `PdfPageDrawing.CollectPaths`: the paths a page's content draws (`PdfDrawnPath`: outline, matrix to the page's
+  points, stroked or filled), not the covers a pattern or a mask lays - for a measurement to snap to.
 - `CanvasHistory.Remap` with `ICanvasRemap`: a plane laid out anew under its things - a document's sheets turned or
   moved - carries the history over instead of forgetting it. Each step is asked for itself on the new plane
   (`ICanvasStep.Remapped`): the canvas's own steps and the inspector's take the new copies of their items and the

@@ -48,6 +48,10 @@ public interface ICanvasTool
     /// may lay it. False by default: a tool works one pointer at a time.</summary>
     bool IsInk => false;
 
+    /// <summary>Whether the points it places are pulled to what the canvas shows (<see cref="InfiniteCanvas.TrySnap"/>)
+    /// - a measurement's ends to a drawing's corners. False by default: ink and moves follow the hand.</summary>
+    bool SnapsToContent => false;
+
     void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e);
 
     void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e);

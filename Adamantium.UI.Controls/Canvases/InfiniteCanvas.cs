@@ -89,6 +89,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     // be on screen before the press - nobody can aim at a point that only appears once it has been hit.
     private Vector2<double>? _snap;
 
+    // What kind of point the pointer was last pulled to - said beside it - or nothing for the grid.
+    private string _snapKind;
+
     // ONE brush, kept and re-pointed rather than made each frame: it is the parameter block the grid shader reads, and
     // a new one every frame would be a new paint identity every frame.
     private readonly CanvasGridBrush _ground = new();
@@ -921,21 +924,71 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(SnapMarkSizeProperty, value);
     }
 
-    /// <summary>Where a world point would be pulled to, and whether anything pulled it. The crossings of the grid AS
-    /// DRAWN - the coarsened step, not the declared one - so what snaps is what can be seen to snap.</summary>
-    public bool TrySnap(Vector2<double> world, out Vector2<double> snapped)
+    /// <summary>Where a world point would be pulled to, and whether anything pulled it: a point of what the canvas shows
+    /// (<see cref="TrySnapToContent"/>) first, for a tool that wants it (<see cref="ICanvasTool.SnapsToContent"/>) and
+    /// unless Alt is held, then the crossings of the grid AS DRAWN - the coarsened step, not the declared one - so what
+    /// snaps is what can be seen to snap.</summary>
+    public bool TrySnap(Vector2<double> world, out Vector2<double> snapped) =>
+        Snap(world, Keyboard.Modifiers, out snapped, out _);
+
+    // The one answer to where a point is pulled, with the kind of point it is; the modifiers are the gesture's own.
+    private bool Snap(Vector2<double> world, InputModifiers modifiers, out Vector2<double> snapped, out string kind)
     {
         snapped = world;
+        kind = null;
         if (!Snaps) return false;
 
+        var reach = ScreenToWorldLength(SnapDistance);
+        var altHeld = (modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0;
+        if (!altHeld && Tool is { SnapsToContent: true } && TrySnapToContent(world, reach, out var point, out kind))
+        {
+            snapped = point;
+            return true;
+        }
+
+        kind = null;
         var step = EffectiveGridSpacing;
         if (!SnapToGrid || step <= 0 || GridStyle == CanvasGridStyle.None) return false;
 
         var nearest = new Vector2<double>(Math.Round(world.X / step) * step, Math.Round(world.Y / step) * step);
-        if ((nearest - world).Length() > ScreenToWorldLength(SnapDistance)) return false;
+        if ((nearest - world).Length() > reach) return false;
 
         snapped = nearest;
         return true;
+    }
+
+    // The last point asked about while the pointer moved, so the tool's description of the same move does not ask again.
+    private Vector2<double> _snapAskedAt = new(double.NaN, double.NaN);
+    private InputModifiers _snapAskedWith;
+    private bool _snapAnswered;
+    private Vector2<double> _snapAnswer;
+
+    private bool SnapOnce(Vector2<double> world, InputModifiers modifiers, out Vector2<double> snapped, out string kind)
+    {
+        if (world == _snapAskedAt && modifiers == _snapAskedWith)
+        {
+            snapped = _snapAnswer;
+            kind = _snapKind;
+            return _snapAnswered;
+        }
+
+        _snapAnswered = Snap(world, modifiers, out snapped, out kind);
+        _snapAskedAt = world;
+        _snapAskedWith = modifiers;
+        _snapAnswer = snapped;
+        _snapKind = kind;
+        return _snapAnswered;
+    }
+
+    /// <summary>A point of what the canvas shows that a world point within <paramref name="reach"/> is pulled to -
+    /// a drawing's corner, the middle of its line - with what kind of point it is, said beside the pointer; none here.
+    /// </summary>
+    protected virtual bool TrySnapToContent(Vector2<double> world, double reach, out Vector2<double> snapped,
+        out string kind)
+    {
+        snapped = world;
+        kind = null;
+        return false;
     }
 
     public CanvasFingerInk FingerInk
@@ -1304,7 +1357,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// availability of its own commands here, or a button bound to one stays as it was first asked.</summary>
     protected virtual void OnCommandsAsk() { }
 
-    /// <summary>Whether points are pulled to the grid while placing - see <see cref="TrySnap"/>.</summary>
+    /// <summary>Whether points are pulled at all while placing - to the grid, or to what the canvas shows - see
+    /// <see cref="TrySnap"/>.</summary>
     protected virtual bool Snaps => true;
 
     /// <summary>Whether the eraser end of a pen rubs out, whatever tool is in hand.</summary>

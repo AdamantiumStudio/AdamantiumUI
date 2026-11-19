@@ -1407,8 +1407,9 @@ public partial class InfiniteCanvas
 
         // Where the pointer would be PULLED to, worked out whatever the tool is doing - the mark has to appear before
         // the press, or nobody can aim at it.
-        var pulled = TrySnap(ScreenToWorld(pointer), out var target) ? target : (Vector2<double>?)null;
-        if (pulled != _snap)
+        var kindWas = _snapKind;
+        var pulled = SnapOnce(ScreenToWorld(pointer), e.Modifiers, out var target, out _) ? target : (Vector2<double>?)null;
+        if (pulled != _snap || _snapKind != kindWas)
         {
             _snap = pulled;
             Repaint();
@@ -1748,7 +1749,7 @@ public partial class InfiniteCanvas
     private CanvasPointerEventArgs Describe(Vector2<double> screen, MouseButtons button, int clicks, PointerEventArgs e)
     {
         var world = ScreenToWorld(screen);
-        var snapped = TrySnap(world, out var pulled);
+        var snapped = SnapOnce(world, e.Modifiers, out var pulled, out _);
         var pen = e.Pointer.Type == PointerType.Pen;
 
         return new CanvasPointerEventArgs

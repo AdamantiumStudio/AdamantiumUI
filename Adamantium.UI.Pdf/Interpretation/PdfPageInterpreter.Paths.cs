@@ -108,7 +108,7 @@ internal sealed partial class PdfPageInterpreter
 
                 if (fillBrush != null || pen != null)
                 {
-                    Write(new PdfGeometryStep(geometry, fillBrush, pen, matrix), frame.Output);
+                    Write(new PdfGeometryStep(geometry, fillBrush, pen, matrix) { IsPagePath = true }, frame.Output);
                 }
 
                 EndObjectGroup(grouped, frame.Output);
