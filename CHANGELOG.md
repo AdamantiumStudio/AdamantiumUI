@@ -442,8 +442,9 @@ All packages share one version.
   `RegisterAttachedReadOnly` return an `AdamantiumPropertyKey`, which the owner keeps private and writes through
   (`SetValue`, `SetCurrentValue`, `ClearValue` taking the key); the public field is the key's `Property`, for reading,
   binding from it and naming it in markup. Writing it any other way - `SetValue`, `SetCurrentValue` or `ClearValue`
-  with the property, by name, from a style or a trigger - throws. A control of an application's own declares its
-  read-only properties the same way: `XxxPropertyKey` private, `XxxProperty = XxxPropertyKey.Property` public.
+  with the property, by name, from a style or a trigger, or through a key its registration did not give out - throws.
+  A control of an application's own declares its read-only properties the same way: `XxxPropertyKey` private,
+  `XxxProperty = XxxPropertyKey.Property` public.
 
 - A leaned map draws far cheaper. A geometry given its triangles - a map's tile, cut with its edge - under one color
   fills from them and its ring rather than from curves the shader walks at every pixel of every layer (a leaned map at

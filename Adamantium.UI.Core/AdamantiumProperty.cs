@@ -55,8 +55,13 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
 
    public Boolean IsAttached { get; private set; }
 
-   public Boolean ReadOnly { get; private set; }
+   public Boolean ReadOnly => key != null;
 
+   // The one key that writes a read-only property, made with it; a key made any other way writes nothing.
+   private readonly AdamantiumPropertyKey key;
+
+   /// <summary>Whether <paramref name="writer"/> is the key made with this property.</summary>
+   internal bool IsWrittenBy(AdamantiumPropertyKey writer) => ReferenceEquals(key, writer);
 
    public bool IsValidType(object value)
    {
@@ -197,7 +202,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
    /// global hook watches does not pay for one.</summary>
    internal bool HasChangedSubscribers => Changed != null;
 
-   private AdamantiumProperty(String name, Type valueType, Type ownerType )
+   private AdamantiumProperty(String name, Type valueType, Type ownerType, bool readOnly = false)
    {
       if (name.Contains("."))
       {
@@ -207,7 +212,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       registeredTypes = new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
       defaultValues = new Dictionary<Type, PropertyMetadata>();
       IsAttached = false;
-      ReadOnly = false;
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
@@ -219,9 +223,10 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       }
       AddDefaultMetadata(ownerType, metadata);
       PropertyId = nextPropertyId++;
+      key = readOnly ? new AdamantiumPropertyKey(this) : null;
    }
 
-    private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata)
+    private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata, bool readOnly = false)
    {
       if (name.Contains("."))
       {
@@ -230,7 +235,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       registeredTypes = new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
       defaultValues = new Dictionary<Type, PropertyMetadata>();
       IsAttached = false;
-      ReadOnly = false;
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
@@ -241,9 +245,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       AddDefaultMetadata(ownerType, metadata);
 
       PropertyId = nextPropertyId++;
+      key = readOnly ? new AdamantiumPropertyKey(this) : null;
    }
 
-    private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata, ValidateValueCallBack validateValueCallBack)
+    private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata,
+       ValidateValueCallBack validateValueCallBack, bool readOnly = false)
    {
       if (name.Contains("."))
       {
@@ -252,7 +258,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       registeredTypes = new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
       defaultValues = new Dictionary<Type, PropertyMetadata>();
       IsAttached = false;
-      ReadOnly = false;
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
@@ -264,6 +269,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       AddDefaultMetadata(ownerType, metadata);
 
       PropertyId = nextPropertyId++;
+      key = readOnly ? new AdamantiumPropertyKey(this) : null;
    }
 
    private static void CheckType(Type valueType, PropertyMetadata metadata, String name)
@@ -362,65 +368,56 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
    /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
    public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
    {
-      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata)
+      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
+         readOnly: true)
       {
-         IsAttached = true,
-         ReadOnly = true
+         IsAttached = true
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return new AdamantiumPropertyKey(property);
+      return property.key;
    }
 
    /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
    public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
-         validateValueCallBack)
+         validateValueCallBack, readOnly: true)
       {
-         IsAttached = true,
-         ReadOnly = true
+         IsAttached = true
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return new AdamantiumPropertyKey(property);
+      return property.key;
    }
 
    /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
    public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType)
    {
-      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType)
-      {
-         ReadOnly = true
-      };
+      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return new AdamantiumPropertyKey(property);
+      return property.key;
    }
 
    /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
    public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
    {
-      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata)
-      {
-         ReadOnly = true
-      };
+      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
+         readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return new AdamantiumPropertyKey(property);
+      return property.key;
    }
 
    /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
    public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
-         validateValueCallBack)
-      {
-         ReadOnly = true
-      };
+         validateValueCallBack, readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return new AdamantiumPropertyKey(property);
+      return property.key;
    }
 
    public bool Equals(AdamantiumProperty other)

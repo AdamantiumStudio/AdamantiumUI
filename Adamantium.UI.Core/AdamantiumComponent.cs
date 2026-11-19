@@ -700,8 +700,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// <summary>Clears the value of the read-only property <paramref name="key"/> writes.</summary>
     public void ClearValue(AdamantiumPropertyKey key, ValuePriority priority = ValuePriority.Local)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        WriteValue(key.Property, AdamantiumProperty.UnsetValue, priority);
+        WriteValue(PropertyWrittenBy(key), AdamantiumProperty.UnsetValue, priority);
     }
 
     /// <summary>
@@ -1104,9 +1103,26 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// <summary>Sets the value of the read-only property <paramref name="key"/> writes.</summary>
     public void SetValue(AdamantiumPropertyKey key, object value, ValuePriority priority = ValuePriority.Local)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        WriteValue(key.Property, value, priority);
+        WriteValue(PropertyWrittenBy(key), value, priority);
     }
+
+    // The property key writes - only if it is the key made with the property.
+    private static AdamantiumProperty PropertyWrittenBy(AdamantiumPropertyKey key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        var property = key.Property;
+        if (!property.IsWrittenBy(key))
+        {
+            ThrowNotItsKey(property);
+        }
+
+        return property;
+    }
+
+    // Apart, so the check above stays small enough to inline into every keyed write.
+    private static void ThrowNotItsKey(AdamantiumProperty property) =>
+        throw new InvalidOperationException(
+            $"{property.OwnerType.Name}.{property.Name}: this key was not made with the property, so it writes nothing.");
 
     private static void RefuseReadOnly(AdamantiumProperty property)
     {
@@ -1153,8 +1169,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// </summary>
     public void SetCurrentValue(AdamantiumPropertyKey key, object value)
     {
-        ArgumentNullException.ThrowIfNull(key);
-        WriteCurrentValue(key.Property, value);
+        WriteCurrentValue(PropertyWrittenBy(key), value);
     }
 
     private void WriteCurrentValue(AdamantiumProperty property, object value)

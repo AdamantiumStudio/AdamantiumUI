@@ -6,6 +6,7 @@ public sealed class AdamantiumPropertyKey
 {
     internal AdamantiumPropertyKey(AdamantiumProperty property)
     {
+        ArgumentNullException.ThrowIfNull(property);
         Property = property;
     }
 

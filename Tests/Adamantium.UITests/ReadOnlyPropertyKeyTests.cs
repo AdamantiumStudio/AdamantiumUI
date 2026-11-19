@@ -105,6 +105,31 @@ public class ReadOnlyPropertyKeyTests
     }
 
     [Test]
+    public void AKeyMadeForTheProperty_ButNotByItsRegistration_WritesNothing()
+    {
+        var counter = new Counter();
+        var forged = new AdamantiumPropertyKey(Counter.CountProperty);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(() => counter.SetValue(forged, 3), Throws.InvalidOperationException);
+            Assert.That(() => counter.SetCurrentValue(forged, 3), Throws.InvalidOperationException);
+            Assert.That(() => counter.ClearValue(forged), Throws.InvalidOperationException);
+            Assert.That(counter.Count, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void AKeyMadeForAPropertyAnyoneWrites_WritesNothing()
+    {
+        var shown = new Shown();
+        var forged = new AdamantiumPropertyKey(Shown.ValueProperty);
+
+        Assert.That(() => shown.SetValue(forged, 3), Throws.InvalidOperationException);
+        Assert.That(shown.Value, Is.Zero);
+    }
+
+    [Test]
     public void TheProperty_StillReachesAModel_ThroughABindingToIt()
     {
         var model = new Model();
