@@ -624,10 +624,13 @@ All packages share one version.
 
 ### Fixed
 
-- A download's name loses direction marks that change how it reads ("invoice‮fdp.exe" shown as "invoiceexe.pdf")
-  and dots and spaces at its end together, which Windows drops, so the file is saved under the name kept. Cut to fit,
-  it no longer splits a character or ends in a kind it did not have ("report.exe" + spaces + "pdf" was saved as
-  "report.exe").
+- A download's name loses direction marks that change how it reads (a right-to-left override shows "invoice",
+  override, "fdp.exe" as "invoiceexe.pdf") and dots and spaces at its end together, which Windows drops, so the file is
+  saved under the name kept. Cut to fit, it no longer splits a character or ends in a kind it did not have
+  ("report.exe" + spaces + "pdf" was saved as "report.exe").
+- A read-only `NumericProperty` row shows its number as the editable row would: `Decimals` places, in the language's
+  own way (`523,599` in Russian), not the raw `ToString()` of the value (`523.5987755`); objects that disagree leave it
+  empty. The canvas inspector's read-only counts, bounds and order read so too.
 - A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
   element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
   gave a fade slot keeps fading in it; any other is left to the window that draws it.

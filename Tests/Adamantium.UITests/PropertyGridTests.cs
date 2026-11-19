@@ -1176,6 +1176,64 @@ public class PropertyGridTests
         });
     }
 
+    // A read-only number reads as its editor would show it: its decimals, in the language's own way.
+    [Test]
+    public void AReadOnlyNumberShowsItsDecimalsInTheLanguage()
+    {
+        var target = new Target { Scale = 523.5987755 };
+        var mass = new NumericProperty { Header = "Mass used", Binding = new Binding("Scale"), IsReadOnly = true };
+        Languages.Current = "ru";
+        var grid = Built(Section(target, mass));
+        TemplateRows(grid);
+        BindingUpdateQueue.Flush();
+
+        Assert.That(TextsIn(RowOf(grid, mass)), Does.Contain("523,599"));
+    }
+
+    // Objects that disagree leave a read-only number empty, not a crash on the empty text standing for no value.
+    [Test]
+    public void AReadOnlyNumberOfObjectsThatDisagreeShowsNothing()
+    {
+        var mass = new NumericProperty { Header = "Mass used", Binding = new Binding("Scale"), IsReadOnly = true };
+        var section = new PropertySection { Header = "Transform", IsExpanded = true };
+        section.Properties.Add(mass);
+        var grid = new PropertyGrid { Template = Chrome() };
+        grid.Sections.Add(section);
+        grid.SelectedObjects = new object[] { new Target { Scale = 1 }, new Target { Scale = 2 } };
+        Settle(grid);
+        TemplateRows(grid);
+        BindingUpdateQueue.Flush();
+
+        var texts = TextsIn(RowOf(grid, mass));
+        Assert.Multiple(() =>
+        {
+            Assert.That(RowOf(grid, mass).IsMixed, Is.True, "the objects agree, so this proves nothing");
+            Assert.That(texts, Has.Count.EqualTo(1), "one text");
+            Assert.That(texts, Is.All.Empty, "and empty");
+        });
+    }
+
+    private static List<string> TextsIn(IUIComponent root)
+    {
+        var texts = new List<string>();
+        var stack = new Stack<IUIComponent>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var component = stack.Pop();
+            if (component is TextBlock text)
+                texts.Add(text.Text);
+
+            foreach (var child in component.VisualChildren)
+            {
+                if (child is IUIComponent visual)
+                    stack.Push(visual);
+            }
+        }
+
+        return texts;
+    }
+
     [Test]
     public void AnEnumPropertyFillsItsOwnChoices()
     {
