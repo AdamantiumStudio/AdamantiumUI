@@ -1041,14 +1041,30 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    /// <summary>Restyles this element and everything under it when it was built or styled before the theme in force came
-    /// in: out of every tree then, it missed the re-theming walk - a page of a tab not selected, a parked view.</summary>
-    internal void RestyleIfItMissedASwap()
+    /// <summary>Marks this element unstyled when it was built or styled before the theme in force came in: out of every
+    /// window then - the tooltip card between tips, a popup made in code - it missed the re-theming walk. What only its
+    /// logical tree reaches - a text's inlines - has no visual attach to come back by, and is restyled here.</summary>
+    internal void MarkStaleIfItMissedASwap()
     {
-        if (_styledInThemeVersion == ThemeManager.Version) return;
+        if (_styledInThemeVersion == ThemeManager.Version)
+        {
+            return;
+        }
 
-        _styledInThemeVersion = ThemeManager.Version;
-        InvalidateStyles();
+        IsStyleApplied = false;
+        if (logicalChildren == null)
+        {
+            return;
+        }
+
+        HashSet<IFundamentalUIComponent> visited = null;
+        foreach (var child in logicalChildren)
+        {
+            if (child is FundamentalUIComponent logicalOnly and not IUIComponent)
+            {
+                logicalOnly.InvalidateStylesCore(visited ??= []);
+            }
+        }
     }
 
     /// <summary>Themes this control via <see cref="ApplyCurrentThemeCore"/>. A failure is logged at Error and leaves this

@@ -337,10 +337,6 @@ public class ContentPresenter : InputUIComponent
         // Re-measured only in a host of another size: the layout it kept is still right otherwise.
         ParkedSubtree.Unpark(_currentRoot, remeasure: hostSize != _lastArrangeSize);
 
-        // The re-theming walk missed it while parked. After the attach: a node out of the tree has no queue to register
-        // the restyle with.
-        (_currentRoot as FundamentalUIComponent)?.RestyleIfItMissedASwap();
-
         SetContentContext(content);
     }
 

@@ -1758,6 +1758,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         // tree, where the visual root owns layout as it always did.
         LayoutRoot = _isLayoutBoundary ? this : (VisualParent as UIComponent)?.LayoutRoot;
 
+        MarkStaleIfItMissedASwap();
         if (!IsStyleApplied) LayoutManager.For(this).InvalidateStyle(this);
 
         // ...and the same for the STAGE that draws it: a subtree a stage has claimed keeps its own marks, everything
