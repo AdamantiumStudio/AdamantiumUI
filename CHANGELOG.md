@@ -608,6 +608,11 @@ All packages share one version.
 
 ### Fixed
 
+- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z undo and redo on a canvas wherever its focus is - on a button of its own bar or in
+  its side panel, not only on the plane. They are the canvas's answers to `ApplicationCommands.Undo` and `Redo`; a
+  text entry inside answers them first for its own text; a tool in the middle of something takes the key and nothing
+  happens; with nothing to take back the key goes on up to a canvas around it or the application's own undo. Ctrl held
+  never picks a tool by its letter.
 - A tooltip follows the theme and its variant: the one card every tooltip is shown on, kept out of every window between
   tips, came back in the theme the application started with - a dark card on a light theme. Anything kept out of every
   window while another theme came in is restyled as it joins a window again.

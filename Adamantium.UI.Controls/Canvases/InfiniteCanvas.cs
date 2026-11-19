@@ -1356,6 +1356,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _align?.RaiseCanExecuteChanged();
         _spread?.RaiseCanExecuteChanged();
         _clear?.RaiseCanExecuteChanged();
+        // ApplicationCommands.Undo and Redo answer from the history too.
+        CommandManager.InvalidateRequerySuggested();
         OnCommandsAsk();
     }
 
