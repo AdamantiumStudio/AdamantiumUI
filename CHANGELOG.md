@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- Files from outside, such as a PDF's attachments. `FileManager.OpenUntrustedItem` opens one only after the system's
+  checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy and the
+  scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to run, and
+  not when its content is a program, a shortcut or a launcher (the desktop goes by content there). `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs,
+  scripts, shortcuts, installers, disk images): the system's list on Windows and a shared one everywhere; those are
+  never opened, nor are links. `FileManager.MarkUntrusted` marks a file saved from outside.
+  `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or
+  direction marks that change how it reads - and `FileNames.Numbered` numbers a second one.
 - A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
   and `WrittenProperty` name the object each target's write sets a property of, and that property - `Body.Mass` sets
   the body's `Mass`, a path into a struct (`Box.Size.X`) the holder's `Size` - from the new
@@ -616,6 +624,10 @@ All packages share one version.
 
 ### Fixed
 
+- A download's name loses direction marks that change how it reads (a right-to-left override shows "invoice",
+  override, "fdp.exe" as "invoiceexe.pdf") and dots and spaces at its end together, which Windows drops, so the file is
+  saved under the name kept. Cut to fit, it no longer splits a character or ends in a kind it did not have
+  ("report.exe" + spaces + "pdf" was saved as "report.exe").
 - A read-only `NumericProperty` row shows its number as the editable row would: `Decimals` places, in the language's
   own way (`523,599` in Russian), not the raw `ToString()` of the value (`523.5987755`); objects that disagree leave it
   empty. The canvas inspector's read-only counts, bounds and order read so too.

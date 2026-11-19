@@ -133,6 +133,12 @@ public class FileManagerDownloadsFolderTests
 
         public bool OpenItem(string path) => false;
 
+        public bool IsDangerousToOpen(string fileName) => true;
+
+        public bool OpenUntrustedItem(string path, IntPtr ownerWindow) => false;
+
+        public bool MarkUntrusted(string path) => false;
+
         public string DownloadsFolder => folder;
     }
 }

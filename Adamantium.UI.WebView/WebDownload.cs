@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Adamantium.UI.Core;
 using Adamantium.UI.WebView.Cef;
 using Adamantium.UI.WebView.Cef.Interop;
 
@@ -13,8 +14,6 @@ namespace Adamantium.UI.WebView;
 /// </summary>
 public sealed unsafe class WebDownload : INotifyPropertyChanged
 {
-    private const int NameLimit = 200;
-
     private readonly Action<WebDownload> saved;
     private readonly Action<WebDownload> ended;
     private readonly Func<string, bool> pathTaken;
@@ -496,41 +495,11 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
     /// name already or another download is saved there.</summary>
     internal string FreePathIn(string folder)
     {
-        var name = Path.GetFileName(suggestedName ?? string.Empty);
-        foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
-            name = name.Replace(invalid, '_');
-        }
-
-        name = name.Trim().TrimEnd('.');
-        if (name.Length == 0)
-        {
-            name = "download";
-        }
-
-        var stem = Path.GetFileNameWithoutExtension(name);
-        var extension = Path.GetExtension(name);
-        // What comes before the first dot is what Windows takes for a device, spaces before the dot aside: NUL.tar.gz too.
-        if (OperatingSystem.IsWindows() && IsDeviceName(name.Split('.')[0].TrimEnd(' ')))
-        {
-            stem = "_" + stem;
-        }
-
-        if (extension.Length > NameLimit / 2)
-        {
-            extension = extension[..(NameLimit / 2)];
-        }
-
-        if (stem.Length + extension.Length > NameLimit)
-        {
-            stem = stem[..(NameLimit - extension.Length)].TrimEnd('.', ' ');
-        }
-
-        name = stem + extension;
+        var name = FileNames.MakeSafe(suggestedName, "download");
         var path = Path.Combine(folder, name);
         for (var number = 1; IsTaken(path); number++)
         {
-            path = Path.Combine(folder, $"{stem} ({number}){extension}");
+            path = Path.Combine(folder, FileNames.Numbered(name, number));
         }
 
         return path;
@@ -564,15 +533,6 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
 
     private bool IsTaken(string path) =>
         File.Exists(path) || Directory.Exists(path) || File.Exists(path + ".crdownload") || pathTaken?.Invoke(path) == true;
-
-    private static bool IsDeviceName(string beforeDot)
-    {
-        var upper = beforeDot.ToUpperInvariant();
-        return upper is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$" ||
-               (upper.Length == 4 && (upper.StartsWith("COM", StringComparison.Ordinal) ||
-                                      upper.StartsWith("LPT", StringComparison.Ordinal)) &&
-                upper[3] is >= '0' and <= '9' or '¹' or '²' or '³');
-    }
 
     /// <summary>Takes the name Chromium suggests as it asks; later updates keep it.</summary>
     internal void Suggest(string name)
