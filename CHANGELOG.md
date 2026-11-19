@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.RepaintGlass`: draws again only the glass - what a tool is making and the pointer's marks - not the
+  layers under it.
 - Snapping to what a canvas shows: a derived canvas answers `TrySnapToContent` with a point of its drawing - a corner,
   the middle of a line - and the kind of point it is. `TrySnap` asks it before the grid for a tool that wants it
   (`ICanvasTool.SnapsToContent`, false by default, so ink and moves follow the hand), and the tool gets the point in
@@ -604,6 +606,10 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas tool from another library shows what it is making as the pointer moves: the canvas draws the glass again
+  after each pointer event, key or text a tool handled and after a tool or one of its pointers is cancelled, not only
+  when the tool asked. A
+  change of the snap mark draws only the glass again, not every layer.
 - A routed command about to run asks its binding again from where it came (`OriginalSource`, `Source`): a binding that
   answered by where the command came from - a button in an item's template - was asked from nowhere and the command
   did not run.

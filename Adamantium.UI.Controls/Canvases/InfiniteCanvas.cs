@@ -1506,7 +1506,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (component is InfiniteCanvas canvas && e.NewValue is false && canvas.Tool is { IsBusy: true } tool)
         {
-            tool.Cancel(canvas);
+            canvas.CancelTool(tool);
         }
     }
 
@@ -1516,7 +1516,10 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        (e.OldValue as ICanvasTool)?.Cancel(canvas);
+        if (e.OldValue is ICanvasTool old)
+        {
+            canvas.CancelTool(old);
+        }
 
         var inks = e.NewValue is ICanvasTool { IsInk: true };
         canvas.SetCurrentValue(Gestures.ManipulationModesProperty, inks
@@ -1777,7 +1780,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         // The ground is one quad whose shader is handed the camera, and the glass is what the hand is doing - both are
         // drawn again, and both are small.
         canvas.InvalidateRender(false);
-        canvas._front?.InvalidateRender(false);
+        canvas.RepaintGlass();
     }
 
     private static void OnDesignModeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
