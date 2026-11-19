@@ -1204,10 +1204,12 @@ public class PropertyGridTests
         TemplateRows(grid);
         BindingUpdateQueue.Flush();
 
+        var texts = TextsIn(RowOf(grid, mass));
         Assert.Multiple(() =>
         {
             Assert.That(RowOf(grid, mass).IsMixed, Is.True, "the objects agree, so this proves nothing");
-            Assert.That(TextsIn(RowOf(grid, mass)), Is.EqualTo(new[] { "" }), "one text, and empty");
+            Assert.That(texts, Has.Count.EqualTo(1), "one text");
+            Assert.That(texts, Is.All.Empty, "and empty");
         });
     }
 
