@@ -22,6 +22,8 @@ namespace Adamantium.UI.Controls;
 /// at once and joins its section's logical tree, so bindings resolve as on any element.</summary>
 public abstract class PropertyDefinition : FundamentalUIComponent
 {
+    private PropertyValueText _valueText;
+
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
         typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null, OnHeaderChanged));
 
@@ -269,6 +271,9 @@ public abstract class PropertyDefinition : FundamentalUIComponent
 
     protected internal DataTemplate ValueFor() => ValueTemplate ?? DefaultValueTemplate;
 
+    /// <summary>A converter showing a value as <see cref="TextOf"/> words it, for a value template made of text.</summary>
+    private protected PropertyValueText ValueText => _valueText ??= new PropertyValueText(this);
+
     /// <summary>Fills the editor with the value. Called whenever the row is (re)bound - the editor is LIVE, so this
     /// runs on every refresh, not once at the start of an edit.</summary>
     protected internal virtual void PrepareEditor(IUIComponent editor, object value) { }
@@ -429,6 +434,9 @@ public class NumericProperty : PropertyDefinition
         new PropertyMetadata(NumericButtonsPlacement.Left));
 
     private DataTemplate _editor;
+    private DataTemplate _display;
+    private String _numberFormat;
+    private Int32 _formatDecimals = -1;
 
     public Double Minimum
     {
@@ -470,6 +478,36 @@ public class NumericProperty : PropertyDefinition
     protected internal override DataTemplate DefaultEditorTemplate =>
         _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Number() });
 
+    /// <summary>A read-only number: its text, as many decimals as the editor would show.</summary>
+    protected internal override DataTemplate DefaultValueTemplate =>
+        _display ??= new DataTemplate(() =>
+        {
+            var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+            var result = new TemplateResult { RootComponent = text };
+            result.AddBinding(text, "Text", new Binding { Mode = BindingMode.OneWay, Converter = ValueText });
+            return result;
+        });
+
+    protected internal override String TextOf(object value) =>
+        value is IConvertible convertible && convertible.GetTypeCode() is >= TypeCode.SByte and <= TypeCode.Decimal
+            ? Convert.ToDouble(convertible, System.Globalization.CultureInfo.InvariantCulture).ToString(NumberFormat, Languages.Culture)
+            : base.TextOf(value);
+
+    private String NumberFormat
+    {
+        get
+        {
+            var decimals = Decimals;
+            if (_formatDecimals != decimals)
+            {
+                _numberFormat = decimals > 0 ? "0." + new String('#', decimals) : "0";
+                _formatDecimals = decimals;
+            }
+
+            return _numberFormat;
+        }
+    }
+
     protected internal override void PrepareEditor(IUIComponent editor, object value)
     {
         if (editor is not NumericUpDown numeric) return;
@@ -479,9 +517,7 @@ public class NumericProperty : PropertyDefinition
         numeric.SmallChange = Step;
         numeric.AreButtonsVisible = ShowButtons;
         numeric.ButtonsPlacement = ButtonsPlacement;
-
-        // "0.###" rather than "N3": limits noise like 182.99999999999997 while a round number stays round.
-        numeric.StringFormat = Decimals > 0 ? "0." + new String('#', Decimals) : "0";
+        numeric.StringFormat = NumberFormat;
         // NULL, not zero, when there is nothing to show - the objects disagree. A zero here would be a number neither
         // of them holds, which is worse than an empty field: it reads as an answer.
         numeric.Value = value is IConvertible convertible
