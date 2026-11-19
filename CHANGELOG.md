@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- Files from outside - a PDF's attachments, downloads. `FileManager.OpenUntrustedItem` opens one only after the
+  system's checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy
+  and the scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to
+  run. `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs, scripts, shortcuts,
+  installers); those are never opened. `FileManager.MarkUntrusted` marks a file saved from outside.
+  `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or
+  direction marks that change how it reads - and `FileNames.Numbered` numbers a second one.
 - A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
   and `WrittenProperty` name the object each target's write sets a property of, and that property - `Body.Mass` sets
   the body's `Mass`, a path into a struct (`Box.Size.X`) the holder's `Size` - from the new
@@ -616,6 +623,8 @@ All packages share one version.
 
 ### Fixed
 
+- A download's name loses direction marks that change how it reads ("invoice‮fdp.exe" shown as "invoiceexe.pdf")
+  and dots and spaces at its end together, which Windows drops, so the file is saved under the name kept.
 - A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
   element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
   gave a fade slot keeps fading in it; any other is left to the window that draws it.
