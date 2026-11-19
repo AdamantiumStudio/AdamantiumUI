@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
+  and `WrittenProperty` name the object each target's write sets a property of, and that property - `Body.Mass` sets
+  the body's `Mass`, a path into a struct (`Box.Size.X`) the holder's `Size` - from the new
+  `BindingExpressionBase.WrittenObject` and `WrittenProperty`. `IsInteractive` marks a write while a spinner is held,
+  dragged, stepped by a held arrow key or turned by the wheel, and `PropertyGrid.ValueCommitted` (and
+  `ValueCommittedCommand`) comes once the value is settled: at once after any other write, once when the move ends -
+  for what is costly to keep, such as a file, as Unreal's interactive and value-set changes. `NumericUpDown.IsInteracting`
+  and `InteractionEnded` tell the move; the wheel's ends when the pointer or the focus leaves, or another press comes.
 - `NumericUpDown.FocusText`: puts the caret in the number with all of it selected, so what is typed replaces it - for
   a field that asks for a value the moment it opens.
 - `InfiniteCanvas.RepaintGlass`: draws again only the glass - what a tool is making and the pointer's marks - not the

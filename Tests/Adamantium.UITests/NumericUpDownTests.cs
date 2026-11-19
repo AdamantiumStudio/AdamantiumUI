@@ -96,6 +96,73 @@ public class NumericUpDownTests
         });
     }
 
+    // An arrow key held moves the value on: it is not settled until the key is let go, and is told so once then.
+    [Test]
+    public void AnArrowKeyHeld_IsAMoveUntilLetGo()
+    {
+        var box = NewBox();
+        var ended = 0;
+        box.InteractionEnded += (_, _) => ended++;
+
+        Key(box, Adamantium.UI.Core.Input.Key.UpArrow, Adamantium.UI.Core.Input.Keyboard.PreviewKeyDownEvent);
+        Key(box, Adamantium.UI.Core.Input.Key.UpArrow, Adamantium.UI.Core.Input.Keyboard.PreviewKeyDownEvent);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Value, Is.EqualTo(7));
+            Assert.That(box.IsInteracting, Is.True, "moving while the key is down");
+            Assert.That(ended, Is.Zero);
+        });
+
+        Key(box, Adamantium.UI.Core.Input.Key.UpArrow, Adamantium.UI.Core.Input.Keyboard.PreviewKeyUpEvent);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.IsInteracting, Is.False);
+            Assert.That(ended, Is.EqualTo(1), "told settled once");
+        });
+    }
+
+    // Shift or Ctrl sizes a move's step and ends none; two step keys held are one move, ended by the last let go.
+    [Test]
+    public void AModifierOrAnotherStepKey_KeepsTheMove()
+    {
+        var box = NewBox();
+        var ended = 0;
+        box.InteractionEnded += (_, _) => ended++;
+        var down = Adamantium.UI.Core.Input.Keyboard.PreviewKeyDownEvent;
+        var up = Adamantium.UI.Core.Input.Keyboard.PreviewKeyUpEvent;
+
+        Key(box, Adamantium.UI.Core.Input.Key.DownArrow, down);
+        Key(box, Adamantium.UI.Core.Input.Key.LeftShift, down);
+        Key(box, Adamantium.UI.Core.Input.Key.UpArrow, down);
+        Key(box, Adamantium.UI.Core.Input.Key.UpArrow, up);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.IsInteracting, Is.True, "Down is still held");
+            Assert.That(ended, Is.Zero);
+        });
+
+        Key(box, Adamantium.UI.Core.Input.Key.DownArrow, up);
+        Assert.That(ended, Is.EqualTo(1), "ended once, by the last key let go");
+    }
+
+    // A click that is not a hold - the keyboard's, or a test's - is one step, settled at once: nothing to wait for.
+    [Test]
+    public void AClickNotHeld_IsNoMove()
+    {
+        var box = NewBox();
+
+        Press(box, "PART_Increase");
+
+        Assert.That(box.IsInteracting, Is.False);
+    }
+
+    private static void Key(NumericUpDown box, Adamantium.UI.Core.Input.Key key, RoutedEvent routed) =>
+        box.RaiseEvent(new Adamantium.UI.Core.Input.KeyEventArgs(Adamantium.UI.Core.Input.KeyboardDevice.CurrentDevice, key,
+            Adamantium.UI.Core.Input.InputModifiers.None, 0) { RoutedEvent = routed });
+
     [Test]
     public void AStepMovesTheValueBySmallChange()
     {

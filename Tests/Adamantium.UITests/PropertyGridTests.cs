@@ -998,6 +998,74 @@ public class PropertyGridTests
 
     // The whole reason the value is a binding and not a member name: everything the binding system can do comes with
     // it. A converter is the plainest proof - a name could never carry one.
+    public struct Span2
+    {
+        public double Width { get; set; }
+    }
+
+    private sealed class Part
+    {
+        public double Mass { get; set; }
+
+        public Span2 Size { get; set; }
+    }
+
+    private sealed class Holder
+    {
+        public Part Part { get; } = new();
+    }
+
+    // What a write sets, said with it: a path through objects writes the last of them; a path into a struct writes the
+    // object holding the struct, the struct's own property.
+    [Test]
+    public void AWrite_SaysTheObjectAndPropertyItSets()
+    {
+        var holder = new Holder();
+        var mass = new NumericProperty { Header = "Mass", Binding = new Binding("Part.Mass") };
+        var width = new NumericProperty { Header = "Width", Binding = new Binding("Part.Size.Width") };
+        var grid = Built(Section(holder, mass, width));
+        var seen = new List<PropertyValuesChangedEventArgs>();
+        grid.ValueChanged += (_, about) => seen.Add(about);
+
+        grid.Write(RowOf(grid, mass), 2.0);
+        grid.Write(RowOf(grid, width), 3.0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(seen[0].WrittenObjects, Is.EqualTo(new object[] { holder.Part }));
+            Assert.That(seen[0].WrittenProperty, Is.EqualTo("Mass"));
+            Assert.That(seen[1].WrittenObjects, Is.EqualTo(new object[] { holder.Part }), "the struct's holder");
+            Assert.That(seen[1].WrittenProperty, Is.EqualTo("Size"));
+            Assert.That(holder.Part.Size.Width, Is.EqualTo(3.0));
+        });
+    }
+
+    // A write nothing moves on from is settled at once; one still moving waits for the move to end, and is settled once.
+    [Test]
+    public void AWrite_IsSettledAtOnce_AMove_WhenItEnds()
+    {
+        var holder = new Holder();
+        var mass = new NumericProperty { Header = "Mass", Binding = new Binding("Part.Mass") };
+        var grid = Built(Section(holder, mass));
+        var committed = new List<PropertyValuesChangedEventArgs>();
+        grid.ValueCommitted += (_, about) => committed.Add(about);
+
+        grid.Write(RowOf(grid, mass), 2.0);
+        Assert.That(committed, Has.Count.EqualTo(1), "a plain write");
+
+        grid.Write(RowOf(grid, mass), 3.0, keepUnshown: true, interactive: true);
+        grid.Write(RowOf(grid, mass), 4.0, keepUnshown: true, interactive: true);
+        Assert.That(committed, Has.Count.EqualTo(1), "not while it moves");
+
+        grid.CommitInteraction(RowOf(grid, mass));
+        Assert.Multiple(() =>
+        {
+            Assert.That(committed, Has.Count.EqualTo(2), "once when it ends");
+            Assert.That(committed[1].WrittenObjects, Is.EqualTo(new object[] { holder.Part }));
+            Assert.That(holder.Part.Mass, Is.EqualTo(4.0));
+        });
+    }
+
     [Test]
     public void AValueBindingCarriesItsConverter()
     {

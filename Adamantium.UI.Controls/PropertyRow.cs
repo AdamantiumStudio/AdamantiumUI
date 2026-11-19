@@ -190,6 +190,10 @@ public class PropertyRow : Control
         // pointed at had changed.
         var rebind = !ReferenceEquals(Definition, definition) || !ReferenceEquals(Targets, targets);
 
+        // A move on the line the row stood for is settled for that line, before the row stands for another.
+        if (rebind)
+            SettleInteraction();
+
         Owner = owner;
         Definition = definition;
         Design.StandsFor(this, definition);
@@ -216,7 +220,11 @@ public class PropertyRow : Control
         _committing = true;
         try
         {
-            return Owner?.Write(this, Definition.ReadEditor(_editor)) ?? false;
+            // A spinner still held, dragged or turned writes again soon: the line is settled once it is let go.
+            var interactive = _editor is NumericUpDown { IsInteracting: true };
+            var written = Owner?.Write(this, Definition.ReadEditor(_editor), keepUnshown: true, interactive) ?? false;
+            _interactionWritten |= written && interactive;
+            return written;
         }
         finally
         {
@@ -225,6 +233,32 @@ public class PropertyRow : Control
     }
 
     private bool _committing;
+
+    // A write made while the spinner moved, not yet told settled.
+    private bool _interactionWritten;
+
+    private void OnEditorInteractionEnded(object sender, EventArgs e) => SettleInteraction();
+
+    private void SettleInteraction()
+    {
+        if (!_interactionWritten)
+            return;
+
+        _interactionWritten = false;
+        Owner?.CommitInteraction(this);
+    }
+
+    /// <summary>The object each target's write sets a property of, in the order of the targets.</summary>
+    internal IReadOnlyList<object> WrittenObjects()
+    {
+        var written = new object[_values.Count];
+        for (var i = 0; i < written.Length; i++)
+            written[i] = _values[i].WrittenObject;
+        return written;
+    }
+
+    /// <summary>The property the row's writes set on <see cref="WrittenObjects"/>.</summary>
+    internal string WrittenProperty => _values.Count > 0 ? _values[0].WrittenProperty : null;
 
     // EVERY OBJECT'S OWN VALUE, not the row's. A write INTO a value edits the object that holds it and nothing else -
     // the row's copy belongs to the first of them, so a color written that way landed on one shape of a selection and
@@ -718,7 +752,12 @@ public class PropertyRow : Control
             box.LostFocus += OnEditorLostFocus;
         }
 
-        if (_editor is NumericUpDown numeric) numeric.ValueChanged += OnEditorValueChanged;
+        if (_editor is NumericUpDown numeric)
+        {
+            numeric.ValueChanged += OnEditorValueChanged;
+            numeric.InteractionEnded += OnEditorInteractionEnded;
+        }
+
         if (_editor is Selector chooser) chooser.SelectionChanged += OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged += OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged += OnSwatchPropertyChanged;
@@ -740,7 +779,15 @@ public class PropertyRow : Control
             box.LostFocus -= OnEditorLostFocus;
         }
 
-        if (_editor is NumericUpDown numeric) numeric.ValueChanged -= OnEditorValueChanged;
+        if (_editor is NumericUpDown numeric)
+        {
+            numeric.ValueChanged -= OnEditorValueChanged;
+            numeric.InteractionEnded -= OnEditorInteractionEnded;
+        }
+
+        // A move cut off with its editor - the row rebuilt - is settled where it stood.
+        SettleInteraction();
+
         if (_editor is Selector chooser) chooser.SelectionChanged -= OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged -= OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged -= OnSwatchPropertyChanged;
