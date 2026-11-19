@@ -616,6 +616,9 @@ All packages share one version.
 
 ### Fixed
 
+- A read-only `NumericProperty` row shows its number as the editable row would: `Decimals` places, in the language's
+  own way (`523,599` in Russian), not the raw `ToString()` of the value (`523.5987755`); objects that disagree leave it
+  empty. The canvas inspector's read-only counts, bounds and order read so too.
 - A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
   element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
   gave a fade slot keeps fading in it; any other is left to the window that draws it.
