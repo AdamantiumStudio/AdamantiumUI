@@ -116,6 +116,12 @@ public class PropertyGrid : Control
     public static readonly AdamantiumProperty MixedTextProperty = AdamantiumProperty.Register(nameof(MixedText),
         typeof(String), typeof(PropertyGrid), new PropertyMetadata(null, OnMixedTextChanged));
 
+    /// <summary>Whether every line only shows its value, as a line whose property is read-only does: nothing is written,
+    /// reset or toggled from the grid.</summary>
+    public static readonly AdamantiumProperty IsReadOnlyProperty = AdamantiumProperty.Register(nameof(IsReadOnly),
+        typeof(bool), typeof(PropertyGrid),
+        new PropertyMetadata(false, static (grid, _) => ((PropertyGrid)grid).Rebuild()));
+
     /// <summary>When lines show their reset button; Always by default (dimmed when nothing to reset), so lines do not
     /// change shape.</summary>
     public static readonly AdamantiumProperty ResetButtonProperty = AdamantiumProperty.Register(nameof(ResetButton),
@@ -335,6 +341,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<ResetButtonState>(ResetButtonProperty);
         set => SetValue(ResetButtonProperty, value);
+    }
+
+    public bool IsReadOnly
+    {
+        get => GetValue<bool>(IsReadOnlyProperty);
+        set => SetValue(IsReadOnlyProperty, value);
     }
 
     public String SearchText

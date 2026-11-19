@@ -505,6 +505,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (component is not InfiniteCanvas canvas) return;
 
+        canvas.LockInspector(e.NewValue as PropertyGrid);
         if (e.NewValue is not PropertyGrid now)
         {
             canvas.Follow(InspectorProperty, null);
@@ -513,6 +514,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         now.ValueChanging += canvas.OnInspectorWriting;
         now.ValueChanged += canvas.OnInspectorWritten;
+
         canvas.Follow(InspectorProperty, () =>
         {
             now.ValueChanging -= canvas.OnInspectorWriting;
@@ -627,7 +629,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     /// <summary>The tool a right click returns to; none by default, which leaves the right button alone.</summary>
     public static readonly AdamantiumProperty DefaultToolProperty = AdamantiumProperty.Register(nameof(DefaultTool),
-        typeof(ICanvasTool), typeof(InfiniteCanvas), new PropertyMetadata(null));
+        typeof(ICanvasTool), typeof(InfiniteCanvas), new PropertyMetadata(null,
+            static (component, _) => ((InfiniteCanvas)component).CoerceValue(ToolProperty)));
 
     /// <summary>What the plain left button DOES - the pen, the selection frame, a shape. A swappable object, so that
     /// one more gesture is one more class rather than one more branch in here.
@@ -637,7 +640,15 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         typeof(ICanvasTool), typeof(InfiniteCanvas),
         // Two-way by default, because the CANVAS changes it too: the right button puts the resting tool back, and a
         // panel bound one way would go on showing whatever it last chose.
-        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnToolChanged));
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnToolChanged,
+            static (component, value) => component is InfiniteCanvas canvas ? canvas.AllowedTool(value) : value));
+
+    /// <summary>Whether the plane is only looked at: panned, zoomed, its items selected and copied, but nothing on it
+    /// changed by the user - no tool but picking, no grips, no deleting, pasting, grouping, ordering or undoing, and the
+    /// inspector only shows. Code still changes the scene, as it changes a read-only text box's text.</summary>
+    public static readonly AdamantiumProperty IsReadOnlyProperty = AdamantiumProperty.Register(nameof(IsReadOnly),
+        typeof(bool), typeof(InfiniteCanvas),
+        new PropertyMetadata(false, static (component, _) => ((InfiniteCanvas)component).OnIsReadOnlyChanged()));
 
     /// <summary>The frame drawn round what is selected, and the outline of its grips.</summary>
     public static readonly AdamantiumProperty SelectionBrushProperty = AdamantiumProperty.Register(
@@ -869,6 +880,73 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(ToolsProperty, value);
     }
 
+    public bool IsReadOnly
+    {
+        get => GetValue<bool>(IsReadOnlyProperty);
+        set => SetValue(IsReadOnlyProperty, value);
+    }
+
+    /// <summary>Raised when <see cref="IsReadOnly"/> changes, for the parts round the plane that follow it.</summary>
+    public event EventHandler IsReadOnlyChanged;
+
+    // While only looked at, the one tool kept is one that picks: the resting one, else the first among the tools.
+    private object AllowedTool(object value)
+    {
+        if (!IsReadOnly || value is null or SelectTool)
+        {
+            return value;
+        }
+
+        if (DefaultTool is SelectTool resting)
+        {
+            return resting;
+        }
+
+        foreach (var tool in _tools ?? [])
+        {
+            if (tool is SelectTool picking)
+            {
+                return picking;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnIsReadOnlyChanged()
+    {
+        // A gesture under way is ended - a drag, a grip, a point, a wire, the pen's eraser - and the tool in hand is
+        // put down, finishing what it was making, before nothing more may change.
+        if (IsReadOnly)
+        {
+            EndEveryGesture();
+        }
+
+        CoerceValue(ToolProperty);
+        LockInspector(Inspector);
+        ApplyDesignMode();
+        Refresh();
+        IsReadOnlyChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // The inspector is made read-only by this canvas only, and given back only what this canvas changed.
+    private void LockInspector(PropertyGrid grid)
+    {
+        if (_lockedInspector != null && (!IsReadOnly || !ReferenceEquals(_lockedInspector, grid)))
+        {
+            _lockedInspector.SetCurrentValue(PropertyGrid.IsReadOnlyProperty, false);
+            _lockedInspector = null;
+        }
+
+        if (IsReadOnly && grid is { IsReadOnly: false })
+        {
+            grid.SetCurrentValue(PropertyGrid.IsReadOnlyProperty, true);
+            _lockedInspector = grid;
+        }
+    }
+
+    private PropertyGrid _lockedInspector;
+
     public Boolean AreToolShortcutsEnabled
     {
         get => GetValue<Boolean>(AreToolShortcutsEnabledProperty);
@@ -1080,10 +1158,17 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private CanvasCommand _clear;
 
     /// <summary>Takes the last step back. Off when there is nothing behind it.</summary>
-    public CanvasCommand UndoCommand => _undo ??= new CanvasCommand(_ => Undo(), _ => History is { CanUndo: true });
+    public CanvasCommand UndoCommand => _undo ??= new CanvasCommand(_ => Undo(),
+        _ => History is { CanUndo: true } history && (!IsReadOnly || AllowsUndoWhileReadOnly(history.StepToUndo)));
 
     /// <summary>...and forward again. Off when nothing has been taken back.</summary>
-    public CanvasCommand RedoCommand => _redo ??= new CanvasCommand(_ => Redo(), _ => History is { CanRedo: true });
+    public CanvasCommand RedoCommand => _redo ??= new CanvasCommand(_ => Redo(),
+        _ => History is { CanRedo: true } history && (!IsReadOnly || AllowsUndoWhileReadOnly(history.StepToRedo)));
+
+    /// <summary>Whether a step is taken back or put again on a plane only looked at: none by default, as nothing on
+    /// such a plane is changed by the user. A derived canvas allows its own steps that change no item, such as a turn of
+    /// what it shows.</summary>
+    protected virtual bool AllowsUndoWhileReadOnly(ICanvasStep step) => false;
 
     /// <summary>Closer in. The parameter is the factor, and one step of <see cref="ZoomStep"/> when nothing is
     /// given.</summary>
@@ -1111,30 +1196,30 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>Takes the selection out - asking first when the canvas was told to ask. Off with nothing
     /// selected.</summary>
     public CanvasCommand DeleteCommand =>
-        _delete ??= new CanvasCommand(_ => RequestDeleteSelection(), _ => _selection.Count > 0);
+        _delete ??= new CanvasCommand(_ => RequestDeleteSelection(), _ => !IsReadOnly && _selection.Count > 0);
 
     /// <summary>Makes one thing of what is selected, and breaks one open again.</summary>
     public CanvasCommand GroupCommand =>
-        _group ??= new CanvasCommand(_ => GroupSelection(), _ => _selection.Count > 1);
+        _group ??= new CanvasCommand(_ => GroupSelection(), _ => !IsReadOnly && _selection.Count > 1);
 
     public CanvasCommand UngroupCommand =>
-        _ungroup ??= new CanvasCommand(_ => UngroupSelection(), _ => _selection.Count > 0);
+        _ungroup ??= new CanvasCommand(_ => UngroupSelection(), _ => !IsReadOnly && _selection.Count > 0);
 
     /// <summary>Raises what is selected to the front of paint order, and lowers it to the back. Off with nothing
     /// selected.</summary>
     public CanvasCommand BringToFrontCommand =>
-        _toFront ??= new CanvasCommand(_ => Reorder(true), _ => _selection.Count > 0 && Scene != null);
+        _toFront ??= new CanvasCommand(_ => Reorder(true), _ => !IsReadOnly && _selection.Count > 0 && Scene != null);
 
     public CanvasCommand SendToBackCommand =>
-        _toBack ??= new CanvasCommand(_ => Reorder(false), _ => _selection.Count > 0 && Scene != null);
+        _toBack ??= new CanvasCommand(_ => Reorder(false), _ => !IsReadOnly && _selection.Count > 0 && Scene != null);
 
     /// <summary>Moves the selection forward past the next item in paint order whose box overlaps it; disabled when nothing in
     /// front overlaps.</summary>
     public CanvasCommand BringForwardCommand =>
-        _forward ??= new CanvasCommand(_ => Step(true), _ => Steppable(true));
+        _forward ??= new CanvasCommand(_ => Step(true), _ => !IsReadOnly && Steppable(true));
 
     public CanvasCommand SendBackwardCommand =>
-        _backward ??= new CanvasCommand(_ => Step(false), _ => Steppable(false));
+        _backward ??= new CanvasCommand(_ => Step(false), _ => !IsReadOnly && Steppable(false));
 
     // FROM THE END IT IS HEADING FOR, so a selection of several keeps its own order: moving the front one first would
     // walk it into the one behind it and the two would swap places instead of both moving.
@@ -1244,13 +1329,13 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// the same thing four times is a surface nobody can keep in step.</summary>
     public CanvasCommand AlignCommand => _align ??= new CanvasCommand(
         edge => { if (Edge(edge) is { } wanted) Align(wanted); },
-        edge => Edge(edge) != null && _selection.Count > 1);
+        edge => !IsReadOnly && Edge(edge) != null && _selection.Count > 1);
 
     /// <summary>...and this opens equal gaps between them, down a column or across a row - the parameter is a
     /// <see cref="CanvasSpread"/> or its word.</summary>
     public CanvasCommand SpreadCommand => _spread ??= new CanvasCommand(
         way => { if (Way(way) is { } wanted) Spread(wanted); },
-        way => Way(way) != null && _selection.Count > 2);
+        way => !IsReadOnly && Way(way) != null && _selection.Count > 2);
 
     /// <summary>Brings the WORK into view: what is selected, and the whole plane when nothing is. One button rather
     /// than two, because that is the one question a person asks of a plane with no edges.</summary>
@@ -1262,7 +1347,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>Empties the plane - asking first when the canvas was told to ask, exactly as deleting a selection
     /// does. Off when there is nothing on it.</summary>
     public CanvasCommand ClearCommand =>
-        _clear ??= new CanvasCommand(_ => RequestClear(), _ => Anything());
+        _clear ??= new CanvasCommand(_ => RequestClear(), _ => !IsReadOnly && Anything());
 
     /// <summary>Puts a new item on top of the one paint order, controls included; tools call it when a gesture finishes.</summary>
     public void Place(ICanvasItem item)
@@ -1555,8 +1640,16 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         canvas.ToolsChanged?.Invoke(canvas, EventArgs.Empty);
     }
 
-    private void OnToolsEdited(object sender, NotifyCollectionChangedEventArgs e) =>
+    private void OnToolsEdited(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        // A plane only looked at takes up its picking tool from what is offered now.
+        if (IsReadOnly)
+        {
+            CoerceValue(ToolProperty);
+        }
+
         ToolsChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>The set of tools changed - a rail rebuilds its buttons on it.</summary>
     public event EventHandler ToolsChanged;

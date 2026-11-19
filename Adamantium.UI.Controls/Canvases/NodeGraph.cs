@@ -21,6 +21,14 @@ public class NodeGraph : InfiniteCanvas
     public NodeGraph()
     {
         _graph = new CanvasGraphHost(this);
+        // A list of kinds open when the graph is only looked at closes: nothing may be picked from it.
+        IsReadOnlyChanged += (_, _) =>
+        {
+            if (IsReadOnly)
+            {
+                SetCurrentValue(IsPaletteOpenProperty, false);
+            }
+        };
     }
 
     /// <summary>The GRAPH: the application's own node objects, one container made for each. Written from both sides -
@@ -195,7 +203,7 @@ public class NodeGraph : InfiniteCanvas
 
     private bool OpenPalette(ElementItem item, CanvasNodePin pin, Vector2<double> world)
     {
-        if (NodeKinds == null || Nodes == null) return false;
+        if (NodeKinds == null || Nodes == null || IsReadOnly) return false;
 
         _askedFrom = item;
         _askedPin = pin;
@@ -211,7 +219,7 @@ public class NodeGraph : InfiniteCanvas
     // A KIND was picked: the node goes where the list was opened, and the wire that opened it lands on it.
     private static void OnPickedKindChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
-        if (component is not NodeGraph graph || e.NewValue is not ICanvasNodeKind picked) return;
+        if (component is not NodeGraph graph || e.NewValue is not ICanvasNodeKind picked || graph.IsReadOnly) return;
 
         var kind = picked.Kind;
 
@@ -299,7 +307,7 @@ public class NodeGraph : InfiniteCanvas
     /// none.</summary>
     public CanvasCommand FrameCommand => _comment ??= new CanvasCommand(
         title => FrameSelection(title as String),
-        _ => Selection.Count > 0 && Scene != null);
+        _ => !IsReadOnly && Selection.Count > 0 && Scene != null);
 
     /// <summary>Draws a titled frame round what is selected and selects IT - the comment every graph editor has; with no
     /// title given, the theme's word for a comment. Null when nothing is selected. The frame holds nothing: what is

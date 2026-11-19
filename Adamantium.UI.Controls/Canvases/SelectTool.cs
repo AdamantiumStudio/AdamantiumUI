@@ -50,7 +50,7 @@ public class SelectTool : ICanvasTool
 
         // A SOCKET first, and nothing else if it was one: a press on a socket means a wire, never a drag of the node
         // it belongs to. Picking would be the wrong answer to a gesture aimed at something a dozen pixels across.
-        if (Wires.Press(canvas, e.Pointer))
+        if (!canvas.IsReadOnly && Wires.Press(canvas, e.Pointer))
         {
             e.Handled = true;
             return;
@@ -72,9 +72,7 @@ public class SelectTool : ICanvasTool
             group.Pick(e.Pointer, canvas.ScreenToWorldLength(4)) is { } inside)
         {
             canvas.Select(inside, false);
-            _grip = CanvasHandle.Body;
-            Begin(canvas);
-            canvas.CapturePointer();
+            StartDragging(canvas);
             e.Handled = true;
             return;
         }
@@ -89,9 +87,7 @@ public class SelectTool : ICanvasTool
 
             if (canvas.Selection.Count > 0)
             {
-                _grip = CanvasHandle.Body;
-                Begin(canvas);
-                canvas.CapturePointer();
+                StartDragging(canvas);
             }
 
             e.Handled = true;
@@ -115,6 +111,19 @@ public class SelectTool : ICanvasTool
 
         canvas.CapturePointer();
         e.Handled = true;
+    }
+
+    // What is picked is dragged - not on a plane only looked at, where a press only picks.
+    private void StartDragging(InfiniteCanvas canvas)
+    {
+        if (canvas.IsReadOnly)
+        {
+            return;
+        }
+
+        _grip = CanvasHandle.Body;
+        Begin(canvas);
+        canvas.CapturePointer();
     }
 
     public void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e)

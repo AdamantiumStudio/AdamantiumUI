@@ -86,10 +86,13 @@ public class CanvasElementLayer : Panel
     internal void ApplyDesignMode()
     {
         var editing = Owner is { IsDesignMode: true };
+        // A plane only looked at: nothing on it takes a press - a node's fold, its sockets, its editors - and a press
+        // goes to the plane, which picks.
+        var lookedAt = Owner is { IsReadOnly: true };
 
         foreach (var child in Children)
         {
-            if (child is IUIComponent visual) visual.IsHitTestVisible = child is CanvasNode || !editing;
+            if (child is IUIComponent visual) visual.IsHitTestVisible = !lookedAt && (child is CanvasNode || !editing);
         }
 
     }

@@ -161,7 +161,8 @@ public class DrawingBoard : InfiniteCanvas
     /// <summary>...and reads one in, adding what it holds to the plane rather than replacing it: a drawing opened on
     /// top of nothing is the same thing as opening it, and one opened onto work already there is a person bringing a
     /// piece in from elsewhere.</summary>
-    public CanvasCommand ImportSvgCommand => _fromSvg ??= new CanvasCommand(_ => ImportSvg(), _ => Scene != null);
+    public CanvasCommand ImportSvgCommand =>
+        _fromSvg ??= new CanvasCommand(_ => ImportSvg(), _ => !IsReadOnly && Scene != null);
 
     /// <summary>Raised when a drawing was read but something in it could not be - an arc, a gradient, a foreign
     /// element. The board says nothing on its own: what to tell the user, and how, is the application's.</summary>
