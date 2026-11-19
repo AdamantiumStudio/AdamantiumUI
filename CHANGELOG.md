@@ -616,6 +616,11 @@ All packages share one version.
 
 ### Fixed
 
+- An element shown again drew at the size it had while collapsed - a browser tab's busy ring stayed 0x0 - now and
+  then. An animation still turning under a collapsed element brought its layout back from the copy kept for a theme
+  swap, and the render thread then read the hidden chain off the interface thread, mid-layout, and kept what it read.
+  A hidden or removed element's copy now goes with it, and sorting the composited animations - every window's, in every
+  window - reads only the layouts the window holds.
 - Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z undo and redo on a canvas wherever its focus is - on a button of its own bar or in
   its side panel, not only on the plane. They are the canvas's answers to `ApplicationCommands.Undo` and `Redo`; a
   text entry inside answers them first for its own text; a tool in the middle of something takes the key and nothing
