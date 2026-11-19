@@ -77,6 +77,20 @@ public class CanvasViewportTests
         });
     }
 
+    // The viewport cuts what it holds whatever the template says: beside a strip of the template's own, a drawing wider
+    // than the view went over the strip.
+    [Test]
+    public void AViewportPart_CutsWhatItHolds_AtItsEdge()
+    {
+        UseFluent();
+        var canvas = CreateCanvasWithStripBeside();
+        canvas.Scene = new CanvasScene();
+        Lay(canvas);
+
+        Assert.That(((Adamantium.UI.Controls.Base.UIComponent)canvas.ViewportElement).ClipToBounds, Is.True,
+            "the viewport lets what it holds out over the strip beside it");
+    }
+
     [Test]
     public void ACanvasWithoutAViewportPart_IsItsOwnViewport()
     {

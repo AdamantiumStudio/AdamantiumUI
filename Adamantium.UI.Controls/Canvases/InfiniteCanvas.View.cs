@@ -1133,6 +1133,13 @@ public partial class InfiniteCanvas : ICanvasCamera
         base.OnApplyTemplate();
 
         _viewportPart = GetTemplateChild("PART_Viewport") as IInputComponent;
+        // What the plane is looked at through cuts what it holds, whatever the template: beside a panel of the
+        // template's own, a sheet wider than the view was drawn over the panel.
+        if (_viewportPart is UIComponent viewport)
+        {
+            viewport.ClipToBounds = true;
+        }
+
         _layers = GetTemplateChild("PART_Layers") as Panel;
 
         _front = GetTemplateChild("PART_Front") as CanvasFrontLayer;
