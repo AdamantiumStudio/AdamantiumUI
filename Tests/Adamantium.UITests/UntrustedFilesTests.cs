@@ -46,8 +46,21 @@ public class UntrustedFilesTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(safe, Has.Length.EqualTo(FileNames.Limit));
+            Assert.That(safe, Has.Length.LessThanOrEqualTo(FileNames.Limit).And.Length.GreaterThan(FileNames.Limit - 5));
             Assert.That(safe, Does.EndWith(".pdf"));
+        });
+    }
+
+    [Test]
+    public void ACut_NeverMakesAKindTheNameDidNotEndWith()
+    {
+        var longExtension = FileNames.MakeSafe("report.exe" + new string(' ', 97) + "pdf", "attachment");
+        var longStem = FileNames.MakeSafe(new string('a', 190) + ".exe" + new string(' ', 20) + "x.pdf", "attachment");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Path.GetExtension(longExtension), Is.Not.EqualTo(".exe"));
+            Assert.That(Path.GetExtension(longStem), Is.EqualTo(".pdf"));
         });
     }
 
@@ -150,6 +163,12 @@ public class UntrustedFilesTests
                 {
                     Assert.That(FileManager.OpenUntrustedItem(program + ".", null), Is.False, "Windows drops the dot");
                     Assert.That(FileManager.OpenUntrustedItem(program + " ", null), Is.False, "and the space");
+                    Assert.That(FileManager.IsDangerousToOpen("setup.exe. "), Is.True, "asked by name alone too");
+                    Assert.That(FileManager.IsDangerousToOpen("notes.txt:setup.exe"), Is.True);
+                }
+                else
+                {
+                    Assert.That(FileManager.IsDangerousToOpen("Meeting 10:30.pdf"), Is.False, "a colon is a letter here");
                 }
 
                 Assert.That(recording.Opened, Is.EqualTo(new[] { Path.GetFullPath(text) }));
@@ -195,6 +214,40 @@ public class UntrustedFilesTests
         }
         finally
         {
+            Directory.Delete(folder, true);
+        }
+    }
+
+    [Test, Platform("Linux,MacOsX")]
+    public void OnUnix_AProgramByItsContent_IsNotOpened_WhateverItsName()
+    {
+        var folder = Directory.CreateTempSubdirectory("adam-untrusted-").FullName;
+        var platform = FileManager.Platform;
+        var recording = new RecordingPlatform();
+        try
+        {
+            var windowsProgram = Path.Combine(folder, "invoice");
+            var linuxProgram = Path.Combine(folder, "invoice.dat");
+            var launcher = Path.Combine(folder, "readme");
+            var text = Path.Combine(folder, "notes");
+            File.WriteAllBytes(windowsProgram, "MZ\u0090\0"u8.ToArray());
+            File.WriteAllBytes(linuxProgram, "\u007FELF\u0002"u8.ToArray());
+            File.WriteAllText(launcher, "# made by hand\n[Desktop Entry]\nExec=sh -c evil\n");
+            File.WriteAllText(text, "just notes");
+            FileManager.Platform = recording;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(FileManager.OpenUntrustedItem(windowsProgram, null), Is.False, "Wine would run it");
+                Assert.That(FileManager.OpenUntrustedItem(linuxProgram, null), Is.False);
+                Assert.That(FileManager.OpenUntrustedItem(launcher, null), Is.False);
+                Assert.That(FileManager.OpenUntrustedItem(text, null), Is.True);
+                Assert.That(recording.Opened, Is.EqualTo(new[] { text }));
+            });
+        }
+        finally
+        {
+            FileManager.Platform = platform;
             Directory.Delete(folder, true);
         }
     }

@@ -19,6 +19,7 @@ public static class FileNames
     {
         var lastPart = Path.GetFileName((name ?? string.Empty).Replace('\\', '/'));
         var written = new StringBuilder(lastPart.Length);
+        Span<char> units = stackalloc char[2];
         foreach (var rune in lastPart.EnumerateRunes())
         {
             if (HidesHowItReads(rune) || (rune.IsBmp && Invalid.Contains((char)rune.Value)))
@@ -27,7 +28,7 @@ public static class FileNames
             }
             else
             {
-                written.Append(rune.ToString());
+                written.Append(units[..rune.EncodeToUtf16(units)]);
             }
         }
 
@@ -39,23 +40,30 @@ public static class FileNames
 
         var stem = Path.GetFileNameWithoutExtension(safe);
         var extension = Path.GetExtension(safe);
+        // An extension that long is no kind of file; cut, it could become one ("x.exe" + spaces + "pdf").
+        if (extension.Length > Limit / 2)
+        {
+            stem = safe;
+            extension = string.Empty;
+        }
+
         // What comes before the first dot is what Windows takes for a device, spaces before the dot aside: NUL.tar.gz too.
-        if (OperatingSystem.IsWindows() && IsDeviceName(safe.Split('.')[0].TrimEnd(' ')))
+        var firstDot = safe.IndexOf('.');
+        if (OperatingSystem.IsWindows() && IsDeviceName((firstDot < 0 ? safe : safe[..firstDot]).TrimEnd(' ')))
         {
             stem = "_" + stem;
         }
 
-        if (extension.Length > Limit / 2)
-        {
-            extension = TrimEnds(Cut(extension, Limit / 2));
-        }
-
         if (stem.Length + extension.Length > Limit)
         {
-            stem = TrimEnds(Cut(stem, Limit - extension.Length));
+            stem = TrimEnds(Cut(stem, Limit - extension.Length - 1));
         }
 
-        return stem + extension;
+        // A cut never leaves a kind the name did not end with.
+        var made = stem + extension;
+        return Path.GetExtension(made).Equals(extension, StringComparison.OrdinalIgnoreCase)
+            ? made
+            : stem + "_" + extension;
     }
 
     /// <summary><paramref name="name"/> numbered, as a second file of the same name is: "report (2).pdf".</summary>

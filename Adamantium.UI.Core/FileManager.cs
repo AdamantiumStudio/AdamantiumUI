@@ -28,17 +28,26 @@ public static class FileManager
     public static bool IsDangerousToOpen(string fileName)
     {
         var name = Path.GetFileName(fileName ?? string.Empty);
-        // A name with a stream in it (setup.exe::$DATA) hides its kind from the extension.
-        return Platform == null || name.Length == 0 || name.Contains(':') || Dangerous.Contains(Path.GetExtension(name)) ||
+        if (OperatingSystem.IsWindows())
+        {
+            // Windows opens "setup.exe." as setup.exe, and a stream in a name (setup.exe::$DATA) hides its kind.
+            name = name.TrimEnd('.', ' ');
+            if (name.Contains(':'))
+            {
+                return true;
+            }
+        }
+
+        return Platform == null || name.Length == 0 || Dangerous.Contains(Path.GetExtension(name)) ||
                Platform.IsDangerousToOpen(name);
     }
 
     /// <summary>Opens a file that came from outside - an attachment, a download - after the desktop's own checks: marked
     /// as from the internet, the system's policy asked, its warning shown over <paramref name="owner"/>. False when it is
-    /// not there, is a link, is <see cref="IsDangerousToOpen">dangerous to open</see> or was not opened. Called on the UI
-    /// thread.</summary>
+    /// not there, is a link, is <see cref="IsDangerousToOpen">dangerous to open</see>, is a program by its content or was
+    /// not opened. Called on the UI thread.</summary>
     public static bool OpenUntrustedItem(string path, IWindow owner) =>
-        FullPathOfAFile(path) is { } full && !IsDangerousToOpen(full) &&
+        FullPathOfAFile(path) is { } full && !IsDangerousToOpen(full) && !IsAProgramByContent(full) &&
         Platform.OpenUntrustedItem(full, owner?.Handle ?? IntPtr.Zero);
 
     /// <summary>Marks a file saved from outside, at <paramref name="path"/>, as browsers mark downloads, so the system
@@ -67,12 +76,55 @@ public static class FileManager
         }
     }
 
+    // Linux and macOS pick the application by content when the name says nothing they know: a Windows program with no
+    // extension goes to Wine, which needs no right to run. Windows goes by the extension alone.
+    private static bool IsAProgramByContent(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        try
+        {
+            Span<byte> start = stackalloc byte[ContentChecked];
+            using var file = File.OpenRead(path);
+            start = start[..file.ReadAtLeast(start, start.Length, throwOnEndOfStream: false)];
+            foreach (var magic in ProgramStarts)
+            {
+                if (start.StartsWith(magic))
+                {
+                    return true;
+                }
+            }
+
+            return start.IndexOf("[Desktop Entry]"u8) >= 0 || start.IndexOf("[KDE Desktop Entry]"u8) >= 0;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    private const int ContentChecked = 1024;
+
+    // Windows and Linux programs, scripts, Mach-O (both byte orders, 32 and 64 bits) and fat binaries.
+    private static readonly byte[][] ProgramStarts =
+    [
+        "MZ"u8.ToArray(), [0x7F, (byte)'E', (byte)'L', (byte)'F'], "#!"u8.ToArray(), [0xCA, 0xFE, 0xBA, 0xBE],
+        [0xFE, 0xED, 0xFA, 0xCE], [0xFE, 0xED, 0xFA, 0xCF], [0xCE, 0xFA, 0xED, 0xFE], [0xCF, 0xFA, 0xED, 0xFE]
+    ];
+
     // Kinds that run code when opened wherever an interpreter for them is installed, whatever the system says of them -
-    // Windows' own list misses Python and Java, Linux and macOS keep none. Disk images mount past the system's checks.
+    // Windows' own list misses Python, Java and more, Linux and macOS keep none. Disk images mount past the system's
+    // checks; some kinds reach out to a server (.rdp, .searchconnector-ms).
     private static readonly HashSet<string> Dangerous = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".exe", ".com", ".scr", ".pif", ".cpl", ".msi", ".msp", ".msix", ".appx", ".appinstaller", ".application",
-        ".appref-ms", ".bat", ".cmd", ".ps1", ".psm1", ".psd1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".hta",
+        ".exe", ".com", ".scr", ".pif", ".cpl", ".msi", ".msp", ".mst", ".msix", ".appx", ".appinstaller", ".application",
+        ".appref-ms", ".bat", ".cmd", ".ps1", ".psm1", ".psd1", ".ps1xml", ".ps2", ".ps2xml", ".psc1", ".psc2", ".msh",
+        ".msh1", ".msh2", ".mshxml", ".vb", ".vbs", ".vbe", ".js", ".jse", ".ws", ".wsf", ".wsh", ".wsc", ".sct", ".hta",
+        ".chm", ".hlp", ".msc", ".diagcab", ".xll", ".xbap", ".rdp", ".searchconnector-ms", ".theme", ".themepack",
+        ".desktopthemepackfile", ".accde", ".ade", ".adp", ".mde", ".website", ".shb", ".shs", ".ins", ".isp", ".job",
         ".lnk", ".url", ".reg", ".inf", ".gadget", ".settingcontent-ms", ".library-ms", ".search-ms", ".scf",
         ".py", ".pyw", ".pyc", ".pyo", ".pyz", ".pyzw", ".jar", ".jnlp", ".rb", ".rbw", ".pl", ".pm", ".php", ".tcl",
         ".lua", ".sh", ".bash", ".zsh", ".csh", ".ksh", ".fish", ".run", ".bin", ".desktop", ".appimage", ".deb", ".rpm",

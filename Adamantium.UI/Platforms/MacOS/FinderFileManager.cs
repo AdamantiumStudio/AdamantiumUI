@@ -13,6 +13,7 @@ namespace Adamantium.UI.Platforms.MacOS;
 internal sealed class FinderFileManager : IFileManagerPlatform
 {
     private const string QuarantineAttribute = "com.apple.quarantine";
+    private const int NoFollow = 0x0001;
 
     /// <summary>Downloads in the home folder: macOS keeps it there, named in English whatever the language the Finder
     /// shows it in.</summary>
@@ -41,7 +42,8 @@ internal sealed class FinderFileManager : IFileManagerPlatform
         var mark = Encoding.UTF8.GetBytes($"0081;{DateTimeOffset.UtcNow.ToUnixTimeSeconds():x8};Adamantium;");
         fixed (byte* value = mark)
         {
-            return PosixInterop.SetMacExtendedAttribute(path, QuarantineAttribute, value, (nuint)mark.Length, 0, 0) == 0;
+            return PosixInterop.SetMacExtendedAttribute(path, QuarantineAttribute, value, (nuint)mark.Length, 0,
+                NoFollow) == 0;
         }
     }
 

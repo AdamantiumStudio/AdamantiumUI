@@ -7,11 +7,12 @@ All packages share one version.
 
 ### Added
 
-- Files from outside - a PDF's attachments, downloads. `FileManager.OpenUntrustedItem` opens one only after the
-  system's checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy
-  and the scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to
-  run. `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs, scripts, shortcuts,
-  installers); those are never opened. `FileManager.MarkUntrusted` marks a file saved from outside.
+- Files from outside, such as a PDF's attachments. `FileManager.OpenUntrustedItem` opens one only after the system's
+  checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy and the
+  scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to run, and
+  not when its content is a program. `FileManager.IsDangerousToOpen` says which kinds run code when opened (programs,
+  scripts, shortcuts, installers, disk images): the system's list on Windows and a shared one everywhere; those are
+  never opened, nor are links. `FileManager.MarkUntrusted` marks a file saved from outside.
   `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or
   direction marks that change how it reads - and `FileNames.Numbered` numbers a second one.
 - A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
@@ -624,7 +625,9 @@ All packages share one version.
 ### Fixed
 
 - A download's name loses direction marks that change how it reads ("invoice‮fdp.exe" shown as "invoiceexe.pdf")
-  and dots and spaces at its end together, which Windows drops, so the file is saved under the name kept.
+  and dots and spaces at its end together, which Windows drops, so the file is saved under the name kept. Cut to fit,
+  it no longer splits a character or ends in a kind it did not have ("report.exe" + spaces + "pdf" was saved as
+  "report.exe").
 - A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
   element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
   gave a fade slot keeps fading in it; any other is left to the window that draws it.
