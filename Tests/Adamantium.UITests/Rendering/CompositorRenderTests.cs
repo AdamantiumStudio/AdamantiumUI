@@ -449,6 +449,111 @@ public class CompositorRenderTests
         Assert.That(added, Is.EqualTo(255), "...the child added while it was hidden too");
     }
 
+    // A spinner left turning under a collapsed parent - a browser tab's busy ring once the page has loaded. The render
+    // thread must not put the hidden spinner's snapshot back from the stand-in kept for a re-capture, and then read its
+    // chain live off the interface thread: what it read there, mid-layout, it kept.
+    [Test]
+    public void ASpinnerTurningUnderACollapsedParent_IsNotReadLive()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64);
+
+        var root = new TestRoot(64, 64);
+        var page = new TestControl();
+        page.Bounds = new Rect(0, 0, 64, 64);
+        page.RenderSize = new Size<double>(64, 64);
+        var spinner = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        spinner.Bounds = new Rect(24, 24, 16, 16);
+        spinner.RenderSize = new Size<double>(16, 16);
+        var spin = new Transform();
+        spinner.RenderTransform = spin;
+        page.Add(spinner);
+        root.Add(page);
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            IterationCount = double.PositiveInfinity,
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("RotationAngle", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("RotationAngle", 360.0) } }
+            }
+        }.Apply(spin);
+        Compositor.StartPending();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(Held(renderer.Cache, "_compositedFallback"), Is.EqualTo(1), "the spin must be composited");
+
+        page.Visibility = Visibility.Collapsed;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renderer.Cache.IsReadLive(page), Is.False, "the collapsed parent was read off the interface thread");
+            Assert.That(renderer.Cache.IsReadLive(spinner), Is.False);
+            Assert.That(Held(renderer.Cache, "_compositedFallback"), Is.Zero, "the hidden spinner is still kept to be turned");
+        });
+    }
+
+    // The compositor plays every window's animations; a cache that never drew the owner leaves its slide alone - it is not
+    // read live to be sorted, nor kept to be moved.
+    [Test]
+    public void ACacheThatDoesNotDrawTheOwner_LeavesItsAnimationsAlone()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var drawing = new OffscreenTestRenderer(_device, factory, 64, 64);
+        using var other = new OffscreenTestRenderer(_device, factory, 64, 64);
+
+        var root = new TestRoot(64, 64);
+        var moving = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        moving.Bounds = new Rect(0, 24, 16, 16);
+        moving.RenderSize = new Size<double>(16, 16);
+        var transform = new Transform();
+        moving.RenderTransform = transform;
+        root.Add(moving);
+        var elsewhere = new TestRoot(64, 64);
+        elsewhere.Add(new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 8, 8)) });
+
+        // A second slide of the same window: with two, the animations are sorted, and the sort is what read them.
+        var second = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 8, 8)) };
+        second.Bounds = new Rect(0, 4, 8, 8);
+        second.RenderSize = new Size<double>(8, 8);
+        var secondTransform = new Transform();
+        second.RenderTransform = secondTransform;
+        root.Add(second);
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateY", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateY", 32.0) } }
+            }
+        }.Apply(secondTransform);
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateX", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateX", 32.0) } }
+            }
+        }.Apply(transform);
+        Compositor.StartPending();
+
+        Assert.That(drawing.RenderFrame(root), Is.True);
+        Assert.That(other.RenderFrame(elsewhere), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(other.Cache.IsReadLive(moving), Is.False, "another window's owner was read live");
+            Assert.That(Held(other.Cache, "_compositedFallback"), Is.Zero, "...and kept to be moved");
+            Assert.That(Held(drawing.Cache, "_compositedFallback"), Is.EqualTo(2), "its own window still moves both");
+        });
+    }
+
     [Test]
     public void AChildRaisedWhileItsParentIsHidden_IsOnTopOnceShown()
     {

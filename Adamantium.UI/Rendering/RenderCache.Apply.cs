@@ -591,6 +591,7 @@ public partial class RenderCache
         {
             RemoveAndDeferDispose(component.RenderId);
             _applySnap.Remove(component);
+            _compositedFallback.Remove(component);
         }
 
         // 2. HIDDEN: it stops DRAWING, and that is all. Its group + units survive, so a re-show (a recycled container a
@@ -599,6 +600,9 @@ public partial class RenderCache
         {
             if (_groupById.TryGetValue(component.RenderId, out var hidden)) RemoveFromOrder(hidden, "undrawn");
             _applySnap.Remove(component);
+            // ...and the stand-in kept for a snapshot being re-captured: an animation still ticking under a hidden element
+            // put its snapshot back from it, and its chain was then read live off the interface thread.
+            _compositedFallback.Remove(component);
         }
 
         FlushOrderRemovals();
