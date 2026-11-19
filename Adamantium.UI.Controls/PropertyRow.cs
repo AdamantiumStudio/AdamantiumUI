@@ -202,8 +202,9 @@ public class PropertyRow : Control
 
         HasChildren = definition is CompositeProperty composite && composite.Children.Count > 0;
         IsExpanded = definition is CompositeProperty { IsExpanded: true };
-        IsReadOnly = definition.IsReadOnly;
-        ShowActionButton = definition.ShowActionButton;
+        IsReadOnly = definition.IsReadOnly || owner is { IsReadOnly: true };
+        // A grid only showing offers no action either: an action writes as an editor does.
+        ShowActionButton = definition.ShowActionButton && owner is not { IsReadOnly: true };
         if (owner != null) ResetButton = owner.ResetButton;
 
         if (rebind) Bind();

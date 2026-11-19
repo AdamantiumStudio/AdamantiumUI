@@ -967,10 +967,10 @@ public partial class InfiniteCanvas
         SelectionTurn is { } turn ? turn.Undo(world, SelectionMiddle) : world;
 
     /// <summary>Which of a single selected item's POINTS a screen position is on, or -1. Only one item at a time offers
-    /// them: the points of two things at once are not one shape.</summary>
+    /// them: the points of two things at once are not one shape. None on a plane only looked at.</summary>
     public int PointHandleAt(Vector2<double> screen)
     {
-        if (_selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return -1;
+        if (IsReadOnly || _selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return -1;
 
         var reach = Math.Max(4, HandleSize) / 2 + 2;
         var points = shaped.Points;
@@ -1043,12 +1043,12 @@ public partial class InfiniteCanvas
 
     /// <summary>Which grips what is selected offers - the AND of what every selected item offers, because a frame round
     /// several things can only do what all of them can; none when they are not framed as one
-    /// (<see cref="SharesFrame"/>).</summary>
+    /// (<see cref="SharesFrame"/>), nor on a plane only looked at (<see cref="IsReadOnly"/>).</summary>
     public CanvasHandles OfferedHandles
     {
         get
         {
-            if (_selection.Count == 0 || !SharesFrame(_selection)) return CanvasHandles.None;
+            if (_selection.Count == 0 || IsReadOnly || !SharesFrame(_selection)) return CanvasHandles.None;
 
             // What offers NOTHING does not get a vote: a wire has no handles, and counted in it took the frame and the
             // body drag away from every node it was selected with.
@@ -1257,7 +1257,7 @@ public partial class InfiniteCanvas
                     break;
                 }
 
-                if (empty && OnEmptyPlaneDoubleClick(spot))
+                if (empty && !IsReadOnly && OnEmptyPlaneDoubleClick(spot))
                 {
                     e.Handled = true;
                     return;
@@ -1303,7 +1303,7 @@ public partial class InfiniteCanvas
         // A GRIP of the manipulation frame, before any tool sees the press: the frame is the canvas's, so dragging one
         // is the same answer whatever tool is in hand. Only the GRIPS - a press inside the frame still means what the
         // tool says, or a shape could never be drawn over something already selected.
-        if (e.ChangedButton == MouseButtons.Left && _selection.Count > 0)
+        if (e.ChangedButton == MouseButtons.Left && _selection.Count > 0 && !IsReadOnly)
         {
             // POINT handles first: they sit inside the frame, so asking about the box first would start a move and a
             // curve could never be reshaped without moving it.
@@ -1333,7 +1333,7 @@ public partial class InfiniteCanvas
         // at a drawing - and knows nothing about what the plain left button means.
         var args = Describe(at, e.ChangedButton, e.ClickCount, e);
 
-        if (args.IsEraser && PenErases)
+        if (args.IsEraser && PenErases && !IsReadOnly)
         {
             _erasing = e.Pointer.Id;
             _penEraser.OnPressed(this, args);
@@ -1677,6 +1677,19 @@ public partial class InfiniteCanvas
         if (!_edgeCoast.IsActive) RememberLayout();
     }
 
+    // Every gesture under way ends where it is: the plane's own, the tool's and the pen's eraser.
+    private void EndEveryGesture()
+    {
+        if (_erasing != null)
+        {
+            _erasing = null;
+            CancelTool(_penEraser);
+        }
+
+        LetGo();
+        ReleasePointer();
+    }
+
     private void LetGo()
     {
         _draggingPoint = -1;
@@ -1840,19 +1853,23 @@ public partial class InfiniteCanvas
 
         if (control && e.Key == Key.G)
         {
-            if (shift) UngroupSelection();
-            else GroupSelection();
+            if (!IsReadOnly)
+            {
+                if (shift) UngroupSelection();
+                else GroupSelection();
+            }
 
             e.Handled = true;
             return;
         }
 
-        // Copy, paste and duplicate - before the tool shortcuts, so a tool whose key is C is not picked by a copy.
+        // Copy, paste and duplicate - before the tool shortcuts, so a tool whose key is C is not picked by a copy. A
+        // plane only looked at is copied from, never put on.
         if (control && e.Key is Key.C or Key.V or Key.D)
         {
             if (e.Key == Key.C) Copy();
-            else if (e.Key == Key.V) Paste();
-            else Duplicate();
+            else if (!IsReadOnly && e.Key == Key.V) Paste();
+            else if (!IsReadOnly) Duplicate();
 
             e.Handled = true;
             return;
@@ -1886,7 +1903,7 @@ public partial class InfiniteCanvas
 
         if (e.Key == Key.Delete)
         {
-            if (_selection.Count == 0) return;
+            if (_selection.Count == 0 || IsReadOnly) return;
 
             // Through the REQUEST, so a key press meets the same question a button does.
             RequestDeleteSelection();
@@ -1926,7 +1943,8 @@ public partial class InfiniteCanvas
 
         foreach (var tool in _tools)
         {
-            if (tool == null || tool.Shortcut != key) continue;
+            // A plane only looked at answers only the keys of the tools that pick, as its rail offers only them.
+            if (tool == null || tool.Shortcut != key || (IsReadOnly && tool is not SelectTool)) continue;
 
             if (ReferenceEquals(tool, Tool)) return true;
 

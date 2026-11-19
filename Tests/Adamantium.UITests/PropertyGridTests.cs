@@ -531,6 +531,31 @@ public class PropertyGridTests
     // object owns it, and wrong when it is the theme's. The theme hands one brush to everything that asks for that
     // color, so recoloring one node's title strip repainted every accent in the application. An edit there means the
     // object OVERRIDES the theme: a new brush on the object, and the theme's left alone.
+    // A grid only showing writes nothing, and its lines say so - as a line of a read-only property does.
+    [Test]
+    public void AReadOnlyGrid_WritesNothing_UntilItIsNotAnyMore()
+    {
+        var node = new CanvasNode { Accent = new SolidColorBrush(Colors.Blue) };
+        var item = new ElementItem(node, new Rect(0, 0, 190, 110));
+        var accent = new SolidColorBrushProperty { Header = "Accent", Binding = new Binding("Element.Accent") };
+        var grid = Built(Section(item, accent));
+
+        grid.IsReadOnly = true;
+        var refused = grid.Write(RowOf(grid, accent), Colors.Red);
+        var shownOnly = RowOf(grid, accent).IsReadOnly;
+        grid.IsReadOnly = false;
+        var written = grid.Write(RowOf(grid, accent), Colors.Red);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(refused, Is.False);
+            Assert.That(shownOnly, Is.True, "the line still offered an editor");
+            Assert.That(written, Is.True);
+            Assert.That(RowOf(grid, accent).IsReadOnly, Is.False);
+            Assert.That((node.Accent as SolidColorBrush)?.Color, Is.EqualTo(Colors.Red));
+        });
+    }
+
     [Test]
     public void EditingAThemeBrushLeavesTheThemesOwnBrushAlone()
     {

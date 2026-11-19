@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `InfiniteCanvas.IsReadOnly`: a plane only looked at. It is panned and zoomed, its items picked and copied, but the
+  user changes nothing on it: the tool in hand is put down for one that picks (the resting `SelectTool`, else the first
+  in `Tools`) and the rail offers only those; a press picks without dragging; no grips or points are offered; paste,
+  duplicate, delete, group, ordering, aligning, clearing, SVG import, undo and redo are off, and so are the
+  inspector's own buttons; the inspector only shows. Code still changes the scene, as it changes a read-only text box's
+  text. `IsReadOnlyChanged` tells the parts round the plane.
+- `PropertyGrid.IsReadOnly`: every line only shows its value, as a line of a read-only property does.
 - Files from outside, such as a PDF's attachments. `FileManager.OpenUntrustedItem` opens one only after the system's
   checks: on Windows through the attachment services, which mark it as from a restricted zone, ask the policy and the
   scanners and show the system's warning; on macOS quarantined first; on Linux and macOS without the right to run, and

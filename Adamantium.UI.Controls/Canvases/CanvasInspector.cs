@@ -288,17 +288,28 @@ public class CanvasInspector : Control, ICanvasPart
         // At DEFAULT priority, which is the whole point: written the ordinary way these would sit in the Local slot,
         // and Local outranks Binding for good - an application that wanted to answer the plus itself could never get
         // a {Binding} through.
-        SetValue(AddSocketCommandProperty, new CanvasCommand(side => Socketed(side, true)), ValuePriority.Default);
-        SetValue(RemoveSocketCommandProperty, new CanvasCommand(socket => Socketed(socket, false)),
+        SetValue(AddSocketCommandProperty, new CanvasCommand(side => Socketed(side, true), _ => Changes()),
             ValuePriority.Default);
-        SetValue(ActualSizeCommandProperty, new CanvasCommand(_ => Actual()), ValuePriority.Default);
+        SetValue(RemoveSocketCommandProperty, new CanvasCommand(socket => Socketed(socket, false), _ => Changes()),
+            ValuePriority.Default);
+        SetValue(ActualSizeCommandProperty, new CanvasCommand(_ => Actual(), _ => Changes()), ValuePriority.Default);
+    }
+
+    // A plane only looked at is changed from here no more than from the plane itself.
+    private bool Changes() => Canvas is not { IsReadOnly: true };
+
+    private void OnReadOnlyChanged(object sender, EventArgs e)
+    {
+        (GetValue<ICommand>(AddSocketCommandProperty) as CanvasCommand)?.RaiseCanExecuteChanged();
+        (GetValue<ICommand>(RemoveSocketCommandProperty) as CanvasCommand)?.RaiseCanExecuteChanged();
+        (GetValue<ICommand>(ActualSizeCommandProperty) as CanvasCommand)?.RaiseCanExecuteChanged();
     }
 
     // EVERY selected picture at once, and each at its OWN size: "the picture's own size" is a different number for
     // each of them, which is the one thing a selection cannot be given as one value.
     private void Actual()
     {
-        if (Canvas is not { } canvas || canvas.Selection.Count == 0) return;
+        if (Canvas is not { IsReadOnly: false } canvas || canvas.Selection.Count == 0) return;
 
         canvas.BeginEdit("Actual size");
         try
@@ -324,7 +335,7 @@ public class CanvasInspector : Control, ICanvasPart
     // twenty nodes at once is not what the plus beside one list of them says.
     private void Socketed(object which, bool adding)
     {
-        if (Canvas is not { } canvas) return;
+        if (Canvas is not { IsReadOnly: false } canvas) return;
 
         foreach (var item in canvas.Selection)
         {
@@ -460,6 +471,7 @@ public class CanvasInspector : Control, ICanvasPart
             was.SearchTextChanged -= inspector.OnSearched;
             was.SearchAsked -= inspector.OnSearchAsked;
             was.SectionsChanged -= inspector.OnSectionsChanged;
+            was.IsReadOnlyChanged -= inspector.OnReadOnlyChanged;
         }
 
         if (e.OldValue is NodeGraph wasGraph)
@@ -476,7 +488,10 @@ public class CanvasInspector : Control, ICanvasPart
             now.SearchTextChanged += inspector.OnSearched;
             now.SearchAsked += inspector.OnSearchAsked;
             now.SectionsChanged += inspector.OnSectionsChanged;
+            now.IsReadOnlyChanged += inspector.OnReadOnlyChanged;
         }
+
+        inspector.OnReadOnlyChanged(inspector, EventArgs.Empty);
 
         inspector.ForgetLayers();
 

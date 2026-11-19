@@ -1013,7 +1013,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     // The POINTS of a single selected item that has them, in screen pixels like every other grip.
     private void DrawPointHandles(CanvasDrawing drawing, Pen pen, Brush brush)
     {
-        if (_selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return;
+        if (IsReadOnly || _selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return;
 
         var half = HandleSize / 2;
         var box = new Rect(-half, -half, HandleSize, HandleSize);

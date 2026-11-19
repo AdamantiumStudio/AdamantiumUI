@@ -106,6 +106,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             rail._canvas.ToolsChanged -= rail.OnToolsChanged;
             rail._canvas.ToolChanged -= rail.OnToolChanged;
             rail._canvas.PhrasesChanged -= rail.OnToolsChanged;
+            rail._canvas.IsReadOnlyChanged -= rail.OnToolsChanged;
         }
 
         rail._canvas = e.NewValue as InfiniteCanvas;
@@ -116,6 +117,7 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
             rail._canvas.ToolChanged += rail.OnToolChanged;
             // New words are what the tools are called.
             rail._canvas.PhrasesChanged += rail.OnToolsChanged;
+            rail._canvas.IsReadOnlyChanged += rail.OnToolsChanged;
         }
 
         rail.Rebuild();
@@ -179,7 +181,8 @@ public class CanvasToolRail : WrapPanel, ICanvasPart
 
         foreach (var tool in tools)
         {
-            if (tool == null) continue;
+            // A plane only looked at offers only the tools that pick.
+            if (tool == null || (_canvas.IsReadOnly && tool is not SelectTool)) continue;
 
             var group = tool.Group;
             if (string.IsNullOrEmpty(group))
