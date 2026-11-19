@@ -157,6 +157,46 @@ public class NumericUpDown : RangeLimitsBase
     /// <summary>The value ran into <see cref="RangeLimitsBase.Maximum"/>.</summary>
     public event EventHandler MaximumReached;
 
+    /// <summary>Whether the value is being moved and moves on: a button held, a drag, an arrow key held, the wheel turning.
+    /// A value changed meanwhile is not settled yet; <see cref="InteractionEnded"/> says when it is.</summary>
+    public bool IsInteracting => _interaction != Interaction.None;
+
+    /// <summary>The value stopped moving: the button or key let go, the drag ended, the pointer or the focus gone after
+    /// the wheel.</summary>
+    public event EventHandler InteractionEnded;
+
+    private Interaction _interaction;
+
+    private void Interact(Interaction way)
+    {
+        // A drag or a button held goes on through a key or the wheel meanwhile: it is still the move.
+        if (_interaction == way || _interaction is Interaction.Drag or Interaction.Button && way is Interaction.Keys or Interaction.Wheel)
+            return;
+
+        EndInteraction();
+        _interaction = way;
+    }
+
+    private void EndInteraction()
+    {
+        if (_interaction == Interaction.None)
+            return;
+
+        _interaction = Interaction.None;
+        _heldStepKeys.Clear();
+        InteractionEnded?.Invoke(this, EventArgs.Empty);
+    }
+
+    // How the value is being moved.
+    private enum Interaction
+    {
+        None,
+        Button,
+        Drag,
+        Keys,
+        Wheel
+    }
+
     public double? Value
     {
         get => GetValue<double?>(ValueProperty);
@@ -368,11 +408,27 @@ public class NumericUpDown : RangeLimitsBase
             _text.PropertyChanged += OnTextChanged;
             _text.Placeholder = Placeholder;
         }
-        if (_increase != null) _increase.Click += OnIncreaseClick;
-        if (_decrease != null) _decrease.Click += OnDecreaseClick;
+        if (_increase != null)
+        {
+            _increase.Click += OnIncreaseClick;
+            _increase.PropertyChanged += OnButtonPropertyChanged;
+        }
+
+        if (_decrease != null)
+        {
+            _decrease.Click += OnDecreaseClick;
+            _decrease.PropertyChanged += OnButtonPropertyChanged;
+        }
 
         UpdateText();
         UpdateButtons();
+    }
+
+    // A button let go ends its hold.
+    private void OnButtonPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == ButtonBase.IsPressedProperty && e.NewValue is false && _interaction == Interaction.Button)
+            EndInteraction();
     }
 
     /// <summary>Let the template's parts go when the template does - see ScrollBar.OnRemoveTemplate.</summary>
@@ -394,13 +450,17 @@ public class NumericUpDown : RangeLimitsBase
         if (_increase != null)
         {
             _increase.Click -= OnIncreaseClick;
+            _increase.PropertyChanged -= OnButtonPropertyChanged;
             _increase = null;
         }
         if (_decrease != null)
         {
             _decrease.Click -= OnDecreaseClick;
+            _decrease.PropertyChanged -= OnButtonPropertyChanged;
             _decrease = null;
         }
+
+        EndInteraction();
     }
 
     // Null is not out of range - it is the absence of one - so it passes through untouched; a number is clamped, the
@@ -586,7 +646,11 @@ public class NumericUpDown : RangeLimitsBase
         }
     }
 
-    private void OnTextLostFocus(object sender, RoutedEventArgs e) => CommitText();
+    private void OnTextLostFocus(object sender, RoutedEventArgs e)
+    {
+        CommitText();
+        EndInteraction();
+    }
 
     /// <summary>Read the entry back, then write the value out again - which both re-formats what parsed and restores
     /// what did not, so the box can never be left showing something the value is not.</summary>
@@ -601,9 +665,20 @@ public class NumericUpDown : RangeLimitsBase
 
     // --- Stepping ---------------------------------------------------------------------------------------------------
 
-    private void OnIncreaseClick(object sender, RoutedEventArgs e) => Step(+1, HeldStep());
+    private void OnIncreaseClick(object sender, RoutedEventArgs e) => StepByButton(sender, +1);
 
-    private void OnDecreaseClick(object sender, RoutedEventArgs e) => Step(-1, HeldStep());
+    private void OnDecreaseClick(object sender, RoutedEventArgs e) => StepByButton(sender, -1);
+
+    // A button held repeats its step until let go; a click by the keyboard is one step, settled at once.
+    private void StepByButton(object button, int direction)
+    {
+        if (button is ButtonBase { IsPressed: true })
+            Interact(Interaction.Button);
+        else
+            EndInteraction();
+
+        Step(direction, HeldStep());
+    }
 
     private void Step(int direction, double amount)
     {
@@ -674,20 +749,37 @@ public class NumericUpDown : RangeLimitsBase
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         base.OnPreviewKeyDown(e);
+        // A key taken before it reached here - a window's shortcut, a save, an undo - ends the keys' or the wheel's move
+        // all the same: what it does should find the value settled.
+        if (e.Handled && _interaction is Interaction.Keys or Interaction.Wheel && !IsModifier(e.Key))
+            EndInteraction();
+
         if (e.Handled || IsReadOnly) return;
+
+        var stepping = AreArrowKeysEnabled && IsStepKey(e.Key);
+        if (stepping)
+        {
+            _heldStepKeys.Add(e.Key);
+            Interact(Interaction.Keys);
+        }
+        // Another key ends the keys' or the wheel's move; a modifier - Shift or Ctrl sizing a drag's step - ends none.
+        else if (_interaction is Interaction.Keys or Interaction.Wheel && !IsModifier(e.Key))
+        {
+            EndInteraction();
+        }
 
         switch (e.Key)
         {
-            case Key.UpArrow when AreArrowKeysEnabled:
+            case Key.UpArrow when stepping:
                 Step(+1, SmallChange);
                 break;
-            case Key.DownArrow when AreArrowKeysEnabled:
+            case Key.DownArrow when stepping:
                 Step(-1, SmallChange);
                 break;
-            case Key.PageUp when AreArrowKeysEnabled:
+            case Key.PageUp when stepping:
                 Step(+1, LargeChange);
                 break;
-            case Key.PageDown when AreArrowKeysEnabled:
+            case Key.PageDown when stepping:
                 Step(-1, LargeChange);
                 break;
             case Key.Escape:
@@ -698,6 +790,49 @@ public class NumericUpDown : RangeLimitsBase
         }
 
         e.Handled = true;
+    }
+
+    // The last step key held let go ends the keys' move.
+    protected override void OnPreviewKeyUp(KeyEventArgs e)
+    {
+        base.OnPreviewKeyUp(e);
+        if (!IsStepKey(e.Key))
+            return;
+
+        _heldStepKeys.Remove(e.Key);
+        if (_interaction == Interaction.Keys && _heldStepKeys.Count == 0)
+            EndInteraction();
+    }
+
+    // The step keys down now.
+    private readonly HashSet<Key> _heldStepKeys = [];
+
+    private static bool IsStepKey(Key key) => key is Key.UpArrow or Key.DownArrow or Key.PageUp or Key.PageDown;
+
+    private static bool IsModifier(Key key) => key is Key.Shift or Key.Ctrl or Key.Alt or Key.LeftShift or Key.RightShift
+        or Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftWin or Key.RightWin;
+
+    // A drag whose pointer was taken away - another window, Alt+Tab - ends there: no release will come.
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        // Only its own capture: a part's, let go as the drag takes the pointer, bubbles here too.
+        if (!_scrubbing || !ReferenceEquals(e.Source, this))
+            return;
+
+        _scrubArmed = false;
+        _scrubbing = false;
+        Mouse.OverrideCursor = null;
+        _text?.SuppressCaret(false);
+        EndInteraction();
+    }
+
+    // The wheel has no end of its own: the pointer leaving ends its turning.
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_interaction == Interaction.Wheel)
+            EndInteraction();
     }
 
     /// <summary>Refuse a keystroke that could not be part of a number BEFORE the text box inserts it. The preview and
@@ -740,6 +875,10 @@ public class NumericUpDown : RangeLimitsBase
 
     private void OnScrubPressed(object sender, PointerPressedEventArgs e)
     {
+        // Any press ends the wheel's turning or another move.
+        if (_interaction is Interaction.Wheel or Interaction.Keys)
+            EndInteraction();
+
         if (e.ChangedButton != MouseButtons.Left || !IsDragScrubEnabled || IsReadOnly || e.ClickCount > 1)
         {
             return;
@@ -792,10 +931,13 @@ public class NumericUpDown : RangeLimitsBase
         {
             e.Pointer.Capture(null);
         }
+
+        EndInteraction();
     }
 
     private void BeginScrub(Pointer pointer)
     {
+        Interact(Interaction.Drag);
         _scrubbing = true;
         _text?.CancelPointerSelection();
         _text?.SuppressCaret(true);
@@ -845,6 +987,7 @@ public class NumericUpDown : RangeLimitsBase
             return;
         }
 
+        Interact(Interaction.Wheel);
         Step(Math.Sign(e.Delta), SmallChange);
         e.Handled = true;
     }

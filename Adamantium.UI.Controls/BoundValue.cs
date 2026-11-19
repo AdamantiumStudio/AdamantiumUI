@@ -67,6 +67,12 @@ internal sealed class BoundValue : FundamentalUIComponent
 
     public Type SourceType => _expression?.SourceType ?? Value?.GetType();
 
+    /// <summary>The object a value written here sets a property of; null where there is none.</summary>
+    public object WrittenObject => _expression?.WrittenObject;
+
+    /// <summary>The property of <see cref="WrittenObject"/> a value written here sets.</summary>
+    public string WrittenProperty => _expression?.WrittenProperty;
+
     internal Type DeclaredType =>
         _converting == null && _expression?.SourceType is { } type && type != typeof(object) ? type : null;
 

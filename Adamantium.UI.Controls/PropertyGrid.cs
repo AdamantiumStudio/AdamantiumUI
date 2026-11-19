@@ -41,6 +41,31 @@ public class PropertyValuesChangedEventArgs : EventArgs
     /// a target living on another thread (<see cref="Binding.WorkOnSourceThread"/>) takes it there, later.</summary>
     public object Value { get; private set; }
 
+    /// <summary>The object each target's write sets a property of, in the order of <see cref="Targets"/>: the target
+    /// itself, or the object its line's path leads to - <c>Body.Mass</c> writes the body. Null for a target the line
+    /// writes nothing on.</summary>
+    public IReadOnlyList<object> WrittenObjects =>
+        _writtenObjects ??= RowStillHere() ? Row.WrittenObjects() : Array.Empty<object>();
+
+    /// <summary>The property of the <see cref="WrittenObjects"/> the write sets: <c>Mass</c> for <c>Body.Mass</c>, the
+    /// struct's own for a path into one - <c>Size</c> for <c>Box.Size.X</c>.</summary>
+    public string WrittenProperty => _writtenProperty ??= RowStillHere() ? Row.WrittenProperty : null;
+
+    // The row written, which says both when asked: paths are walked only for whoever reads them.
+    internal PropertyRow Row { get; init; }
+
+    // The row still stands for this line: one reused for another since has nothing to say about it.
+    private bool RowStillHere() =>
+        Row != null && ReferenceEquals(Row.Definition, Property) && ReferenceEquals(Row.Targets, Targets);
+
+    private IReadOnlyList<object> _writtenObjects;
+    private string _writtenProperty;
+
+    /// <summary>Whether the value is still being moved - a spinner held, dragged or turned - and another write of the
+    /// same line follows; <see cref="PropertyGrid.ValueCommitted"/> says when it is settled. What is costly to keep - a
+    /// file written - waits for that.</summary>
+    public bool IsInteractive { get; internal set; }
+
     internal void Wrote(object value)
     {
         Value = value;
@@ -155,6 +180,11 @@ public class PropertyGrid : Control
     /// <see cref="ValueChanged"/> says, for a view model bound from markup.</summary>
     public static readonly AdamantiumProperty ValueChangedCommandProperty = AdamantiumProperty.Register(
         nameof(ValueChangedCommand), typeof(ICommand), typeof(PropertyGrid), new PropertyMetadata(null));
+
+    /// <summary>Executed once a written value is settled, with the change as its parameter: what
+    /// <see cref="ValueCommitted"/> says, for a view model bound from markup.</summary>
+    public static readonly AdamantiumProperty ValueCommittedCommandProperty = AdamantiumProperty.Register(
+        nameof(ValueCommittedCommand), typeof(ICommand), typeof(PropertyGrid), new PropertyMetadata(null));
 
     /// <summary>Executed BEFORE each value is written or taken back, with the change as its parameter: what
     /// <see cref="ValueChanging"/> says, for a view model bound from markup - the moment the value about to be replaced
@@ -319,6 +349,12 @@ public class PropertyGrid : Control
         set => SetValue(ValueChangedCommandProperty, value);
     }
 
+    public ICommand ValueCommittedCommand
+    {
+        get => GetValue<ICommand>(ValueCommittedCommandProperty);
+        set => SetValue(ValueCommittedCommandProperty, value);
+    }
+
     public ICommand ValueChangingCommand
     {
         get => GetValue<ICommand>(ValueChangingCommandProperty);
@@ -347,6 +383,11 @@ public class PropertyGrid : Control
 
     /// <summary>Raised after a value has been written.</summary>
     public event EventHandler<PropertyValuesChangedEventArgs> ValueChanged;
+
+    /// <summary>Raised once a written value is settled: right after a write that is not
+    /// <see cref="PropertyValuesChangedEventArgs.IsInteractive"/>, and once when a spinner held, dragged or turned is let
+    /// go - with no value then, the line's last write being the value.</summary>
+    public event EventHandler<PropertyValuesChangedEventArgs> ValueCommitted;
 
     /// <summary>Raised BEFORE a value is written - the one moment at which what is about to be replaced can still be
     /// read. Not cancellable: it exists so a change can be REMEMBERED, not refused.</summary>
@@ -579,12 +620,12 @@ public class PropertyGrid : Control
     /// editor says the user changed something - there is no edit MODE to enter or leave: the editors are live.</summary>
     public bool Write(PropertyRow row, object edited) => Write(row, edited, keepUnshown: true);
 
-    internal bool Write(PropertyRow row, object edited, bool keepUnshown)
+    internal bool Write(PropertyRow row, object edited, bool keepUnshown, bool interactive = false)
     {
         if (row?.Definition == null || row.IsReadOnly) return false;
 
-        var about = new PropertyValuesChangedEventArgs(row.Targets.Count > 0 ? row.Targets[0] : null,
-            row.Definition, row.Targets);
+        var about = Describe(row);
+        about.IsInteractive = interactive;
 
         // BEFORE anything is written, because that is the only moment the previous value still exists. Whoever wants to
         // take the edit back needs it: a color or a width leaves no trace in a comparison of where things are, so the
@@ -597,7 +638,7 @@ public class PropertyGrid : Control
         // the whole point - everything else holding it follows.
         if (row.WriteInto(edited))
         {
-            OnValueChanged(about);
+            Changed(about);
             Refresh(null, row.Definition);
             return true;
         }
@@ -611,9 +652,29 @@ public class PropertyGrid : Control
         }
 
         about.Wrote(value);
-        OnValueChanged(about);
+        Changed(about);
         Refresh(null, row.Definition);
         return true;
+    }
+
+    /// <summary>Says the value a row's spinner was moving is settled: <see cref="ValueCommitted"/> for its line, its last
+    /// write being the value.</summary>
+    internal void CommitInteraction(PropertyRow row)
+    {
+        if (row?.Definition != null)
+            OnValueCommitted(Describe(row));
+    }
+
+    // What a write of the row is about, before it is written: the objects it goes to and what it sets on each.
+    private static PropertyValuesChangedEventArgs Describe(PropertyRow row) =>
+        new(row.Targets.Count > 0 ? row.Targets[0] : null, row.Definition, row.Targets) { Row = row };
+
+    // Told as changed, and as settled unless more of the same move follows.
+    private void Changed(PropertyValuesChangedEventArgs about)
+    {
+        OnValueChanged(about);
+        if (!about.IsInteractive)
+            OnValueCommitted(about);
     }
 
     private void OnValueChanging(PropertyValuesChangedEventArgs about)
@@ -628,6 +689,12 @@ public class PropertyGrid : Control
         CommandManager.ExecuteFrom(ValueChangedCommand, about, this, null);
     }
 
+    private void OnValueCommitted(PropertyValuesChangedEventArgs about)
+    {
+        ValueCommitted?.Invoke(this, about);
+        CommandManager.ExecuteFrom(ValueCommittedCommand, about, this, null);
+    }
+
     /// <summary>Takes back what was written into one line, where the objects themselves know what was written - the
     /// value is dropped rather than replaced, so a style's or a theme's answer comes back. Reported like any other
     /// edit: whoever keeps the undo of a write keeps the undo of taking it back.</summary>
@@ -635,14 +702,13 @@ public class PropertyGrid : Control
     {
         if (row?.Definition == null || row.IsReadOnly) return false;
 
-        var about = new PropertyValuesChangedEventArgs(row.Targets.Count > 0 ? row.Targets[0] : null,
-            row.Definition, row.Targets);
+        var about = Describe(row);
 
         OnValueChanging(about);
 
         if (!row.ResetValues()) return false;
 
-        OnValueChanged(about);
+        Changed(about);
         Refresh(null, row.Definition);
         return true;
     }

@@ -178,6 +178,13 @@ public abstract class BindingExpressionBase
    /// is the object's own to change. True where the expression cannot tell, and decides when it writes.</summary>
    public virtual bool IsSourceWritable => true;
 
+   /// <summary>The object a value written back sets a property of: the source property's owner - for a path ending inside
+   /// a struct, the object holding that struct. Null where the expression has nothing to write back to.</summary>
+   public virtual object WrittenObject => null;
+
+   /// <summary>The property of <see cref="WrittenObject"/> a value written back sets.</summary>
+   public virtual string WrittenProperty => null;
+
    // The value this expression currently produces (after its own converter, before any target-type coercion). It
    // matters only when the expression is a CHILD of a MultiBinding: its value feeds the parent's converter instead
    // of driving a target property. A top-level expression (TargetProperty != null) pushes straight to the target.

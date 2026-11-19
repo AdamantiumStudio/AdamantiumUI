@@ -28,6 +28,22 @@ public class BindingExpression : BindingExpressionBase
    public override bool IsSourceWritable => _leaf?.CanWrite ?? _source is { CanWrite: true };
 
    /// <inheritdoc/>
+   public override object WrittenObject => _bindToSource ? null : ObjectWritten(out _);
+
+   /// <inheritdoc/>
+   public override string WrittenProperty
+   {
+      get
+      {
+         if (_bindToSource)
+            return null;
+
+         ObjectWritten(out var property);
+         return property;
+      }
+   }
+
+   /// <inheritdoc/>
    public override bool IsSourceEdited
    {
       get
@@ -712,21 +728,26 @@ public class BindingExpression : BindingExpressionBase
    // The thread this binding writes its source on, when it works there; null when it writes it at once.
    private ISourceThread SourceThread() =>
       Binding.WorkOnSourceThread && SourceSlot().Property == null && BindingEngine.GetSourceThread(Target) is { } thread
-      && thread.Holds(WrittenObject())
+      && thread.Holds(ObjectWritten(out _))
          ? thread
          : null;
 
-   // The object a write changes: the source itself, or - for a path ending inside a struct - the last object on the way
-   // that is not a copy, which the struct is put back into. A camera's view model passes the camera on to its OrthoScale.
-   private object WrittenObject()
+   // The object a write changes, and its property: the source itself, or - for a path ending inside a struct - the last
+   // object on the way that is not a copy, which the struct is put back into. A camera's view model passes the camera on
+   // to its OrthoScale.
+   private object ObjectWritten(out string property)
    {
+      property = SourcePropertyName;
       if (_leaf == null || !Walk())
          return ResolvedSource;
 
       for (var i = _boxes.Length - 1; i >= 0; i--)
       {
          if (_boxes[i] != null && !_boxes[i].GetType().IsValueType)
+         {
+            property = _segments[i];
             return _boxes[i];
+         }
       }
 
       return ResolvedSource;
