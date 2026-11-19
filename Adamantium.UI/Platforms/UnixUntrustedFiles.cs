@@ -10,17 +10,27 @@ internal static class UnixUntrustedFiles
     private const UnixFileMode Execution = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
     private const int ContentChecked = 1024;
 
-    // Windows and Linux programs, scripts, Mach-O (both byte orders, 32 and 64 bits), fat binaries, Windows shortcuts.
+    // Windows and Linux programs, scripts, Mach-O (both byte orders, 32 and 64 bits), fat binaries, Windows shortcuts,
+    // launchers written as config files, Debian and RPM packages.
     private static readonly byte[][] ProgramStarts =
     [
         "MZ"u8.ToArray(), [0x7F, (byte)'E', (byte)'L', (byte)'F'], "#!"u8.ToArray(), [0xCA, 0xFE, 0xBA, 0xBE],
         [0xFE, 0xED, 0xFA, 0xCE], [0xFE, 0xED, 0xFA, 0xCF], [0xCE, 0xFA, 0xED, 0xFE], [0xCF, 0xFA, 0xED, 0xFE],
-        [0x4C, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00], "# Config File"u8.ToArray(), "# KDE Config File"u8.ToArray()
+        [0x4C, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00], "# Config File"u8.ToArray(), "# KDE Config File"u8.ToArray(),
+        "[Desktop Action"u8.ToArray(), "!<arch>\ndebian-binary"u8.ToArray(), [0xED, 0xAB, 0xEE, 0xDB]
     ];
 
-    // Launchers and internet shortcuts the desktop finds anywhere near the start.
+    // Launchers, internet shortcuts and app references the desktop finds anywhere near the start.
     private static readonly byte[][] ProgramSections =
-        ["[Desktop Entry]"u8.ToArray(), "[KDE Desktop Entry]"u8.ToArray(), "[InternetShortcut]"u8.ToArray()];
+    [
+        "[Desktop Entry]"u8.ToArray(), "[KDE Desktop Entry]"u8.ToArray(), "[InternetShortcut]"u8.ToArray(),
+        "[Flatpak Ref]"u8.ToArray(), "[Flatpak Repo]"u8.ToArray()
+    ];
+
+    /// <summary>Opens a file from outside with <paramref name="open"/>: marked first by <paramref name="mark"/>, so a
+    /// refused one is left marked too, and not when it is a program by its content.</summary>
+    public static bool Open(string path, Func<string, bool> mark, Func<string, bool> open) =>
+        mark(path) && !IsAProgramByContent(path) && open(path);
 
     /// <summary>Takes the right to run away from the file at <paramref name="path"/>; false when it could not.</summary>
     public static bool TakeAwayExecution(string path)
@@ -74,7 +84,8 @@ internal static class UnixUntrustedFiles
 
             return false;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or
+                                      NotSupportedException)
         {
             return true;
         }

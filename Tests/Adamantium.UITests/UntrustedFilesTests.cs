@@ -36,6 +36,9 @@ public class UntrustedFilesTests
             Assert.That(FileNames.MakeSafe("NUL.tar.gz", "attachment"), Is.EqualTo("_NUL.tar.gz"));
             Assert.That(FileNames.MakeSafe("a.txt:hidden.exe", "attachment"), Is.EqualTo("a.txt_hidden.exe"));
             Assert.That(FileNames.MakeSafe("what?.txt", "attachment"), Is.EqualTo("what_.txt"));
+            Assert.That(FileNames.MakeSafe("CON" + new string(' ', 300) + "x.pdf", "attachment"), Is.EqualTo("_CON.pdf"),
+                "a cut that leaves a device name");
+            Assert.That(FileNames.MakeSafe("NUL" + new string(' ', 300) + "y", "attachment"), Is.EqualTo("_NUL"));
         });
     }
 
@@ -46,7 +49,7 @@ public class UntrustedFilesTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(safe, Has.Length.EqualTo(FileNames.Limit));
+            Assert.That(safe, Has.Length.EqualTo(FileNames.Limit - 1), "one kept for a device name's '_'");
             Assert.That(safe, Does.EndWith(".pdf"));
         });
     }
@@ -238,6 +241,7 @@ public class UntrustedFilesTests
             var shortcut = Written("letter", [0x4C, 0x00, 0x00, 0x00, 0x01, 0x14, 0x02, 0x00, 0x00]);
             var launcher = Written("readme", "# made by hand\n[Desktop Entry]\nExec=sh -c evil\n"u8.ToArray());
             var link = Written("site", "[InternetShortcut]\nURL=file:///evil\n"u8.ToArray());
+            var flatpak = Written("update", "[Flatpak Ref]\nUrl=https://evil\n"u8.ToArray());
             var text = Written("notes", "just notes"u8.ToArray());
 
             Assert.Multiple(() =>
@@ -248,11 +252,26 @@ public class UntrustedFilesTests
                 Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(shortcut), Is.True);
                 Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(launcher), Is.True);
                 Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(link), Is.True);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(flatpak), Is.True);
                 Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.IsAProgramByContent(text), Is.False);
+
+                var opened = new List<string>();
+                bool Open(string path)
+                {
+                    opened.Add(path);
+                    return true;
+                }
+
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.Open(windowsProgram, _ => true, Open), Is.False);
+                Assert.That(Adamantium.UI.Platforms.UnixUntrustedFiles.Open(text, _ => true, Open), Is.True);
+                Assert.That(opened, Is.EqualTo(new[] { text }), "a program never reaches the opener, a text does");
                 if (OperatingSystem.IsLinux())
                 {
+                    File.SetUnixFileMode(windowsProgram, UnixFileMode.UserRead | UnixFileMode.UserExecute);
                     Assert.That(new Adamantium.UI.Platforms.Linux.DesktopFileManager().OpenUntrustedItem(windowsProgram,
                         IntPtr.Zero), Is.False, "refused before xdg-open");
+                    Assert.That(File.GetUnixFileMode(windowsProgram) & UnixFileMode.UserExecute,
+                        Is.EqualTo(UnixFileMode.None), "and left without the right to run");
                 }
             });
         }

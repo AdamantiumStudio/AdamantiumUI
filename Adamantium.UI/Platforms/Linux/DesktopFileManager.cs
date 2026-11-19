@@ -142,7 +142,7 @@ internal sealed class DesktopFileManager : IFileManagerPlatform
 
     // Without the right to run and not a program by content, xdg-open can only hand the file to an application.
     public bool OpenUntrustedItem(string path, IntPtr ownerWindow) =>
-        !UnixUntrustedFiles.IsAProgramByContent(path) && MarkUntrusted(path) && OpenItem(path);
+        UnixUntrustedFiles.Open(path, MarkUntrusted, OpenItem);
 
     // Linux desktops read no mark from outside; taking away the right to run is all there is.
     public bool MarkUntrusted(string path) => UnixUntrustedFiles.TakeAwayExecution(path);

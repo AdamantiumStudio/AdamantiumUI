@@ -30,7 +30,7 @@ internal sealed class FinderFileManager : IFileManagerPlatform
 
     // Quarantined, the file is checked by Gatekeeper and its warning shown when `open` hands it on.
     public bool OpenUntrustedItem(string path, IntPtr ownerWindow) =>
-        !UnixUntrustedFiles.IsAProgramByContent(path) && MarkUntrusted(path) && OpenItem(path);
+        UnixUntrustedFiles.Open(path, MarkUntrusted, OpenItem);
 
     // The quarantine mark browsers write: flags, the time in hex seconds, the application that saved it.
     public unsafe bool MarkUntrusted(string path)

@@ -48,21 +48,20 @@ public static class FileNames
             extension = string.Empty;
         }
 
-        // What comes before the first dot is what Windows takes for a device, spaces before the dot aside: NUL.tar.gz too.
-        var firstDot = safe.IndexOf('.');
-        if (OperatingSystem.IsWindows() && IsDeviceName((firstDot < 0 ? safe : safe[..firstDot]).TrimEnd(' ')))
-        {
-            stem = "_" + stem;
-        }
-
-        // A dropped kind keeps room for the '_' that stops what is left from reading as one.
-        var room = kindDropped ? Limit - 1 : Limit - extension.Length;
+        // Room is kept for a '_' in front of a device name and, for a dropped kind, one after what could read as a kind.
+        var room = (kindDropped ? Limit - 1 : Limit - extension.Length) - 1;
         if (stem.Length > room)
         {
             stem = TrimEnds(Cut(stem, room));
         }
 
-        return kindDropped && Path.GetExtension(stem).Length > 0 ? stem + "_" : stem + extension;
+        var made = kindDropped && Path.GetExtension(stem).Length > 0 ? stem + "_" : stem + extension;
+        // What comes before the first dot is what Windows takes for a device, spaces before the dot aside: NUL.tar.gz too;
+        // judged after the cut, which can leave one ("CON" + spaces + "x.pdf").
+        var firstDot = made.IndexOf('.');
+        return OperatingSystem.IsWindows() && IsDeviceName((firstDot < 0 ? made : made[..firstDot]).TrimEnd(' '))
+            ? "_" + made
+            : made;
     }
 
     /// <summary><paramref name="name"/> numbered, as a second file of the same name is: "report (2).pdf".</summary>
