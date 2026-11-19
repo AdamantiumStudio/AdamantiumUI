@@ -1253,7 +1253,11 @@ public partial class InfiniteCanvas
         // belongs to the pen, and the tool taking over has no way to end it.
         if (e.ChangedButton == MouseButtons.Right && DefaultTool is { } resting)
         {
-            Tool?.Cancel(this);
+            if (Tool is { } held)
+            {
+                CancelTool(held);
+            }
+
             SetCurrentValue(ToolProperty, resting);
 
             e.Handled = true;
@@ -1317,7 +1321,7 @@ public partial class InfiniteCanvas
         {
             _erasing = e.Pointer.Id;
             _penEraser.OnPressed(this, args);
-            if (args.Handled) e.Handled = true;
+            TakeToolAnswer(args, e);
             return;
         }
 
@@ -1335,7 +1339,25 @@ public partial class InfiniteCanvas
         }
 
         Tool?.OnPressed(this, args);
-        if (args.Handled) e.Handled = true;
+        TakeToolAnswer(args, e);
+    }
+
+    // A pointer event the tool handled may have changed what it is making, and that is drawn on the glass: every tool
+    // is drawn again without having to ask.
+    private void TakeToolAnswer(CanvasPointerEventArgs args, RoutedEventArgs e)
+    {
+        if (args.Handled)
+        {
+            e.Handled = true;
+            RepaintGlass();
+        }
+    }
+
+    /// <summary>Gives up what the tool had half made, and takes it off the glass.</summary>
+    private void CancelTool(ICanvasTool tool)
+    {
+        tool.Cancel(this);
+        RepaintGlass();
     }
 
     private bool FingersInk() => FingerInk switch
@@ -1399,7 +1421,7 @@ public partial class InfiniteCanvas
             _pointerInside = false;
             Cursor = Cursors.Arrow;
 
-            if (had) Repaint();
+            if (had) RepaintGlass();
             return;
         }
 
@@ -1412,7 +1434,7 @@ public partial class InfiniteCanvas
         if (pulled != _snap || _snapKind != kindWas)
         {
             _snap = pulled;
-            Repaint();
+            RepaintGlass();
         }
 
         // A POINT taken before any tool saw the press is dragged before any tool sees the move, and pulled to the grid
@@ -1446,7 +1468,7 @@ public partial class InfiniteCanvas
             Tool?.OnMoved(this, args);
         }
 
-        if (args.Handled) e.Handled = true;
+        TakeToolAnswer(args, e);
     }
 
     // What the pointer is ABOUT to do. A grip looks the same whichever corner it is, so the cursor is the only thing
@@ -1521,7 +1543,7 @@ public partial class InfiniteCanvas
         _snap = null;
         _pointerInside = false;
 
-        if (had) Repaint();
+        if (had) RepaintGlass();
     }
 
     private void OnPointerUp(object sender, PointerReleasedEventArgs e)
@@ -1584,7 +1606,7 @@ public partial class InfiniteCanvas
                 Tool?.OnReleased(this, args);
             }
 
-            if (args.Handled) e.Handled = true;
+            TakeToolAnswer(args, e);
         }
         finally
         {
@@ -1600,7 +1622,7 @@ public partial class InfiniteCanvas
         {
             _erasing = null;
             _activePointer = e.Pointer;
-            _penEraser.Cancel(this);
+            CancelTool(_penEraser);
         }
 
         // A finger panning under an ink tool is taken over by a pinch: the pan ends here, whatever the tool takes,
@@ -1611,6 +1633,7 @@ public partial class InfiniteCanvas
         if (TakesManyPointers)
         {
             Tool.CancelPointer(this, id);
+            RepaintGlass();
             if (pressed) EndEdit();
             return;
         }
@@ -1644,7 +1667,10 @@ public partial class InfiniteCanvas
         _panning = false;
         _panPointer = null;
         _frame.End();
-        Tool?.Cancel(this);
+        if (Tool is { } held)
+        {
+            CancelTool(held);
+        }
     }
 
     private void OnManipulation(object sender, ManipulationEventArgs e)
@@ -1775,7 +1801,11 @@ public partial class InfiniteCanvas
         // The TOOL first: the canvas spends Delete, Escape and space on its own things, and all three mean something
         // else to a tool with a caret in a word.
         Tool?.OnKey(this, e);
-        if (e.Handled) return;
+        if (e.Handled)
+        {
+            RepaintGlass();
+            return;
+        }
 
         // A TOOL IN THE MIDDLE OF SOMETHING OWNS THE KEYBOARD: everything it left unanswered would otherwise go on to
         // the canvas, and typing "vet" picked three tools and threw the word away.
@@ -1864,7 +1894,7 @@ public partial class InfiniteCanvas
         {
             if (Tool is { IsBusy: true } busy)
             {
-                busy.Cancel(this);
+                CancelTool(busy);
                 e.Handled = true;
                 return;
             }
@@ -1913,6 +1943,10 @@ public partial class InfiniteCanvas
         if (!Ours(e)) return;
 
         Tool?.OnText(this, e);
+        if (e.Handled)
+        {
+            RepaintGlass();
+        }
     }
 
     /// <summary>Whether a keyboard event is the CANVAS'S to answer, rather than one belonging to something standing on

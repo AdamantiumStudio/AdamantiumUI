@@ -613,8 +613,12 @@ public partial class InfiniteCanvas : ICanvasCamera
 
         Drawn(layer => layer.Repaint());
 
-        _front?.InvalidateRender(false);
+        RepaintGlass();
     }
+
+    /// <summary>Draws the glass again - what the tool is making and the pointer's marks - leaving the layers under it as
+    /// they are. The canvas does it after each pointer event a tool handled and after a tool is cancelled.</summary>
+    public void RepaintGlass() => _front?.InvalidateRender(false);
 
     /// <summary>Everything on the plane, wherever it is - what a whole graph is, as against what can be seen of one.
     /// Saving a document is the case: a node left three screens away is still in it.</summary>
