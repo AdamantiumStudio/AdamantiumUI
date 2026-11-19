@@ -616,6 +616,9 @@ All packages share one version.
 
 ### Fixed
 
+- A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
+  element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
+  gave a fade slot keeps fading in it; any other is left to the window that draws it.
 - An element shown again drew at the size it had while collapsed - a browser tab's busy ring stayed 0x0 - now and
   then. An animation still turning under a collapsed element brought its layout back from the copy kept for a theme
   swap, and the render thread then read the hidden chain off the interface thread, mid-layout, and kept what it read.

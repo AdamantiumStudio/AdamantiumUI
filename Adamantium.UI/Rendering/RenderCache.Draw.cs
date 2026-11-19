@@ -2321,6 +2321,21 @@ public partial class RenderCache
     {
         if (entry.Owner is not { } owner || _transformTable == null) return;
 
+        // An owner whose snapshot this cache does not hold - hidden, mid re-capture, another window's, or one only read
+        // live - is not read live again to find its slot. One it gave a slot of its own keeps fading in it; any other is
+        // not its to fade. Not marked applied: the window that draws it may still need the loop's mirror.
+        if (!_applySnap.TryGetValue(owner, out var snap) || _readLive.Contains(owner))
+        {
+            if (_fadeOwners.TryGetValue(owner, out var held) &&
+                _transformTable.TryGetOpacitySlot(owner.RenderId, out var current) && current == held)
+            {
+                _transformTable.SetAlpha(device, held, entry.Alpha);
+                ApplyCopyFades(device, owner, entry);
+            }
+
+            return;
+        }
+
         if (OpensLayer(owner))
         {
             entry.MarkApplied();
@@ -2340,9 +2355,8 @@ public partial class RenderCache
 
         // Keep the snapshot's own value in step, so EffectiveOpacity (which the slot-blind families still bake with)
         // reads the alpha the compositor just applied.
-        if (_applySnap.TryGetValue(owner, out var snap))
-            _applySnap[owner] = new LayoutSnapshot(snap.LocalTransform, snap.RenderSize, snap.ClipToBounds,
-                snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii);
+        _applySnap[owner] = new LayoutSnapshot(snap.LocalTransform, snap.RenderSize, snap.ClipToBounds,
+            snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii);
     }
 
     // TRANSFORM: one 64-byte matrix write moves the whole node, and it lands in TWO places. The transform table is what the

@@ -554,6 +554,64 @@ public class CompositorRenderTests
         });
     }
 
+    // The compositor plays every window's fades. A cache that never drew the owner neither reads it live nor gives it a
+    // slot; and the drawing cache, once the owner's parent collapses, does not read the hidden chain live either. Two
+    // fades, so the animations are sorted as well - the sort used to read them first.
+    [Test]
+    public void AFade_IsReadLiveNeitherByAnotherWindow_NorUnderACollapsedParent()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var drawing = new OffscreenTestRenderer(_device, factory, 64, 64);
+        using var other = new OffscreenTestRenderer(_device, factory, 64, 64);
+
+        var root = new TestRoot(64, 64);
+        var page = new TestControl();
+        page.Bounds = new Rect(0, 0, 64, 64);
+        page.RenderSize = new Size<double>(64, 64);
+        var fading = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        fading.Bounds = new Rect(24, 24, 16, 16);
+        fading.RenderSize = new Size<double>(16, 16);
+        page.Add(fading);
+        var steady = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 8, 8)) };
+        steady.Bounds = new Rect(0, 0, 8, 8);
+        steady.RenderSize = new Size<double>(8, 8);
+        root.Add(page);
+        root.Add(steady);
+        var elsewhere = new TestRoot(64, 64);
+        elsewhere.Add(new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 8, 8)) });
+
+        foreach (var target in new[] { fading, steady })
+        {
+            new Animation
+            {
+                Duration = TimeSpan.FromSeconds(1),
+                IterationCount = double.PositiveInfinity,
+                KeyFrames =
+                {
+                    new KeyFrame { Cue = new Cue(0), Setters = { new Setter("Opacity", 1.0) } },
+                    new KeyFrame { Cue = new Cue(1), Setters = { new Setter("Opacity", 0.2) } }
+                }
+            }.Apply(target);
+        }
+
+        Compositor.StartPending();
+
+        Assert.That(drawing.RenderFrame(root), Is.True);
+        Assert.That(other.RenderFrame(elsewhere), Is.True);
+        page.Visibility = Visibility.Collapsed;
+        Assert.That(drawing.RenderFrame(root), Is.True);
+        Assert.That(drawing.RenderFrame(root), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(other.Cache.IsReadLive(fading), Is.False, "another window's fading owner was read live");
+            Assert.That(other.Cache.IsReadLive(steady), Is.False);
+            Assert.That(Held(other.Cache, "_fadeOwners"), Is.Zero, "...and given a fade slot");
+            Assert.That(drawing.Cache.IsReadLive(page), Is.False, "the collapsed parent was read off the interface thread");
+            Assert.That(drawing.Cache.IsReadLive(fading), Is.False);
+        });
+    }
+
     [Test]
     public void AChildRaisedWhileItsParentIsHidden_IsOnTopOnceShown()
     {
