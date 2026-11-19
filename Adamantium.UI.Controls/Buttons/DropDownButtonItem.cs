@@ -14,8 +14,10 @@ public class DropDownButtonItem : ButtonBase
         nameof(IsHighlighted), typeof(bool), typeof(DropDownButtonItem),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
 
-    public static readonly AdamantiumProperty IsAvailableProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey IsAvailablePropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(IsAvailable), typeof(bool), typeof(DropDownButtonItem), new PropertyMetadata(true, OnIsAvailableChanged));
+
+    public static readonly AdamantiumProperty IsAvailableProperty = IsAvailablePropertyKey.Property;
 
     static DropDownButtonItem()
     {
@@ -45,7 +47,7 @@ public class DropDownButtonItem : ButtonBase
     public bool IsAvailable
     {
         get => GetValue<bool>(IsAvailableProperty);
-        internal set => SetValue(IsAvailableProperty, value);
+        internal set => SetValue(IsAvailablePropertyKey, value);
     }
 
     protected override void OnPointerEntered(PointerEventArgs e)

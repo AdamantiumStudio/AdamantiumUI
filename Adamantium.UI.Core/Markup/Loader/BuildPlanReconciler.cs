@@ -291,7 +291,12 @@ internal sealed class BuildPlanReconciler
             ? (_resolver.Resolve(reference.OwnerType.GetFullTypeName()) as ReflectionResolvedType)?.ClrType
                 .GetField($"{reference.Name}Property", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as AdamantiumProperty
             : component.GetProperty(reference.Name);
-        if (property != null)
+        if (property is { ReadOnly: true })
+        {
+            // Markup only binds from it; its value is its owner's.
+            Data.BindingEngine.ClearBinding(component, property);
+        }
+        else if (property != null)
         {
             component.ClearValue(property);
         }

@@ -45,8 +45,10 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     /// <summary>True while the panel shows skeleton placeholders for binds deferred past the frame budget, or held
     /// (VirtualizingPanel.HoldSkeletons).</summary>
-    public static readonly AdamantiumProperty IsLoadingItemsProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsLoadingItems),
-        typeof(bool), typeof(ItemsControl), new PropertyMetadata(false));
+    private static readonly AdamantiumPropertyKey IsLoadingItemsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsLoadingItems), typeof(bool), typeof(ItemsControl), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsLoadingItemsProperty = IsLoadingItemsPropertyKey.Property;
 
     public static readonly AdamantiumProperty ItemContainerStyleProperty = AdamantiumProperty.Register(nameof(ItemContainerStyle),
         typeof(Style), typeof(ItemsControl), new PropertyMetadata(null, OnRegenerateContainers));
@@ -138,7 +140,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     public bool IsLoadingItems
     {
         get => GetValue<bool>(IsLoadingItemsProperty);
-        internal set => SetValue(IsLoadingItemsProperty, value);
+        internal set => SetValue(IsLoadingItemsPropertyKey, value);
     }
 
     /// <summary>Picks the <see cref="DataTemplate"/> per item (when no <see cref="ItemTemplate"/> is set).</summary>

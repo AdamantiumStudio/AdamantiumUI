@@ -42,8 +42,10 @@ public class TextBox : TextBoxBase
         nameof(ClearButtonToolTip), typeof(string), typeof(TextBox), new PropertyMetadata(null));
 
     /// <summary>Whether the box holds any text. The control keeps it; the theme reads it.</summary>
-    public static readonly AdamantiumProperty HasTextProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasText),
-        typeof(bool), typeof(TextBox), new PropertyMetadata(false));
+    private static readonly AdamantiumPropertyKey HasTextPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasText), typeof(bool), typeof(TextBox), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasTextProperty = HasTextPropertyKey.Property;
 
     public static readonly AdamantiumProperty TextTransformProperty = AdamantiumProperty.Register(nameof(TextTransform),
         typeof(TextTransform), typeof(TextBox),
@@ -171,7 +173,7 @@ public class TextBox : TextBoxBase
     {
         OnEditedTextChanged(a, e);
         if (a is not TextBox box) return;
-        box.SetCurrentValue(HasTextProperty, !string.IsNullOrEmpty(box.Text));
+        box.SetCurrentValue(HasTextPropertyKey, !string.IsNullOrEmpty(box.Text));
         AutomationEvents.RaisePropertyChanged(box, AutomationProperty.Value, e.OldValue, e.NewValue);
         if (AutomationEvents.IsListening && box.FindAutomationPeer() != null)
             AutomationEvents.Raise(box, AutomationEvent.TextChanged);

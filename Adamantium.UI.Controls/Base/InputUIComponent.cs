@@ -173,9 +173,11 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         return null;
     }
 
-    public static readonly AdamantiumProperty IsFocusedProperty =
+    private static readonly AdamantiumPropertyKey IsFocusedPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsFocused),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsFocusedProperty = IsFocusedPropertyKey.Property;
 
     public static readonly AdamantiumProperty ToolTipProperty = AdamantiumProperty.Register(nameof(ToolTip),
         typeof(object), typeof(InputUIComponent), new PropertyMetadata(null, OnToolTipChanged));
@@ -208,24 +210,32 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     public static readonly AdamantiumProperty FocusableProperty = AdamantiumProperty.Register(nameof(Focusable),
         typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
     
-    public static readonly AdamantiumProperty IsKeyboardFocusedProperty =
+    private static readonly AdamantiumPropertyKey IsKeyboardFocusedPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsKeyboardFocused),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsKeyboardFocusedProperty = IsKeyboardFocusedPropertyKey.Property;
     
     /// <summary>A pointer is over the element or one of its descendants: the mouse or a pen in range, or a finger down.</summary>
-    public static readonly AdamantiumProperty IsPointerOverProperty =
+    private static readonly AdamantiumPropertyKey IsPointerOverPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsPointerOver),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty IsPointerOverProperty = IsPointerOverPropertyKey.Property;
+
     /// <summary>The focus is on this element or inside it - what a composite control, whose editor holds the focus, asks.</summary>
-    public static readonly AdamantiumProperty IsKeyboardFocusWithinProperty =
+    private static readonly AdamantiumPropertyKey IsKeyboardFocusWithinPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsKeyboardFocusWithin),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty IsKeyboardFocusWithinProperty = IsKeyboardFocusWithinPropertyKey.Property;
+
     /// <summary>The focus got here by keyboard - when a focus ring is worth drawing.</summary>
-    public static readonly AdamantiumProperty IsFocusVisibleProperty =
+    private static readonly AdamantiumPropertyKey IsFocusVisiblePropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsFocusVisible),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsFocusVisibleProperty = IsFocusVisiblePropertyKey.Property;
 
     /// <summary>A style for this control's <see cref="FocusAdorner"/>, applied after the theme's. Null leaves the theme's
     /// ring; a style with no Template shows none.</summary>
@@ -243,13 +253,17 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     }
 
     /// <summary>A pointer is over the element itself, not one of its descendants.</summary>
-    public static readonly AdamantiumProperty IsPointerDirectlyOverProperty =
+    private static readonly AdamantiumPropertyKey IsPointerDirectlyOverPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsPointerDirectlyOver),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsPointerDirectlyOverProperty = IsPointerDirectlyOverPropertyKey.Property;
     
-    public static readonly AdamantiumProperty IsInitializedProperty =
+    private static readonly AdamantiumPropertyKey IsInitializedPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsInitialized),
             typeof(Boolean), typeof(InputUIComponent), new PropertyMetadata(false, OnIsInitializedChanged));
+
+    public static readonly AdamantiumProperty IsInitializedProperty = IsInitializedPropertyKey.Property;
 
     // Mirrored in a field: read per node on every attach walk, where a property read was the largest cost.
     private bool _isInitialized;
@@ -258,38 +272,38 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     public bool IsInitialized
     {
         get => _isInitialized;
-        private set => SetValue(IsInitializedProperty, value);
+        private set => SetValue(IsInitializedPropertyKey, value);
     }
     
     public bool IsPointerOver
     {
         get => GetValue<bool>(IsPointerOverProperty);
-        private set => SetValue(IsPointerOverProperty, value);
+        private set => SetValue(IsPointerOverPropertyKey, value);
     }
 
     public bool IsKeyboardFocusWithin
     {
         get => GetValue<bool>(IsKeyboardFocusWithinProperty);
-        private set => SetValue(IsKeyboardFocusWithinProperty, value);
+        private set => SetValue(IsKeyboardFocusWithinPropertyKey, value);
     }
 
     public bool IsFocusVisible
     {
         get => GetValue<bool>(IsFocusVisibleProperty);
-        private set => SetValue(IsFocusVisibleProperty, value);
+        private set => SetValue(IsFocusVisiblePropertyKey, value);
     }
 
     public bool IsPointerDirectlyOver
     {
         get => GetValue<bool>(IsPointerDirectlyOverProperty);
-        private set => SetValue(IsPointerDirectlyOverProperty, value);
+        private set => SetValue(IsPointerDirectlyOverPropertyKey, value);
     }
 
     
     public bool IsKeyboardFocused
     {
         get => GetValue<bool>(IsKeyboardFocusedProperty);
-        private set => SetValue(IsKeyboardFocusedProperty, value);
+        private set => SetValue(IsKeyboardFocusedPropertyKey, value);
     }
     
 
@@ -303,7 +317,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     public Boolean IsFocused
     {
         get => GetValue<Boolean>(IsFocusedProperty);
-        private set => SetValue(IsFocusedProperty, value);
+        private set => SetValue(IsFocusedPropertyKey, value);
     }
     
     public Boolean Focusable

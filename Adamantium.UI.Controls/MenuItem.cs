@@ -45,17 +45,23 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault,
             OnCheckabilityChanged));
 
-    public static readonly AdamantiumProperty ShowsCheckColumnProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey ShowsCheckColumnPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(ShowsCheckColumn), typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty ShowsIconColumnProperty = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ShowsCheckColumnProperty = ShowsCheckColumnPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey ShowsIconColumnPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(ShowsIconColumn), typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty ShowsIconColumnProperty = ShowsIconColumnPropertyKey.Property;
 
     public static readonly AdamantiumProperty StaysOpenOnClickProperty = AdamantiumProperty.Register(nameof(StaysOpenOnClick),
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsInRangeProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsInRange),
-        typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+    private static readonly AdamantiumPropertyKey IsInRangePropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsInRange), typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsInRangeProperty = IsInRangePropertyKey.Property;
 
     // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
     // looking ordinary and doing nothing when clicked. A menu is built and thrown away on every open, so the listener's
@@ -237,7 +243,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public bool ShowsCheckColumn
     {
         get => GetValue<bool>(ShowsCheckColumnProperty);
-        private set => SetValue(ShowsCheckColumnProperty, value);
+        private set => SetValue(ShowsCheckColumnPropertyKey, value);
     }
 
     /// <summary>Whether the row is in the range a menu that selects one reaches (<see cref="ContextMenu.SelectsRange"/>):
@@ -246,7 +252,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public bool IsInRange
     {
         get => GetValue<bool>(IsInRangeProperty);
-        internal set => SetValue(IsInRangeProperty, value);
+        internal set => SetValue(IsInRangePropertyKey, value);
     }
 
     /// <summary>Whether the row keeps a column for an icon. Every row of a menu does once one of them has an
@@ -255,7 +261,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public bool ShowsIconColumn
     {
         get => GetValue<bool>(ShowsIconColumnProperty);
-        private set => SetValue(ShowsIconColumnProperty, value);
+        private set => SetValue(ShowsIconColumnPropertyKey, value);
     }
 
     /// <summary>Whether the menu stays open after the row is chosen - for a list of switches flipped one after another.</summary>

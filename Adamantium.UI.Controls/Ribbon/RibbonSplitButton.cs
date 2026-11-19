@@ -12,9 +12,11 @@ public class RibbonSplitButton : RibbonDropDownButton
 {
     /// <summary>Whether the pointer is over the ARROW half. A split button that highlights as one piece cannot say
     /// which of its two things a click is about to do, so the theme lights the halves separately.</summary>
-    public static readonly AdamantiumProperty IsPointerOverDropDownProperty =
+    private static readonly AdamantiumPropertyKey IsPointerOverDropDownPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(IsPointerOverDropDown),
             typeof(bool), typeof(RibbonSplitButton), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsPointerOverDropDownProperty = IsPointerOverDropDownPropertyKey.Property;
 
     public static readonly AdamantiumProperty IndicatorBrushProperty = AdamantiumProperty.Register(nameof(IndicatorBrush),
         typeof(Brush), typeof(RibbonSplitButton), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
@@ -49,7 +51,7 @@ public class RibbonSplitButton : RibbonDropDownButton
     public bool IsPointerOverDropDown
     {
         get => GetValue<bool>(IsPointerOverDropDownProperty);
-        private set => SetValue(IsPointerOverDropDownProperty, value);
+        private set => SetValue(IsPointerOverDropDownPropertyKey, value);
     }
 
     /// <summary>A bar under the icon in what the body applies - the font color or the highlight picked last, as in

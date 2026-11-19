@@ -159,12 +159,16 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// camera is at. A step stated in world units is a step that means something different at every zoom: a tenth is
     /// a hair at 1:1 and a hundred and seventy pixels at seventeen thousand, where every line is one white blob.
     /// <para>Never coarser than a tenth, so zooming OUT does not turn the nudge into a jump.</para></summary>
-    public static readonly AdamantiumProperty ThicknessStepProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey ThicknessStepPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(ThicknessStep), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.1));
 
+    public static readonly AdamantiumProperty ThicknessStepProperty = ThicknessStepPropertyKey.Property;
+
     /// <summary>...and the thinnest a line may be set to: a hundredth of a screen pixel.</summary>
-    public static readonly AdamantiumProperty ThicknessLeastProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey ThicknessLeastPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(ThicknessLeast), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.01));
+
+    public static readonly AdamantiumProperty ThicknessLeastProperty = ThicknessLeastPropertyKey.Property;
 
     public Double ThicknessStep => GetValue<Double>(ThicknessStepProperty);
 
@@ -174,15 +178,17 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         var scale = Scale > 0 ? Scale : 1;
 
-        SetValue(ThicknessStepProperty, Math.Min(0.1, 0.1 / scale));
-        SetValue(ThicknessLeastProperty, Math.Min(0.01, 0.01 / scale));
+        SetValue(ThicknessStepPropertyKey, Math.Min(0.1, 0.1 / scale));
+        SetValue(ThicknessLeastPropertyKey, Math.Min(0.01, 0.01 / scale));
     }
 
     /// <summary>Whether a view has been kept, so that giving it up can be offered only where there is something to
     /// give up.</summary>
-    public static readonly AdamantiumProperty KeepsHomeFaceProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey KeepsHomeFacePropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(KeepsHomeFace), typeof(Visibility), typeof(InfiniteCanvas),
         new PropertyMetadata(Visibility.Collapsed));
+
+    public static readonly AdamantiumProperty KeepsHomeFaceProperty = KeepsHomeFacePropertyKey.Property;
 
     public Visibility KeepsHomeFace => GetValue<Visibility>(KeepsHomeFaceProperty);
 
@@ -192,7 +198,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         var kept = canvas.HomeAt != Vector2<double>.Zero || Math.Abs(canvas.HomeScale - 1) > 1e-6;
 
-        canvas.SetValue(KeepsHomeFaceProperty, kept ? Visibility.Visible : Visibility.Collapsed);
+        canvas.SetValue(KeepsHomeFacePropertyKey, kept ? Visibility.Visible : Visibility.Collapsed);
     }
 
     /// <summary>Puts <c>Home</c> back to the world's origin at one to one - what takes back a view that was kept.
