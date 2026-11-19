@@ -28,6 +28,9 @@ public interface IAdamantiumComponent : IComponent
     /// <param name="priority">Priority for value</param>
     void ClearValue(AdamantiumProperty property, ValuePriority priority = ValuePriority.Local);
 
+    /// <summary>Clears the value of the read-only property <paramref name="key"/> writes.</summary>
+    void ClearValue(AdamantiumPropertyKey key, ValuePriority priority = ValuePriority.Local);
+
     /// <summary>
     /// Gets a <see cref="AdamantiumProperty"/> value.
     /// </summary>
@@ -66,6 +69,12 @@ public interface IAdamantiumComponent : IComponent
     /// <param name="value">The value.</param>
     /// <param name="priority">Priority for value</param>
     void SetValue(AdamantiumProperty property, object value, ValuePriority priority = ValuePriority.Local);
+
+    /// <summary>Sets the value of the read-only property <paramref name="key"/> writes.</summary>
+    void SetValue(AdamantiumPropertyKey key, object value, ValuePriority priority = ValuePriority.Local);
+
+    /// <summary>Sets the current value of the read-only property <paramref name="key"/> writes.</summary>
+    void SetCurrentValue(AdamantiumPropertyKey key, object value);
 
     /// <summary>
     /// Changes what the property holds without claiming where it comes from: written into the slot it is already

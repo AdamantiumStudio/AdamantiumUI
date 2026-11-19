@@ -138,9 +138,11 @@ public class NodeGraph : InfiniteCanvas
     /// <summary>The same state as something markup can bind straight to a panel: a question in code and a visibility in
     /// markup are not the same shape, and keeping them in step here is a line rather than a converter in three themes.
     /// </summary>
-    public static readonly AdamantiumProperty PaletteFaceProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey PaletteFacePropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(PaletteFace), typeof(Visibility), typeof(NodeGraph),
         new PropertyMetadata(Visibility.Collapsed));
+
+    public static readonly AdamantiumProperty PaletteFaceProperty = PaletteFacePropertyKey.Property;
 
     /// <summary>Where the list opens, in SCREEN pixels from the graph's corner - under the pointer, which is where the
     /// hand already is.</summary>
@@ -179,7 +181,7 @@ public class NodeGraph : InfiniteCanvas
         if (component is not NodeGraph graph) return;
 
         var open = e.NewValue is true;
-        graph.SetValue(PaletteFaceProperty, open ? Visibility.Visible : Visibility.Collapsed);
+        graph.SetValue(PaletteFacePropertyKey, open ? Visibility.Visible : Visibility.Collapsed);
 
         if (open) return;
 

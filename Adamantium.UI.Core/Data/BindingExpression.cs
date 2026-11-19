@@ -42,7 +42,8 @@ public class BindingExpression : BindingExpressionBase
    public override bool ResetSource()
    {
       var (component, property) = SourceSlot();
-      if (property == null) return false;
+      // A read-only source is its owner's to set back, as it is to write.
+      if (property == null || property.ReadOnly) return false;
 
       component.ClearValue(property);
       if (HoldsWrittenCurrentValue(component, property))

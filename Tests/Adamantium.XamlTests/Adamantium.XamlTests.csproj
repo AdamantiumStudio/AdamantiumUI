@@ -33,6 +33,8 @@
       <!-- The node an application would bring: the canvas has none of its own, so both suites ask the same stand-in
            rather than each writing a graph's objects again. -->
       <Compile Include="..\Adamantium.UITests\Graph\GraphNode.cs" Link="Graph\GraphNode.cs" />
+      <!-- The mouse's events raised on an element: hover comes as it does from the input system. -->
+      <Compile Include="..\Adamantium.UITests\PointerInput.cs" Link="PointerInput.cs" />
       <Compile Include="..\Adamantium.UI.WebView.Tests\NoDevices.cs" Link="WebView\NoDevices.cs" />
     </ItemGroup>
 

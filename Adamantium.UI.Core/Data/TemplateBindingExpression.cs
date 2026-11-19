@@ -55,6 +55,12 @@ public class TemplateBindingExpression : BindingExpressionBase
     // as {Binding} does, and skip the write when the value cannot be made to fit rather than poison the slot.
     public override void UpdateSource()
     {
+        // A read-only templated-parent property is its owner's to write, as a {Binding} leaves it.
+        if (SourceProperty.ReadOnly)
+        {
+            return;
+        }
+
         var shown = Target.GetValue(TargetProperty);
         // Nothing cannot go into a slot that cannot hold it (an emptied length field over a TimeSpan): the target is
         // given back what the source holds, as a {Binding} refuses it.

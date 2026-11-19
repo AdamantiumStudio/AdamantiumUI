@@ -693,8 +693,15 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     public void ClearValue(AdamantiumProperty property, ValuePriority priority = ValuePriority.Local)
     {
         ArgumentNullException.ThrowIfNull(property);
+        RefuseReadOnly(property);
+        WriteValue(property, AdamantiumProperty.UnsetValue, priority);
+    }
 
-        SetValue(property, AdamantiumProperty.UnsetValue, priority);
+    /// <summary>Clears the value of the read-only property <paramref name="key"/> writes.</summary>
+    public void ClearValue(AdamantiumPropertyKey key, ValuePriority priority = ValuePriority.Local)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        WriteValue(key.Property, AdamantiumProperty.UnsetValue, priority);
     }
 
     /// <summary>
@@ -979,6 +986,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     // of overwriting one slot. The Trigger priority slot just mirrors the stack's current top.
     public void SetTriggerValue(AdamantiumProperty property, object value, object token)
     {
+        RefuseReadOnly(property);
         triggerValues ??= new Dictionary<string, TriggerValueContainer>();
         if (!triggerValues.TryGetValue(property.Name, out var container))
             triggerValues[property.Name] = container = new TriggerValueContainer();
@@ -1011,6 +1019,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// <summary>Records one style's contribution and writes whichever of them is the most specific.</summary>
     public void SetStyleValue(AdamantiumProperty property, object value, Style style)
     {
+        RefuseReadOnly(property);
         AddStyleEntry(property.Name, value, style);
         WriteStyleValue(property, EffectiveStyleValue(property.Name, value), StyleSlotFor(property, property.Name, style));
     }
@@ -1080,12 +1089,39 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     }
 
     /// <summary>
-    /// Sets a <see cref="AdamantiumProperty"/> value.
+    /// Sets a <see cref="AdamantiumProperty"/> value. A read-only property refuses it: its owner writes it through its
+    /// <see cref="AdamantiumPropertyKey"/>.
     /// </summary>
     /// <param name="property">The property.</param>
     /// <param name="value">New value.</param>
     /// <param name="priority"></param>
     public void SetValue(AdamantiumProperty property, object value, ValuePriority priority = ValuePriority.Local)
+    {
+        RefuseReadOnly(property);
+        WriteValue(property, value, priority);
+    }
+
+    /// <summary>Sets the value of the read-only property <paramref name="key"/> writes.</summary>
+    public void SetValue(AdamantiumPropertyKey key, object value, ValuePriority priority = ValuePriority.Local)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        WriteValue(key.Property, value, priority);
+    }
+
+    private static void RefuseReadOnly(AdamantiumProperty property)
+    {
+        if (property is { ReadOnly: true })
+        {
+            ThrowReadOnly(property);
+        }
+    }
+
+    // Apart, so the check above stays small enough to inline into every write.
+    private static void ThrowReadOnly(AdamantiumProperty property) =>
+        throw new InvalidOperationException(
+            $"{property.OwnerType.Name}.{property.Name} is read-only: only its owner writes it, through its key.");
+
+    private void WriteValue(AdamantiumProperty property, object value, ValuePriority priority)
     {
         ValidateProperty(property);
 
@@ -1109,11 +1145,25 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// the templated parent could never set the property again.</summary>
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
+        RefuseReadOnly(property);
+        WriteCurrentValue(property, value);
+    }
+
+    /// <summary>Sets the current value of the read-only property <paramref name="key"/> writes, keeping its source.
+    /// </summary>
+    public void SetCurrentValue(AdamantiumPropertyKey key, object value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        WriteCurrentValue(key.Property, value);
+    }
+
+    private void WriteCurrentValue(AdamantiumProperty property, object value)
+    {
         // A {Binding} a template's markup set stands at Template: the value goes into its slot whatever shows over it - a
         // trigger, or nothing yet as the binding has written nothing - since raised to Binding it would mask it for good.
         if (Data.BindingEngine.GetBindingExpression(this, property) is { Priority: ValuePriority.Template })
         {
-            SetValue(property, value, ValuePriority.Template);
+            WriteValue(property, value, ValuePriority.Template);
             return;
         }
 
@@ -1123,7 +1173,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
                        || IsFedByStyleBinding(property, basePriority)
             ? basePriority
             : ValuePriority.Binding;
-        SetValue(property, value, priority);
+        WriteValue(property, value, priority);
     }
 
     private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)

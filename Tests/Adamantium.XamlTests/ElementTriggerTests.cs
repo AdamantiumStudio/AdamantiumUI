@@ -73,7 +73,7 @@ public class ElementTriggerTests
         Assert.That(AnimationManager.HasActiveAnimations, Is.False, "nothing animates before the condition is met");
 
         // Hover: IsPointerOver crosses to true -> the EnterAction must start the keyframe animation.
-        button.SetValue(InputUIComponent.IsPointerOverProperty, true);
+        Adamantium.UITests.PointerInput.Enter(button);
         Assert.That(AnimationManager.HasActiveAnimations, Is.True,
             "element-level trigger's EnterAction did not fire on hover");
 

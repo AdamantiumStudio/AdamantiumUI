@@ -37,8 +37,10 @@ public abstract class ButtonBase : ContentControl
     public static readonly AdamantiumProperty ClickModeProperty = AdamantiumProperty.Register(nameof(ClickMode),
         typeof(ClickMode), typeof(ButtonBase), new PropertyMetadata(ClickMode.Release));
 
-    public static readonly AdamantiumProperty IsPressedProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsPressed),
-        typeof(bool), typeof(ButtonBase), new PropertyMetadata(false));
+    private static readonly AdamantiumPropertyKey IsPressedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsPressed), typeof(bool), typeof(ButtonBase), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsPressedProperty = IsPressedPropertyKey.Property;
 
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(ButtonBase), new PropertyMetadata(null, OnCommandChanged));
@@ -123,7 +125,7 @@ public abstract class ButtonBase : ContentControl
     public bool IsPressed
     {
         get => GetValue<bool>(IsPressedProperty);
-        private set => SetValue(IsPressedProperty, value);
+        private set => SetValue(IsPressedPropertyKey, value);
     }
 
     public ICommand Command

@@ -34,8 +34,10 @@ public class TitleBar : Control
     public static readonly AdamantiumProperty TitleAlignmentProperty = AdamantiumProperty.Register(nameof(TitleAlignment),
         typeof(HorizontalAlignment), typeof(TitleBar), new PropertyMetadata(HorizontalAlignment.Left, PropertyMetadataOptions.AffectsArrange));
 
-    public static readonly AdamantiumProperty TitleCenteringProperty = AdamantiumProperty.RegisterReadOnly(nameof(TitleCentering),
-        typeof(Thickness), typeof(TitleBar), new PropertyMetadata(default(Thickness)));
+    private static readonly AdamantiumPropertyKey TitleCenteringPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(TitleCentering), typeof(Thickness), typeof(TitleBar), new PropertyMetadata(default(Thickness)));
+
+    public static readonly AdamantiumProperty TitleCenteringProperty = TitleCenteringPropertyKey.Property;
 
     /// <summary>Content at the very start of the caption, before the window commands. Deliberately a neutral slot: the
     /// title bar shows what was put in it and knows nothing about what that is.</summary>
@@ -162,7 +164,7 @@ public class TitleBar : Control
     public Thickness TitleCentering
     {
         get => GetValue<Thickness>(TitleCenteringProperty);
-        private set => SetValue(TitleCenteringProperty, value);
+        private set => SetValue(TitleCenteringPropertyKey, value);
     }
 
     public bool ShowMinButton

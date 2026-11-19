@@ -359,7 +359,8 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       return property;
    }
 
-   public static AdamantiumProperty RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
+   /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
+   public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata)
       {
@@ -368,10 +369,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property;
+      return new AdamantiumPropertyKey(property);
    }
 
-   public static AdamantiumProperty RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
+   /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
+   public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
          validateValueCallBack)
@@ -381,10 +383,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property;
+      return new AdamantiumPropertyKey(property);
    }
-   
-   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType)
+
+   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
+   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType)
       {
@@ -392,10 +395,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property;
+      return new AdamantiumPropertyKey(property);
    }
 
-   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
+   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
+   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata)
       {
@@ -403,10 +407,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property;
+      return new AdamantiumPropertyKey(property);
    }
 
-   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
+   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
+   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
          validateValueCallBack)
@@ -415,7 +420,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       };
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property;
+      return new AdamantiumPropertyKey(property);
    }
 
    public bool Equals(AdamantiumProperty other)
