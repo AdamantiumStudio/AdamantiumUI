@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `NumericUpDown.FocusText`: puts the caret in the number with all of it selected, so what is typed replaces it - for
+  a field that asks for a value the moment it opens.
 - `InfiniteCanvas.RepaintGlass`: draws again only the glass - what a tool is making and the pointer's marks - not the
   layers under it.
 - Snapping to what a canvas shows: a derived canvas answers `TrySnapToContent` with a point of its drawing - a corner,
