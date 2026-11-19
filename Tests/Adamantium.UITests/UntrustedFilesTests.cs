@@ -201,7 +201,7 @@ public class UntrustedFilesTests
         }
     }
 
-    [Test, Platform("Linux")]
+    [Test, Platform("Linux"), System.Runtime.Versioning.SupportedOSPlatform("linux")]
     public void OnLinux_AFileFromOutside_LosesTheRightToRun()
     {
         var folder = Directory.CreateTempSubdirectory("adam-untrusted-").FullName;
