@@ -606,6 +606,11 @@ All packages share one version.
 
 ### Fixed
 
+- Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z undo and redo on a canvas wherever its focus is - on a button of its own bar or in
+  its side panel, not only on the plane. They are the canvas's answers to `ApplicationCommands.Undo` and `Redo`; a
+  text entry inside answers them first for its own text; a tool in the middle of something takes the key and nothing
+  happens; with nothing to take back the key goes on up to a canvas around it or the application's own undo. Ctrl held
+  never picks a tool by its letter.
 - A canvas tool from another library shows what it is making as the pointer moves: the canvas draws the glass again
   after each pointer event, key or text a tool handled and after a tool or one of its pointers is cancelled, not only
   when the tool asked. A

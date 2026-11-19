@@ -1173,7 +1173,23 @@ public partial class InfiniteCanvas
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(InfiniteCanvas), new PropertyMetadata(true));
         BackgroundProperty.OverrideMetadata(typeof(InfiniteCanvas),
             new PropertyMetadata(Brushes.Transparent, OnGroundBrushSet));
+
+        // Wherever the focus is in the canvas; a text entry inside answers first, for its own text.
+        BindHistory(ApplicationCommands.Undo, static canvas => canvas.UndoCommand);
+        BindHistory(ApplicationCommands.Redo, static canvas => canvas.RedoCommand);
     }
+
+    // A busy tool takes the key and nothing happens; with nothing to take, it goes on up - an outer canvas, the app.
+    private static void BindHistory(RoutedCommand command, Func<InfiniteCanvas, CanvasCommand> step) =>
+        CommandManager.RegisterClassCommandBinding(typeof(InfiniteCanvas), new CommandBinding(command,
+            (sender, _) => step((InfiniteCanvas)sender).Execute(null),
+            (sender, e) =>
+            {
+                var canvas = (InfiniteCanvas)sender;
+                var busy = canvas.Tool is { IsBusy: true };
+                e.CanExecute = !busy && step(canvas).CanExecute(null);
+                e.Handled = busy || e.CanExecute;
+            }));
 
     private void OnPointerDown(object sender, PointerPressedEventArgs e)
     {
@@ -1817,7 +1833,8 @@ public partial class InfiniteCanvas
             return;
         }
 
-        // GROUPING and UNDO before the tool shortcuts: a tool letter with Ctrl held has never meant the tool anywhere.
+        // GROUPING before the tool shortcuts: a tool letter with Ctrl held has never meant the tool anywhere. Undo and redo
+        // are commands of the canvas's own (see the static constructor), heard wherever the focus is in it.
         var control = (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
         var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
 
@@ -1825,17 +1842,6 @@ public partial class InfiniteCanvas
         {
             if (shift) UngroupSelection();
             else GroupSelection();
-
-            e.Handled = true;
-            return;
-        }
-
-        // Ctrl+Z, and BOTH of the two things the world calls redo: which one a person reaches for depends on what they
-        // used last.
-        if (control && (e.Key == Key.Z || e.Key == Key.Y))
-        {
-            if (e.Key == Key.Y || shift) Redo();
-            else Undo();
 
             e.Handled = true;
             return;
@@ -1862,8 +1868,8 @@ public partial class InfiniteCanvas
         }
 
         // AFTER the tool and BEFORE the canvas's own keys: a tool typing owns every letter, and picking a tool is the
-        // commonest thing a person does here.
-        if (PickByShortcut(e.Key))
+        // commonest thing a person does here. Never with Ctrl held - Ctrl+Alt+Z is no Z.
+        if (!control && PickByShortcut(e.Key))
         {
             e.Handled = true;
             return;
