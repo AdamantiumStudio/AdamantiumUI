@@ -28,14 +28,20 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
         
-    public static readonly AdamantiumProperty StylesProperty =
-            AdamantiumProperty.RegisterReadOnly(nameof(Styles), typeof(StylesCollection), typeof(FundamentalUIComponent));
-    
-    public static readonly AdamantiumProperty BehaviorsProperty =
+    private static readonly AdamantiumPropertyKey StylesPropertyKey =
+        AdamantiumProperty.RegisterReadOnly(nameof(Styles), typeof(StylesCollection), typeof(FundamentalUIComponent));
+
+    private static readonly AdamantiumPropertyKey BehaviorsPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(Behaviors), typeof(BehaviorCollection), typeof(FundamentalUIComponent));
 
-    public static readonly AdamantiumProperty TriggersProperty =
+    private static readonly AdamantiumPropertyKey TriggersPropertyKey =
         AdamantiumProperty.RegisterReadOnly(nameof(Triggers), typeof(TriggerCollection), typeof(FundamentalUIComponent));
+
+    public static readonly AdamantiumProperty StylesProperty = StylesPropertyKey.Property;
+
+    public static readonly AdamantiumProperty BehaviorsProperty = BehaviorsPropertyKey.Property;
+
+    public static readonly AdamantiumProperty TriggersProperty = TriggersPropertyKey.Property;
     
     public static readonly AdamantiumProperty DataContextProperty = AdamantiumProperty.Register(nameof(DataContext),
         typeof(object), typeof(FundamentalUIComponent),
@@ -113,7 +119,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             var behaviors = GetValue<BehaviorCollection>(BehaviorsProperty);
             if (behaviors == null)
             {
-                SetValue(BehaviorsProperty, behaviors = new BehaviorCollection(this));
+                SetValue(BehaviorsPropertyKey, behaviors = new BehaviorCollection(this));
             }
 
             return behaviors;
@@ -139,7 +145,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             var triggers = GetValue<TriggerCollection>(TriggersProperty);
             if (triggers == null)
             {
-                SetValue(TriggersProperty, triggers = new TriggerCollection());
+                SetValue(TriggersPropertyKey, triggers = new TriggerCollection());
             }
 
             return triggers;
@@ -558,7 +564,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             {
                 styles = new StylesCollection();
                 styles.CollectionChanged += StylesOnCollectionChanged;
-                SetValue(StylesProperty, styles);
+                SetValue(StylesPropertyKey, styles);
             }
             return styles;
         }

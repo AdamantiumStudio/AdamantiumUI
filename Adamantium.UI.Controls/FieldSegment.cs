@@ -11,14 +11,21 @@ namespace Adamantium.UI.Controls;
 /// keyboard is on it.</summary>
 public abstract class FieldSegment : Control
 {
-    public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.RegisterReadOnly(nameof(Text),
+    private static readonly AdamantiumPropertyKey TextPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Text),
         typeof(string), typeof(FieldSegment), new PropertyMetadata(string.Empty));
 
-    public static readonly AdamantiumProperty IsEmptyProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsEmpty),
-        typeof(bool), typeof(FieldSegment), new PropertyMetadata(true));
+    public static readonly AdamantiumProperty TextProperty = TextPropertyKey.Property;
 
-    public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsActive),
-        typeof(bool), typeof(FieldSegment), new PropertyMetadata(false, PropertyMetadataOptions.AffectsParentArrange));
+    private static readonly AdamantiumPropertyKey IsEmptyPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsEmpty), typeof(bool), typeof(FieldSegment), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty IsEmptyProperty = IsEmptyPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey IsActivePropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsActive), typeof(bool), typeof(FieldSegment),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsParentArrange));
+
+    public static readonly AdamantiumProperty IsActiveProperty = IsActivePropertyKey.Property;
 
     /// <summary>How the part the keyboard is on is marked; set on a field and inherited by its parts.</summary>
     public static readonly AdamantiumProperty MarkingProperty = AdamantiumProperty.RegisterAttached("Marking",
@@ -41,21 +48,21 @@ public abstract class FieldSegment : Control
     public string Text
     {
         get => GetValue<string>(TextProperty);
-        private set => SetValue(TextProperty, value);
+        private set => SetValue(TextPropertyKey, value);
     }
 
     /// <summary>Nothing entered: it shows its placeholder.</summary>
     public bool IsEmpty
     {
         get => GetValue<bool>(IsEmptyProperty);
-        private set => SetValue(IsEmptyProperty, value);
+        private set => SetValue(IsEmptyPropertyKey, value);
     }
 
     /// <summary>The keyboard is on it: arrows step it, digits go into it.</summary>
     public bool IsActive
     {
         get => GetValue<bool>(IsActiveProperty);
-        internal set => SetValue(IsActiveProperty, value);
+        internal set => SetValue(IsActivePropertyKey, value);
     }
 
     /// <summary>What it shows while empty; a single letter is repeated to the segment's width - <c>д</c> shows as

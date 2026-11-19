@@ -37,13 +37,15 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         typeof(Double), typeof(MeasurableUIComponent),
         new PropertyMetadata((Double)0, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
 
-    public static readonly AdamantiumProperty ActualWidthProperty = AdamantiumProperty.RegisterReadOnly(nameof(ActualWidth),
-        typeof(Double), typeof(MeasurableUIComponent),
-        new PropertyMetadata((Double)0));
+    private static readonly AdamantiumPropertyKey ActualWidthPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(ActualWidth), typeof(Double), typeof(MeasurableUIComponent), new PropertyMetadata((Double)0));
 
-    public static readonly AdamantiumProperty ActualHeightProperty = AdamantiumProperty.RegisterReadOnly(nameof(ActualHeight),
-        typeof(Double), typeof(MeasurableUIComponent),
-        new PropertyMetadata((Double)0));
+    public static readonly AdamantiumProperty ActualWidthProperty = ActualWidthPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey ActualHeightPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(ActualHeight), typeof(Double), typeof(MeasurableUIComponent), new PropertyMetadata((Double)0));
+
+    public static readonly AdamantiumProperty ActualHeightProperty = ActualHeightPropertyKey.Property;
 
     public static readonly AdamantiumProperty MaxWidthProperty = AdamantiumProperty.Register(nameof(MaxWidth),
         typeof(Double), typeof(MeasurableUIComponent),
@@ -166,13 +168,13 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     public Double ActualWidth
     {
         get => GetValue<Double>(ActualWidthProperty);
-        private set => SetValue(ActualWidthProperty, value);
+        private set => SetValue(ActualWidthPropertyKey, value);
     }
 
     public Double ActualHeight
     {
         get => GetValue<Double>(ActualHeightProperty);
-        private set => SetValue(ActualHeightProperty, value);
+        private set => SetValue(ActualHeightPropertyKey, value);
     }
 
     public Double MinWidth

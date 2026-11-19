@@ -111,7 +111,7 @@ public class VirtualWindowChromeTests
         window.ResizeMode = mode;
         var titleBar = TitleBarOf(window);
 
-        titleBar.SetValue(InputUIComponent.IsPointerOverProperty, true);
+        Adamantium.UITests.PointerInput.Enter(titleBar);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
 
         Assert.Multiple(() =>

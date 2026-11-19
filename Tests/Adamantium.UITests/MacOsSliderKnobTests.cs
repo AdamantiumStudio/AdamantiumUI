@@ -1,4 +1,6 @@
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
@@ -12,6 +14,21 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class MacOsSliderKnobTests
 {
+    // A window's root stand-in: a press finds where it is on it, as it does on a window.
+    private sealed class TestWindowRoot : Grid, IRootVisualComponent
+    {
+        public Vector2<double> PointToClient(PixelPoint point) => new(point.X, point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
+        public PixelPoint Position { get; set; }
+        public void AttachContextAndInitialize(IUIContext context) { }
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public string Title { get; set; }
+        public double ClientWidth { get; set; }
+        public double ClientHeight { get; set; }
+        public IUIContext UIContext => null;
+    }
+
     private static Thumb Knob()
     {
         var thumb = new Thumb { Width = 20, Height = 20 };
@@ -21,7 +38,8 @@ public class MacOsSliderKnobTests
         set.Initialize(null);
         foreach (var style in set.Styles) style.Attach(thumb);
 
-        var root = new Border { Width = 200, Height = 100, Child = thumb };
+        var root = new TestWindowRoot { Width = 200, Height = 100, ClientWidth = 200, ClientHeight = 100 };
+        root.Children.Add(thumb);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
         return thumb;
     }
@@ -58,8 +76,8 @@ public class MacOsSliderKnobTests
 
     /// <summary>The glow is OFF at rest and ON while dragging. Being FOUND by name and being WRITTEN to are two
     /// different claims, and only the first was measured at first - so this drives the state itself.
-    /// <para><c>IsDragging</c> is read-only, which stops a transition being attached to it and nothing else:
-    /// <c>SetValue</c> writes it, so the state a real drag produces can be produced here.</para>
+    /// <para><c>IsDragging</c> is read-only: the drag is made as the mouse makes one, pressed on the thumb and let go.
+    /// </para>
     /// </summary>
     [Test]
     public void TheGlowFollowsTheDrag()
@@ -73,12 +91,12 @@ public class MacOsSliderKnobTests
         var knob = (Border)thumb.GetTemplateChild("Knob");
         var atRest = knob.Background;
 
-        thumb.SetValue(Thumb.IsDraggingProperty, true);
+        PointerInput.Press(thumb);
         TestContext.WriteLine($"dragging: IsDragging={thumb.IsDragging} aura.IsEnabled={aura.IsEnabled} " +
                               $"fillChanged={!ReferenceEquals(knob.Background, atRest)}");
         Assert.That(aura.IsEnabled, Is.True, "the trigger reaches the Aura by name and switches it on");
 
-        thumb.SetValue(Thumb.IsDraggingProperty, false);
+        PointerInput.Release(thumb);
         TestContext.WriteLine($"released: IsDragging={thumb.IsDragging} aura.IsEnabled={aura.IsEnabled}");
         Assert.That(aura.IsEnabled, Is.False, "and lets go of it again");
         Assert.That(knob.Background, Is.SameAs(atRest), "and the knob's fill goes back with it");

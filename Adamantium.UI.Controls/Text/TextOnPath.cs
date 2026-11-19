@@ -56,8 +56,10 @@ public class TextOnPath : InputUIComponent
         nameof(StrokeThickness), typeof(double), typeof(TextOnPath),
         new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty IsTextPlacedProperty = AdamantiumProperty.RegisterReadOnly(
+    private static readonly AdamantiumPropertyKey IsTextPlacedPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(IsTextPlaced), typeof(bool), typeof(TextOnPath), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsTextPlacedProperty = IsTextPlacedPropertyKey.Property;
 
     private TextLayout _layout;
     private IFont _layoutFont;
@@ -184,7 +186,7 @@ public class TextOnPath : InputUIComponent
     public bool IsTextPlaced
     {
         get => GetValue<bool>(IsTextPlacedProperty);
-        private set => SetValue(IsTextPlacedProperty, value);
+        private set => SetValue(IsTextPlacedPropertyKey, value);
     }
 
     protected internal override void OnFontsArrived()
