@@ -2312,6 +2312,20 @@ public partial class RenderCache
     {
         if (entry.Owner is not { } owner || _transformTable == null) return;
 
+        // An owner whose snapshot this cache does not hold - hidden, mid re-capture, or another window's - is not read
+        // live to find its slot. One it gave a slot of its own keeps fading in it; any other is not its to fade.
+        if (!_applySnap.ContainsKey(owner))
+        {
+            if (_fadeOwners.TryGetValue(owner, out var held))
+            {
+                _transformTable.SetAlpha(device, held, entry.Alpha);
+                ApplyCopyFades(device, owner, entry);
+                entry.MarkApplied();
+            }
+
+            return;
+        }
+
         if (OpensLayer(owner))
         {
             entry.MarkApplied();

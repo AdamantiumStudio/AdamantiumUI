@@ -616,6 +616,9 @@ All packages share one version.
 
 ### Fixed
 
+- A composited fade no longer reads an element's layout off the interface thread when the window does not hold it - the
+  element hidden, its layout being re-captured, or another window's (every window plays every fade). One the window
+  gave a fade slot keeps fading in it; any other is left to the window that draws it.
 - Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z undo and redo on a canvas wherever its focus is - on a button of its own bar or in
   its side panel, not only on the plane. They are the canvas's answers to `ApplicationCommands.Undo` and `Redo`; a
   text entry inside answers them first for its own text; a tool in the middle of something takes the key and nothing

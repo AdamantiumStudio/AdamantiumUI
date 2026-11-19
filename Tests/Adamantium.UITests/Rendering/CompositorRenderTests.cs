@@ -449,6 +449,54 @@ public class CompositorRenderTests
         Assert.That(added, Is.EqualTo(255), "...the child added while it was hidden too");
     }
 
+    // The compositor plays every window's fades. A cache that never drew the owner neither reads it live nor gives it a
+    // slot; and the drawing cache, once the owner's parent collapses, does not read the hidden chain live either.
+    [Test]
+    public void AFade_IsReadLiveNeitherByAnotherWindow_NorUnderACollapsedParent()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var drawing = new OffscreenTestRenderer(_device, factory, 64, 64);
+        using var other = new OffscreenTestRenderer(_device, factory, 64, 64);
+
+        var root = new TestRoot(64, 64);
+        var page = new TestControl();
+        page.Bounds = new Rect(0, 0, 64, 64);
+        page.RenderSize = new Size<double>(64, 64);
+        var fading = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        fading.Bounds = new Rect(24, 24, 16, 16);
+        fading.RenderSize = new Size<double>(16, 16);
+        page.Add(fading);
+        root.Add(page);
+        var elsewhere = new TestRoot(64, 64);
+        elsewhere.Add(new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 8, 8)) });
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            IterationCount = double.PositiveInfinity,
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("Opacity", 1.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("Opacity", 0.2) } }
+            }
+        }.Apply(fading);
+        Compositor.StartPending();
+
+        Assert.That(drawing.RenderFrame(root), Is.True);
+        Assert.That(other.RenderFrame(elsewhere), Is.True);
+        page.Visibility = Visibility.Collapsed;
+        Assert.That(drawing.RenderFrame(root), Is.True);
+        Assert.That(drawing.RenderFrame(root), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(other.Cache.IsReadLive(fading), Is.False, "another window's fading owner was read live");
+            Assert.That(Held(other.Cache, "_fadeOwners"), Is.Zero, "...and given a fade slot");
+            Assert.That(drawing.Cache.IsReadLive(page), Is.False, "the collapsed parent was read off the interface thread");
+            Assert.That(drawing.Cache.IsReadLive(fading), Is.False);
+        });
+    }
+
     [Test]
     public void AChildRaisedWhileItsParentIsHidden_IsOnTopOnceShown()
     {
