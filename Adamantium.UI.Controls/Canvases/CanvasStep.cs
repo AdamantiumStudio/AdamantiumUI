@@ -56,6 +56,47 @@ internal sealed class CanvasStep : ICanvasStep
         scene.Touch();
     }
 
+    public ICanvasStep Remapped(ICanvasRemap remap)
+    {
+        var before = Items(_before, remap);
+        var after = before == null ? null : Items(_after, remap);
+        var wasAt = after == null ? null : Places(_wasAt, remap);
+        var isAt = wasAt == null ? null : Places(_isAt, remap);
+        return isAt == null ? null : new CanvasStep(Reason, before, after, wasAt, isAt);
+    }
+
+    private static List<ICanvasItem> Items(List<ICanvasItem> items, ICanvasRemap remap)
+    {
+        var carried = new List<ICanvasItem>(items.Count);
+        foreach (var item in items)
+        {
+            if (remap.ItemFor(item) is not { } now)
+            {
+                return null;
+            }
+
+            carried.Add(now);
+        }
+
+        return carried;
+    }
+
+    private static Dictionary<ICanvasItem, Rect> Places(Dictionary<ICanvasItem, Rect> places, ICanvasRemap remap)
+    {
+        var carried = new Dictionary<ICanvasItem, Rect>(places.Count);
+        foreach (var (item, box) in places)
+        {
+            if (remap.ItemFor(item) is not { } now)
+            {
+                return null;
+            }
+
+            carried[now] = remap.BoxFor(item, box);
+        }
+
+        return carried;
+    }
+
     private static void PutBack(ICanvasItem item, Rect box)
     {
         var now = item.Bounds;

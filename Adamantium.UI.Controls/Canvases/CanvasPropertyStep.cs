@@ -61,4 +61,28 @@ public sealed class CanvasPropertyStep : ICanvasStep
         scene?.Touch();
         _grid.Rebuild();
     }
+
+    /// <summary>The same values written to the items that now stand for the ones it was written to; a value that is a
+    /// place on the plane is kept as it was.</summary>
+    public ICanvasStep Remapped(ICanvasRemap remap)
+    {
+        var values = new List<(object Target, object Was, object Is)>(_values.Count);
+        foreach (var (target, was, now) in _values)
+        {
+            if (target is not ICanvasItem item)
+            {
+                values.Add((target, was, now));
+                continue;
+            }
+
+            if (remap.ItemFor(item) is not { } carried)
+            {
+                return null;
+            }
+
+            values.Add((carried, was, now));
+        }
+
+        return new CanvasPropertyStep(_grid, _definition, values);
+    }
 }

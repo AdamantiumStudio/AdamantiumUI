@@ -62,6 +62,43 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
     /// cleared.</summary>
     public CanvasHistoryChange LastChange { get; private set; }
 
+    /// <summary>Carries every step over to a plane laid out anew, the newest first; one that cannot follow is forgotten
+    /// with everything that leans on it. Announced as <see cref="CanvasHistoryChange.Remapped"/>: nothing was done.
+    /// </summary>
+    public void Remap(ICanvasRemap remap)
+    {
+        if (remap == null || (_done.Count == 0 && _undone.Count == 0)) return;
+
+        var last = LastStep;
+        LastStep = null;
+        Carry(_done, remap, last);
+        Carry(_undone, remap, last);
+        LastChange = CanvasHistoryChange.Remapped;
+        Announce();
+    }
+
+    // From the end, which is the next to take back either way: a step that cannot follow takes with it the ones before
+    // it in the list - done before it, or to be redone after it.
+    private void Carry(List<ICanvasStep> steps, ICanvasRemap remap, ICanvasStep last)
+    {
+        for (var index = steps.Count - 1; index >= 0; index--)
+        {
+            var step = steps[index];
+            var carried = step.Remapped(remap);
+            if (carried == null)
+            {
+                steps.RemoveRange(0, index + 1);
+                return;
+            }
+
+            steps[index] = carried;
+            if (ReferenceEquals(step, last))
+            {
+                LastStep = carried;
+            }
+        }
+    }
+
     /// <summary>Forgets everything - a new drawing, or one just loaded.</summary>
     public void Clear()
     {
