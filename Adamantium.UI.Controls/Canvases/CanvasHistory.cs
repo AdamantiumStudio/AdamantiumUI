@@ -54,6 +54,12 @@ public sealed class CanvasHistory : System.ComponentModel.INotifyPropertyChanged
 
     public string NextRedo => _undone.Count > 0 ? _undone[^1].Reason : string.Empty;
 
+    /// <summary>The step the next undo takes back, and the one the next redo puts back; null when there is none.
+    /// </summary>
+    public ICanvasStep StepToUndo => _done.Count > 0 ? _done[^1] : null;
+
+    public ICanvasStep StepToRedo => _undone.Count > 0 ? _undone[^1] : null;
+
     /// <summary>The step pushed, undone or redone last - what the latest <see cref="Changed"/> is about, for a listener
     /// that follows what a step touched; null once the history is cleared.</summary>
     public ICanvasStep LastStep { get; private set; }

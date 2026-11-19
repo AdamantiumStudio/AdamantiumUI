@@ -1158,12 +1158,17 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private CanvasCommand _clear;
 
     /// <summary>Takes the last step back. Off when there is nothing behind it.</summary>
-    public CanvasCommand UndoCommand =>
-        _undo ??= new CanvasCommand(_ => Undo(), _ => !IsReadOnly && History is { CanUndo: true });
+    public CanvasCommand UndoCommand => _undo ??= new CanvasCommand(_ => Undo(),
+        _ => History is { CanUndo: true } history && (!IsReadOnly || AllowsUndoWhileReadOnly(history.StepToUndo)));
 
     /// <summary>...and forward again. Off when nothing has been taken back.</summary>
-    public CanvasCommand RedoCommand =>
-        _redo ??= new CanvasCommand(_ => Redo(), _ => !IsReadOnly && History is { CanRedo: true });
+    public CanvasCommand RedoCommand => _redo ??= new CanvasCommand(_ => Redo(),
+        _ => History is { CanRedo: true } history && (!IsReadOnly || AllowsUndoWhileReadOnly(history.StepToRedo)));
+
+    /// <summary>Whether a step is taken back or put again on a plane only looked at: none by default, as nothing on
+    /// such a plane is changed by the user. A derived canvas allows its own steps that change no item, such as a turn of
+    /// what it shows.</summary>
+    protected virtual bool AllowsUndoWhileReadOnly(ICanvasStep step) => false;
 
     /// <summary>Closer in. The parameter is the factor, and one step of <see cref="ZoomStep"/> when nothing is
     /// given.</summary>

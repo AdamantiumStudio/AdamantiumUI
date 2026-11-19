@@ -219,6 +219,40 @@ public class CanvasReadOnlyTests
         });
     }
 
+    // A canvas whose own turn of what it shows changes no item lets the turn be taken back while only looked at.
+    private sealed class TurningBoard : DrawingBoard
+    {
+        protected override bool AllowsUndoWhileReadOnly(ICanvasStep step) => step?.Reason == "Turn";
+    }
+
+    [Test]
+    public void ADerivedCanvas_TakesBackItsOwnSteps_WhileReadOnly_AndNoOthers()
+    {
+        var canvas = new TurningBoard();
+        var window = new Window { Width = 800, Height = 600, Content = canvas };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var scene = new CanvasScene();
+        canvas.Scene = scene;
+        var item = Box(0, 0);
+        scene.Add(item);
+        canvas.BeginEdit("Move");
+        item.Move(new Vector2<double>(5, 0));
+        canvas.EndEdit();
+        canvas.IsReadOnly = true;
+        var moveUndoable = canvas.UndoCommand.CanExecute();
+        canvas.IsReadOnly = false;
+        canvas.BeginEdit("Turn");
+        item.Move(new Vector2<double>(5, 0));
+        canvas.EndEdit();
+        canvas.IsReadOnly = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(moveUndoable, Is.False, "a move is taken back on a plane only looked at");
+            Assert.That(canvas.UndoCommand.CanExecute(), Is.True, "the canvas's own turn cannot be taken back");
+        });
+    }
+
     [Test]
     public void TheRail_OffersOnlyWhatPicks_AndTheInspector_OnlyShows()
     {
