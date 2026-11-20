@@ -637,6 +637,8 @@ All packages share one version.
 
 ### Fixed
 
+- A drop-down's row written in markup, chosen through automation before the list was ever opened, is selected and runs
+  the drop-down's command; it was taken for no row of the list.
 - Adamantium.Vulkan 1.3.1 and Slang 1.1.2: an empty string in a structure's field no longer runs past the marshalling
   buffer.
 - A canvas's viewport part (`PART_Viewport`) cuts what it holds at its edge, whatever the template says: beside a

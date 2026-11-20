@@ -603,12 +603,14 @@ public class DropDown : Selector
         if (index >= 0) Highlight(index);
     }
 
-    // A row was clicked: select its item and dismiss.
+    // A row was clicked: select its item and dismiss. A row given in markup is its own item: chosen while the list was
+    // never opened - by automation - it has no container generated yet.
     internal void SelectFromContainer(DropDownItem container)
     {
         if (!container.IsEnabled) return;
 
         var index = ItemContainerGenerator.IndexFromContainer(container);
+        if (index < 0) index = Items.IndexOf(container);
         if (index >= 0) SelectSingle(index);
         IsDropDownOpen = false;
     }
