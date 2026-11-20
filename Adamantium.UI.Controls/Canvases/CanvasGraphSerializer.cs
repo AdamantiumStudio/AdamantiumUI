@@ -108,15 +108,18 @@ public static class CanvasGraphSerializer
             var links = ReadLinks(root);
             var frames = ReadFrames(root, canvas);
 
+            // ONE change of the scene for the whole graph: an item at a time is a walk of the scene each, and of
+            // everything that follows the scene.
             void Replace()
             {
-                foreach (var item in new List<ICanvasItem>(canvas.ItemsHere()))
+                var items = new List<ICanvasItem>(scene.Items.Count + frames.Count + seeds.Count + links.Count);
+                foreach (var item in scene.Items)
                 {
-                    if (IsGraphs(item)) scene.Remove(item);
+                    if (!IsGraphs(item)) items.Add(item);
                 }
 
                 // The frames FIRST: they stand behind the nodes they are drawn round.
-                foreach (var frame in frames) scene.Add(frame);
+                items.AddRange(frames);
 
                 var placed = new List<ElementItem>(seeds.Count);
                 foreach (var seed in seeds)
@@ -125,7 +128,7 @@ public static class CanvasGraphSerializer
                     Dress(node, seed);
 
                     var element = new ElementItem(node, seed.World);
-                    scene.Add(element);
+                    items.Add(element);
                     placed.Add(element);
                 }
 
@@ -133,9 +136,10 @@ public static class CanvasGraphSerializer
                 {
                     if (from < 0 || from >= placed.Count || to < 0 || to >= placed.Count) continue;
 
-                    var wire = Join(placed[from], fromPin, placed[to], toPin);
-                    if (wire != null) scene.Add(wire);
+                    if (Join(placed[from], fromPin, placed[to], toPin) is { } wire) items.Add(wire);
                 }
+
+                scene.Reset(items);
             }
 
             if (canvas.History is { } history) history.Record(scene, "Open", Replace);

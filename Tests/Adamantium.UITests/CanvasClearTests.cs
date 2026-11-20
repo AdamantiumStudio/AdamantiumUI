@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -56,6 +57,181 @@ public class CanvasClearTests
         nodes.Add(node);
 
         return node;
+    }
+
+    // MANY AT ONCE is one change of the plane, not one per item: an item at a time was a walk of the scene each, and of
+    // everything that follows it - deleting or pasting a large selection took quadratic time.
+    private static (NodeGraph Canvas, CanvasScene Scene, TrackingCollection<ICanvasNode> Nodes, GraphNode Last) Chain(int count)
+    {
+        var (canvas, scene, nodes) = Stage();
+        GraphNode last = null;
+        for (var i = 0; i < count; i++)
+        {
+            var node = Node(nodes, i * 200);
+            if (last != null) _ = new CanvasConnection(last.Outputs[0], node.Inputs[0]);
+            last = node;
+        }
+
+        return (canvas, scene, nodes, last);
+    }
+
+    [Test]
+    public void DeletingManyNodes_ChangesThePlaneOnce_AndCutsTheirWires()
+    {
+        var (canvas, scene, _, last) = Chain(30);
+        var lastItem = canvas.ItemOf(last);
+        var chosen = new System.Collections.Generic.List<ICanvasItem>();
+        foreach (var item in scene.Items)
+        {
+            if (item is ElementItem && !ReferenceEquals(item, lastItem)) chosen.Add(item);
+        }
+
+        canvas.SelectMany(chosen, false);
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        canvas.DeleteSelection();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Is.EqualTo(new ICanvasItem[] { lastItem }), "the nodes or their wires stayed");
+            Assert.That(changes, Is.LessThanOrEqualTo(3), "the plane was changed once for each item");
+            Assert.That(last.Inputs[0].Connections, Is.Empty, "the graph kept the wire to a deleted node");
+            Assert.That(((CanvasNode)lastItem.Element).InputPins[0].IsConnected, Is.False, "the freed socket is taken");
+        });
+    }
+
+    [Test]
+    public void DuplicatingMany_ChangesThePlaneOnce_WiredAsTheyWere()
+    {
+        var (canvas, scene, _, _) = Chain(30);
+        canvas.SelectMany(new System.Collections.Generic.List<ICanvasItem>(scene.Items), false);
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        canvas.Duplicate();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Has.Count.EqualTo(2 * (30 + 29)), "the copies or their wires are missing");
+            Assert.That(changes, Is.LessThanOrEqualTo(3), "the plane was changed once for each item");
+        });
+    }
+
+    // A CLEAR reported as one removal of every object takes them off in one change too.
+    [Test]
+    public void ACollectionCleared_TakesItsObjectsOffAtOnce()
+    {
+        var (_, scene, objects) = Board();
+        for (var i = 0; i < 30; i++) objects.Add(new PlacedObject { Left = i * 50, Width = 40, Height = 30 });
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        objects.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Is.Empty);
+            Assert.That(changes, Is.EqualTo(1), "the plane was changed once for each object");
+        });
+    }
+
+    // MANY INSIDE A GROUP, deleted at once: out of the group in one walk, and the group gone with its last.
+    [Test]
+    public void DeletingAllOfAGroupFromInside_TakesTheGroupToo()
+    {
+        var (canvas, scene, _) = Board();
+        var members = new System.Collections.Generic.List<ICanvasItem>();
+        for (var i = 0; i < 10; i++)
+        {
+            members.Add(new ShapeItem(CanvasShape.Rectangle, new Rect(i * 50, 0, 40, 30), Brushes.White, 1));
+        }
+
+        var group = new GroupItem(members);
+        scene.Add(group);
+        canvas.SelectMany(members, false);
+
+        canvas.DeleteSelection();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(group.Children, Is.Empty);
+            Assert.That(scene.Items, Is.Empty, "the empty group stayed on the plane");
+        });
+    }
+
+    // A GROUP OF NODES deleted takes the wires of the nodes inside it.
+    [Test]
+    public void DeletingAGroupOfNodes_TakesTheirWires()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var a = Node(nodes, 0);
+        var b = Node(nodes, 200);
+        var c = Node(nodes, 400);
+        _ = new CanvasConnection(a.Outputs[0], c.Inputs[0]);
+        canvas.SelectMany([canvas.ItemOf(a), canvas.ItemOf(b)], false);
+        var group = canvas.GroupSelection();
+        canvas.SelectMany([group], false);
+
+        canvas.DeleteSelection();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items.OfType<ConnectionItem>(), Is.Empty, "the wire of a node in the group stayed");
+            Assert.That(c.Inputs[0].Connections, Is.Empty);
+        });
+    }
+
+    // A GROUP INSIDE A GROUP left empty by a delete goes too, not an invisible box in the paint order.
+    [Test]
+    public void DeletingAllOfAGroupInsideAGroup_TakesThatGroupToo()
+    {
+        var (canvas, scene, _) = Board();
+        var inner = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 40, 30), Brushes.White, 1);
+        var kept = new ShapeItem(CanvasShape.Rectangle, new Rect(100, 0, 40, 30), Brushes.White, 1);
+        var nested = new GroupItem([inner]);
+        var outer = new GroupItem([nested, kept]);
+        scene.Add(outer);
+        canvas.SelectMany([inner], false);
+
+        canvas.DeleteSelection();
+
+        Assert.That(outer.Children, Is.EqualTo(new ICanvasItem[] { kept }), "the empty group stayed inside");
+    }
+
+    // AN OBJECT PUT BACK whose item an undo has put back on the plane already stands there once.
+    [Test]
+    public void AnObjectPutBack_WithItsItemOnThePlane_StandsOnce()
+    {
+        var (_, scene, objects) = Board();
+        var model = new PlacedObject { Left = 0, Width = 40, Height = 30 };
+        objects.Add(model);
+        var item = scene.Items.Single();
+
+        objects.Remove(model);
+        scene.Add(item);
+        objects.Add(model);
+
+        Assert.That(scene.Items, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void ACollectionReset_TakesItsObjectsOffAtOnce()
+    {
+        var (canvas, scene, _) = Board();
+        var objects = new System.Collections.ObjectModel.ObservableCollection<ICanvasObject>();
+        canvas.Objects = objects;
+        for (var i = 0; i < 30; i++) objects.Add(new PlacedObject { Left = i * 50, Width = 40, Height = 30 });
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        objects.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Is.Empty);
+            Assert.That(changes, Is.EqualTo(1), "the plane was changed once for each object");
+        });
     }
 
     /// <summary>A GRAPH WITH WIRES ON IT, emptied in one go. Every wire is cut by the same sweep that takes the nodes
