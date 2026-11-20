@@ -635,6 +635,10 @@ All packages share one version.
 
 ### Fixed
 
+- A window whose frame was held back for want of room in a batch draws it again: the next frame, its buffers grown,
+  was owed by nothing recorded, so the window kept the frame before until something else changed - and with two
+  frames unshown the loop stopped recording at all, an application under automation never going idle. Seen when
+  many pictures came at once: a PDF viewer's page thumbnails as another document opened.
 - Adamantium.Vulkan 1.3.1 and Slang 1.1.2: an empty string in a structure's field no longer runs past the marshalling
   buffer.
 - A canvas's viewport part (`PART_Viewport`) cuts what it holds at its edge, whatever the template says: beside a
