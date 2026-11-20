@@ -635,6 +635,8 @@ All packages share one version.
 
 ### Fixed
 
+- Adamantium.Vulkan 1.3.1 and Slang 1.1.2: an empty string in a structure's field no longer runs past the marshalling
+  buffer.
 - A canvas's viewport part (`PART_Viewport`) cuts what it holds at its edge, whatever the template says: beside a
   panel of the template's own, a drawing wider than the view - a PDF sheet turned or zoomed - was drawn over the panel.
   The canvas clipped only itself as a whole.
