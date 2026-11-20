@@ -1,5 +1,4 @@
 using System.Collections;
-using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Automation;
@@ -520,32 +519,26 @@ public class CanvasInspector : Control, ICanvasPart
         ReadHeader();
     }
 
-    // The edits of the moment are listed once - by the next layout pass, or before the next frame, whichever comes
-    // first: a plane filled item by item is not listed again for each item.
+    // The edits of the moment are listed once, before the next frame: a plane filled item by item is not listed again
+    // for each item.
     private void ListSoon()
     {
         if (_listPosted) return;
 
         _listPosted = true;
-        InvalidateMeasure();
-        LoopSignal.Post(ListPosted);
+        LoopSignal.Post(_listPostedAction ??= ListPosted);
     }
 
+    // Listed meanwhile - another canvas, a search - it is not listed again.
     private void ListPosted()
     {
-        if (!_listPosted) return;
+        if (!_listPosted || IsDiscarded) return;
 
-        _listPosted = false;
         ReadStructure();
     }
 
-    protected override Size<double> MeasureOverride(Size<double> availableSize)
-    {
-        ListPosted();
-        return base.MeasureOverride(availableSize);
-    }
-
     private bool _listPosted;
+    private Action _listPostedAction;
 
     private void OnSearched(object sender, EventArgs e)
     {
@@ -654,6 +647,7 @@ public class CanvasInspector : Control, ICanvasPart
 
     private void ReadStructure()
     {
+        _listPosted = false;
         if (Canvas is not { } canvas)
         {
             Structure = null;

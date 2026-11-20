@@ -482,9 +482,12 @@ All packages share one version.
 
 ### Changed
 
-- `CanvasInspector` lists the plane's items once the edits of the moment are done, not again for each item put in or
-  taken out, and `CanvasScene.Add` numbers only the item put on top instead of every item again: filling a plane item by
-  item spends less on each item (4000 marks put in a PDF viewer one by one took over three seconds).
+- An `InfiniteCanvas` lays out its scene's edits once, as layout is, not once for each edit: its layers are cut by the
+  next measure, and the commands and the drawing follow before the next frame. The selection - which items are in it,
+  its frame, the panes on it - and `PlaneChanged` still follow at once; code reading the layers right after `Scene.Add`
+  lays the canvas out first. `CanvasInspector` lists the plane's items once per frame too, and `CanvasScene.Add` numbers
+  only the item put on top. Filling a plane item by item is linear: 4000 marks put in a PDF viewer one by one take 70
+  ms, not 3.3 s.
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
   surfaces it kept itself before; the panel sees no difference.
 - **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and

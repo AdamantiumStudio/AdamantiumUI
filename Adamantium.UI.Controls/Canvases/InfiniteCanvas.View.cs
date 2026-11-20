@@ -1555,6 +1555,13 @@ public partial class InfiniteCanvas : ICanvasCamera
         return host;
     }
 
+    // The plane's edits are laid out before what is on it is measured.
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
+    {
+        LayOutEdits();
+        return base.MeasureOverride(availableSize);
+    }
+
     // The world's origin starts in the MIDDLE of the viewport: a plane whose origin sits off in a corner reads as one
     // that has been scrolled away from, which on something with no edges is the one impression to avoid.
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
@@ -1599,11 +1606,8 @@ public partial class InfiniteCanvas : ICanvasCamera
         SyncScrollBars();
 
         // The controls on the plane are asked for again HERE: "which of them can be seen" is answered from the
-        // viewport, and until this pass there is none to answer from. Edits of the plane waiting are laid out with them.
-        if (_settlePosted)
-            SettleEdits(viewport);
-        else
-            SyncElements(viewport);
+        // viewport, and until this pass there is none to answer from. The plane's edits are laid out with them.
+        SyncElements(viewport);
 
         return size;
     }
