@@ -633,6 +633,9 @@ All packages share one version.
 
 ### Fixed
 
+- A canvas's viewport part (`PART_Viewport`) cuts what it holds at its edge, whatever the template says: beside a
+  panel of the template's own, a drawing wider than the view - a PDF sheet turned or zoomed - was drawn over the panel.
+  The canvas clipped only itself as a whole.
 - A download's name loses direction marks that change how it reads (a right-to-left override shows "invoice",
   override, "fdp.exe" as "invoiceexe.pdf") and dots and spaces at its end together, which Windows drops, so the file is
   saved under the name kept. Cut to fit, it no longer splits a character or ends in a kind it did not have
