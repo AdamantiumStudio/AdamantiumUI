@@ -1,0 +1,6 @@
+<Language>
+    <Phrase Key="Bytes" Text="Б"/>
+    <Phrase Key="Kilobytes" Text="КБ"/>
+    <Phrase Key="Megabytes" Text="МБ"/>
+    <Phrase Key="Gigabytes" Text="ГБ"/>
+</Language>
