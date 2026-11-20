@@ -1740,7 +1740,37 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private void OnSceneEdited(object sender, EventArgs e)
     {
         Forget();
-        SyncElements();
+
+        // A pane that follows the selection follows at once: an item moving moves the frame, and the bar sits on the
+        // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
+        // so it is the one place that has to say so. It costs what is selected, not the whole plane.
+        _chromeLayer?.InvalidateArrange();
+        FollowSelectionFrame();
+
+        PlaneChanged?.Invoke(this, EventArgs.Empty);
+        SettleSoon();
+    }
+
+    // The edits of the moment are laid out once - by the next layout pass, or before the next frame, whichever comes
+    // first: a plane filled item by item is not laid out again for each item.
+    private void SettleSoon()
+    {
+        if (_settlePosted) return;
+
+        _settlePosted = true;
+        InvalidateArrange();
+        LoopSignal.Post(() => SettleEdits(ViewportSize));
+    }
+
+    private bool _settlePosted;
+
+    // Lays out the plane's edits waiting, if any, for the viewport passed in.
+    private void SettleEdits(Size<double> viewport)
+    {
+        if (!_settlePosted) return;
+
+        _settlePosted = false;
+        SyncElements(viewport);
 
         // ...and place them again even when the SET has not changed. An edit here is just as often one item's rectangle
         // moving - which is exactly what dragging a control does - and a layer that only answered to items appearing and
@@ -1750,14 +1780,6 @@ public partial class InfiniteCanvas : Control, ISceneFollower
             host.InvalidateMeasure();
             host.InvalidateArrange();
         });
-
-        // The same for a pane that follows the selection: an item moving moves the frame, and the bar sits on the
-        // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
-        // so it is the one place that has to say so.
-        _chromeLayer?.InvalidateArrange();
-        FollowSelectionFrame();
-
-        PlaneChanged?.Invoke(this, EventArgs.Empty);
 
         // ...and the buttons that answer from the PLANE rather than from the selection - the bin is the one - ask
         // again. Emptying a plane that has just been filled must not be refused because it was empty when the button

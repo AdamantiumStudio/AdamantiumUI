@@ -1599,8 +1599,11 @@ public partial class InfiniteCanvas : ICanvasCamera
         SyncScrollBars();
 
         // The controls on the plane are asked for again HERE: "which of them can be seen" is answered from the
-        // viewport, and until this pass there is none to answer from.
-        SyncElements(viewport);
+        // viewport, and until this pass there is none to answer from. Edits of the plane waiting are laid out with them.
+        if (_settlePosted)
+            SettleEdits(viewport);
+        else
+            SyncElements(viewport);
 
         return size;
     }
