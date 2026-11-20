@@ -98,21 +98,21 @@ public class PhysicalKeyTests
     [Test]
     public void ThePlace_WinsOverWhatTheLayoutMakesTheKeyType()
     {
-        Assert.That(UIUniverseOutput.TryTranslate(Key.Z, (uint)Keys.W, out var key), Is.True);
+        Assert.That(UniverseInputListener.TryTranslate(Key.Z, (uint)Keys.W, out var key), Is.True);
         Assert.That(key, Is.EqualTo(Keys.W));
     }
 
     [Test]
     public void WithoutAPlace_TheVirtualKeyIsUsed()
     {
-        Assert.That(UIUniverseOutput.TryTranslate(Key.A, 0, out var key), Is.True);
+        Assert.That(UniverseInputListener.TryTranslate(Key.A, 0, out var key), Is.True);
         Assert.That(key, Is.EqualTo(Keys.A));
     }
 
     [Test]
     public void APlaceTheEngineHasNoKeyFor_FallsBackToTheVirtualKey()
     {
-        Assert.That(UIUniverseOutput.TryTranslate(Key.A, 0x0007_0087, out var key), Is.True);
+        Assert.That(UniverseInputListener.TryTranslate(Key.A, 0x0007_0087, out var key), Is.True);
         Assert.That(key, Is.EqualTo(Keys.A));
     }
 }

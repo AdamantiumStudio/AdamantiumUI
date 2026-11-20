@@ -49,6 +49,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.WebView.Helpe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Pdf", "Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj", "{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Remote", "Adamantium.UI.Remote\Adamantium.UI.Remote.csproj", "{7FB3497D-A767-4945-A191-1F0C91EF58E1}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.WebView.Runtime", "Adamantium.UI.WebView.Runtime\Adamantium.UI.WebView.Runtime.csproj", "{AC38387F-43B4-4134-8EA3-AE65E7368F9B}"
 EndProject
 Global
@@ -337,6 +339,18 @@ Global
 		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x64.Build.0 = Release|Any CPU
 		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x86.ActiveCfg = Release|Any CPU
 		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x86.Build.0 = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|x64.Build.0 = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Debug|x86.Build.0 = Debug|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|x64.ActiveCfg = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|x64.Build.0 = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|x86.ActiveCfg = Release|Any CPU
+		{7FB3497D-A767-4945-A191-1F0C91EF58E1}.Release|x86.Build.0 = Release|Any CPU
 		{AC38387F-43B4-4134-8EA3-AE65E7368F9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AC38387F-43B4-4134-8EA3-AE65E7368F9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC38387F-43B4-4134-8EA3-AE65E7368F9B}.Debug|x64.ActiveCfg = Debug|Any CPU

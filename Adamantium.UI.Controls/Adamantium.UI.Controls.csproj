@@ -32,6 +32,7 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Adamantium.UI" />
+        <InternalsVisibleTo Include="Adamantium.UI.Remote" />
         <InternalsVisibleTo Include="Adamantium.UI.Automation" />
         <InternalsVisibleTo Include="Adamantium.UITests" />
         <InternalsVisibleTo Include="Adamantium.XamlTests" />
