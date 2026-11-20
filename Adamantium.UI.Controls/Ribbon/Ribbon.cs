@@ -965,7 +965,7 @@ public class Ribbon : Selector
     private void OnKeyTipKeyUp(object sender, KeyEventArgs e)
     {
         var completes = _altAlone.KeyUp(e);
-        if (!e.Key.IsAlt()) return;
+        if (!e.Key.IsAlt() || !IsShown()) return;
 
         _altDown = false;
         if (completes) Toggle();
@@ -988,6 +988,12 @@ public class Ribbon : Selector
         _altAlone.KeyDown(e);
         if (e.Key.IsAlt())
         {
+            // A ribbon put away leaves Alt to the window: no key tips over a strip nobody sees.
+            if (!IsShown())
+            {
+                return;
+            }
+
             _altDown = true;
             e.Handled = true;
             return;
@@ -1011,6 +1017,20 @@ public class Ribbon : Selector
 
     /// <summary>Whether the key tips are up.</summary>
     internal bool ShowsKeyTips => _keyTips is { IsActive: true };
+
+    // Shown: neither the ribbon nor anything it stands in is collapsed or hidden.
+    private bool IsShown()
+    {
+        for (IUIComponent element = this; element != null; element = element.VisualParent)
+        {
+            if (element.Visibility != Visibility.Visible)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private void Toggle()
     {
