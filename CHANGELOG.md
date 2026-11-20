@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPicture.DrawUncopied` draws items themselves, not copies - items made for the picture and kept for no canvas -
+  so one that cannot be copied is drawn too: a PDF viewer's page thumbnails draw marks tied to text by it.
 - `InfiniteCanvas.IsReadOnly`: a plane only looked at. It is panned and zoomed, its items picked and copied, but the
   user changes nothing on it: the tool in hand is put down for one that picks (the resting `SelectTool`, else the first
   in `Tools`) and the rail offers only those; a press picks without dragging; no grips or points are offered; paste,
