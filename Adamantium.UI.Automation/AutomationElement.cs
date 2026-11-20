@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.UI.Core;
@@ -195,12 +196,69 @@ public sealed class AutomationElement
     private async Task<(ElementDetails Details, List<string> Misses)> CompareAsync(IEnumerable<Expectation> expected)
     {
         var all = expected.ToList();
-        var details = await InspectAsync([.. all.Select(expectation => expectation.Key).Where(key => !Expectation.IsElementKey(key))]);
-        return (details, Expectation.Misses(details, all));
+        var shown = all.Where(expectation => expectation.Key == Expectation.BrightnessKey).ToList();
+        var read = all.Where(expectation => expectation.Key != Expectation.BrightnessKey).ToList();
+        var details = await InspectAsync([.. read.Select(expectation => expectation.Key).Where(key => !Expectation.IsElementKey(key))]);
+        var misses = Expectation.Misses(details, read);
+        // The picture is measured last, and only while the rest matches: it costs a frame read back from the window.
+        if (shown.Count > 0 && misses.Count == 0)
+        {
+            var brightness = await BrightnessAsync();
+            misses.AddRange(shown.Select(expectation => Expectation.Miss(expectation, brightness)).Where(miss => miss != null));
+        }
+
+        return (details, misses);
+    }
+
+    // How bright the brightest hundredth of the element's pixels are, as the window's frame has them: a pixel's
+    // brightness the mean of its red, green and blue. What is lit reads high however much dark space is round it. NaN
+    // while the window has drawn no frame to read - a miss a wait tries again.
+    private async Task<double> BrightnessAsync()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "adam-auto-brightness-" + Guid.NewGuid().ToString("N") + ".png");
+        try
+        {
+            try
+            {
+                await ShotAsync(path);
+            }
+            catch (AutomationException)
+            {
+                return double.NaN;
+            }
+
+            using var image = Adamantium.Imaging.Image.Load(path);
+            var pixels = image.GetPixelBuffer(0, 0).GetPixels<byte>();
+            Span<int> counts = stackalloc int[256];
+            for (var index = 0; index + 3 < pixels.Length; index += 4)
+            {
+                counts[(pixels[index] + pixels[index + 1] + pixels[index + 2]) / 3]++;
+            }
+
+            var brightest = Math.Max(1, pixels.Length / 4 / 100);
+            var taken = 0;
+            var sum = 0L;
+            for (var level = 255; level >= 0 && taken < brightest; level--)
+            {
+                var take = Math.Min(counts[level], brightest - taken);
+                taken += take;
+                sum += (long)take * level;
+            }
+
+            return taken == 0 ? 0 : (double)sum / taken;
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
     }
 
     /// <summary>A picture of the element, drawn by the application's renderer and written to <paramref name="path"/> as
-    /// PNG - to look at, never to compare. Not in a headless session, which draws nothing.</summary>
+    /// PNG - to look at, and what the <c>brightness</c> expectation measures; never compared pixel by pixel. Not in a
+    /// headless session, which draws nothing.</summary>
     public async Task<string> ShotAsync(string path) => (await RunAsync(AutomationCommand.Shot, path)).Text;
 
     public Task InvokeAsync() => RunAsync(AutomationCommand.Invoke);

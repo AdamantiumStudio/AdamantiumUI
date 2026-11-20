@@ -24,7 +24,7 @@ public static class ScenarioTranslator
     private static readonly string[] ElementKeys =
     [
         "Name", "Id", "Type", "Class", "Value", "Toggle", "Selected", "Expanded", "Min", "Max", "HScroll", "VScroll", "Window",
-        "Zoom", "Dock", "Key", "Left", "Top", "Width", "Height", "Enabled", "Offscreen", "Focus"
+        "Zoom", "Dock", "Key", "Left", "Top", "Width", "Height", "Enabled", "Offscreen", "Focus", "Brightness"
     ];
 
     private static readonly string[] ReservedNames =

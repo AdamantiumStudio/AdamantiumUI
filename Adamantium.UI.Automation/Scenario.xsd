@@ -501,6 +501,9 @@
     <xs:attribute name="Enabled" type="xs:string" />
     <xs:attribute name="Offscreen" type="xs:string" />
     <xs:attribute name="Focus" type="xs:string" />
+    <xs:attribute name="Brightness" type="xs:string">
+      <xs:annotation><xs:documentation>What the element shows, as the window's frame has it: how bright the brightest hundredth of its pixels are, 0 to 255, or a range - 150..255. A picture drawn black, or not at all, reads near 0; one with something lit, high.</xs:documentation></xs:annotation>
+    </xs:attribute>
     <xs:anyAttribute namespace="##local" processContents="skip">
       <xs:annotation><xs:documentation>Any other attribute names a property of the element's control.</xs:documentation></xs:annotation>
     </xs:anyAttribute>

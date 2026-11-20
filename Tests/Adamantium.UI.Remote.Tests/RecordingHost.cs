@@ -7,6 +7,8 @@ namespace Adamantium.UI.Remote.Tests;
 /// <summary>A universe host that keeps what its viewer gives it, for a test to wait on.</summary>
 public sealed class RecordingHost : IUniverseHostService
 {
+    private int _newSurfacesAsked;
+
     public BlockingCollection<UniverseLaunch> Launches { get; } = new();
 
     public BlockingCollection<string> Sizes { get; } = new();
@@ -30,6 +32,10 @@ public sealed class RecordingHost : IUniverseHostService
     public void Resize(uint width, uint height, float pixelsPerPoint) => Sizes.Add($"{width}x{height}@{pixelsPerPoint}");
 
     public void AskFrame(ulong frame) => AskedFrames.Add(frame);
+
+    public int NewSurfacesAsked => Volatile.Read(ref _newSurfacesAsked);
+
+    public void AskNewSurface() => Interlocked.Increment(ref _newSurfacesAsked);
 
     public void MovePointer(float x, float y, bool isOver) => Pointer.Add($"{x},{y},{isOver}");
 

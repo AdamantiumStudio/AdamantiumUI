@@ -15,35 +15,28 @@ namespace Adamantium.UI.Remote;
 internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
 {
     private readonly object _sync = new();
-    private readonly RenderTargetPanel _panel;
     private readonly Guid _deviceUuid;
-    private readonly UniverseInputListener _input;
     private readonly HashSet<Keys> _keysDown = [];
+    private readonly HashSet<MouseButton> _buttonsDown = [];
     private readonly TaskCompletionSource _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Action _frameTaken;
+    private RenderTargetPanel _panel;
+    private UniverseInputListener _input;
+    private IWindow _window;
     private UniverseHostConnection _connection;
     private IUniverseHostService _host;
     private RemoteSurface _surface;
     private SharedSurfaceDescriptor _descriptor;
-    private IWindow _window;
+    private bool _descriptorBound;
     private uint _width;
     private uint _height;
     private bool _disposed;
 
-    public RemoteUniverse(RenderTargetPanel panel, Guid deviceUuid)
+    public RemoteUniverse(Guid deviceUuid)
     {
-        _panel = panel;
         _deviceUuid = deviceUuid;
         Viewer = new RemoteUniverseViewer(this);
         _frameTaken = OnFrameTaken;
-        _input = new UniverseInputListener(panel, this);
-        panel.SizeChanged += OnSizeChanged;
-        panel.PointerMoved += OnPointerMoved;
-        panel.PointerExited += OnPointerExited;
-        panel.GotFocus += OnFocusChanged;
-        panel.LostFocus += OnFocusChanged;
-        panel.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
-        WatchWindow();
     }
 
     /// <summary>What the host tells, given to <see cref="UniverseHostConnection.ConnectAsync"/>.</summary>
@@ -51,11 +44,25 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
 
     public Task Ended => _ended.Task;
 
+    public RenderTargetPanel Panel => _panel;
+
+    /// <summary>Whether the host has shown a surface not let go of since.</summary>
+    internal bool HasSurface
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _descriptor != null;
+            }
+        }
+    }
+
     public float PixelsPerPoint => _window is { } window ? (float)window.DpiScale.X : 1;
 
     public bool TakesKeyboard => HasKeyboard;
 
-    private bool HasKeyboard => _panel.IsKeyboardFocused && _window is { IsActive: true };
+    private bool HasKeyboard => _panel is { IsKeyboardFocused: true } && _window is { IsActive: true };
 
     /// <summary>Takes the connection the viewer was given to; the host is called through it from now on.</summary>
     public void Attach(UniverseHostConnection connection)
@@ -69,16 +76,44 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         connection.Completion.ContinueWith(_ => LoseHost(), TaskScheduler.Default);
     }
 
-    // The host's process went: nothing is sent to it any more, and its last surface is let go of.
-    private void LoseHost()
+    public void ShowIn(RenderTargetPanel panel)
     {
-        lock (_sync)
+        if (ReferenceEquals(panel, _panel) || _disposed && panel != null)
         {
-            _host = null;
-            LetGoOfSurface();
+            return;
         }
 
-        _ended.TrySetResult();
+        LeavePanel(tellHost: true);
+        if (panel == null)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            _panel = panel;
+            // A surface a panel had may have been imported there: a second import would read frames the first gave
+            // back, so the host is asked for new ones, bound as they come.
+            if (_descriptorBound)
+            {
+                _host?.AskNewSurface();
+            }
+            else
+            {
+                BindSurface();
+            }
+        }
+
+        _input = new UniverseInputListener(panel, this);
+        panel.SizeChanged += OnSizeChanged;
+        panel.PointerMoved += OnPointerMoved;
+        panel.PointerExited += OnPointerExited;
+        panel.GotFocus += OnFocusChanged;
+        panel.LostFocus += OnFocusChanged;
+        panel.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
+        WatchWindow();
+        Resize();
+        TellFocus();
     }
 
     public async Task LaunchAsync(UniverseLaunch launch, CancellationToken cancellationToken)
@@ -111,19 +146,11 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
             return;
         }
 
-        _disposed = true;
-        _input.Dispose();
-        _panel.SizeChanged -= OnSizeChanged;
-        _panel.PointerMoved -= OnPointerMoved;
-        _panel.PointerExited -= OnPointerExited;
-        _panel.GotFocus -= OnFocusChanged;
-        _panel.LostFocus -= OnFocusChanged;
-        _panel.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
-        UnwatchWindow();
-
+        LeavePanel(tellHost: false);
         UniverseHostConnection connection;
         lock (_sync)
         {
+            _disposed = true;
             connection = _connection;
             _connection = null;
             _host = null;
@@ -157,8 +184,78 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         }
     }
 
+    // The panel let go of: its picture, its input, and - while the host stays - the keys and buttons it held there.
+    private void LeavePanel(bool tellHost)
+    {
+        var panel = _panel;
+        if (panel == null)
+        {
+            return;
+        }
+
+        _input.Dispose();
+        _input = null;
+        panel.SizeChanged -= OnSizeChanged;
+        panel.PointerMoved -= OnPointerMoved;
+        panel.PointerExited -= OnPointerExited;
+        panel.GotFocus -= OnFocusChanged;
+        panel.LostFocus -= OnFocusChanged;
+        panel.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
+        UnwatchWindow();
+        lock (_sync)
+        {
+            if (_descriptor != null)
+            {
+                panel.ClearSource(_descriptor);
+            }
+
+            _panel = null;
+        }
+
+        _width = 0;
+        _height = 0;
+        _keysDown.Clear();
+        if (tellHost && LiveHost is { } host)
+        {
+            host.Focus(false);
+            host.MovePointer(0, 0, false);
+            // A button held as the panel went is let go: its release never comes to a listener gone.
+            foreach (var button in _buttonsDown)
+            {
+                host.TakeMouseInput(new MouseInput { InputType = InputType.Up, Button = button });
+            }
+        }
+
+        _buttonsDown.Clear();
+    }
+
+    // Under the lock: the surface handed to the panel, once.
+    private void BindSurface()
+    {
+        if (_panel == null || _descriptor == null)
+        {
+            return;
+        }
+
+        _panel.SetSource(_descriptor);
+        _descriptorBound = true;
+    }
+
+    // The host's process went: nothing is sent to it any more, and its last surface is let go of.
+    private void LoseHost()
+    {
+        lock (_sync)
+        {
+            _host = null;
+            LetGoOfSurface();
+        }
+
+        _ended.TrySetResult();
+    }
+
     internal void ShowSurface(RemoteSurface surface)
     {
+        RenderTargetPanel panel;
         lock (_sync)
         {
             if (_disposed)
@@ -168,25 +265,36 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
             }
 
             var previous = _surface;
+            var previousDescriptor = _descriptor;
             _surface = surface;
             _descriptor = surface.ToDescriptor();
-            // Once bound, the panel imports no more of the previous one, so its handles are done with.
-            _panel.SetSource(_descriptor);
+            _descriptorBound = false;
+            BindSurface();
+            // Bound in its place, or let go of with nothing to show: the panel imports no more of the previous one, so
+            // its handles are done with.
+            if (!_descriptorBound && previousDescriptor != null)
+            {
+                _panel?.ClearSource(previousDescriptor);
+            }
+
             previous?.CloseHandles();
             AskFrameOnceShown(_descriptor);
+            panel = _panel;
         }
 
-        RequestPanelFrame();
+        RequestPanelFrame(panel);
     }
 
     internal void ShowFrame(ulong frame)
     {
+        RenderTargetPanel panel;
         lock (_sync)
         {
             _descriptor?.NoteSubmitted(frame);
+            panel = _panel;
         }
 
-        RequestPanelFrame();
+        RequestPanelFrame(panel);
     }
 
     internal void EndUniverse()
@@ -229,17 +337,18 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
     {
         if (_descriptor != null)
         {
-            _panel.ClearSource(_descriptor);
+            _panel?.ClearSource(_descriptor);
         }
 
         _surface?.CloseHandles();
         _surface = null;
         _descriptor = null;
+        _descriptorBound = false;
     }
 
-    private void RequestPanelFrame()
+    private static void RequestPanelFrame(RenderTargetPanel panel)
     {
-        if (_panel.RootVisual?.Window is { } window)
+        if (panel?.RootVisual?.Window is { } window)
         {
             (window.Renderer ?? window.DefaultRenderer)?.RequestFrame();
         }
@@ -247,9 +356,10 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
 
     private void MeasurePanel(out uint width, out uint height)
     {
+        var panel = _panel;
         var scale = PixelsPerPoint;
-        width = (uint)Math.Round(_panel.ActualWidth * scale);
-        height = (uint)Math.Round(_panel.ActualHeight * scale);
+        width = panel == null ? 0 : (uint)Math.Round(panel.ActualWidth * scale);
+        height = panel == null ? 0 : (uint)Math.Round(panel.ActualHeight * scale);
     }
 
     private void Resize()
@@ -365,7 +475,19 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         LiveHost?.TakeKeyboardInput(input);
     }
 
-    void IUniverseInputTarget.TakeMouseInput(MouseInput input) => LiveHost?.TakeMouseInput(input);
+    void IUniverseInputTarget.TakeMouseInput(MouseInput input)
+    {
+        if (input.InputType == InputType.Down)
+        {
+            _buttonsDown.Add(input.Button);
+        }
+        else if (input.InputType == InputType.Up)
+        {
+            _buttonsDown.Remove(input.Button);
+        }
+
+        LiveHost?.TakeMouseInput(input);
+    }
 
     void IUniverseInputTarget.TakeGestureInput(GestureInput input) => LiveHost?.TakeGestureInput(input);
 

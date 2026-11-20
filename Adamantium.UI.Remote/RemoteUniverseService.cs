@@ -1,6 +1,5 @@
 using Adamantium.Graphics.Core;
 using Adamantium.Multiverse.Remote;
-using Adamantium.UI.Controls.Panels;
 
 namespace Adamantium.UI.Remote;
 
@@ -13,11 +12,10 @@ internal sealed class RemoteUniverseService : IRemoteUniverseService
         _devices = devices;
     }
 
-    public async Task<IRemoteUniverse> ConnectAsync(string pipeName, RenderTargetPanel panel,
-        CancellationToken cancellationToken)
+    public async Task<IRemoteUniverse> ConnectAsync(string pipeName, CancellationToken cancellationToken)
     {
         var device = _devices.MainGraphicsDevice?.GraphicsAdapter.DeviceUuid ?? Guid.Empty;
-        var universe = new RemoteUniverse(panel, device);
+        var universe = new RemoteUniverse(device);
         try
         {
             var connection = await UniverseHostConnection.ConnectAsync(pipeName, universe.Viewer, cancellationToken);

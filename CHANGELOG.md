@@ -7,14 +7,18 @@ All packages share one version.
 
 ### Added
 
+- A scenario checks what an element shows: `Brightness="150..255"` on `Expect` or `Wait` reads how bright the brightest
+  hundredth of its pixels are in the window's frame, 0 to 255 - a picture drawn black, or not at all, reads near 0; one
+  with something lit, high, however much dark space is round it.
 - `CanvasPicture.DrawUncopied` draws items themselves, not copies - items made for the picture and kept for no canvas -
   so one that cannot be copied is drawn too: a PDF viewer's page thumbnails draw marks tied to text by it.
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
-  `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName, panel)`
-  gives an `IRemoteUniverse` that launches the game at the panel's size on the panel's GPU, stops it and reads its
-  scene and frame back. The host's frames are drawn in the panel, one asked for per frame the panel takes; the panel's
-  size, scale, pointer, focus, keys, buttons, wheel, gestures and text go to the host as they go to a universe of this
-  process.
+  `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName)` gives
+  an `IRemoteUniverse`, shown in a panel by `ShowIn(panel)` or, from a view-model, by the `RemoteUniverseHost` behavior.
+  It launches the game at the panel's size on the panel's GPU, stops it and reads its scene and frame back. The host's
+  frames are drawn in the panel, one asked for per frame the panel takes; moved to another panel, it asks the host for
+  new surfaces instead of importing one twice. The panel's size, scale, pointer, focus, keys, buttons, wheel, gestures
+  and text go to the host as they go to a universe of this process; a button held as it leaves a panel is let go.
 - `InfiniteCanvas.IsReadOnly`: a plane only looked at. It is panned and zoomed, its items picked and copied, but the
   user changes nothing on it: the tool in hand is put down for one that picks (the resting `SelectTool`, else the first
   in `Tools`) and the rail offers only those; a press picks without dragging; no grips or points are offered; paste,
