@@ -8,9 +8,9 @@ All packages share one version.
 ### Added
 
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
-  `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName, panel)`
-  gives an `IRemoteUniverse` that launches the game at the panel's size on the panel's GPU, stops it and reads its
-  scene and frame back. The host's frames are drawn in the panel, one asked for per frame the panel takes; the panel's
+  `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName)` gives
+  an `IRemoteUniverse`, shown in a panel by `ShowIn(panel)` or, from a view-model, by the `RemoteUniverseHost` behavior.
+  It launches the game at the panel's size on the panel's GPU, stops it and reads its scene and frame back. The host's frames are drawn in the panel, one asked for per frame the panel takes; the panel's
   size, scale, pointer, focus, keys, buttons, wheel, gestures and text go to the host as they go to a universe of this
   process.
 - `InfiniteCanvas.IsReadOnly`: a plane only looked at. It is panned and zoomed, its items picked and copied, but the

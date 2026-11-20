@@ -41,7 +41,8 @@ public class RemoteUniverseTests
         var pipeName = "adamantium-remote-universe-" + Guid.NewGuid().ToString("N");
         using var connecting = new CancellationTokenSource(Patience);
         var accepting = UniverseViewerConnection.AcceptAsync(pipeName, _host, connecting.Token);
-        _universe = new RemoteUniverse(_panel, Gpu);
+        _universe = new RemoteUniverse(Gpu);
+        _universe.ShowIn(_panel);
         _universe.Attach(UniverseHostConnection.ConnectAsync(pipeName, _universe.Viewer, connecting.Token)
             .GetAwaiter().GetResult());
         _served = accepting.GetAwaiter().GetResult();
@@ -201,6 +202,69 @@ public class RemoteUniverseTests
             Assert.That(ended, Is.True, "ended");
             Assert.That(_panel.Source, Is.Null, "let go of");
         });
+    }
+
+    // A surface the host showed before the universe was shown anywhere is bound once it is; shown nowhere again, the
+    // panel lets go of it and its keys no longer reach the host.
+    [Test]
+    public void ShownNowhere_ThenInAPanel_ThenNowhere_ThePanelTakesTheSurfaceAndGivesItBack()
+    {
+        _universe.ShowIn(null);
+        _served.Viewer.ShowSurface(SurfaceInMemory());
+        Assert.That(SpinWait.SpinUntil(() => _universe.HasSurface, Patience), Is.True, "the surface came");
+        var unshown = _panel.Source;
+
+        _universe.ShowIn(_panel);
+        var shown = _panel.Source;
+        _universe.ShowIn(null);
+        _panel.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.W, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(unshown, Is.Null, "nothing bound while shown nowhere");
+            Assert.That(shown?.MemoryPath, Is.EqualTo("frames"), "bound once shown");
+            Assert.That(_panel.Source, Is.Null, "let go of once shown nowhere");
+            Assert.That(_universe.Panel, Is.Null);
+            Assert.That(_host.Keys.TryTake(out _, TimeSpan.FromMilliseconds(300)), Is.False, "a key of a panel left");
+        });
+    }
+
+    // Through the behavior in markup: bound, the universe is shown in its panel; unbound, nowhere.
+    [Test]
+    public void TheHostBehavior_ShowsTheUniverseItIsGiven_AndNoneOnceItIsTakenAway()
+    {
+        _universe.ShowIn(null);
+        var other = new RenderTargetPanel();
+        var behavior = new RemoteUniverseHost();
+        other.Behaviors.Add(behavior);
+
+        behavior.Universe = _universe;
+        var shownIn = _universe.Panel;
+        behavior.Universe = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shownIn, Is.SameAs(other));
+            Assert.That(_universe.Panel, Is.Null);
+        });
+    }
+
+    // Moved to another panel by its owner, a universe stays there when the behavior of the first lets go.
+    [Test]
+    public void TheHostBehavior_LeavesAUniverseMovedToAnotherPanel()
+    {
+        var other = new RenderTargetPanel();
+        var behavior = new RemoteUniverseHost();
+        other.Behaviors.Add(behavior);
+        behavior.Universe = _universe;
+
+        _universe.ShowIn(_panel);
+        behavior.Universe = null;
+
+        Assert.That(_universe.Panel, Is.SameAs(_panel));
     }
 
     [Test]

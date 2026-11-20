@@ -75,10 +75,12 @@ public class RemoteUniverseHostTests
             WindowExtension.UpdateTree(window);
         }
 
-        _universe = new RemoteUniverse(_panel, _main.GraphicsAdapter.DeviceUuid);
+        _universe = new RemoteUniverse(_main.GraphicsAdapter.DeviceUuid);
         using var connecting = new CancellationTokenSource(Patience);
         _universe.Attach(UniverseHostConnection.ConnectAsync(pipeName, _universe.Viewer, connecting.Token)
             .GetAwaiter().GetResult());
+        // Shown as markup shows it: a view-model's universe bound to the panel's behavior.
+        _panel.Behaviors.Add(new RemoteUniverseHost { Universe = _universe });
     }
 
     [TearDown]
