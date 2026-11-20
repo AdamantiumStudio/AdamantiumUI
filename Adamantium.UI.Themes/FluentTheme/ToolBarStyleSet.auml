@@ -36,6 +36,29 @@
         </Setter>
     </Style>
 
+    <!-- A bar's grip: square dots in two columns, quiet at rest and coming up to the primary ink under the pointer, as a
+         row's drag handle does. -->
+    <Style Selector="Thumb.ToolBarGrip">
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Fill="{TemplateBinding Foreground}"
+                              Data="M0,0 L2,0 L2,2 L0,2 Z M4,0 L6,0 L6,2 L4,2 Z M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M0,8 L2,8 L2,10 L0,10 Z M4,8 L6,8 L6,10 L4,10 Z M0,12 L2,12 L2,14 L0,14 Z M4,12 L6,12 L6,14 L4,14 Z"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Thumb.ToolBarGrip">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        </PropertyTrigger>
+    </Style>
+
     <!-- A bar: its grip, its commands as their own styles draw them, and the chevron of what does not fit. A card on the
          tray, so a bar reads as one thing to move. -->
     <Style Selector="ToolBar">
@@ -55,22 +78,13 @@
                             CornerRadius="{ResourceReference CornerRadiusDefault}"
                             Padding="{TemplateBinding Padding}">
                         <DockPanel>
-                            <!-- The grip moves the bar; the dots run across the bar, as the bar's own ends do. -->
+                            <!-- The grip moves the bar; drawn by Thumb.ToolBarGrip below. -->
                             <Thumb x:Name="PART_Grip"
+                                   Classes="ToolBarGrip"
                                    DockPanel.Dock="Left"
                                    Width="{ResourceReference ToolBarGripLength}"
                                    Cursor="SizeAll"
-                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}">
-                                <Thumb.Template>
-                                    <ControlTemplate TargetType="Thumb">
-                                        <Border Background="Transparent">
-                                            <Path HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                  Fill="{ResourceReference TextFillColorTertiary}"
-                                                  Data="M0,0 L2,0 L2,2 L0,2 Z M4,0 L6,0 L6,2 L4,2 Z M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M0,8 L2,8 L2,10 L0,10 Z M4,8 L6,8 L6,10 L4,10 Z M0,12 L2,12 L2,14 L0,14 Z M4,12 L6,12 L6,14 L4,14 Z"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Thumb.Template>
-                            </Thumb>
+                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
                             <ToggleButton x:Name="PART_OverflowButton"
                                           DockPanel.Dock="Right"
                                           Width="{TemplateBinding OverflowButtonLength}"
