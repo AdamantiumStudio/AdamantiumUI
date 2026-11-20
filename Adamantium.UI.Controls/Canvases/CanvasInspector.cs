@@ -515,9 +515,26 @@ public class CanvasInspector : Control, ICanvasPart
 
     private void OnPlaneChanged(object sender, EventArgs e)
     {
-        ReadStructure();
+        ListSoon();
         ReadHeader();
     }
+
+    // The edits of the moment are listed once: a plane filled item by item is not listed again for each item.
+    private void ListSoon()
+    {
+        if (_listPosted) return;
+
+        _listPosted = true;
+        LoopSignal.Post(ListPosted);
+    }
+
+    private void ListPosted()
+    {
+        _listPosted = false;
+        ReadStructure();
+    }
+
+    private bool _listPosted;
 
     private void OnSearched(object sender, EventArgs e)
     {

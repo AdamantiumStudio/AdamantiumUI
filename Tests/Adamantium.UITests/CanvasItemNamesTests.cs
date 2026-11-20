@@ -172,6 +172,33 @@ public class CanvasItemNamesTests
         Assert.That(inspector.FoundCount, Is.EqualTo(3));
     }
 
+    // A plane filled item by item is listed once the edits of the moment are done, not again for each item: listing
+    // every item for every one put in made filling a plane quadratic.
+    [Test]
+    public void TheInspectorsList_IsReadOnce_ForManyItemsPutIn()
+    {
+        var scene = new CanvasScene();
+        var board = new DrawingBoard { Scene = scene };
+        var inspector = new CanvasInspector { Canvas = board };
+        LoopSignal.Drain();
+        var before = inspector.Structure;
+
+        for (var index = 0; index < 100; index++)
+        {
+            scene.Add(Box($"box {index}"));
+        }
+
+        var meanwhile = inspector.Structure;
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(meanwhile, Is.SameAs(before), "the list was read again for an item put in");
+            Assert.That(inspector.ItemCount, Is.EqualTo(100));
+            Assert.That(inspector.Structure.Cast<ICanvasItem>().First().Name, Is.EqualTo("box 99"), "topmost first");
+        });
+    }
+
     private sealed class SheetsBoard : DrawingBoard
     {
         public override string PlaceOf(ICanvasItem item) => "sheet 3";
