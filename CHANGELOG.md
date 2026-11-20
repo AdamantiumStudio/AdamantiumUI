@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
+  `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName, panel)`
+  gives an `IRemoteUniverse` that launches the game at the panel's size on the panel's GPU, stops it and reads its
+  scene and frame back. The host's frames are drawn in the panel, one asked for per frame the panel takes; the panel's
+  size, scale, pointer, focus, keys, buttons, wheel, gestures and text go to the host as they go to a universe of this
+  process.
 - `InfiniteCanvas.IsReadOnly`: a plane only looked at. It is panned and zoomed, its items picked and copied, but the
   user changes nothing on it: the tool in hand is put down for one that picks (the resting `SelectTool`, else the first
   in `Tools`) and the rail offers only those; a press picks without dragging; no grips or points are offered; paste,
@@ -488,6 +494,10 @@ All packages share one version.
   lays the canvas out first. `CanvasInspector` lists the plane's items once per frame too, and `CanvasScene.Add` numbers
   only the item put on top. Filling a plane item by item is linear: 4000 marks put in a PDF viewer one by one take 70
   ms, not 3.3 s.
+- The sandbox's demo universe places its lights, camera and model by `WorldPosition`, the engine's type for an
+  entity's place; a test keeps a meter of a `WorldPosition` written through a binding path, as an inspector types it.
+- **Breaking:** `UIUniverseOutput.TranslationKeys` and `MouseTranslationKeys` are gone: the translation of a panel's
+  input to the engine's moved to one internal listener, which a universe of another process uses too.
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
   surfaces it kept itself before; the panel sees no difference.
 - **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and

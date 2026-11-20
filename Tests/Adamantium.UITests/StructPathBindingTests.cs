@@ -96,6 +96,24 @@ public class StructPathBindingTests
         });
     }
 
+    // A point of the world, as an entity's place is: the inspector types its meters one by one.
+    private sealed class Placed
+    {
+        public WorldPosition Position { get; set; } = new(1e9, 2, 3);
+    }
+
+    [Test]
+    public void OneMeterOfAWorldPositionIsWritten()
+    {
+        var placed = new Placed();
+        var border = Bound(placed, "Position.Y");
+
+        border.Width = 90;
+        BindingUpdateQueue.Flush();
+
+        Assert.That(placed.Position, Is.EqualTo(new WorldPosition(1e9, 90, 3)));
+    }
+
     [Test]
     public void APathThroughAStructToNothingSaysNothing()
     {

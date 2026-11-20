@@ -100,7 +100,7 @@ public partial class SceneViewModel : TabPageViewModel
 
     // Where the camera stood the first time we saw it. Remembered rather than assumed: whatever the engine placed it
     // at IS home, and that is the one place a lost person can be put back.
-    private Vector3<double>? _home;
+    private WorldPosition? _home;
     private QuaternionF _homeRotation;
 
     private void OnPulse(object sender, EventArgs e)
