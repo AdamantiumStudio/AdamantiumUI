@@ -578,11 +578,16 @@ public class NumericUpDown : RangeLimitsBase
     private bool TryParse(string text, out double value)
         => double.TryParse(text, ParsingNumberStyle, EffectiveCulture, out value);
 
+    private string ValueText() => Value.HasValue ? FormatValue(Value.Value) : string.Empty;
+
+    // Whether the box shows an entry not taken yet - what Escape abandons.
+    private bool IsEntryPending() => _text != null && _text.Text != ValueText();
+
     private void UpdateText()
     {
         if (_text == null) return;
 
-        var text = Value.HasValue ? FormatValue(Value.Value) : string.Empty;
+        var text = ValueText();
         if (_text.Text == text) return;
 
         _writingText = true;
@@ -782,8 +787,9 @@ public class NumericUpDown : RangeLimitsBase
             case Key.PageDown when stepping:
                 Step(-1, LargeChange);
                 break;
-            case Key.Escape:
-                UpdateText();   // abandon the entry, go back to what the value actually is
+            // Abandons an entry, back to the value; with none it is left to the window, which a dialog closes by.
+            case Key.Escape when IsEntryPending():
+                UpdateText();
                 break;
             default:
                 return;

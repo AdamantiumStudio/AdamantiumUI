@@ -160,8 +160,38 @@ public class NumericUpDownTests
     }
 
     private static void Key(NumericUpDown box, Adamantium.UI.Core.Input.Key key, RoutedEvent routed) =>
-        box.RaiseEvent(new Adamantium.UI.Core.Input.KeyEventArgs(Adamantium.UI.Core.Input.KeyboardDevice.CurrentDevice, key,
-            Adamantium.UI.Core.Input.InputModifiers.None, 0) { RoutedEvent = routed });
+        Pressed(box, key, routed);
+
+    private static bool Pressed(NumericUpDown box, Adamantium.UI.Core.Input.Key key, RoutedEvent routed)
+    {
+        var args = new Adamantium.UI.Core.Input.KeyEventArgs(Adamantium.UI.Core.Input.KeyboardDevice.CurrentDevice, key,
+            Adamantium.UI.Core.Input.InputModifiers.None, 0) { RoutedEvent = routed };
+        box.RaiseEvent(args);
+        return args.Handled;
+    }
+
+    // Escape abandons a typed entry, back to the value; with none it is the window's, so a dialog closes by it.
+    [Test]
+    public void Escape_AbandonsAnEntry_ElseIsLeftToTheWindow()
+    {
+        var box = NewBox();
+        var text = TextOf(box);
+        var escape = Adamantium.UI.Core.Input.Key.Escape;
+        var down = Adamantium.UI.Core.Input.Keyboard.PreviewKeyDownEvent;
+
+        text.Text = "8";
+        var abandoned = Pressed(box, escape, down);
+        var shown = text.Text;
+        var leftOver = Pressed(box, escape, down);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(abandoned, Is.True, "the entry abandoned");
+            Assert.That(shown, Is.EqualTo("5"));
+            Assert.That(box.Value, Is.EqualTo(5));
+            Assert.That(leftOver, Is.False, "nothing to abandon: the window's");
+        });
+    }
 
     [Test]
     public void AStepMovesTheValueBySmallChange()
