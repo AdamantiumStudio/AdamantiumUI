@@ -35,7 +35,7 @@ public class DropDownItem : ListBoxItem
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
-        (Owner ?? FindOwnerLogically())?.HighlightFromContainer(this);
+        FindOwner()?.HighlightFromContainer(this);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -43,7 +43,7 @@ public class DropDownItem : ListBoxItem
         base.OnPointerPressed(e);
         if (IsEnabled && e.ChangedButton == MouseButtons.Left)
         {
-            (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);
+            FindOwner()?.SelectFromContainer(this);
         }
     }
 
@@ -56,12 +56,13 @@ public class DropDownItem : ListBoxItem
         if (e.Handled || !IsEnabled || e.Key is not (Key.Enter or Key.Space))
             return;
 
-        (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);
+        FindOwner()?.SelectFromContainer(this);
         e.Handled = true;
     }
 
-    // Fallback for an authored DropDownItem (no PrepareContainer): the popup child keeps a LOGICAL link to the DropDown
-    // even though the visual tree is broken. The SHARED walk, which bridges template boundaries by TemplatedParent - a
-    // raw LogicalParent loop dead-ends at the first template part between the row and its list.
-    private DropDown FindOwnerLogically() => this.GetSelfAndLogicalAncestors().OfType<DropDown>().FirstOrDefault();
+    // The drop-down this row is of: the one that made it; else, for a row written in markup, the one it is written in -
+    // a list never opened holds its rows by nothing else - and then the logical walk, which bridges template boundaries
+    // by TemplatedParent (a raw LogicalParent loop dead-ends at the first template part between the row and its list).
+    internal DropDown FindOwner() => Owner ?? ItemsControl.AuthoredOwner(this) as DropDown ??
+                                     this.GetSelfAndLogicalAncestors().OfType<DropDown>().FirstOrDefault();
 }

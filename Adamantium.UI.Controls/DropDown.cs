@@ -210,9 +210,23 @@ public class DropDown : Selector
         SelectionChanged += (_, _) =>
         {
             UpdateDisplayContent();
+            MarkUnshownRows();
             RunCommand();
         };
         PointerWheelChanged += OnHeaderWheel;
+    }
+
+    // A row of markup the list never showed is no container the selection reaches: it is told itself, so what it says
+    // of itself - to automation too - is what the list holds.
+    private void MarkUnshownRows()
+    {
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (Items[i] is DropDownItem row && ItemContainerGenerator.IndexFromContainer(row) < 0)
+            {
+                row.IsSelected = ReferenceEquals(row, SelectedItem);
+            }
+        }
     }
 
     // Wheel over the CLOSED drop-down steps the selection: down = next item, up = previous. Off unless asked for - see
@@ -604,10 +618,10 @@ public class DropDown : Selector
     }
 
     // A row was clicked: select its item and dismiss. A row given in markup is its own item: chosen while the list was
-    // never opened - by automation - it has no container generated yet.
+    // never opened - by automation - it has no container generated yet, nor the list's being off.
     internal void SelectFromContainer(DropDownItem container)
     {
-        if (!container.IsEnabled) return;
+        if (!IsEnabled || !container.IsEnabled) return;
 
         var index = ItemContainerGenerator.IndexFromContainer(container);
         if (index < 0) index = Items.IndexOf(container);

@@ -26,10 +26,8 @@ public class ListBoxItemAutomationPeer : ContentControlAutomationPeer, ISelectio
     {
         switch (Owner)
         {
-            // A row of markup in a list never opened is no container yet: the list it is written in is its owner.
             case DropDownItem item:
-                (item.Owner ?? ItemsControl.AuthoredOwner(item) as DropDown ??
-                 item.GetLogicalAncestors().OfType<DropDown>().FirstOrDefault())?.SelectFromContainer(item);
+                item.FindOwner()?.SelectFromContainer(item);
                 break;
             case ListBoxItem item when List() is { } list:
                 list.SelectOnlyItem(list.ItemOf(item));

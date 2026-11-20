@@ -33,12 +33,29 @@ public class DropDownAutomationTests
         drop.Items.Add(new DropDownItem { Content = "Left", Tag = "L" });
         drop.Items.Add(new DropDownItem { Content = "Center", Tag = "C" });
 
-        new ListBoxItemAutomationPeer((DropDownItem)drop.Items[1]).Select();
+        var center = new ListBoxItemAutomationPeer((DropDownItem)drop.Items[1]);
+
+        center.Select();
 
         Assert.Multiple(() =>
         {
             Assert.That(drop.SelectedIndex, Is.EqualTo(1));
             Assert.That(command.Ran, Is.EqualTo(new object[] { "C" }));
+            Assert.That(center.IsSelected, Is.True, "the row says it is chosen");
+            Assert.That(((DropDownItem)drop.Items[0]).IsSelected, Is.False);
         });
+    }
+
+    // A drop-down that is off takes no row, chosen by automation or not.
+    [Test]
+    public void AnOffDropDown_TakesNoRowOfMarkup()
+    {
+        var drop = new DropDown { IsEnabled = false };
+        drop.Items.Add(new DropDownItem { Content = "Left" });
+        drop.Items.Add(new DropDownItem { Content = "Center" });
+
+        new ListBoxItemAutomationPeer((DropDownItem)drop.Items[1]).Select();
+
+        Assert.That(drop.SelectedIndex, Is.EqualTo(-1));
     }
 }
