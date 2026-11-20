@@ -6,6 +6,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Extensions;
 using Adamantium.Vulkan.Core;
 using NUnit.Framework;
@@ -156,6 +157,49 @@ public class RemoteUniverseTests
         {
             Assert.That(first, Is.EqualTo(8ul));
             Assert.That(second, Is.EqualTo(8ul));
+        });
+    }
+
+    // Alt held in the view, then the focus taken elsewhere, where Alt is let go: the next press with Alt holds it again.
+    [Test]
+    public void AKeyHeldWhenThePanelLosesTheFocus_IsForgotten()
+    {
+        _panel.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.LeftAlt, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+        Take(_host.Keys, "Alt down");
+        _panel.RaiseEvent(new RoutedEventArgs(FocusManager.LostFocusEvent, _panel));
+
+        _panel.RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Right,
+            InputModifiers.LeftAlt | InputModifiers.RightMouseButton, default)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent
+        });
+        Mouse.Pointer.Capture(null);
+
+        var alt = Take(_host.Keys, "Alt held again for the press");
+        Assert.That(alt.Key, Is.EqualTo(Keys.LeftAlt));
+    }
+
+    // The host's process went away: the panel lets go of its surface, and input to the panel goes nowhere.
+    [Test]
+    public void TheHostGone_ThePanelLetsGoOfItsSurface_AndInputGoesNowhere()
+    {
+        _served.Viewer.ShowSurface(SurfaceInMemory());
+        Assert.That(SpinWait.SpinUntil(() => _panel.Source != null, Patience), Is.True, "bound");
+
+        _served.Dispose();
+        var ended = _universe.Ended.Wait(Patience);
+        _panel.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.W, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ended, Is.True, "ended");
+            Assert.That(_panel.Source, Is.Null, "let go of");
         });
     }
 

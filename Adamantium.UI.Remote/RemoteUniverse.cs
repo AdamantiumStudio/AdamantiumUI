@@ -38,8 +38,8 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         _frameTaken = OnFrameTaken;
         _input = new UniverseInputListener(panel, this);
         panel.SizeChanged += OnSizeChanged;
-        panel.PointerMoved += OnPointerMovedOrLeft;
-        panel.PointerExited += OnPointerMovedOrLeft;
+        panel.PointerMoved += OnPointerMoved;
+        panel.PointerExited += OnPointerExited;
         panel.GotFocus += OnFocusChanged;
         panel.LostFocus += OnFocusChanged;
         panel.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
@@ -66,7 +66,19 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
             _host = connection.Host;
         }
 
-        connection.Completion.ContinueWith(_ => _ended.TrySetResult(), TaskScheduler.Default);
+        connection.Completion.ContinueWith(_ => LoseHost(), TaskScheduler.Default);
+    }
+
+    // The host's process went: nothing is sent to it any more, and its last surface is let go of.
+    private void LoseHost()
+    {
+        lock (_sync)
+        {
+            _host = null;
+            LetGoOfSurface();
+        }
+
+        _ended.TrySetResult();
     }
 
     public async Task LaunchAsync(UniverseLaunch launch, CancellationToken cancellationToken)
@@ -102,8 +114,8 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         _disposed = true;
         _input.Dispose();
         _panel.SizeChanged -= OnSizeChanged;
-        _panel.PointerMoved -= OnPointerMovedOrLeft;
-        _panel.PointerExited -= OnPointerMovedOrLeft;
+        _panel.PointerMoved -= OnPointerMoved;
+        _panel.PointerExited -= OnPointerExited;
         _panel.GotFocus -= OnFocusChanged;
         _panel.LostFocus -= OnFocusChanged;
         _panel.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
@@ -256,15 +268,33 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
     // SizeChanged bubbles up from children, so the size is read from the panel itself.
     private void OnSizeChanged(object sender, SizeChangedEventArgs e) => Resize();
 
-    private void OnPointerMovedOrLeft(object sender, PointerEventArgs e)
+    private void OnPointerMoved(object sender, PointerEventArgs e) =>
+        MovePointer(e, _panel.IsPointerDirectlyOver || _panel.IsPointerCaptured);
+
+    // Raised before the panel stops being directly under the pointer, so that is not asked: only a captured one stays.
+    private void OnPointerExited(object sender, PointerEventArgs e) => MovePointer(e, _panel.IsPointerCaptured);
+
+    private void MovePointer(PointerEventArgs e, bool isOver)
     {
         var at = e.GetPosition(_panel);
         var scale = PixelsPerPoint;
-        var isOver = _panel.IsPointerDirectlyOver || _panel.IsPointerCaptured;
         LiveHost?.MovePointer((float)(at.X * scale), (float)(at.Y * scale), isOver);
     }
 
-    private void OnFocusChanged(object sender, RoutedEventArgs e) => LiveHost?.Focus(HasKeyboard);
+    private void OnFocusChanged(object sender, RoutedEventArgs e) => TellFocus();
+
+    // The host lets go of every key once it loses the keyboard, and so does the viewer: a key let go elsewhere would
+    // stay held here, and a modifier held for the next press would not be sent.
+    private void TellFocus()
+    {
+        var hasKeyboard = HasKeyboard;
+        if (!hasKeyboard)
+        {
+            _keysDown.Clear();
+        }
+
+        LiveHost?.Focus(hasKeyboard);
+    }
 
     private void OnAttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
     {
@@ -311,7 +341,7 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
     {
         if (e.Property == WindowBase.IsActiveProperty)
         {
-            LiveHost?.Focus(HasKeyboard);
+            TellFocus();
         }
     }
 
