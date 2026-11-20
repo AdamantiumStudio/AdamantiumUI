@@ -232,6 +232,52 @@ public class RemoteUniverseTests
         });
     }
 
+    // A surface bound to one panel is not imported again by another: the host is asked for a new one, and that is bound.
+    [Test]
+    public void MovedToAnotherPanel_ItAsksForANewSurface_AndBindsThatOne()
+    {
+        _served.Viewer.ShowSurface(SurfaceInMemory("first"));
+        Assert.That(SpinWait.SpinUntil(() => _panel.Source != null, Patience), Is.True, "bound to the first panel");
+        var other = new RenderTargetPanel();
+
+        _universe.ShowIn(other);
+        var asked = SpinWait.SpinUntil(() => _host.NewSurfacesAsked == 1, Patience);
+        var before = other.Source;
+        _served.Viewer.ShowSurface(SurfaceInMemory("second"));
+        var bound = SpinWait.SpinUntil(() => other.Source != null, Patience);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.True, "a new surface asked for");
+            Assert.That(before, Is.Null, "the first panel's surface not bound again");
+            Assert.That(bound, Is.True, "the new one bound");
+            Assert.That(other.Source?.MemoryPath, Is.EqualTo("second"));
+            Assert.That(_panel.Source, Is.Null, "the first panel let go of its own");
+        });
+    }
+
+    // The right button held as the universe leaves the panel: its release never reaches a listener gone, so it is sent.
+    [Test]
+    public void AButtonHeldAsThePanelIsLeft_IsLetGoOnTheHost()
+    {
+        _panel.RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Right, InputModifiers.RightMouseButton,
+            default)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent
+        });
+        Take(_host.Mouse, "pressed");
+
+        _universe.ShowIn(null);
+        Mouse.Pointer.Capture(null);
+
+        var release = Take(_host.Mouse, "let go");
+        Assert.Multiple(() =>
+        {
+            Assert.That(release.Button, Is.EqualTo(Adamantium.Multiverse.Input.MouseButton.Right));
+            Assert.That(release.InputType, Is.EqualTo(InputType.Up));
+        });
+    }
+
     // Through the behavior in markup: bound, the universe is shown in its panel; unbound, nowhere.
     [Test]
     public void TheHostBehavior_ShowsTheUniverseItIsGiven_AndNoneOnceItIsTakenAway()
@@ -276,14 +322,14 @@ public class RemoteUniverseTests
     }
 
     // Never imported here: nothing draws the panel.
-    private static RemoteSurface SurfaceInMemory() => new()
+    private static RemoteSurface SurfaceInMemory(string path = "frames") => new()
     {
         Width = 4,
         Height = 4,
         Format = Format.B8G8R8A8_UNORM,
         HandleType = SharedHandleType.HostMemory,
         Buffers = [new RemoteSurfaceBuffer(0, 64, 0, 0, 4096, 64)],
-        MemoryPath = "frames"
+        MemoryPath = path
     };
 
     private uint Pixels(double points) => (uint)Math.Round(points * _window.DpiScale.X);

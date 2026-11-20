@@ -4,11 +4,13 @@ using Adamantium.UI.Controls.Panels;
 namespace Adamantium.UI.Remote;
 
 /// <summary>A universe of another process, shown in a panel (<see cref="ShowIn"/>, or <see cref="RemoteUniverseHost"/>
-/// in markup). Disposed, it lets go of the panel and of the connection, and the host's process ends.</summary>
+/// in markup). Disposed on the panel's thread, it lets go of the panel and of the connection, and the host's process
+/// ends.</summary>
 public interface IRemoteUniverse : IDisposable
 {
     /// <summary>Shows the universe in <paramref name="panel"/> - its frames drawn there, the panel's size, pointer, focus
-    /// and input given to it - and nowhere else; null shows it nowhere. On the panel's thread.</summary>
+    /// and input given to it - and nowhere else; null shows it nowhere. A surface another panel had is not imported
+    /// again: the host is asked for a new one. On the panel's thread.</summary>
     void ShowIn(RenderTargetPanel panel);
 
     /// <summary>The panel the universe is shown in; null while it is shown nowhere.</summary>
