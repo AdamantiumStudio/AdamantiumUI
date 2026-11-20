@@ -22,7 +22,7 @@ namespace Adamantium.UI.Universes;
 public class RenderTargetUniverseOutput : UIUniverseOutput, ISharedSurfaceConsumer
 {
     private readonly IGraphicsDeviceService _uiDevices;
-    private readonly SharedSurfaceProducer _producer;
+    private readonly ISharedSurfaceProducer _producer;
     private RenderTargetPanel nativeWindow;
 
     // Without the UI's devices the frames always go through handles.
