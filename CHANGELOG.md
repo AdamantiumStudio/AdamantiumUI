@@ -483,8 +483,8 @@ All packages share one version.
 ### Changed
 
 - `CanvasInspector` lists the plane's items once the edits of the moment are done, not again for each item put in or
-  taken out: filling a plane item by item is no longer quadratic (4000 marks put in a PDF viewer one by one took over
-  three seconds).
+  taken out, and `CanvasScene.Add` numbers only the item put on top instead of every item again: filling a plane item by
+  item spends less on each item (4000 marks put in a PDF viewer one by one took over three seconds).
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
   surfaces it kept itself before; the panel sees no difference.
 - **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and

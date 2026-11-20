@@ -27,8 +27,10 @@ public class CanvasScene : ICanvasScene
     {
         if (item == null) return;
 
+        // Put on top, it alone takes a number: those under it keep theirs, stamped by every change before.
         _items.Add(item);
-        Settled();
+        item.Order = _items.Count - 1;
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public bool Remove(ICanvasItem item)
