@@ -46,14 +46,25 @@ public static class CommandManager
 
     private static readonly Dictionary<Type, List<CommandBinding>> ClassCommandBindings = new();
     private static readonly Dictionary<Type, List<KeyBinding>> ClassInputBindings = new();
+    // Only while still asked for: a menu opened since may have asked right away. The ticker is let go first, so an ask
+    // made while the sources answer waits for the next frame.
     private static readonly Func<double, bool> RequeryOnFrame = _ =>
     {
-        RequeryNow();
+        requeryTickerSet = false;
+        if (requeryPending)
+        {
+            RequeryNow();
+        }
+
         return true;
     };
 
     private static bool requeryPending;
-    private static long requeryAskedOnTick;
+
+    // One ticker at a time, so the sources ask at most once a frame; one set before a reset of the animations was
+    // dropped with them (AnimationManager.Reset).
+    private static bool requeryTickerSet;
+    private static long requeryTickerSetOnReset;
 
     private static bool registered;
     private static bool windowKeysRegistered;
@@ -88,14 +99,19 @@ public static class CommandManager
     /// changed, as a selection that becomes empty. Costs nothing while no source listens.</summary>
     public static void InvalidateRequerySuggested()
     {
-        // Pending since an earlier frame means its ticker was dropped (AnimationManager.Reset): ask for it again.
-        if (RequerySuggested == null || (requeryPending && requeryAskedOnTick == AnimationManager.Ticks))
+        if (RequerySuggested == null)
         {
             return;
         }
 
         requeryPending = true;
-        requeryAskedOnTick = AnimationManager.Ticks;
+        if (requeryTickerSet && requeryTickerSetOnReset == AnimationManager.Resets)
+        {
+            return;
+        }
+
+        requeryTickerSet = true;
+        requeryTickerSetOnReset = AnimationManager.Resets;
         AnimationManager.AddTicker(RequeryOnFrame);
     }
 

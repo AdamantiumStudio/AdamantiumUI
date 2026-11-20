@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPicture.DrawUncopied` draws items themselves, not copies - items made for the picture and kept for no canvas -
+  so one that cannot be copied is drawn too: a PDF viewer's page thumbnails draw marks tied to text by it.
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
   `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName, panel)`
   gives an `IRemoteUniverse` that launches the game at the panel's size on the panel's GPU, stops it and reads its
@@ -653,6 +655,10 @@ All packages share one version.
 
 ### Fixed
 
+- Command sources ask their commands again after `AnimationManager.Reset` even when asked before the next frame: a
+  requery the reset dropped was taken as still waiting until a frame came, so in a run of tests the next test's
+  buttons kept the state they were made with. They ask at most once a frame also when a menu requeried at once in it,
+  or a source asked again while they answered: that ask waits for the next frame.
 - A drop-down's row written in markup, chosen through automation before the list was ever opened, is selected and runs
   the drop-down's command; it was taken for no row of the list.
 - A window whose frame was held back for want of room in a batch draws it again: the next frame, its buffers grown,
