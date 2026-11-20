@@ -86,6 +86,12 @@ public class RenderTargetPanel : Grid
       set => SetValue(FrameSharingProperty, value);
    }
 
+   // Whether a key the hosted universe took is kept from focus navigation: Tab only while the panel accepts it, and no
+   // key the window binds to a command.
+   internal bool SpendsKey(KeyEventArgs e) =>
+      (e.Key != Key.Tab || AcceptsTab && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) == 0)
+      && !CommandManager.IsBoundInWindow(this, e);
+
    private bool _looking;    // relative mode currently engaged by THIS panel
    private bool _leftDown;   // Drag mode: left button held on the panel
    private bool _rightDown;  // Drag mode: right button held on the panel
