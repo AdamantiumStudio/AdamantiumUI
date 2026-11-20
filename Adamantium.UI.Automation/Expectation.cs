@@ -67,6 +67,11 @@ public readonly record struct Expectation(string Key, string Value)
     /// </summary>
     internal static string Miss(Expectation expected, double actual)
     {
+        if (double.IsNaN(actual))
+        {
+            return $"  {expected.Key}: expected \"{expected.Value}\", the window has drawn nothing yet";
+        }
+
         var text = Invariant(Math.Round(actual, 1));
         return text == expected.Value || InRange(text, expected.Value)
             ? null

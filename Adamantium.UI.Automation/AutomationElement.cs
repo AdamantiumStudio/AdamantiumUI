@@ -200,7 +200,8 @@ public sealed class AutomationElement
         var read = all.Where(expectation => expectation.Key != Expectation.BrightnessKey).ToList();
         var details = await InspectAsync([.. read.Select(expectation => expectation.Key).Where(key => !Expectation.IsElementKey(key))]);
         var misses = Expectation.Misses(details, read);
-        if (shown.Count > 0)
+        // The picture is measured last, and only while the rest matches: it costs a frame read back from the window.
+        if (shown.Count > 0 && misses.Count == 0)
         {
             var brightness = await BrightnessAsync();
             misses.AddRange(shown.Select(expectation => Expectation.Miss(expectation, brightness)).Where(miss => miss != null));
@@ -210,13 +211,22 @@ public sealed class AutomationElement
     }
 
     // How bright the brightest hundredth of the element's pixels are, as the window's frame has them: a pixel's
-    // brightness the mean of its red, green and blue. What is lit reads high however much dark space is round it.
+    // brightness the mean of its red, green and blue. What is lit reads high however much dark space is round it. NaN
+    // while the window has drawn no frame to read - a miss a wait tries again.
     private async Task<double> BrightnessAsync()
     {
         var path = Path.Combine(Path.GetTempPath(), "adam-auto-brightness-" + Guid.NewGuid().ToString("N") + ".png");
         try
         {
-            await ShotAsync(path);
+            try
+            {
+                await ShotAsync(path);
+            }
+            catch (AutomationException)
+            {
+                return double.NaN;
+            }
+
             using var image = Adamantium.Imaging.Image.Load(path);
             var pixels = image.GetPixelBuffer(0, 0).GetPixels<byte>();
             Span<int> counts = stackalloc int[256];
@@ -239,12 +249,16 @@ public sealed class AutomationElement
         }
         finally
         {
-            File.Delete(path);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
     }
 
     /// <summary>A picture of the element, drawn by the application's renderer and written to <paramref name="path"/> as
-    /// PNG - to look at, never to compare. Not in a headless session, which draws nothing.</summary>
+    /// PNG - to look at, and what the <c>brightness</c> expectation measures; never compared pixel by pixel. Not in a
+    /// headless session, which draws nothing.</summary>
     public async Task<string> ShotAsync(string path) => (await RunAsync(AutomationCommand.Shot, path)).Text;
 
     public Task InvokeAsync() => RunAsync(AutomationCommand.Invoke);
