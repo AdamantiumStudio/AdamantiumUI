@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `CanvasPicture.DrawUncopied` draws items themselves, not copies - items made for the picture and kept for no canvas -
+  so one that cannot be copied is drawn too: a PDF viewer's page thumbnails draw marks tied to text by it.
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
   `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName, panel)`
   gives an `IRemoteUniverse` that launches the game at the panel's size on the panel's GPU, stops it and reads its
