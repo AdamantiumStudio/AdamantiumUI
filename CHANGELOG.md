@@ -482,6 +482,9 @@ All packages share one version.
 
 ### Changed
 
+- The sandbox's demo universe places its lights, camera and model by `WorldPosition`, the engine's type for an
+  entity's place; a test keeps a meter of a `WorldPosition` written through a binding path, as an inspector types it.
+
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
   surfaces it kept itself before; the panel sees no difference.
 - **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and
