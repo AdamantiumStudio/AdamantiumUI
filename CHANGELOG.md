@@ -24,6 +24,8 @@ All packages share one version.
   never opened, nor are links. `FileManager.MarkUntrusted` marks a file saved from outside.
   `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or
   direction marks that change how it reads - and `FileNames.Numbered` numbers a second one.
+- `FileSizes.Format`: a file's size as a person reads it, in the largest unit it fills and the language's units and
+  numbers - "2.4 MB", "42 КБ".
 - A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
   and `WrittenProperty` name the object each target's write sets a property of, and that property - `Body.Mass` sets
   the body's `Mass`, a path into a struct (`Box.Size.X`) the holder's `Size` - from the new
@@ -640,6 +642,8 @@ All packages share one version.
 - A canvas's viewport part (`PART_Viewport`) cuts what it holds at its edge, whatever the template says: beside a
   panel of the template's own, a drawing wider than the view - a PDF sheet turned or zoomed - was drawn over the panel.
   The canvas clipped only itself as a whole.
+- Escape in a `NumericUpDown` with nothing typed is left to its window, so a dialog or an overlay window closes by it;
+  with an entry typed it still abandons that entry.
 - A download's name loses direction marks that change how it reads (a right-to-left override shows "invoice",
   override, "fdp.exe" as "invoiceexe.pdf") and dots and spaces at its end together, which Windows drops, so the file is
   saved under the name kept. Cut to fit, it no longer splits a character or ends in a kind it did not have
