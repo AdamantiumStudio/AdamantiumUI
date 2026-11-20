@@ -114,8 +114,11 @@ public class BatchRoomRenderTests
             scene.Newcomers.Add(Square(x, y));
         }
 
+        var asked = 0;
+        scene.Renderer.Cache.AskForFrame = () => asked++;
         scene.Draw();
         Assert.That(scene.Renderer.Cache.LastFrameWithheld, Is.True, "the buffer was too small: the frame is held back");
+        Assert.That(asked, Is.EqualTo(1), "the frame held back is not asked for again: nothing recorded owes it");
 
         var second = scene.Draw();
         Assert.That(scene.Renderer.Cache.LastFrameWithheld, Is.False);
