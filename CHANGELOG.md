@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- A scenario checks what an element shows: `Brightness="150..255"` on `Expect` or `Wait` reads how bright the brightest
+  hundredth of its pixels are in the window's frame, 0 to 255 - a picture drawn black, or not at all, reads near 0; one
+  with something lit, high, however much dark space is round it.
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
   `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName)` gives
   an `IRemoteUniverse`, shown in a panel by `ShowIn(panel)` or, from a view-model, by the `RemoteUniverseHost` behavior.

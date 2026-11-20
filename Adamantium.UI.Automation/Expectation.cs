@@ -7,14 +7,19 @@ namespace Adamantium.UI.Automation;
 
 /// <summary>What an element is expected to show: a key - <c>name</c>, <c>value</c>, <c>toggle</c>, <c>zoom</c>... or the
 /// name of any of its control's properties - and the text it should read as, or a range of numbers it should fall in,
-/// <c>180..195</c>, for what the system's own settings move - a pinch's zoom starts past its drag threshold.</summary>
+/// <c>180..195</c>, for what the system's own settings move - a pinch's zoom starts past its drag threshold.
+/// <c>brightness</c> is what the element shows: how bright the brightest hundredth of its pixels are in the window's frame,
+/// 0 to 255 - a picture drawn black, or not at all, reads near 0; one with something lit, high.</summary>
 public readonly record struct Expectation(string Key, string Value)
 {
+    /// <summary>The key of the brightness of what the element shows.</summary>
+    public const string BrightnessKey = "brightness";
+
     /// <summary>The keys read off the element itself; any other key names a property of its control.</summary>
     public static IReadOnlyList<string> ElementKeys { get; } =
     [
         "name", "id", "type", "class", "value", "toggle", "selected", "expanded", "min", "max", "hscroll", "vscroll",
-        "window", "zoom", "dock", "key", "left", "top", "width", "height", "enabled", "offscreen", "focus"
+        "window", "zoom", "dock", "key", "left", "top", "width", "height", "enabled", "offscreen", "focus", BrightnessKey
     ];
 
     internal static bool IsElementKey(string key) => ElementKeys.Contains(key);
@@ -57,6 +62,16 @@ public readonly record struct Expectation(string Key, string Value)
             .Where(check => check.Actual != check.Value && !InRange(check.Actual, check.Value))
             .Select(check => $"  {check.Key}: expected \"{check.Value}\", was \"{check.Actual}\"")
             .ToList();
+
+    /// <summary>The miss of <paramref name="expected"/> against <paramref name="actual"/>, measured apart; null for none.
+    /// </summary>
+    internal static string Miss(Expectation expected, double actual)
+    {
+        var text = Invariant(Math.Round(actual, 1));
+        return text == expected.Value || InRange(text, expected.Value)
+            ? null
+            : $"  {expected.Key}: expected \"{expected.Value}\", was \"{text}\"";
+    }
 
     private static bool InRange(string actual, string expected)
     {
