@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `BooleanToVisibilityConverter` (`Adamantium.UI.Controls.Converters`), as WPF has one: true shows, false collapses, and
+  back, so a switch and what it shows bind two-way; the parameter `Invert` turns it round.
+
 - `ToolBarTray` and `ToolBar`: an application's tool bars in rows, each a batch of commands - any controls, drawn as the
   theme draws them - shown and hidden as a whole. A bar stands by its `Band` and `BandIndex`, which bind two-way so an
   application keeps its layout. Its grip moves it to another place of its row, another row, a new row above the first
