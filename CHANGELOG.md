@@ -10,6 +10,8 @@ All packages share one version.
 - A scenario checks what an element shows: `Brightness="150..255"` on `Expect` or `Wait` reads how bright the brightest
   hundredth of its pixels are in the window's frame, 0 to 255 - a picture drawn black, or not at all, reads near 0; one
   with something lit, high, however much dark space is round it.
+- `CanvasPicture.DrawUncopied` draws items themselves, not copies - items made for the picture and kept for no canvas -
+  so one that cannot be copied is drawn too: a PDF viewer's page thumbnails draw marks tied to text by it.
 - `Adamantium.UI.Remote`: a universe running in another process - the engine's universe host - shown in a
   `RenderTargetPanel`. `AddRemoteUniverses()` registers `IRemoteUniverseService`; its `ConnectAsync(pipeName)` gives
   an `IRemoteUniverse`, shown in a panel by `ShowIn(panel)` or, from a view-model, by the `RemoteUniverseHost` behavior.
@@ -492,6 +494,8 @@ All packages share one version.
 
 ### Changed
 
+- The sandbox's demo universe places its lights, camera and model by `WorldPosition`, the engine's type for an
+  entity's place; a test keeps a meter of a `WorldPosition` written through a binding path, as an inspector types it.
 - **Breaking:** `UIUniverseOutput.TranslationKeys` and `MouseTranslationKeys` are gone: the translation of a panel's
   input to the engine's moved to one internal listener, which a universe of another process uses too.
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
@@ -649,6 +653,10 @@ All packages share one version.
 
 ### Fixed
 
+- Command sources ask their commands again after `AnimationManager.Reset` even when asked before the next frame: a
+  requery the reset dropped was taken as still waiting until a frame came, so in a run of tests the next test's
+  buttons kept the state they were made with. They ask at most once a frame also when a menu requeried at once in it,
+  or a source asked again while they answered: that ask waits for the next frame.
 - A drop-down's row written in markup, chosen through automation before the list was ever opened, is selected and runs
   the drop-down's command; it was taken for no row of the list.
 - A window whose frame was held back for want of room in a batch draws it again: the next frame, its buffers grown,

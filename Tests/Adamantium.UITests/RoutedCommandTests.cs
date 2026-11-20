@@ -342,6 +342,79 @@ public class RoutedCommandTests
         }
     }
 
+    // A requery made at once - as a menu opening makes it - and asked for again in the frame: one on the frame, not two.
+    [Test]
+    public void ARequeryMadeAtOnce_AndAskedAgain_MakesOneOnTheFrame()
+    {
+        var heard = 0;
+        EventHandler listener = (_, _) => heard++;
+        Shout.CanExecuteChanged += listener;
+        try
+        {
+            CommandManager.InvalidateRequerySuggested();
+            CommandManager.RequeryNow();
+            CommandManager.InvalidateRequerySuggested();
+            AnimationManager.Tick(0.016);
+
+            Assert.That(heard, Is.EqualTo(2), "the one made at once and one on the frame");
+        }
+        finally
+        {
+            Shout.CanExecuteChanged -= listener;
+        }
+    }
+
+    // A source asking again while the sources answer gets its requery on the next frame, not a second one in this.
+    [Test]
+    public void AnAskMadeWhileTheSourcesAnswer_WaitsForTheNextFrame()
+    {
+        var heard = 0;
+        EventHandler listener = (_, _) =>
+        {
+            heard++;
+            CommandManager.InvalidateRequerySuggested();
+        };
+        Shout.CanExecuteChanged += listener;
+        try
+        {
+            CommandManager.InvalidateRequerySuggested();
+            CommandManager.RequeryNow();
+            CommandManager.InvalidateRequerySuggested();
+            AnimationManager.Tick(0.016);
+            var inTheFrame = heard;
+            AnimationManager.Tick(0.016);
+
+            Assert.That((inTheFrame, heard), Is.EqualTo((2, 3)), "once at once, once a frame");
+        }
+        finally
+        {
+            Shout.CanExecuteChanged -= listener;
+            AnimationManager.Reset();
+        }
+    }
+
+    // Asked again before any frame came after the reset - as the next test of a run asks - it is still made.
+    [Test]
+    public void AnAskDroppedWithTheAnimations_IsMadeAgain_BeforeAnyFrame()
+    {
+        var heard = 0;
+        EventHandler listener = (_, _) => heard++;
+        Shout.CanExecuteChanged += listener;
+        try
+        {
+            CommandManager.InvalidateRequerySuggested();
+            AnimationManager.Reset();
+            CommandManager.InvalidateRequerySuggested();
+            AnimationManager.Tick(0.016);
+
+            Assert.That(heard, Is.EqualTo(1));
+        }
+        finally
+        {
+            Shout.CanExecuteChanged -= listener;
+        }
+    }
+
     [TestCase("Ctrl+Shift+K", Key.K, ModifierKeys.Control | ModifierKeys.Shift, "Ctrl+Shift+K")]
     [TestCase("control+1", Key.D1, ModifierKeys.Control, "Ctrl+1")]
     [TestCase("Cmd+Delete", Key.Delete, ModifierKeys.Meta, "Meta+Delete")]

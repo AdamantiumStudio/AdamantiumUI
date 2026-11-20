@@ -84,4 +84,44 @@ public class CanvasPictureTests
         Assert.That(session.Texts[1].Layout, Is.Not.SameAs(session.Texts[0].Layout),
             "each picture shapes a copy's text, never the item's own layout");
     }
+
+    // Items the caller made for the picture are drawn as they are: one that cannot be copied - a mark tied to text - too.
+    [Test]
+    public void ItemsDrawnUncopied_AreDrawnThemselves_ThoseThatCannotBeCopiedToo()
+    {
+        var copied = new RecordingDrawingSession();
+        var uncopied = new RecordingDrawingSession();
+        var tied = new UncopiedText(new TextItem(new Vector2<double>(5, 5), "Tied", Brushes.Black, 12));
+
+        CanvasPicture.Draw(new List<ICanvasItem> { tied }, copied);
+        CanvasPicture.DrawUncopied(new List<ICanvasItem> { tied }, uncopied);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(copied.Texts, Is.Empty, "an item that cannot be copied is skipped by a copying picture");
+            Assert.That(uncopied.Texts, Has.Count.EqualTo(1), "the item itself was not drawn");
+        });
+    }
+
+    // A text that refuses to be copied, as a mark tied to a page's text does.
+    private sealed class UncopiedText(TextItem text) : ICanvasItem
+    {
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged
+        {
+            add => text.PropertyChanged += value;
+            remove => text.PropertyChanged -= value;
+        }
+
+        public Adamantium.UI.Core.Rect Bounds => text.Bounds;
+
+        public int Order { get; set; }
+
+        public bool HitTest(Vector2<double> world, double tolerance) => text.HitTest(world, tolerance);
+
+        public void Render(CanvasDrawing drawing) => text.Render(drawing);
+
+        public void Move(Vector2<double> worldDelta) => text.Move(worldDelta);
+
+        public void Resize(Adamantium.UI.Core.Rect world) => text.Resize(world);
+    }
 }

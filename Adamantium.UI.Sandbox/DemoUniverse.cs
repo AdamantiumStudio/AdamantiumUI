@@ -147,12 +147,12 @@ namespace Adamantium.UI.Sandbox
         private void AddLightsAndCamera()
         {
             var point = new LightTemplate().BuildEntity(null, "Point light", LightType.Point);
-            point.Transform.Position = new Vector3<double>(-5, -4, 2);
+            point.Transform.Position = new WorldPosition(-5, -4, 2);
             point.GetComponent<Light>().Range = 6;
             _lights.AddLight(point);
 
             var spot = new LightTemplate().BuildEntity(null, "Spot light", LightType.Spot);
-            spot.Transform.Position = new Vector3<double>(5, -6, 6);
+            spot.Transform.Position = new WorldPosition(5, -6, 6);
             spot.Transform.Rotation = Quaternion.CreateFromAxisAngle<float>(Vector3F.UnitX, float.DegreesToRadians(180));
             var spotLight = spot.GetComponent<Light>();
             spotLight.Range = 8;
@@ -160,18 +160,18 @@ namespace Adamantium.UI.Sandbox
             _lights.AddLight(spot);
 
             var directional = new LightTemplate().BuildEntity(null, "Directional light", LightType.Directional);
-            directional.Transform.Position = new Vector3<double>(0, -7, 8);
+            directional.Transform.Position = new WorldPosition(0, -7, 8);
             directional.Transform.Rotation = Quaternion.CreateFromAxisAngle<float>(Vector3F.UnitX, float.DegreesToRadians(150));
             _lights.AddLight(directional);
 
-            var camera = new CameraTemplate().BuildEntity(null, "Scene camera", new Vector3<double>(8, -3, -4), Vector3<double>.ForwardLH, -Vector3<double>.Up, 800, 600, 0.1f, 1000f);
+            var camera = new CameraTemplate().BuildEntity(null, "Scene camera", new WorldPosition(8, -3, -4), Vector3<double>.ForwardLH, -Vector3<double>.Up, 800, 600, 0.1f, 1000f);
             EntityWorld.EntityManager.AddEntity(camera);
         }
 
         public Task<Entity> ImportModel(SceneData scene)
         {
             return Task.Run(() =>
-                EntityWorld.CreateEntityFromTemplate(new EntityImportTemplate(scene, Assets, new Vector3<double>(0, 0, 6))));
+                EntityWorld.CreateEntityFromTemplate(new EntityImportTemplate(scene, Assets, new WorldPosition(0, 0, 6))));
         }
 
         public async Task<Entity> ImportModel(String pathToFile, AssetLoadOptions options = null)
