@@ -199,26 +199,29 @@ public class CanvasItemNamesTests
         });
     }
 
-    // Not shown, the list is not read for the plane's edits; turned to, it is read then, with all of them.
+    // Not shown, the list's rows are not made for the plane's edits - its counts are; turned to, it is made then.
     [Test]
-    public void TheInspectorsListNotShown_IsReadWhenTurnedTo()
+    public void TheInspectorsListNotShown_IsCounted_AndMadeWhenTurnedTo()
     {
         var scene = new CanvasScene();
         var board = new DrawingBoard { Scene = scene };
         var inspector = new CanvasInspector { Canvas = board, ShowsProperties = true };
         LoopSignal.Drain();
+        var before = inspector.Structure;
 
         scene.Add(Box("Bolts"));
         scene.Add(Box("Nuts"));
         LoopSignal.Drain();
-        var hidden = inspector.ItemCount;
+        var hidden = inspector.Structure;
+        var counted = inspector.ItemCount;
 
         inspector.ShowsStructure = true;
 
         Assert.Multiple(() =>
         {
-            Assert.That(hidden, Is.Zero, "the list not shown was read");
-            Assert.That(inspector.ItemCount, Is.EqualTo(2), "turned to, the list was not read");
+            Assert.That(hidden, Is.SameAs(before), "the rows of the list not shown were made");
+            Assert.That(counted, Is.EqualTo(2), "the list not shown was not counted");
+            Assert.That(inspector.Structure.Cast<ICanvasItem>().Count(), Is.EqualTo(2), "turned to, it was not made");
         });
     }
 

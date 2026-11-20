@@ -200,6 +200,26 @@ public class CanvasOrderTests
         });
     }
 
+    // DESIGN MODE BACK ON, the frame is back where the held thing stands - though the plane was moved while it was off,
+    // and nothing was put in or picked since.
+    [Test]
+    public void TheFrameComesBack_WithDesignMode()
+    {
+        var canvas = Canvas();
+        var under = Ink();
+        canvas.Scene.Add(under);
+        canvas.Scene.Add(Ink());
+        canvas.Select(under, false);
+        LayOut(canvas);
+
+        canvas.IsDesignMode = false;
+        canvas.Offset += new Vector2<double>(30, 0);
+        LayOut(canvas);
+        canvas.IsDesignMode = true;
+
+        Assert.That(canvas.ChromeGoesAfter(under), Is.True, "the frame did not come back with design mode");
+    }
+
     // A NUMBER WRITTEN STRAIGHT to an item is put right by moving it to where it already is - the scene numbers only
     // the item put on top when one is added, so nothing else would.
     [Test]

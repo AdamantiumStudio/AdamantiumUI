@@ -519,12 +519,12 @@ public class CanvasInspector : Control, ICanvasPart
         ReadHeader();
     }
 
-    // The edits of the moment are listed once, before the next frame - a plane filled item by item is not listed
-    // again for each item - and only while the list is shown: turned to, it is listed then.
+    // The edits of the moment are listed once, before the next frame: a plane filled item by item is not listed again
+    // for each item. The counts always are; the list's rows only while it is shown, and when it is turned to.
     private void ListSoon()
     {
         _listStale = true;
-        if (_listPosted || !ShowsStructure) return;
+        if (_listPosted) return;
 
         _listPosted = true;
         LoopSignal.Post(_listPostedAction ??= ListPosted);
@@ -534,7 +534,7 @@ public class CanvasInspector : Control, ICanvasPart
     private void ListPosted()
     {
         _listPosted = false;
-        if (_listStale && !IsDiscarded) ReadStructure();
+        if (_listStale && !IsDiscarded) ReadStructure(rows: ShowsStructure);
     }
 
     private bool _listStale;
@@ -647,15 +647,33 @@ public class CanvasInspector : Control, ICanvasPart
     private void ReadTool() =>
         Fill(_tools, ToolSets(), Names(Canvas?.Tool));
 
-    private void ReadStructure()
+    // The list as the plane is now; without its rows, only counted - the rows wait for the list to be turned to.
+    private void ReadStructure(bool rows = true)
     {
-        _listStale = false;
         if (Canvas is not { } canvas)
         {
+            _listStale = false;
             Structure = null;
             ItemCount = 0;
             return;
         }
+
+        if (!rows)
+        {
+            var count = 0;
+            var found = 0;
+            foreach (var item in canvas.ShownItems())
+            {
+                count++;
+                if (canvas.Matches(item)) found++;
+            }
+
+            ItemCount = count;
+            FoundCount = found;
+            return;
+        }
+
+        _listStale = false;
 
         // TOPMOST FIRST, so the list reads the way the drawing is stacked. A fresh list every time: the scene's own is
         // edited in place and tells a binding nothing.

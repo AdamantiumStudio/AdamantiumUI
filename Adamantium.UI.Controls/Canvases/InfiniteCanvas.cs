@@ -1782,9 +1782,14 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private bool _settlePosted;
     private Action _settleEdits;
 
+    // Cut for the viewport the last arrange laid out, so that arrange does not cut again; the frame may stand on
+    // another layer after it, so the layers are drawn again.
     private void LayOutEdits()
     {
-        if (_layersStale) SyncElements();
+        if (!_layersStale) return;
+
+        SyncElements(_viewport);
+        Repaint();
     }
 
     private void SettleEdits()
@@ -1938,6 +1943,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         Hosts(host => host.ApplyDesignMode());
 
+        // The frame is drawn in design mode only, so where it goes is worked out again.
+        MarkChrome();
         Repaint();
     }
 
