@@ -38,6 +38,9 @@ public class RemoteUniverseHostTests
     private const int Height = 90;
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
 
+    // The sum of a pixel's three channels on the cube the sun lights; the ambient light alone gives about 60.
+    private const int LitBrightness = 300;
+
     private MainGraphicsDevice _main;
     private IGraphicsDevice _device;
     private string _folder;
@@ -119,7 +122,7 @@ public class RemoteUniverseHostTests
         using var surface = SharedSurface.Import(_device, descriptor);
         var brightness = 0;
         var waited = Stopwatch.StartNew();
-        while (brightness <= 60 && waited.Elapsed < Patience)
+        while (brightness <= LitBrightness && waited.Elapsed < Patience)
         {
             Take(presenter, surface);
             brightness = surface.LatchedCopy is { } frame ? CenterBrightness(frame) : 0;
@@ -141,7 +144,7 @@ public class RemoteUniverseHostTests
         {
             Assert.That(descriptor.Width, Is.EqualTo((uint)Math.Round(_panel.ActualWidth * _universe.PixelsPerPoint)),
                 "drawn at the panel's size");
-            Assert.That(brightness, Is.GreaterThan(60), "the lit cube in the middle of the frame the panel took");
+            Assert.That(brightness, Is.GreaterThan(LitBrightness), "the lit cube in the middle of the frame the panel took");
             Assert.That(later, Is.GreaterThan(lit + 3), "newer frames came as the panel took them");
             Assert.That(ended, Is.True, "told the universe stopped");
             Assert.That(_panel.Source, Is.Null, "the panel let go of the surface");
