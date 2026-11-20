@@ -24,6 +24,8 @@ All packages share one version.
   never opened, nor are links. `FileManager.MarkUntrusted` marks a file saved from outside.
   `FileNames.MakeSafe` makes a name from outside fit to save under - its last part only, no device name, no control or
   direction marks that change how it reads - and `FileNames.Numbered` numbers a second one.
+- `FileSizes.Format`: a file's size as a person reads it, in the largest unit it fills and the language's units and
+  numbers - "2.4 MB", "42 КБ".
 - A property grid's write says what it sets and whether it is settled. `PropertyValuesChangedEventArgs.WrittenObjects`
   and `WrittenProperty` name the object each target's write sets a property of, and that property - `Body.Mass` sets
   the body's `Mass`, a path into a struct (`Box.Size.X`) the holder's `Size` - from the new
