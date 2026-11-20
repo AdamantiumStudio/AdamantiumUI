@@ -1740,37 +1740,91 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private void OnSceneEdited(object sender, EventArgs e)
     {
         Forget();
-        SyncElements();
 
-        // ...and place them again even when the SET has not changed. An edit here is just as often one item's rectangle
-        // moving - which is exactly what dragging a control does - and a layer that only answered to items appearing and
-        // disappearing left the control behind while its frame walked off.
+        // A pane that follows the selection follows at once: an item moving moves the frame, and the bar sits on the
+        // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
+        // so it is the one place that has to say so. It costs what is selected, not the whole plane.
+        _chromeLayer?.InvalidateArrange();
+        FollowSelectionFrame();
+
+        // ...and the hosted controls are placed again even when the SET has not changed: an edit is just as often one
+        // item's rectangle moving - which is exactly what dragging a control does - and a layer that only answered to
+        // items appearing and disappearing left the control behind while its frame walked off.
         Hosts(host =>
         {
             host.InvalidateMeasure();
             host.InvalidateArrange();
         });
 
-        // The same for a pane that follows the selection: an item moving moves the frame, and the bar sits on the
-        // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
-        // so it is the one place that has to say so.
-        _chromeLayer?.InvalidateArrange();
-        FollowSelectionFrame();
-
         PlaneChanged?.Invoke(this, EventArgs.Empty);
+        Repaint();
+        SettleSoon();
+    }
+
+    // The edits of the moment are laid out once, as layout is: the layers are cut before the next frame - or by the
+    // next measure, for an edit made after the frame began - and the commands asked again. A plane filled item by item
+    // is not walked again for each item.
+    private void SettleSoon()
+    {
+        if (!_layersStale)
+        {
+            _layersStale = true;
+            InvalidateMeasure();
+        }
+
+        if (_settlePosted) return;
+
+        _settlePosted = true;
+        LoopSignal.Post(_settleEdits ??= SettleEdits);
+    }
+
+    private bool _layersStale;
+    private bool _settlePosted;
+    private Action _settleEdits;
+
+    // Cut for the viewport the last arrange laid out, so that arrange does not cut again; the frame may stand on
+    // another layer after it, so the layers are drawn again.
+    private void LayOutEdits()
+    {
+        if (!_layersStale) return;
+
+        SyncElements(_viewport);
+        Repaint();
+    }
+
+    private void SettleEdits()
+    {
+        _settlePosted = false;
+        if (IsDiscarded) return;
+
+        LayOutEdits();
 
         // ...and the buttons that answer from the PLANE rather than from the selection - the bin is the one - ask
         // again. Emptying a plane that has just been filled must not be refused because it was empty when the button
         // was first bound.
         Refresh();
-
-        Repaint();
     }
 
     // Drops selected items that have left the plane by any route, so the frame and Delete never act on them.
     private void Forget()
     {
         if (_selection.Count == 0 || Scene is not { } scene) return;
+
+        // Each selected item standing where the scene numbered it is still there: the whole plane is walked only when
+        // one is not - taken out, or inside a group.
+        var items = scene.Items;
+        var allThere = true;
+        foreach (var item in _selection)
+        {
+            var at = item.Order;
+            if (at < 0 || at >= items.Count || !ReferenceEquals(items[at], item) || !IsShown(item))
+            {
+                allThere = false;
+                break;
+            }
+        }
+
+        if (allThere) return;
 
         var there = new HashSet<ICanvasItem>();
 
@@ -1889,6 +1943,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         Hosts(host => host.ApplyDesignMode());
 
+        // The frame is drawn in design mode only, so where it goes is worked out again.
+        MarkChrome();
         Repaint();
     }
 

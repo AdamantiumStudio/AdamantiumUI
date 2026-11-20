@@ -490,6 +490,12 @@ All packages share one version.
 
 ### Changed
 
+- An `InfiniteCanvas` lays out its scene's edits once, as layout is, not once for each edit: its layers are cut by the
+  next measure, and the commands and the drawing follow before the next frame. The selection - which items are in it,
+  its frame, the panes on it - and `PlaneChanged` still follow at once; code reading the layers right after `Scene.Add`
+  lays the canvas out first. `CanvasInspector` lists the plane's items once per frame too, and `CanvasScene.Add` numbers
+  only the item put on top. Filling a plane item by item is linear: 4000 marks put in a PDF viewer one by one take 70
+  ms, not 3.3 s.
 - The sandbox's demo universe places its lights, camera and model by `WorldPosition`, the engine's type for an
   entity's place; a test keeps a meter of a `WorldPosition` written through a binding path, as an inspector types it.
 - **Breaking:** `UIUniverseOutput.TranslationKeys` and `MouseTranslationKeys` are gone: the translation of a panel's

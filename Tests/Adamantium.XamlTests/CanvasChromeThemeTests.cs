@@ -1681,8 +1681,10 @@ public class CanvasChromeThemeTests
         return found;
     }
 
+    // A frame: the loop's posted work first, then layout and bindings.
     private static void Settle(InfiniteCanvas canvas)
     {
+        LoopSignal.Drain();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         canvas.Measure(new Size<double>(900, 600), force: true);

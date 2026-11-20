@@ -172,6 +172,59 @@ public class CanvasItemNamesTests
         Assert.That(inspector.FoundCount, Is.EqualTo(3));
     }
 
+    // A plane filled item by item is listed once the edits of the moment are done, not again for each item: listing
+    // every item for every one put in made filling a plane quadratic.
+    [Test]
+    public void TheInspectorsList_IsReadOnce_ForManyItemsPutIn()
+    {
+        var scene = new CanvasScene();
+        var board = new DrawingBoard { Scene = scene };
+        var inspector = new CanvasInspector { Canvas = board, ShowsStructure = true };
+        LoopSignal.Drain();
+        var before = inspector.Structure;
+
+        for (var index = 0; index < 100; index++)
+        {
+            scene.Add(Box($"box {index}"));
+        }
+
+        var meanwhile = inspector.Structure;
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(meanwhile, Is.SameAs(before), "the list was read again for an item put in");
+            Assert.That(inspector.ItemCount, Is.EqualTo(100));
+            Assert.That(inspector.Structure.Cast<ICanvasItem>().First().Name, Is.EqualTo("box 99"), "topmost first");
+        });
+    }
+
+    // Not shown, the list's rows are not made for the plane's edits - its counts are; turned to, it is made then.
+    [Test]
+    public void TheInspectorsListNotShown_IsCounted_AndMadeWhenTurnedTo()
+    {
+        var scene = new CanvasScene();
+        var board = new DrawingBoard { Scene = scene };
+        var inspector = new CanvasInspector { Canvas = board, ShowsProperties = true };
+        LoopSignal.Drain();
+        var before = inspector.Structure;
+
+        scene.Add(Box("Bolts"));
+        scene.Add(Box("Nuts"));
+        LoopSignal.Drain();
+        var hidden = inspector.Structure;
+        var counted = inspector.ItemCount;
+
+        inspector.ShowsStructure = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hidden, Is.SameAs(before), "the rows of the list not shown were made");
+            Assert.That(counted, Is.EqualTo(2), "the list not shown was not counted");
+            Assert.That(inspector.Structure.Cast<ICanvasItem>().Count(), Is.EqualTo(2), "turned to, it was not made");
+        });
+    }
+
     private sealed class SheetsBoard : DrawingBoard
     {
         public override string PlaceOf(ICanvasItem item) => "sheet 3";

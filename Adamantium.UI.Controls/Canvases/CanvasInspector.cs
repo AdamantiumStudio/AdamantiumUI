@@ -515,9 +515,31 @@ public class CanvasInspector : Control, ICanvasPart
 
     private void OnPlaneChanged(object sender, EventArgs e)
     {
-        ReadStructure();
+        ListSoon();
         ReadHeader();
     }
+
+    // The edits of the moment are listed once, before the next frame: a plane filled item by item is not listed again
+    // for each item. The counts always are; the list's rows only while it is shown, and when it is turned to.
+    private void ListSoon()
+    {
+        _listStale = true;
+        if (_listPosted) return;
+
+        _listPosted = true;
+        LoopSignal.Post(_listPostedAction ??= ListPosted);
+    }
+
+    // Listed meanwhile - another canvas, a search - it is not listed again.
+    private void ListPosted()
+    {
+        _listPosted = false;
+        if (_listStale && !IsDiscarded) ReadStructure(rows: ShowsStructure);
+    }
+
+    private bool _listStale;
+    private bool _listPosted;
+    private Action _listPostedAction;
 
     private void OnSearched(object sender, EventArgs e)
     {
@@ -602,6 +624,7 @@ public class CanvasInspector : Control, ICanvasPart
         }
 
         inspector.Read();
+        if (inspector.ShowsStructure && inspector._listStale) inspector.ReadStructure();
     }
 
     private bool _settling;
@@ -624,14 +647,33 @@ public class CanvasInspector : Control, ICanvasPart
     private void ReadTool() =>
         Fill(_tools, ToolSets(), Names(Canvas?.Tool));
 
-    private void ReadStructure()
+    // The list as the plane is now; without its rows, only counted - the rows wait for the list to be turned to.
+    private void ReadStructure(bool rows = true)
     {
         if (Canvas is not { } canvas)
         {
+            _listStale = false;
             Structure = null;
             ItemCount = 0;
             return;
         }
+
+        if (!rows)
+        {
+            var count = 0;
+            var found = 0;
+            foreach (var item in canvas.ShownItems())
+            {
+                count++;
+                if (canvas.Matches(item)) found++;
+            }
+
+            ItemCount = count;
+            FoundCount = found;
+            return;
+        }
+
+        _listStale = false;
 
         // TOPMOST FIRST, so the list reads the way the drawing is stacked. A fresh list every time: the scene's own is
         // edited in place and tells a binding nothing.

@@ -27,8 +27,10 @@ public class CanvasScene : ICanvasScene
     {
         if (item == null) return;
 
+        // Put on top, it alone takes a number: those under it keep theirs, stamped by every change before.
         _items.Add(item);
-        Settled();
+        item.Order = _items.Count - 1;
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public bool Remove(ICanvasItem item)
@@ -131,7 +133,17 @@ public class CanvasScene : ICanvasScene
     private bool MoveTo(ICanvasItem item, int index)
     {
         var at = item == null ? -1 : _items.IndexOf(item);
-        if (at < 0 || at == index) return false;
+        if (at < 0) return false;
+
+        // Already there, it keeps its place - and its number, should one have been written to it straight.
+        if (at == index)
+        {
+            if (item.Order == index) return false;
+
+            item.Order = index;
+            Changed?.Invoke(this, EventArgs.Empty);
+            return false;
+        }
 
         _items.RemoveAt(at);
         _items.Insert(index, item);

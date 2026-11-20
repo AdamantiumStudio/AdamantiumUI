@@ -45,6 +45,13 @@ public class CanvasOrderTests
         return canvas;
     }
 
+    // The plane's edits are laid out by the next layout pass, as on screen.
+    private static void LayOut(InfiniteCanvas canvas)
+    {
+        canvas.Measure(new Size<double>(800, 600));
+        canvas.Arrange(new Rect(0, 0, 800, 600));
+    }
+
     private static StrokeItem Ink()
     {
         var ink = new StrokeItem(new Vector2<double>(0, 0), Brushes.Black, 2);
@@ -163,6 +170,72 @@ public class CanvasOrderTests
         var stack = canvas.GetTemplateChild("PART_Layers") as Adamantium.UI.Controls.Panels.Panel;
 
         if (stack != null) Assert.That(stack.Children.Count, Is.EqualTo(1), "ten neighbors took ten layers");
+    }
+
+    // A PLANE FILLED ITEM BY ITEM IS LAID OUT ONCE: the items put in wait for the next layout pass - or, with none, for
+    // the loop - and are laid out together, not once for each.
+    [Test]
+    public void ItemsPutInOneByOne_AreLaidOutOnce()
+    {
+        LoopSignal.Drain();
+        var canvas = Canvas();
+        var stack = (Adamantium.UI.Controls.Panels.Panel)canvas.GetTemplateChild("PART_Layers");
+        canvas.Scene.Add(Ink());
+        LayOut(canvas);
+
+        for (var i = 0; i < 100; i++) canvas.Scene.Add(Picture());
+
+        var meanwhile = stack.Children.Count;
+        LayOut(canvas);
+        var laidOut = stack.Children.Count;
+
+        canvas.Scene.Add(Ink());
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(meanwhile, Is.EqualTo(1), "the plane was laid out again for an item put in");
+            Assert.That(laidOut, Is.EqualTo(2), "the layout pass did not lay out the items waiting");
+            Assert.That(stack.Children.Count, Is.EqualTo(3), "with no layout pass, the loop did not lay them out");
+        });
+    }
+
+    // DESIGN MODE BACK ON, the frame is back where the held thing stands - though the plane was moved while it was off,
+    // and nothing was put in or picked since.
+    [Test]
+    public void TheFrameComesBack_WithDesignMode()
+    {
+        var canvas = Canvas();
+        var under = Ink();
+        canvas.Scene.Add(under);
+        canvas.Scene.Add(Ink());
+        canvas.Select(under, false);
+        LayOut(canvas);
+
+        canvas.IsDesignMode = false;
+        canvas.Offset += new Vector2<double>(30, 0);
+        LayOut(canvas);
+        canvas.IsDesignMode = true;
+
+        Assert.That(canvas.ChromeGoesAfter(under), Is.True, "the frame did not come back with design mode");
+    }
+
+    // A NUMBER WRITTEN STRAIGHT to an item is put right by moving it to where it already is - the scene numbers only
+    // the item put on top when one is added, so nothing else would.
+    [Test]
+    public void AWrongNumber_IsPutRight_ByMovingTheItemWhereItIs()
+    {
+        var scene = new CanvasScene();
+        var under = Ink();
+        var top = Ink();
+        scene.Add(under);
+        scene.Add(top);
+
+        top.Order = 9999;
+        scene.Reposition(top, 9999);
+        scene.Add(Ink());
+
+        Assert.That(top.Order, Is.EqualTo(1));
     }
 
     // AMONG THEMSELVES. "One order" is worth nothing if it only sorts the two SORTS: a shape has to be able to go over
@@ -534,6 +607,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(under);
         canvas.Scene.Add(Ink());
         canvas.Select(under, false);
+        LayOut(canvas);
 
         Assert.That(canvas.ChromeGoesAfter(under), Is.True, "the frame was not put with the item it is round");
         Assert.That(canvas.ChromeGoesOnGlass, Is.False, "the frame floated over the thing standing on top of it");
@@ -656,6 +730,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(picture);
         canvas.Scene.Add(over);
         canvas.Select(picture, false);
+        LayOut(canvas);
 
         Assert.That(canvas.ChromeGoesBefore(over), Is.True, "the frame round a control was not put over the control");
         Assert.That(canvas.ChromeGoesOnGlass, Is.False, "the frame floated over the stroke drawn on top of the picture");
