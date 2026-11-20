@@ -200,6 +200,24 @@ public class CanvasOrderTests
         });
     }
 
+    // A NUMBER WRITTEN STRAIGHT to an item is put right by moving it to where it already is - the scene numbers only
+    // the item put on top when one is added, so nothing else would.
+    [Test]
+    public void AWrongNumber_IsPutRight_ByMovingTheItemWhereItIs()
+    {
+        var scene = new CanvasScene();
+        var under = Ink();
+        var top = Ink();
+        scene.Add(under);
+        scene.Add(top);
+
+        top.Order = 9999;
+        scene.Reposition(top, 9999);
+        scene.Add(Ink());
+
+        Assert.That(top.Order, Is.EqualTo(1));
+    }
+
     // AMONG THEMSELVES. "One order" is worth nothing if it only sorts the two SORTS: a shape has to be able to go over
     // another shape, and a control over another control, or what was built is two buckets with extra steps.
     [Test]

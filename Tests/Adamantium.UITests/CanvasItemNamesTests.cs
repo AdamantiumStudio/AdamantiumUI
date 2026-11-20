@@ -179,7 +179,7 @@ public class CanvasItemNamesTests
     {
         var scene = new CanvasScene();
         var board = new DrawingBoard { Scene = scene };
-        var inspector = new CanvasInspector { Canvas = board };
+        var inspector = new CanvasInspector { Canvas = board, ShowsStructure = true };
         LoopSignal.Drain();
         var before = inspector.Structure;
 
@@ -196,6 +196,29 @@ public class CanvasItemNamesTests
             Assert.That(meanwhile, Is.SameAs(before), "the list was read again for an item put in");
             Assert.That(inspector.ItemCount, Is.EqualTo(100));
             Assert.That(inspector.Structure.Cast<ICanvasItem>().First().Name, Is.EqualTo("box 99"), "topmost first");
+        });
+    }
+
+    // Not shown, the list is not read for the plane's edits; turned to, it is read then, with all of them.
+    [Test]
+    public void TheInspectorsListNotShown_IsReadWhenTurnedTo()
+    {
+        var scene = new CanvasScene();
+        var board = new DrawingBoard { Scene = scene };
+        var inspector = new CanvasInspector { Canvas = board, ShowsProperties = true };
+        LoopSignal.Drain();
+
+        scene.Add(Box("Bolts"));
+        scene.Add(Box("Nuts"));
+        LoopSignal.Drain();
+        var hidden = inspector.ItemCount;
+
+        inspector.ShowsStructure = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hidden, Is.Zero, "the list not shown was read");
+            Assert.That(inspector.ItemCount, Is.EqualTo(2), "turned to, the list was not read");
         });
     }
 

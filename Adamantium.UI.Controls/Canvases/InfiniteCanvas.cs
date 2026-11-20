@@ -1747,12 +1747,23 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _chromeLayer?.InvalidateArrange();
         FollowSelectionFrame();
 
+        // ...and the hosted controls are placed again even when the SET has not changed: an edit is just as often one
+        // item's rectangle moving - which is exactly what dragging a control does - and a layer that only answered to
+        // items appearing and disappearing left the control behind while its frame walked off.
+        Hosts(host =>
+        {
+            host.InvalidateMeasure();
+            host.InvalidateArrange();
+        });
+
         PlaneChanged?.Invoke(this, EventArgs.Empty);
+        Repaint();
         SettleSoon();
     }
 
-    // The edits of the moment are laid out once, as layout is: the layers are cut by the next measure, and the commands
-    // and the drawing follow before the next frame. A plane filled item by item is not walked again for each item.
+    // The edits of the moment are laid out once, as layout is: the layers are cut before the next frame - or by the
+    // next measure, for an edit made after the frame began - and the commands asked again. A plane filled item by item
+    // is not walked again for each item.
     private void SettleSoon()
     {
         if (!_layersStale)
@@ -1771,21 +1782,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private bool _settlePosted;
     private Action _settleEdits;
 
-    // Cuts the layers again for the plane's edits, if any wait - and places the hosted controls again even when the
-    // SET has not changed: an edit is just as often one item's rectangle moving - which is exactly what dragging a
-    // control does - and a layer that only answered to items appearing and disappearing left the control behind while
-    // its frame walked off.
     private void LayOutEdits()
     {
-        if (!_layersStale) return;
-
-        _layersStale = false;
-        SyncElements();
-        Hosts(host =>
-        {
-            host.InvalidateMeasure();
-            host.InvalidateArrange();
-        });
+        if (_layersStale) SyncElements();
     }
 
     private void SettleEdits()
@@ -1793,15 +1792,12 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _settlePosted = false;
         if (IsDiscarded) return;
 
-        // Off screen no measure comes to cut the layers: they are cut here.
-        if (!IsAttachedToVisualTree) LayOutEdits();
+        LayOutEdits();
 
         // ...and the buttons that answer from the PLANE rather than from the selection - the bin is the one - ask
         // again. Emptying a plane that has just been filled must not be refused because it was empty when the button
         // was first bound.
         Refresh();
-
-        Repaint();
     }
 
     // Drops selected items that have left the plane by any route, so the frame and Delete never act on them.

@@ -519,11 +519,12 @@ public class CanvasInspector : Control, ICanvasPart
         ReadHeader();
     }
 
-    // The edits of the moment are listed once, before the next frame: a plane filled item by item is not listed again
-    // for each item.
+    // The edits of the moment are listed once, before the next frame - a plane filled item by item is not listed
+    // again for each item - and only while the list is shown: turned to, it is listed then.
     private void ListSoon()
     {
-        if (_listPosted) return;
+        _listStale = true;
+        if (_listPosted || !ShowsStructure) return;
 
         _listPosted = true;
         LoopSignal.Post(_listPostedAction ??= ListPosted);
@@ -532,11 +533,11 @@ public class CanvasInspector : Control, ICanvasPart
     // Listed meanwhile - another canvas, a search - it is not listed again.
     private void ListPosted()
     {
-        if (!_listPosted || IsDiscarded) return;
-
-        ReadStructure();
+        _listPosted = false;
+        if (_listStale && !IsDiscarded) ReadStructure();
     }
 
+    private bool _listStale;
     private bool _listPosted;
     private Action _listPostedAction;
 
@@ -623,6 +624,7 @@ public class CanvasInspector : Control, ICanvasPart
         }
 
         inspector.Read();
+        if (inspector.ShowsStructure && inspector._listStale) inspector.ReadStructure();
     }
 
     private bool _settling;
@@ -647,7 +649,7 @@ public class CanvasInspector : Control, ICanvasPart
 
     private void ReadStructure()
     {
-        _listPosted = false;
+        _listStale = false;
         if (Canvas is not { } canvas)
         {
             Structure = null;

@@ -1384,6 +1384,9 @@ public partial class InfiniteCanvas : ICanvasCamera
     {
         if (_layers == null || _sceneTaken) return;
 
+        // Cut for every edit so far, and for this viewport: neither the next measure nor this arrange cuts again.
+        _layersStale = false;
+        _cutForViewport = viewport;
         _runs.Clear();
 
         List<ICanvasItem> run = null;
@@ -1428,6 +1431,8 @@ public partial class InfiniteCanvas : ICanvasCamera
     private static bool Contains(Rect outer, Rect inner) =>
         inner.X >= outer.X && inner.Y >= outer.Y &&
         inner.X + inner.Width <= outer.X + outer.Width && inner.Y + inner.Height <= outer.Y + outer.Height;
+
+    private Size<double> _cutForViewport;
 
     private const double CutMargin = 0.5;
     private const double CutMostOfFresh = 4;
@@ -1606,8 +1611,9 @@ public partial class InfiniteCanvas : ICanvasCamera
         SyncScrollBars();
 
         // The controls on the plane are asked for again HERE: "which of them can be seen" is answered from the
-        // viewport, and until this pass there is none to answer from. The plane's edits are laid out with them.
-        SyncElements(viewport);
+        // viewport, and until this pass there is none to answer from - unless they were for this very viewport since the
+        // last edit and camera move, which cut them themselves.
+        if (_layersStale || viewport != _cutForViewport) SyncElements(viewport);
 
         return size;
     }
