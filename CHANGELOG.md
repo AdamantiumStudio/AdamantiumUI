@@ -488,6 +488,8 @@ All packages share one version.
 
 ### Changed
 
+- The sandbox's demo universe places its lights, camera and model by `WorldPosition`, the engine's type for an
+  entity's place; a test keeps a meter of a `WorldPosition` written through a binding path, as an inspector types it.
 - **Breaking:** `UIUniverseOutput.TranslationKeys` and `MouseTranslationKeys` are gone: the translation of a panel's
   input to the engine's moved to one internal listener, which a universe of another process uses too.
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
