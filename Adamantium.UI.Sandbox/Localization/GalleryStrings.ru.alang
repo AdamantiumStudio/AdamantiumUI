@@ -24,6 +24,7 @@
     <Phrase Key="PropertyGrid" Text="Сетка свойств"/>
     <Phrase Key="Tabs" Text="Вкладки"/>
     <Phrase Key="Menus" Text="Меню"/>
+    <Phrase Key="ToolBars" Text="Панели инструментов"/>
     <Phrase Key="Trees" Text="Деревья"/>
     <Phrase Key="Splitter" Text="Разделитель"/>
     <Phrase Key="ColorPicker" Text="Выбор цвета"/>

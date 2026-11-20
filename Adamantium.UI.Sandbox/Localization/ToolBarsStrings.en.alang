@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Hint" Text="Drag a bar by its grip to another place of its row, to another row, below the last row for a new one, or into the tray below. Right-click a tray to show or hide its bars or to lock them. Narrow the upper tray: its last commands go to their bar's menu."/>
+    <Phrase Key="Width" Text="Width of the upper tray"/>
+    <Phrase Key="Lower" Text="Another tray"/>
+    <Phrase Key="Edit" Text="Edit"/>
+    <Phrase Key="Text" Text="Text"/>
+    <Phrase Key="Paragraph" Text="Paragraph"/>
+    <Phrase Key="View" Text="View"/>
+    <Phrase Key="Extra" Text="Extra"/>
+    <Phrase Key="Cut" Text="Cut"/>
+    <Phrase Key="Copy" Text="Copy"/>
+    <Phrase Key="Paste" Text="Paste"/>
+    <Phrase Key="Bold" Text="Bold"/>
+    <Phrase Key="Italic" Text="Italic"/>
+    <Phrase Key="Underline" Text="Underline"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="ZoomIn" Text="Zoom in"/>
+    <Phrase Key="ZoomOut" Text="Zoom out"/>
+    <Phrase Key="Help" Text="Help"/>
+    <Phrase Key="Nothing" Text="nothing yet"/>
+    <Phrase Key="Report" Text="Pressed: {command}"/>
+</Language>

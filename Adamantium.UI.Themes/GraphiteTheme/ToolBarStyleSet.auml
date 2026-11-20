@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The editor's tray: dense rows with a hairline under them. Its menu holds the bars by name - the tray adds them
+         when it opens - and the switch that locks them. -->
+    <Style Selector="ToolBarTray">
+        <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="2,1"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <ToolBarTrayPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu x:Shared="False">
+                    <MenuItem Header="{Localize ToolBarStrings.LockToolBars}"
+                              Command="{x:Static ToolBarTray.LockCommand}"/>
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBarTray">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A bar: no card of its own - the bars are told apart by a hairline after each, as the editor's panes are. -->
+    <Style Selector="ToolBar">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+        <Setter Property="Padding" Value="1,1,3,1"/>
+        <Setter Property="Margin" Value="0,0,3,1"/>
+        <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBar">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <DockPanel>
+                            <!-- Two hairline rules, the editor's grip. -->
+                            <Thumb x:Name="PART_Grip"
+                                   DockPanel.Dock="Left"
+                                   Width="{ResourceReference ToolBarGripLength}"
+                                   Cursor="SizeAll"
+                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}">
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border Background="Transparent">
+                                            <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Fill="{ResourceReference TextFillColorTertiary}"
+                                                  Data="M0,0 L1,0 L1,12 L0,12 Z M3,0 L4,0 L4,12 L3,12 Z"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                            <ToggleButton x:Name="PART_OverflowButton"
+                                          DockPanel.Dock="Right"
+                                          Width="{TemplateBinding OverflowButtonLength}"
+                                          MinWidth="0"
+                                          Padding="0"
+                                          Visibility="Collapsed"
+                                          IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
+                                          ToolTip="{Localize ToolBarStrings.MoreCommands}"
+                                          AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
+                                <Path Data="M0,0 L3,3 L6,0"
+                                      Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </ToggleButton>
+                            <StackPanel x:Name="PART_Items"
+                                        Orientation="{TemplateBinding Orientation}"
+                                        VerticalAlignment="Center"/>
+                            <Popup x:Name="PART_OverflowPopup"
+                                   Placement="Bottom"
+                                   PlacementAlignment="End"
+                                   KeepOpen="False"
+                                   IgnoreTargetPress="True"
+                                   IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
+                                <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                        BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                        BorderThickness="1"
+                                        Padding="2">
+                                    <StackPanel x:Name="PART_OverflowItems"
+                                                Orientation="{TemplateBinding Orientation}"/>
+                                </Border>
+                            </Popup>
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="ToolBar">
+        <PropertyTrigger Property="HasOverflowItems" Value="true">
+            <Setter TargetName="PART_OverflowButton" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ToolBarTray.IsLocked" Value="true">
+            <Setter TargetName="PART_Grip" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Orientation" Value="Vertical">
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
+            <Setter TargetName="PART_Grip" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
+            <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
+            <Setter TargetName="PART_OverflowButton" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_OverflowButton" Property="Height" Value="{TemplateBinding OverflowButtonLength}"/>
+            <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Stretch"/>
+            <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_OverflowPopup" Property="Placement" Value="Right"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsMoving" Value="true">
+            <Setter Property="Opacity" Value="0.8"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>

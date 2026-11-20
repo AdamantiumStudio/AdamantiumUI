@@ -21,6 +21,7 @@ public partial class GalleryViewModel
         new PropertyGridViewModel(),
         new TabsViewModel(),
         new MenusViewModel(),
+        new ToolBarsViewModel(),
         new TreesViewModel(),
         new SplitterViewModel(),
         new ColorPickerViewModel(),

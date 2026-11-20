@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Toolbars page: a command pressed on a bar says so below; a bar dragged by its grip into the first row and another into the lower tray; the upper tray narrowed, so a bar's last commands go to its menu, and one run from there; the lower tray locked from its menu, its grips gone.">
+  <Select Target="id=GalleryTabs/id=ToolBars" />
+  <Wait Target="id=ToolBarsView/id=UpperTray" Timeout="20s" />
+  <Invoke Target="id=CutCommand" />
+  <Expect Target="id=ToolBarsReport" Name="Pressed: Cut" />
+  <!-- The View bar from the second row to the end of the first; the Paragraph bar into the lower tray, after Extra. -->
+  <Drag Target="id=ViewBar/id=PART_Grip" From="5,15" To="320,-25" />
+  <Wait Target="id=UpperTray/id=ViewBar" />
+  <Drag Target="id=ParagraphBar/id=PART_Grip" From="5,15" To="120,105" />
+  <Wait Target="id=LowerTray/id=ParagraphBar" />
+  <Absent Target="id=UpperTray/id=ParagraphBar" />
+  <!-- Narrowed, the Text bar keeps Bold and sends the rest under its chevron; Italic is pressed from there and the menu
+       goes away. -->
+  <Set Target="id=TrayWidth" Value="330" />
+  <Wait Target="id=TextBar/id=PART_OverflowButton" Offscreen="False" />
+  <Click Target="id=TextBar/id=PART_OverflowButton" />
+  <Click Target="id=ItalicCommand" />
+  <Expect Target="id=ToolBarsReport" Name="Pressed: Italic" />
+  <Set Target="id=TrayWidth" Value="900" />
+  <Wait Target="id=TextBar/id=PART_OverflowButton" Offscreen="True" Timeout="5s" />
+  <Expect Target="id=TextBar/id=UnderlineCommand" Offscreen="False" />
+  <!-- Locked from the tray's own menu: the grips go, so nothing moves the bars. -->
+  <RightClick Target="id=LowerTray" />
+  <Click Target="name=Lock the toolbars" />
+  <Wait Target="id=LowerTray/id=ExtraBar/id=PART_Grip" Offscreen="True" Timeout="5s" />
+</Scenario>

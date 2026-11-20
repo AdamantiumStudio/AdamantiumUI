@@ -74,6 +74,7 @@
         <StyleInclude Source="{x:Type fluent:DropInsertionIndicatorStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:HoldIndicatorStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DragHandleStyleSet}"/>
+        <StyleInclude Source="{x:Type fluent:ToolBarStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:TileGripStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:SelectionAdornerStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:HoverAdornerStyleSet}"/>

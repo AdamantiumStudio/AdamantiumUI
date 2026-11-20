@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `ToolBarTray` and `ToolBar`: an application's tool bars in rows, each a batch of commands - any controls, drawn as the
+  theme draws them - shown and hidden as a whole. A bar stands by its `Band` and `BandIndex`, which bind two-way so an
+  application keeps its layout. Its grip moves it to another place of its row, another row, a new row above the first
+  or below the last, or another tray of the window - only where both trays hold their bars as items of their own; let
+  go of anywhere else, it goes back: bars do not float. A row short of room shortens its last bars first, and the
+  commands that no longer fit go to the bar's overflow menu, the last first, as each command's
+  `ToolBar.OverflowMode` allows (`AsNeeded`, `Always`, `Never`); a command run from the menu puts it away. The tray's
+  menu shows and hides its bars by their `Header` and locks them (`IsLocked`, inherited by the bars, which hide their
+  grips; `LockCommand`). A tray runs across a window or, `Orientation="Vertical"`, down its side. Bars are written in
+  the tray's markup or made for the view models of its `ItemsSource`, each the root of the template its
+  `ItemTemplateSelector` picks. To automation a tray is a pane and a bar a tool bar named by its header. Styled in
+  Fluent, Graphite and macOS; the sandbox has a Toolbars page.
+
 - A scenario checks what an element shows: `Brightness="150..255"` on `Expect` or `Wait` reads how bright the brightest
   hundredth of its pixels are in the window's frame, 0 to 255 - a picture drawn black, or not at all, reads near 0; one
   with something lit, high, however much dark space is round it.
