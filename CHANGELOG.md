@@ -13,7 +13,8 @@ All packages share one version.
   or below the last, or another tray of the window - only where both trays hold their bars as items of their own; let
   go of anywhere else, it goes back: bars do not float. A row short of room shortens its last bars first, and the
   commands that no longer fit go to the bar's overflow menu, the last first, as each command's
-  `ToolBar.OverflowMode` allows (`AsNeeded`, `Always`, `Never`); a command run from the menu puts it away. The tray's
+  `ToolBar.OverflowMode` allows (`AsNeeded`, `Always`, `Never`); a command run from the menu puts it away. A bar's
+  `Spacing` stands between its commands, on the bar and in the menu; each theme gives its own. The tray's
   menu shows and hides its bars by their `Header` and locks them (`IsLocked`, inherited by the bars, which hide their
   grips; `LockCommand`). A tray runs across a window or, `Orientation="Vertical"`, down its side. Bars are written in
   the tray's markup or made for the view models of its `ItemsSource`, each the root of the template its

@@ -45,6 +45,8 @@
          Height is fixed and width is a floor - see the Fluent metrics for why that asymmetry is the point. -->
     <sys:Double x:Key="PagerButtonMinWidth">30</sys:Double>
     <sys:Double x:Key="PagerButtonHeight">28</sys:Double>
+    <!-- A Mac toolbar's buttons stand apart, not shoulder to shoulder. -->
+    <sys:Double x:Key="ToolBarSpacing">6</sys:Double>
 
     <!-- A HAIRLINE, not a stroke. Fluent draws control borders 2 wide; a Mac's are one device pixel and are there to
          seat the control on its surface rather than to outline it. -->

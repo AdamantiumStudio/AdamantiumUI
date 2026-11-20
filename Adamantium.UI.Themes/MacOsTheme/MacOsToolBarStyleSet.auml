@@ -42,6 +42,7 @@
         <Setter Property="Padding" Value="3"/>
         <Setter Property="Margin" Value="0,0,8,4"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
+        <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolBar">
@@ -80,7 +81,7 @@
                                       Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1.2"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </ToggleButton>
-                            <StackPanel x:Name="PART_Items"
+                            <StackPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                         Orientation="{TemplateBinding Orientation}"
                                         VerticalAlignment="Center"/>
                             <Popup x:Name="PART_OverflowPopup"
@@ -94,7 +95,7 @@
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="5">
-                                    <StackPanel x:Name="PART_OverflowItems"
+                                    <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
                                                 Orientation="{TemplateBinding Orientation}"/>
                                 </Border>
                             </Popup>

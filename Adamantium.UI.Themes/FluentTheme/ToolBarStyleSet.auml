@@ -45,6 +45,7 @@
         <Setter Property="Padding" Value="2"/>
         <Setter Property="Margin" Value="0,0,4,3"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
+        <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolBar">
@@ -83,7 +84,7 @@
                                       Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </ToggleButton>
-                            <StackPanel x:Name="PART_Items"
+                            <StackPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                         Orientation="{TemplateBinding Orientation}"
                                         VerticalAlignment="Center"/>
                             <!-- What does not fit: the same commands, on a card under the chevron. -->
@@ -98,7 +99,7 @@
                                         BorderThickness="1"
                                         CornerRadius="{ResourceReference CornerRadiusDefault}"
                                         Padding="4">
-                                    <StackPanel x:Name="PART_OverflowItems"
+                                    <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
                                                 Orientation="{TemplateBinding Orientation}"/>
                                 </Border>
                             </Popup>

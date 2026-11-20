@@ -57,6 +57,10 @@ public class ToolBar : ItemsControl
         nameof(OverflowButtonLength), typeof(double), typeof(ToolBar),
         new PropertyMetadata(20.0, PropertyMetadataOptions.AffectsMeasure));
 
+    /// <summary>The room between two commands, on the bar and in its overflow menu - a theme metric.</summary>
+    public static readonly AdamantiumProperty SpacingProperty = AdamantiumProperty.Register(nameof(Spacing),
+        typeof(double), typeof(ToolBar), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsMeasure));
+
     /// <summary>Where a command stands when its bar is short of room; set on the command.</summary>
     public static readonly AdamantiumProperty OverflowModeProperty = AdamantiumProperty.RegisterAttached("OverflowMode",
         typeof(ToolBarOverflowMode), typeof(AdamantiumComponent),
@@ -139,6 +143,12 @@ public class ToolBar : ItemsControl
     {
         get => GetValue<bool>(IsMovingProperty);
         internal set => SetValue(IsMovingPropertyKey, value);
+    }
+
+    public double Spacing
+    {
+        get => GetValue<double>(SpacingProperty);
+        set => SetValue(SpacingProperty, value);
     }
 
     public double OverflowButtonLength
@@ -308,9 +318,9 @@ public class ToolBar : ItemsControl
 
         // In the tray's terms: with the bar's margin, as the length it is given is.
         var margin = horizontal ? Margin.Left + Margin.Right : Margin.Top + Margin.Bottom;
-        FullLength = margin + _chrome + Sum(lengths, mode => mode != ToolBarOverflowMode.Always) +
+        FullLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode == ToolBarOverflowMode.Always)) +
                      (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0);
-        ShortestLength = margin + _chrome + Sum(lengths, mode => mode == ToolBarOverflowMode.Never) +
+        ShortestLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
                          (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
         return size;
     }
@@ -349,32 +359,55 @@ public class ToolBar : ItemsControl
     private bool[] Overflowing(double room, double[] lengths)
     {
         var chrome = double.IsNaN(_chrome) ? 0 : _chrome;
-        var overflowing = new bool[_commands.Count];
-        var total = chrome;
-        var anyAlways = false;
-        for (var i = 0; i < _commands.Count; i++)
-        {
-            overflowing[i] = GetOverflowMode(_commands[i]) == ToolBarOverflowMode.Always;
-            anyAlways |= overflowing[i];
-            total += overflowing[i] ? 0 : lengths[i];
-        }
-
-        if (total + (anyAlways ? OverflowButtonLength : 0) <= room + Tolerance)
+        var overflowing = Overflowing(mode => mode == ToolBarOverflowMode.Always);
+        if (chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
+            room + Tolerance)
         {
             return overflowing;
         }
 
-        total += OverflowButtonLength;
-        for (var i = _commands.Count - 1; i >= 0 && total > room + Tolerance; i--)
+        for (var i = _commands.Count - 1; i >= 0; i--)
         {
+            if (chrome + OverflowButtonLength + OnBar(lengths, overflowing) <= room + Tolerance)
+            {
+                break;
+            }
+
             if (!overflowing[i] && GetOverflowMode(_commands[i]) == ToolBarOverflowMode.AsNeeded)
             {
                 overflowing[i] = true;
-                total -= lengths[i];
             }
         }
 
         return overflowing;
+    }
+
+    private bool[] Overflowing(System.Func<ToolBarOverflowMode, bool> goes)
+    {
+        var overflowing = new bool[_commands.Count];
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            overflowing[i] = goes(GetOverflowMode(_commands[i]));
+        }
+
+        return overflowing;
+    }
+
+    // How long the commands left on the bar are, with the spacing between those shown, as the bar's panel lays them out.
+    private double OnBar(double[] lengths, bool[] overflowing)
+    {
+        var length = 0.0;
+        var shown = 0;
+        for (var i = 0; i < lengths.Length; i++)
+        {
+            if (!overflowing[i] && _commands[i].Visibility != Visibility.Collapsed)
+            {
+                length += lengths[i];
+                shown++;
+            }
+        }
+
+        return length + Math.Max(0, Spacing) * Math.Max(0, shown - 1);
     }
 
     private const double Tolerance = 1e-6;
@@ -405,20 +438,6 @@ public class ToolBar : ItemsControl
         }
 
         return changed;
-    }
-
-    private double Sum(double[] lengths, System.Func<ToolBarOverflowMode, bool> counts)
-    {
-        var sum = 0.0;
-        for (var i = 0; i < lengths.Length; i++)
-        {
-            if (counts(GetOverflowMode(_commands[i])))
-            {
-                sum += lengths[i];
-            }
-        }
-
-        return sum;
     }
 
     private bool Any(ToolBarOverflowMode mode) => _commands.Any(command => GetOverflowMode(command) == mode);

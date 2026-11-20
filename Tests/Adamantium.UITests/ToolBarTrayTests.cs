@@ -207,6 +207,32 @@ public class ToolBarTrayTests
     }
 
     [TestCaseSource(nameof(StyleSets))]
+    public void TheBarsSpacing_StandsBetweenItsCommands_AndCountsWhenRoomIsShort(System.Type styleSet)
+    {
+        Use(styleSet);
+        var bar = Bar("Bar", 0, 0);
+        bar.Spacing = 10;
+        var tray = Tray(bar);
+        var root = Shown(tray, 1000);
+        var first = (IUIComponent)bar.Items[0];
+        var second = (IUIComponent)bar.Items[1];
+        var gap = At(second, root).X - (At(first, root).X + first.RenderSize.Width);
+
+        root.Width = tray.DesiredSize.Width;
+        Show(root);
+        var fitsExactly = !bar.HasOverflowItems;
+        root.Width -= 5;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gap, Is.EqualTo(10).Within(0.5));
+            Assert.That(fitsExactly, Is.True);
+            Assert.That(bar.HasOverflowItems, Is.True, "five short of room with the spacing counted");
+        });
+    }
+
+    [TestCaseSource(nameof(StyleSets))]
     public void ACommandThatNeverOverflows_StaysOnTheBar_AndOneThatAlwaysDoes_IsInTheMenu(System.Type styleSet)
     {
         Use(styleSet);
