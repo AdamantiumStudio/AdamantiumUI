@@ -64,6 +64,38 @@ public class CanvasGraphSerializerTests
         });
     }
 
+    // A GRAPH OPENED is one change of the plane, not one per node and wire - each of those a walk of the scene.
+    [Test]
+    public void AGraphOpened_ChangesThePlaneOnce()
+    {
+        var (canvas, scene) = Stage();
+        ElementItem last = null;
+        for (var i = 0; i < 20; i++)
+        {
+            var item = new ElementItem(Made($"Node {i}", "In 1"), new Rect(i * 200, 0, 160, 90));
+            scene.Add(item);
+            if (last != null)
+            {
+                scene.Add(new ConnectionItem(last, ((CanvasNode)last.Element).OutputPins[0], item,
+                    ((CanvasNode)item.Element).InputPins[0]));
+            }
+
+            last = item;
+        }
+
+        var text = CanvasGraphSerializer.Save(canvas);
+        var (other, target) = Stage();
+        var changes = 0;
+        target.Changed += (_, _) => changes++;
+
+        Assert.That(CanvasGraphSerializer.Load(other, text), Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(target.Items, Has.Count.EqualTo(20 + 19));
+            Assert.That(changes, Is.LessThanOrEqualTo(3), "the plane was changed once for each node and wire");
+        });
+    }
+
     // A COMMENT FRAME is part of the graph's reading: written out, it comes back where it was, saying what it said, in
     // its own color and behind the nodes. Loading used to clear the frames and never write them.
     [Test]

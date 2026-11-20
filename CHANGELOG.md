@@ -494,6 +494,20 @@ All packages share one version.
 
 ### Changed
 
+- A `NodeGraph` bound to an application's nodes follows them without walking the whole plane for each: a node put in
+  draws only its own wires, a wire made or cut or a socket added only its own node's lines, and the host's own changes
+  no longer make it look for wires somebody drew; the wires are kept over the nodes, put back in that order once per
+  frame. Nodes taken out - one, or all of a `Clear` - leave the plane in one change, and so do a `DrawingBoard`'s
+  objects. Deleting or duplicating a selection (inside groups too), opening a graph file and taking a step back are one
+  walk of the plane, and picking many items no longer searches the selection for each. A graph of 2000 nodes, a wire to
+  each, fills in 0.3 s, not 66 s; 4000 deleted at once take 50 ms.
+- A node moved in the application's collection keeps its wires: the move was handled as taking it out and putting it
+  back, which cut every wire of it out of the graph.
+- A `NodeGraph`'s wires: a line put back by an undo is the graph's wire again, not a second wire; a wire drawn into a
+  full socket takes the line of the wire it replaces off the plane; a line drawn again for a socket changed keeps its
+  width, color and routing; nodes go under the wires without lifting the wires over a note put above them. Deleting a
+  group takes the wires of the nodes inside it, and a group inside a group left empty goes too. An item an undo put
+  back on a `DrawingBoard` is not put on it a second time when its object comes back.
 - An `InfiniteCanvas` lays out its scene's edits once, as layout is, not once for each edit: its layers are cut by the
   next measure, and the commands and the drawing follow before the next frame. The selection - which items are in it,
   its frame, the panes on it - and `PlaneChanged` still follow at once; code reading the layers right after `Scene.Add`

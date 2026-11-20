@@ -97,13 +97,7 @@ internal sealed class CanvasDrawingHost
             return;
         }
 
-        if (e.OldItems != null)
-        {
-            foreach (var item in e.OldItems)
-            {
-                if (item is ICanvasObject model) Drop(model);
-            }
-        }
+        if (e.OldItems != null) Drop(e.OldItems);
 
         if (e.NewItems == null) return;
 
@@ -113,19 +107,30 @@ internal sealed class CanvasDrawingHost
         }
     }
 
+    // The whole collection in ONE change of the scene, not one per object.
     private void Fill()
     {
         if (_objects == null || _scene == null) return;
 
-        foreach (var item in _objects)
+        var added = new List<ICanvasItem>();
+        foreach (var entry in _objects)
         {
-            if (item is ICanvasObject model) Put(model);
+            if (entry is ICanvasObject model && Place(model) is { } item && !_scene.Holds(item)) added.Add(item);
         }
+
+        _scene.ResetWithout(null, added);
     }
 
+    // Put back by an undo, an item may stand on the plane already: not a second time.
     private void Put(ICanvasObject model)
     {
-        if (_scene == null || _placed.ContainsKey(model)) return;
+        if (Place(model) is { } item && !_scene.Holds(item)) _scene.Add(item);
+    }
+
+    // The object's item, dressed and followed - not yet on the plane. Null for one placed already.
+    private ICanvasItem Place(ICanvasObject model)
+    {
+        if (_scene == null || _placed.ContainsKey(model)) return null;
 
         // THE ITEM THE SCENE ALREADY HAS for this object, as for a node: see CanvasGraphHost.Put. Only its control is
         // this canvas's.
@@ -151,7 +156,7 @@ internal sealed class CanvasDrawingHost
         _placed[model] = item;
         model.PropertyChanged += OnModelChanged;
 
-        _scene.Add(item);
+        return item;
     }
 
     // WHAT DRAWS IT, decided by what the application says it is. A shape the canvas knows how to draw; anything else is
@@ -189,23 +194,33 @@ internal sealed class CanvasDrawingHost
             ContentTemplateSelector = _selector
         };
 
-    private void Drop(ICanvasObject model)
+    // The objects taken out of the collection - one, or all of a Clear - off the plane in ONE change of the scene.
+    private void Drop(IList models)
     {
-        if (!_placed.Remove(model, out var item)) return;
+        var gone = new HashSet<ICanvasItem>();
+        foreach (var entry in models)
+        {
+            if (entry is not ICanvasObject model || !_placed.Remove(model, out var item)) continue;
 
-        model.PropertyChanged -= OnModelChanged;
-        _scene?.Remove(item);
+            model.PropertyChanged -= OnModelChanged;
+            gone.Add(item);
+        }
+
+        if (gone.Count > 0) _scene?.ResetWithout(gone);
     }
 
     private void Clear()
     {
+        var gone = new HashSet<ICanvasItem>();
         foreach (var (model, item) in _placed)
         {
             model.PropertyChanged -= OnModelChanged;
-            _scene?.Remove(item);
+            gone.Add(item);
         }
 
         _placed.Clear();
+
+        if (gone.Count > 0) _scene?.ResetWithout(gone);
     }
 
     private static void Discard(ElementItem item, ContentPresenter presenter)

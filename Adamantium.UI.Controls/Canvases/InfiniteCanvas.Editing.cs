@@ -196,9 +196,11 @@ public partial class InfiniteCanvas
     {
         if (!extend) _selection.Clear();
 
+        // Asked of a set, not the list: a search of the list for every item made picking many quadratic.
+        var have = new HashSet<ICanvasItem>(_selection);
         foreach (var item in items)
         {
-            if (Pickable(item) && !_selection.Contains(item)) _selection.Add(item);
+            if (Pickable(item) && have.Add(item)) _selection.Add(item);
         }
 
         Selected();
@@ -276,12 +278,23 @@ public partial class InfiniteCanvas
     {
         if (Scene is not { } scene) return;
 
+        // The pins a wire sits on, in one walk: asked of the scene pin by pin, a step back over a large graph was a walk
+        // of it for every pin.
+        var held = new HashSet<CanvasNodePin>();
+        foreach (var item in scene.Items)
+        {
+            if (item is not ConnectionItem wire) continue;
+
+            if (wire.FromPin != null) held.Add(wire.FromPin);
+            if (wire.ToPin != null) held.Add(wire.ToPin);
+        }
+
         foreach (var item in scene.Items)
         {
             if (item is not ElementItem { Element: CanvasNode node }) continue;
 
-            foreach (var pin in node.InputPins) ConnectionItem.Retie(scene, pin);
-            foreach (var pin in node.OutputPins) ConnectionItem.Retie(scene, pin);
+            foreach (var pin in node.InputPins) pin.IsConnected = held.Contains(pin);
+            foreach (var pin in node.OutputPins) pin.IsConnected = held.Contains(pin);
         }
     }
 
@@ -315,10 +328,11 @@ public partial class InfiniteCanvas
     {
         // In PAINT order, taken from the scene rather than from the selection: what was selected first is not what is
         // drawn first, and a group that reordered its own contents would change the drawing by being made.
+        var chosen = new HashSet<ICanvasItem>(_selection);
         var ordered = new List<ICanvasItem>();
         foreach (var item in Scene.Items)
         {
-            if (_selection.Contains(item)) ordered.Add(item);
+            if (chosen.Contains(item)) ordered.Add(item);
         }
 
         if (ordered.Count < 2) return null;
@@ -619,13 +633,16 @@ public partial class InfiniteCanvas
         into ??= _clipboardWires;
         if (Scene == null) return;
 
+        // Each thing's position in the list, looked up rather than searched for every wire.
+        var at = new Dictionary<ICanvasItem, int>(taken.Count);
+        for (var i = 0; i < taken.Count; i++) at.TryAdd(taken[i], i);
+
         foreach (var item in Scene.Items)
         {
             if (item is not ConnectionItem wire) continue;
 
-            var from = taken.IndexOf(wire.FromItem);
-            var to = taken.IndexOf(wire.ToItem);
-            if (from < 0 || to < 0) continue;
+            if (wire.FromItem is null || !at.TryGetValue(wire.FromItem, out var from)) continue;
+            if (wire.ToItem is null || !at.TryGetValue(wire.ToItem, out var to)) continue;
 
             var fromPin = Index(wire.FromItem, wire.FromPin);
             var toPin = Index(wire.ToItem, wire.ToPin);
@@ -646,6 +663,11 @@ public partial class InfiniteCanvas
             var step = new Vector2<double>(CopyOffset, CopyOffset);
             var made = new List<ICanvasItem>(copies.Count);
 
+            // ONE change of the scene for the whole set, on top of what is there: an item at a time is a walk of the
+            // scene each, and of everything that follows the scene.
+            var items = new List<ICanvasItem>(Scene.Items.Count + copies.Count + wires.Count);
+            items.AddRange(Scene.Items);
+
             foreach (var item in copies)
             {
                 // A copy OF THE COPY: the clipboard holds one set and may be pasted many times, and pasting the same
@@ -653,7 +675,7 @@ public partial class InfiniteCanvas
                 if (item.Copy() is not { } fresh) continue;
 
                 fresh.Move(step);
-                Scene.Add(fresh);
+                items.Add(fresh);
                 made.Add(fresh);
             }
 
@@ -664,13 +686,13 @@ public partial class InfiniteCanvas
                 if (source.Element is not CanvasNode left || target.Element is not CanvasNode right) continue;
                 if (fromPin >= left.OutputPins.Count || toPin >= right.InputPins.Count) continue;
 
-                var wire = new ConnectionItem(source, left.OutputPins[fromPin], target, right.InputPins[toPin]);
-                Scene.Add(wire);
+                items.Add(new ConnectionItem(source, left.OutputPins[fromPin], target, right.InputPins[toPin]));
 
                 left.OutputPins[fromPin].IsConnected = true;
                 right.InputPins[toPin].IsConnected = true;
             }
 
+            Scene.Reset(items);
             SelectMany(made, false);
             Scene.Touch();
         }
@@ -893,54 +915,113 @@ public partial class InfiniteCanvas
         }
     }
 
+    // ONE change of the scene for all that is deleted: an item at a time is a walk of the scene each, and of everything
+    // that follows the scene.
     private void Remove()
     {
-        // A COPY, because taking a thing off the plane is heard: the canvas lets go of what has left the scene (see
-        // Forget), and that writes to the very list this is walking.
-        foreach (var item in new List<ICanvasItem>(_selection))
-        {
-            // A NODE TAKES ITS WIRES WITH IT: a socket whose node is gone is not somewhere a wire can end, and left
-            // behind no gesture could ever reach it.
-            if (item is ElementItem { Element: CanvasNode }) Unwire(item as ElementItem);
+        var chosen = new List<ICanvasItem>(_selection);
+        var going = new HashSet<ICanvasItem>(chosen);
 
-            // What the scene refuses is inside a GROUP - a group's children leave the scene when it is made. Without
-            // this, deleting something reached by entering a group would quietly do nothing at all.
-            if (!Scene.Remove(item)) RemoveFromGroups(item);
+        // A NODE TAKES ITS WIRES WITH IT: a socket whose node is gone is not somewhere a wire can end, and left behind no
+        // gesture could ever reach it. Found in one walk, for every node deleted.
+        var nodes = new HashSet<ElementItem>();
+        foreach (var item in chosen) Nodes(item, nodes);
+
+        var freed = new List<CanvasNodePin>();
+        var left = new List<ICanvasItem>(Scene.Items.Count);
+        var inScene = new HashSet<ICanvasItem>();
+        foreach (var item in Scene.Items)
+        {
+            if (item is ConnectionItem wire && (nodes.Contains(wire.FromItem) || nodes.Contains(wire.ToItem)))
+            {
+                going.Add(wire);
+            }
+
+            if (!going.Contains(item))
+            {
+                left.Add(item);
+                continue;
+            }
+
+            inScene.Add(item);
+            if (item is ConnectionItem cut)
+            {
+                freed.Add(cut.FromPin);
+                freed.Add(cut.ToPin);
+            }
+        }
+
+        // What the scene does not hold is inside a GROUP - a group's children leave the scene when it is made. Without
+        // this, deleting something reached by entering a group would quietly do nothing at all. Taken out of every group
+        // in one walk; a group with nothing left is not a group, and leaving it would put an invisible thing in the
+        // paint order that can still be selected by its own empty box.
+        var inGroups = new HashSet<ICanvasItem>();
+        foreach (var item in chosen)
+        {
+            if (!inScene.Contains(item)) inGroups.Add(item);
+        }
+
+        if (inGroups.Count > 0)
+        {
+            left.RemoveAll(top => top is GroupItem group && Prune(group, inGroups) && group.Children.Count == 0);
         }
 
         _selection.Clear();
+        Scene.Reset(left);
+
+        // The sockets the wires taken out sat on are taken still only where another wire sits.
+        if (freed.Count > 0)
+        {
+            var held = new HashSet<CanvasNodePin>();
+            foreach (var item in left)
+            {
+                if (item is not ConnectionItem wire) continue;
+
+                held.Add(wire.FromPin);
+                held.Add(wire.ToPin);
+            }
+
+            foreach (var pin in freed)
+            {
+                if (pin != null) pin.IsConnected = held.Contains(pin);
+            }
+        }
+
         Selected();
         Scene.Touch();
     }
 
-    // Every wire fastened to a node, taken out with it. Gathered into a LIST first: removing from the scene changes
-    // what a walk over the scene is walking.
-    private void Unwire(ElementItem node)
+    // Takes the items wanted out of a group and the groups inside it - a group inside left empty goes too; whether any
+    // was taken.
+    private static bool Prune(GroupItem group, HashSet<ICanvasItem> gone)
     {
-        if (node == null || Scene == null) return;
-
-        var wires = new List<ConnectionItem>();
-        foreach (var item in Scene.Items)
+        var pruned = false;
+        foreach (var child in new List<ICanvasItem>(group.Children))
         {
-            if (item is ConnectionItem wire && wire.Holds(node)) wires.Add(wire);
+            if (gone.Contains(child))
+            {
+                pruned |= group.Remove(child);
+            }
+            else if (child is GroupItem nested && Prune(nested, gone))
+            {
+                pruned = true;
+                if (nested.Children.Count == 0) group.Remove(nested);
+            }
         }
 
-        foreach (var wire in wires) ConnectionItem.Cut(Scene, wire);
+        return pruned;
     }
 
-    private void RemoveFromGroups(ICanvasItem item)
+    // The nodes an item is or holds: a group deleted takes the wires of the nodes inside it too.
+    private static void Nodes(ICanvasItem item, HashSet<ElementItem> into)
     {
-        // Taken as a LIST first: emptying a group removes it from the store this is walking.
-        var tops = new List<ICanvasItem>(Scene.Items);
-
-        foreach (var top in tops)
+        if (item is ElementItem { Element: CanvasNode } node)
         {
-            if (top is not GroupItem group || !group.Remove(item)) continue;
-
-            // A group with nothing left is not a group; leaving it would put an invisible thing in the paint order that
-            // can still be selected by its own empty box.
-            if (group.Children.Count == 0) Scene.Remove(group);
-            return;
+            into.Add(node);
+        }
+        else if (item is GroupItem group)
+        {
+            foreach (var child in group.Children) Nodes(child, into);
         }
     }
 
@@ -1131,9 +1212,10 @@ public partial class InfiniteCanvas
 
         if (wanted != null)
         {
+            var have = new HashSet<ICanvasItem>();
             foreach (var item in wanted)
             {
-                if (canvas.Pickable(item) && !canvas._selection.Contains(item)) canvas._selection.Add(item);
+                if (canvas.Pickable(item) && have.Add(item)) canvas._selection.Add(item);
             }
         }
 

@@ -219,6 +219,417 @@ public class CanvasNodesSourceTests
         });
     }
 
+    // A GRAPH FILLED node by node, a wire to each: the plane takes each node and each wire once - not every wire again
+    // for every node, which made filling a graph of two thousand nodes take a minute.
+    [Test]
+    public void AGraphFilledNodeByNode_PutsEachNodeAndWireOnce()
+    {
+        var (_, scene, nodes) = Stage();
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        GraphNode last = null;
+        for (var i = 0; i < 50; i++)
+        {
+            var node = Made("Add", i * 120, 0);
+            nodes.Add(node);
+            if (last != null) _ = new CanvasConnection(last.Outputs[0], node.Inputs[0]);
+            last = node;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Has.Count.EqualTo(50 + 49), "fifty nodes and the wires between them");
+            Assert.That(changes, Is.EqualTo(50 + 49), "the plane was changed again for what it already held");
+            Assert.That(last.Inputs[0].Connections, Has.Count.EqualTo(1));
+        });
+    }
+
+    // THE WIRES OVER THE NODES, as a graph is drawn: filled node by node, the plane is put in that order once the edits
+    // of the moment are done - not a node over the wires drawn before it, a layer for every one.
+    [Test]
+    public void AGraphFilledNodeByNode_DrawsItsWiresOverItsNodes()
+    {
+        var (_, scene, nodes) = Stage();
+        GraphNode last = null;
+        for (var i = 0; i < 10; i++)
+        {
+            var node = Made("Add", i * 120, 0);
+            nodes.Add(node);
+            if (last != null) _ = new CanvasConnection(last.Outputs[0], node.Inputs[0]);
+            last = node;
+        }
+
+        LoopSignal.Drain();
+
+        var firstLine = scene.Items.ToList().FindIndex(item => item is ConnectionItem);
+        Assert.Multiple(() =>
+        {
+            Assert.That(firstLine, Is.EqualTo(10), "a node stands over a wire");
+            Assert.That(scene.Items.Skip(10).All(item => item is ConnectionItem), Is.True);
+        });
+    }
+
+    // A collection telling of many put in at once, in one event - as many applications' do.
+    private sealed class Batched : System.Collections.ObjectModel.ObservableCollection<ICanvasNode>
+    {
+        public void AddMany(params ICanvasNode[] added)
+        {
+            var at = Count;
+            foreach (var node in added) Items.Add(node);
+
+            OnCollectionChanged(new System.Collections.Specialized.NotifyCollectionChangedEventArgs(
+                System.Collections.Specialized.NotifyCollectionChangedAction.Add, added, at));
+        }
+    }
+
+    // MANY NODES PUT IN AT ONCE over a graph drawn already go under its wires too.
+    [Test]
+    public void NodesPutInAtOnce_OverAGraph_GoUnderItsWires()
+    {
+        var (canvas, scene, _) = Stage();
+        var nodes = new Batched();
+        canvas.Nodes = nodes;
+        var left = Made("Add", 0, 0);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+
+        nodes.AddMany(Made("Add", 400, 0), Made("Add", 600, 0));
+        LoopSignal.Drain();
+
+        Assert.That(scene.Items[^1], Is.InstanceOf<ConnectionItem>(), "a node put in stands over the wire");
+    }
+
+    // A NOTE PUT OVER A WIRE stays over it when the graph's nodes are put back under its wires.
+    [Test]
+    public void ANoteOverAWire_StaysOverIt_WhenNodesGoUnderTheWires()
+    {
+        var (_, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+        var note = new TextItem(new Vector2<double>(0, 100), "note", Adamantium.UI.Core.Media.Brushes.White, 12);
+        scene.Add(note);
+
+        nodes.Add(Made("Add", 400, 0));
+        LoopSignal.Drain();
+
+        var items = scene.Items.ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(items.IndexOf(note), Is.GreaterThan(items.FindIndex(item => item is ConnectionItem)),
+                "the note went under the wire");
+            Assert.That(items.FindLastIndex(item => item is ElementItem),
+                Is.LessThan(items.FindIndex(item => item is ConnectionItem)), "a node stands over the wire");
+        });
+    }
+
+    // A NODE MOVED in the application's list is the same node, wires and all.
+    [Test]
+    public void ANodeMovedInTheList_KeepsItsWires()
+    {
+        var (_, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+
+        nodes.Move(0, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(right.Inputs[0].Connections, Has.Count.EqualTo(1), "the move cut the wire out of the graph");
+            Assert.That(scene.Items.OfType<ConnectionItem>().Count(), Is.EqualTo(1));
+        });
+    }
+
+    // A SOCKET PUT ON A NODE draws that node's wires again, not every wire of the graph.
+    [Test]
+    public void ASocketPutOnANode_DrawsOnlyItsWiresAgain()
+    {
+        var (_, scene, nodes) = Stage();
+        var a = Made("Add", 0, 0);
+        var b = Made("Add", 200, 0);
+        var c = Made("Add", 400, 0);
+        var d = Made("Add", 600, 0);
+        nodes.Add(a);
+        nodes.Add(b);
+        nodes.Add(c);
+        nodes.Add(d);
+        _ = new CanvasConnection(a.Outputs[0], b.Inputs[0]);
+        _ = new CanvasConnection(c.Outputs[0], d.Inputs[0]);
+        var other = scene.Items.OfType<ConnectionItem>().ToList();
+
+        b.Inputs.Add(new GraphSocket { Name = "In 2" });
+
+        var after = scene.Items.OfType<ConnectionItem>().ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(after, Has.Count.EqualTo(2));
+            Assert.That(after, Does.Contain(other[1]), "the wire of nodes not touched was drawn anew");
+        });
+    }
+
+    // A NODE PUT BACK whose item and wire line an undo has put back on the plane already: the line is the graph's again.
+    [Test]
+    public void ANodePutBack_WithItsLineOnThePlane_HasItsWireAgain()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+        var item = canvas.ItemOf(right);
+        var line = scene.Items.OfType<ConnectionItem>().Single();
+
+        nodes.Remove(right);
+        scene.Add(item);
+        scene.Add(line);
+        nodes.Add(right);
+        LoopSignal.Drain();
+
+        Assert.That(right.Inputs[0].Connections, Has.Count.EqualTo(1), "the line standing again is not in the graph");
+    }
+
+    // A WIRE DRAWN into a full socket takes the place of the oldest there - and that wire's line goes with it.
+    [Test]
+    public void AWireDrawnIntoAFullSocket_TakesTheOldLineOff()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var source = new GraphNode { Kind = "One", Title = "One", Left = 0 };
+        source.Outputs.Add(new GraphSocket { Name = "Out", Capacity = 1 });
+        var first = Made("Add", 200, 0);
+        var second = Made("Add", 400, 0);
+        nodes.Add(source);
+        nodes.Add(first);
+        nodes.Add(second);
+        _ = new CanvasConnection(source.Outputs[0], first.Inputs[0]);
+        var old = scene.Items.OfType<ConnectionItem>().Single();
+        var from = canvas.ItemOf(source);
+        var to = canvas.ItemOf(second);
+
+        scene.Add(new ConnectionItem(from, ((CanvasNode)from.Element).OutputPins[0], to,
+            ((CanvasNode)to.Element).InputPins[0]));
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(source.Outputs[0].Connections.Single().To, Is.SameAs(second.Inputs[0]));
+            Assert.That(scene.Items, Does.Not.Contain(old), "the line of the wire given up stayed");
+            Assert.That(((CanvasNode)canvas.ItemOf(first).Element).InputPins[0].IsConnected, Is.False);
+        });
+    }
+
+    // THE LINE OF A WIRE THE GRAPH STILL HAS, put back by an undo with its nodes: that wire's line again, not a second
+    // wire beside it.
+    [Test]
+    public void ALinePutBackWithItsNodes_IsTheGraphsWire_NotASecond()
+    {
+        var canvas = new NodeGraph();
+        canvas.Measure(new Size<double>(800, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 800, 600));
+        var scene = new CanvasScene();
+        canvas.Scene = scene;
+        var nodes = new System.Collections.ObjectModel.ObservableCollection<ICanvasNode>();
+        canvas.Nodes = nodes;
+        var left = Made("Add", 0, 0);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        var wire = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+        var standing = new System.Collections.Generic.List<ICanvasItem>(scene.Items);
+
+        nodes.Clear();
+        foreach (var item in standing) scene.Add(item);
+        nodes.Add(left);
+        nodes.Add(right);
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(right.Inputs[0].Connections, Is.EqualTo(new[] { wire }), "another wire was made for the line");
+            Assert.That(scene.Items.OfType<ConnectionItem>().Count(), Is.EqualTo(1), "a second line was drawn");
+        });
+    }
+
+    // A SOCKET PUT BEFORE THE OTHERS is one change of the plane, however many wires the node has - and its lines keep
+    // the width they were drawn with.
+    [Test]
+    public void ASocketPutFirstOnANode_ChangesThePlaneOnce()
+    {
+        var (_, scene, nodes) = Stage();
+        var hub = Made("Hub", 0, 0, inputs: 0, outputs: 1);
+        nodes.Add(hub);
+        for (var i = 0; i < 5; i++)
+        {
+            var leaf = Made("Add", 200, i * 100);
+            nodes.Add(leaf);
+            _ = new CanvasConnection(hub.Outputs[0], leaf.Inputs[0]);
+        }
+
+        foreach (var line in scene.Items.OfType<ConnectionItem>())
+        {
+            line.Thickness = 5;
+            line.Stroke = Adamantium.UI.Core.Media.Brushes.Red;
+        }
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        hub.Outputs.Insert(0, new GraphSocket(GraphNode.Branches) { Name = "Out 0" });
+
+        var lines = scene.Items.OfType<ConnectionItem>().ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(lines, Has.Count.EqualTo(5));
+            Assert.That(lines.All(line => line.Thickness == 5 && ReferenceEquals(line.Stroke,
+                Adamantium.UI.Core.Media.Brushes.Red)), Is.True, "a line drawn again lost its look");
+        });
+    }
+
+    // AN UNDO PUTTING BACK the old line of a wire whose line was drawn anew: the same wire, not cut and made again.
+    [Test]
+    public void AnOldLinePutBackForItsWire_KeepsThatWire()
+    {
+        var (_, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0, outputs: 2);
+        var right = Made("Add", 200, 0);
+        nodes.Add(left);
+        nodes.Add(right);
+        var wire = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
+        var old = scene.Items.OfType<ConnectionItem>().Single();
+        left.Outputs.RemoveAt(1);
+        var anew = scene.Items.OfType<ConnectionItem>().Single();
+        Assume.That(anew, Is.Not.SameAs(old), "the line was not drawn anew");
+
+        var items = scene.Items.Where(item => !ReferenceEquals(item, anew)).ToList();
+        items.Add(old);
+        scene.Reset(items);
+
+        Assert.That(right.Inputs[0].Connections, Is.EqualTo(new[] { wire }), "the wire was cut and made again");
+    }
+
+    // A SOCKET PUT AFTER THE OTHERS moves no pin: the node's lines stay as they are.
+    [Test]
+    public void ASocketPutLastOnANode_LeavesItsLines()
+    {
+        var (_, scene, nodes) = Stage();
+        var hub = Made("Hub", 0, 0, inputs: 0, outputs: 1);
+        var leaf = Made("Add", 200, 0);
+        nodes.Add(hub);
+        nodes.Add(leaf);
+        _ = new CanvasConnection(hub.Outputs[0], leaf.Inputs[0]);
+        var line = scene.Items.OfType<ConnectionItem>().Single();
+
+        hub.Outputs.Add(new GraphSocket(GraphNode.Branches) { Name = "Out 2" });
+
+        Assert.That(scene.Items.OfType<ConnectionItem>().Single(), Is.SameAs(line), "the line was drawn anew");
+    }
+
+    // A NODE THE PLANE NO LONGER HOLDS, taken out of the collection, leaves the plane as it is.
+    [Test]
+    public void ANodeDeletedOnThePlane_TakenOutOfTheList_ChangesNothingMore()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var node = Made("Add", 0, 0);
+        nodes.Add(node);
+        canvas.SelectMany([canvas.ItemOf(node)], false);
+        canvas.DeleteSelection();
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        nodes.Remove(node);
+
+        Assert.That(changes, Is.Zero);
+    }
+
+    // A GRAPH EMPTIED from the application leaves the plane in one change, its wires cut out of the graph with it.
+    [Test]
+    public void AGraphEmptiedByTheApplication_LeavesThePlaneAtOnce()
+    {
+        var (_, scene, nodes) = Stage();
+        var models = new System.Collections.Generic.List<GraphNode>();
+        for (var i = 0; i < 30; i++)
+        {
+            var node = Made("Add", i * 120, 0);
+            nodes.Add(node);
+            if (models.Count > 0) _ = new CanvasConnection(models[^1].Outputs[0], node.Inputs[0]);
+            models.Add(node);
+        }
+
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        nodes.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items, Is.Empty);
+            Assert.That(changes, Is.EqualTo(1), "the plane was changed once for each node and wire");
+            Assert.That(models.All(model => model.Inputs[0].Connections.Count == 0), Is.True, "a wire stayed in the graph");
+        });
+    }
+
+    // A NODE TAKEN OUT takes its wires off with it, and the sockets they held on the nodes beside it are free again.
+    [Test]
+    public void ANodeTakenOut_FreesTheSocketsItsWiresHeld()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var middle = Made("Add", 200, 0);
+        var right = Made("Add", 400, 0);
+        nodes.Add(left);
+        nodes.Add(middle);
+        nodes.Add(right);
+        _ = new CanvasConnection(left.Outputs[0], middle.Inputs[0]);
+        _ = new CanvasConnection(middle.Outputs[0], right.Inputs[0]);
+
+        nodes.Remove(middle);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items.OfType<ConnectionItem>(), Is.Empty, "a wire of the node taken out stayed");
+            Assert.That(((CanvasNode)canvas.ItemOf(left).Element).OutputPins[0].IsConnected, Is.False);
+            Assert.That(((CanvasNode)canvas.ItemOf(right).Element).InputPins[0].IsConnected, Is.False);
+        });
+    }
+
+    // A WIRE CUT by the application takes its line off, and its sockets are free again - without the others redrawn.
+    [Test]
+    public void AWireCutByTheApplication_TakesOnlyItsLineOff_AndFreesItsSockets()
+    {
+        var (canvas, scene, nodes) = Stage();
+        var left = Made("Add", 0, 0);
+        var middle = Made("Add", 200, 0);
+        var right = Made("Add", 400, 0);
+        nodes.Add(left);
+        nodes.Add(middle);
+        nodes.Add(right);
+        var kept = new CanvasConnection(left.Outputs[0], middle.Inputs[0]);
+        var cut = new CanvasConnection(middle.Outputs[0], right.Inputs[0]);
+        var keptLine = scene.Items.OfType<ConnectionItem>().Single(line => line.ToItem == canvas.ItemOf(middle));
+        var changes = 0;
+        scene.Changed += (_, _) => changes++;
+
+        cut.Disconnect();
+
+        var rightPins = ((CanvasNode)canvas.ItemOf(right).Element).InputPins;
+        Assert.Multiple(() =>
+        {
+            Assert.That(scene.Items.OfType<ConnectionItem>().ToList(), Is.EqualTo(new[] { keptLine }),
+                "the cut wire's line stayed, or the kept one was drawn anew");
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(rightPins[0].IsConnected, Is.False, "the socket of the cut wire is still taken");
+            Assert.That(kept.To.Connections, Has.Count.EqualTo(1));
+        });
+    }
+
     // The scene and the graph are the application's and outlive the page; the node controls and the wires drawn for them
     // are the canvas's. A canvas thrown away takes its own items off the scene - or the scene keeps the canvas and its
     // page, and a canvas shown on it again lays a second set beside the first - and leaves the graph exactly as it was.
