@@ -36,6 +36,29 @@
         </Setter>
     </Style>
 
+    <!-- A bar's grip: six round dots in two columns, in the secondary ink - a handle the eye finds at once - coming up to
+         the primary ink under the pointer, as a row's drag handle does. -->
+    <Style Selector="Thumb.ToolBarGrip">
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Fill="{TemplateBinding Foreground}"
+                              Data="M0,1.5 A1.5,1.5 0 1 1 3,1.5 A1.5,1.5 0 1 1 0,1.5 Z M4.5,1.5 A1.5,1.5 0 1 1 7.5,1.5 A1.5,1.5 0 1 1 4.5,1.5 Z M0,7 A1.5,1.5 0 1 1 3,7 A1.5,1.5 0 1 1 0,7 Z M4.5,7 A1.5,1.5 0 1 1 7.5,7 A1.5,1.5 0 1 1 4.5,7 Z M0,12.5 A1.5,1.5 0 1 1 3,12.5 A1.5,1.5 0 1 1 0,12.5 Z M4.5,12.5 A1.5,1.5 0 1 1 7.5,12.5 A1.5,1.5 0 1 1 4.5,12.5 Z"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Thumb.ToolBarGrip">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        </PropertyTrigger>
+    </Style>
+
     <!-- A bar: a soft rounded group with no edge, as the Mac groups a toolbar's buttons. -->
     <Style Selector="ToolBar">
         <Setter Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
@@ -52,24 +75,13 @@
                             CornerRadius="8"
                             Padding="{TemplateBinding Padding}">
                         <DockPanel>
-                            <!-- A faint pill, the Mac's handle: there to be found, not to be read. -->
+                            <!-- The grip: drawn by Thumb.ToolBarGrip below. -->
                             <Thumb x:Name="PART_Grip"
+                                   Classes="ToolBarGrip"
                                    DockPanel.Dock="Left"
                                    Width="{ResourceReference ToolBarGripLength}"
                                    Cursor="SizeAll"
-                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}">
-                                <Thumb.Template>
-                                    <!-- Six round dots in two columns, in the secondary ink: a handle the eye finds at
-                                         once. -->
-                                    <ControlTemplate TargetType="Thumb">
-                                        <Border Background="Transparent">
-                                            <Path HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                  Fill="{ResourceReference TextFillColorSecondary}"
-                                                  Data="M0,1.5 A1.5,1.5 0 1 1 3,1.5 A1.5,1.5 0 1 1 0,1.5 Z M4.5,1.5 A1.5,1.5 0 1 1 7.5,1.5 A1.5,1.5 0 1 1 4.5,1.5 Z M0,7 A1.5,1.5 0 1 1 3,7 A1.5,1.5 0 1 1 0,7 Z M4.5,7 A1.5,1.5 0 1 1 7.5,7 A1.5,1.5 0 1 1 4.5,7 Z M0,12.5 A1.5,1.5 0 1 1 3,12.5 A1.5,1.5 0 1 1 0,12.5 Z M4.5,12.5 A1.5,1.5 0 1 1 7.5,12.5 A1.5,1.5 0 1 1 4.5,12.5 Z"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Thumb.Template>
-                            </Thumb>
+                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
                             <ToggleButton x:Name="PART_OverflowButton"
                                           DockPanel.Dock="Right"
                                           Width="{TemplateBinding OverflowButtonLength}"
