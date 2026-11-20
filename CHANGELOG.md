@@ -482,6 +482,8 @@ All packages share one version.
 
 ### Changed
 
+- `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
+  surfaces it kept itself before; the panel sees no difference.
 - **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and
   `RegisterAttachedReadOnly` return an `AdamantiumPropertyKey`, which the owner keeps private and writes through
   (`SetValue`, `SetCurrentValue`, `ClearValue` taking the key); the public field is the key's `Property`, for reading,
