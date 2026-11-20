@@ -114,6 +114,8 @@ public class AutomationAuditTests
         [typeof(TilesHost)] = (T.Group, null),
         [typeof(TitleBar)] = (T.TitleBar, null),
         [typeof(ToggleSwitch)] = (T.Button, null),
+        [typeof(ToolBar)] = (T.ToolBar, null),
+        [typeof(ToolBarTray)] = (T.Pane, null),
         [typeof(ToolTip)] = (T.ToolTip, null),
         [typeof(TreeView)] = (T.Tree, null),
         [typeof(TreeViewItem)] = (T.TreeItem, null),

@@ -1,0 +1,5 @@
+<Language>
+    <Phrase Key="MoreCommands" Text="Ещё команды"/>
+    <Phrase Key="LockToolBars" Text="Закрепить панели"/>
+    <Phrase Key="Grip" Text="Переместить панель"/>
+</Language>

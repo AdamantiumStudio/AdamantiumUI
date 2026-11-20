@@ -1,0 +1,24 @@
+<Language>
+    <Phrase Key="Hint" Text="Перетащите полосу за ручку в другое место ряда, в другой ряд, под последний ряд — в новый, или в нижний лоток. Правая кнопка по лотку показывает и прячет полосы и закрепляет их. Сузьте верхний лоток: последние команды уйдут в меню своей полосы."/>
+    <Phrase Key="Width" Text="Ширина верхнего лотка"/>
+    <Phrase Key="Lower" Text="Другой лоток"/>
+    <Phrase Key="Edit" Text="Правка"/>
+    <Phrase Key="Text" Text="Текст"/>
+    <Phrase Key="Paragraph" Text="Абзац"/>
+    <Phrase Key="View" Text="Вид"/>
+    <Phrase Key="Extra" Text="Ещё"/>
+    <Phrase Key="Cut" Text="Вырезать"/>
+    <Phrase Key="Copy" Text="Копировать"/>
+    <Phrase Key="Paste" Text="Вставить"/>
+    <Phrase Key="Bold" Text="Полужирный"/>
+    <Phrase Key="Italic" Text="Курсив"/>
+    <Phrase Key="Underline" Text="Подчёркнутый"/>
+    <Phrase Key="Left" Text="Влево"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Right" Text="Вправо"/>
+    <Phrase Key="ZoomIn" Text="Крупнее"/>
+    <Phrase Key="ZoomOut" Text="Мельче"/>
+    <Phrase Key="Help" Text="Справка"/>
+    <Phrase Key="Nothing" Text="пока ничего"/>
+    <Phrase Key="Report" Text="Нажато: {command}"/>
+</Language>

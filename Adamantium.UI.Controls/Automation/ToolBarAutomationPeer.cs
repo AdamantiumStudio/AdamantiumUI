@@ -11,4 +11,7 @@ public class ToolBarAutomationPeer : UIComponentAutomationPeer
     }
 
     public override AutomationControlType ControlType => AutomationControlType.ToolBar;
+
+    // A tool bar is called by its header.
+    protected override string NameCore() => (Owner as ToolBar)?.Header as string;
 }

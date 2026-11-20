@@ -1,0 +1,49 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <StackPanel Orientation="Vertical" Margin="24" MaxWidth="1000">
+
+        <TextBlock Text="ToolBarTray + ToolBar" FontSize="20" MarginBottom="4"/>
+        <TextBlock Text="{Localize ToolBarsStrings.Hint}" TextWrapping="WrapByWords"
+                   FontSize="13" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="14"/>
+
+        <StackPanel Orientation="Horizontal" MarginBottom="10">
+            <TextBlock x:Name="TrayWidthLabel" Text="{Localize ToolBarsStrings.Width}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Slider x:Name="TrayWidth" Width="240" Minimum="120" Maximum="900"
+                    AutomationProperties.LabeledBy="{Binding ElementName=TrayWidthLabel}"
+                    Value="{Binding TrayWidth, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <!-- Two rows: Edit and Text in the first, Paragraph and View in the second. -->
+        <ToolBarTray x:Name="UpperTray" Width="{Binding TrayWidth}" HorizontalAlignment="Left" MarginBottom="16">
+            <ToolBar x:Name="EditBar" Header="{Localize ToolBarsStrings.Edit}" Band="0" BandIndex="0">
+                <Button x:Name="CutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
+                <Button x:Name="CopyCommand" Content="{Localize ToolBarsStrings.Copy}" Command="{Binding PressCommand}" CommandParameter="Copy"/>
+                <Button x:Name="PasteCommand" Content="{Localize ToolBarsStrings.Paste}" Command="{Binding PressCommand}" CommandParameter="Paste"/>
+            </ToolBar>
+            <ToolBar x:Name="TextBar" Header="{Localize ToolBarsStrings.Text}" Band="0" BandIndex="1">
+                <ToggleButton x:Name="BoldCommand" Content="{Localize ToolBarsStrings.Bold}" Command="{Binding PressCommand}" CommandParameter="Bold"/>
+                <ToggleButton x:Name="ItalicCommand" Content="{Localize ToolBarsStrings.Italic}" Command="{Binding PressCommand}" CommandParameter="Italic"/>
+                <ToggleButton x:Name="UnderlineCommand" Content="{Localize ToolBarsStrings.Underline}" Command="{Binding PressCommand}" CommandParameter="Underline"/>
+            </ToolBar>
+            <ToolBar x:Name="ParagraphBar" Header="{Localize ToolBarsStrings.Paragraph}" Band="1" BandIndex="0">
+                <Button x:Name="LeftCommand" Content="{Localize ToolBarsStrings.Left}" Command="{Binding PressCommand}" CommandParameter="Left"/>
+                <Button x:Name="CenterCommand" Content="{Localize ToolBarsStrings.Center}" Command="{Binding PressCommand}" CommandParameter="Center"/>
+                <Button x:Name="RightCommand" Content="{Localize ToolBarsStrings.Right}" Command="{Binding PressCommand}" CommandParameter="Right"/>
+            </ToolBar>
+            <ToolBar x:Name="ViewBar" Header="{Localize ToolBarsStrings.View}" Band="1" BandIndex="1">
+                <Button x:Name="ZoomInCommand" Content="{Localize ToolBarsStrings.ZoomIn}" Command="{Binding PressCommand}" CommandParameter="ZoomIn"/>
+                <Button x:Name="ZoomOutCommand" Content="{Localize ToolBarsStrings.ZoomOut}" Command="{Binding PressCommand}" CommandParameter="ZoomOut"/>
+            </ToolBar>
+        </ToolBarTray>
+
+        <TextBlock Text="{Localize ToolBarsStrings.Lower}" FontSize="14" MarginBottom="6"/>
+        <ToolBarTray x:Name="LowerTray" HorizontalAlignment="Stretch" MarginBottom="16">
+            <ToolBar x:Name="ExtraBar" Header="{Localize ToolBarsStrings.Extra}">
+                <Button x:Name="HelpCommand" Content="{Localize ToolBarsStrings.Help}" Command="{Binding PressCommand}" CommandParameter="Help"/>
+            </ToolBar>
+        </ToolBarTray>
+
+        <TextBlock x:Name="ToolBarsReport"
+                   Text="{Localize ToolBarsStrings.Report, command={Localize ToolBarsStrings, Key={Binding Pressed}}}"/>
+    </StackPanel>
+</View>

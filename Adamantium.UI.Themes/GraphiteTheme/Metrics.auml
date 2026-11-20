@@ -251,6 +251,9 @@
     <sys:Double x:Key="FocusRingOutset">1</sys:Double>
     <sys:Double x:Key="DragHandleWidth">12</sys:Double>
     <sys:Double x:Key="DragHandleHeight">16</sys:Double>
+    <sys:Double x:Key="ToolBarGripLength">8</sys:Double>
+    <sys:Double x:Key="ToolBarOverflowButtonLength">16</sys:Double>
+    <sys:Double x:Key="ToolBarSpacing">2</sys:Double>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- The tab strip's own furniture. The close and pin buttons are SQUARE and sized to this theme's row rather than

@@ -24,6 +24,7 @@
     <Phrase Key="PropertyGrid" Text="Property grid"/>
     <Phrase Key="Tabs" Text="Tabs"/>
     <Phrase Key="Menus" Text="Menus"/>
+    <Phrase Key="ToolBars" Text="Toolbars"/>
     <Phrase Key="Trees" Text="Trees"/>
     <Phrase Key="Splitter" Text="Splitter"/>
     <Phrase Key="ColorPicker" Text="Color Picker"/>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The tray: a band of the window's chrome, its bars in rows. Its menu holds the bars by name - the tray adds them
+         when it opens - and the switch that locks them. -->
+    <Style Selector="ToolBarTray">
+        <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
+        <Setter Property="Padding" Value="4,3"/>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <ToolBarTrayPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu x:Shared="False">
+                    <MenuItem Header="{Localize ToolBarStrings.LockToolBars}"
+                              Command="{x:Static ToolBarTray.LockCommand}"/>
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBarTray">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A bar's grip: square dots in two columns, quiet at rest and coming up to the primary ink under the pointer, as a
+         row's drag handle does. -->
+    <Style Selector="Thumb.ToolBarGrip">
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="Transparent">
+                        <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Fill="{TemplateBinding Foreground}"
+                              Data="M0,0 L2,0 L2,2 L0,2 Z M4,0 L6,0 L6,2 L4,2 Z M0,4 L2,4 L2,6 L0,6 Z M4,4 L6,4 L6,6 L4,6 Z M0,8 L2,8 L2,10 L0,10 Z M4,8 L6,8 L6,10 L4,10 Z M0,12 L2,12 L2,14 L0,14 Z M4,12 L6,12 L6,14 L4,14 Z"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Thumb.ToolBarGrip">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- A bar: its grip, its commands as their own styles draw them, and the chevron of what does not fit. A card on the
+         tray, so a bar reads as one thing to move. -->
+    <Style Selector="ToolBar">
+        <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="Margin" Value="0,0,4,3"/>
+        <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
+        <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBar">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{ResourceReference CornerRadiusDefault}"
+                            Padding="{TemplateBinding Padding}">
+                        <DockPanel>
+                            <!-- The grip moves the bar; drawn by Thumb.ToolBarGrip below. -->
+                            <Thumb x:Name="PART_Grip"
+                                   Classes="ToolBarGrip"
+                                   DockPanel.Dock="Left"
+                                   Width="{ResourceReference ToolBarGripLength}"
+                                   Cursor="SizeAll"
+                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
+                            <ToggleButton x:Name="PART_OverflowButton"
+                                          DockPanel.Dock="Right"
+                                          Width="{TemplateBinding OverflowButtonLength}"
+                                          MinWidth="0"
+                                          Padding="0"
+                                          Visibility="Collapsed"
+                                          IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
+                                          ToolTip="{Localize ToolBarStrings.MoreCommands}"
+                                          AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
+                                <Path Data="M0,0 L4,4 L8,0"
+                                      Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </ToggleButton>
+                            <StackPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
+                                        Orientation="{TemplateBinding Orientation}"
+                                        VerticalAlignment="Center"/>
+                            <!-- What does not fit: the same commands, on a card under the chevron. -->
+                            <Popup x:Name="PART_OverflowPopup"
+                                   Placement="Bottom"
+                                   PlacementAlignment="End"
+                                   KeepOpen="False"
+                                   IgnoreTargetPress="True"
+                                   IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
+                                <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                        BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                        Padding="4">
+                                    <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
+                                                Orientation="{TemplateBinding Orientation}"/>
+                                </Border>
+                            </Popup>
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="ToolBar">
+        <PropertyTrigger Property="HasOverflowItems" Value="true">
+            <Setter TargetName="PART_OverflowButton" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ToolBarTray.IsLocked" Value="true">
+            <Setter TargetName="PART_Grip" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <!-- Down the side of a window: the grip on top, the chevron below. -->
+        <PropertyTrigger Property="Orientation" Value="Vertical">
+            <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
+            <Setter TargetName="PART_Grip" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
+            <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
+            <Setter TargetName="PART_OverflowButton" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_OverflowButton" Property="Height" Value="{TemplateBinding OverflowButtonLength}"/>
+            <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Stretch"/>
+            <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_OverflowPopup" Property="Placement" Value="Right"/>
+        </PropertyTrigger>
+        <!-- Lifted while it is moved, so the rows under it still read. -->
+        <PropertyTrigger Property="IsMoving" Value="true">
+            <Setter Property="Opacity" Value="0.85"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>
