@@ -940,7 +940,7 @@ public class Ribbon : Selector
     /// Latin layout. Office matches what was actually typed, and so does this.</summary>
     private void OnKeyTipText(object sender, TextInputEventArgs e)
     {
-        if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text)) return;
+        if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text) || !IsShown()) return;
 
         // With Alt held a letter is a shortcut, not a key tip, and autorepeat is not a new keystroke; both are swallowed.
         if (_altDown || _altAlone.LastWasRepeat)
@@ -999,7 +999,7 @@ public class Ribbon : Selector
             return;
         }
 
-        if (_keyTips is not { IsActive: true }) return;
+        if (_keyTips is not { IsActive: true } || !IsShown()) return;
 
         if (e.Key == Key.Escape)
         {
@@ -1018,18 +1018,22 @@ public class Ribbon : Selector
     /// <summary>Whether the key tips are up.</summary>
     internal bool ShowsKeyTips => _keyTips is { IsActive: true };
 
-    // Shown: neither the ribbon nor anything it stands in is collapsed or hidden.
+    // Shown: nothing from the ribbon up to its window is collapsed or hidden. Put away while its key tips are up, it ends
+    // them, so they take no more keys.
     private bool IsShown()
     {
-        for (IUIComponent element = this; element != null; element = element.VisualParent)
+        if (KeyboardNavigation.IsShown(this))
         {
-            if (element.Visibility != Visibility.Visible)
-            {
-                return false;
-            }
+            return true;
         }
 
-        return true;
+        if (_keyTips is { IsActive: true })
+        {
+            _keyTips.End();
+        }
+
+        _altDown = false;
+        return false;
     }
 
     private void Toggle()

@@ -259,7 +259,7 @@ public static class KeyboardNavigation
     }
 
     // Visible up to a window, or up to an overlay still hosted on one.
-    private static bool IsShown(IUIComponent element)
+    internal static bool IsShown(IUIComponent element)
     {
         IUIComponent top = null;
         for (var node = element; node != null; node = node.VisualParent)
