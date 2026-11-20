@@ -19,7 +19,7 @@ public class UniverseKeyTranslationTests
                 continue;
             }
 
-            Assert.That(UIUniverseOutput.TranslationKeys.TryGetValue(key, out var translated), Is.True, key.ToString());
+            Assert.That(UniverseInputListener.TranslationKeys.TryGetValue(key, out var translated), Is.True, key.ToString());
             Assert.That(translated, Is.EqualTo(same), key.ToString());
         }
     }
