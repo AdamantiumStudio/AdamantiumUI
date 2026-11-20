@@ -27,7 +27,7 @@ public class ListBoxItemAutomationPeer : ContentControlAutomationPeer, ISelectio
         switch (Owner)
         {
             case DropDownItem item:
-                (item.Owner ?? item.GetLogicalAncestors().OfType<DropDown>().FirstOrDefault())?.SelectFromContainer(item);
+                item.FindOwner()?.SelectFromContainer(item);
                 break;
             case ListBoxItem item when List() is { } list:
                 list.SelectOnlyItem(list.ItemOf(item));

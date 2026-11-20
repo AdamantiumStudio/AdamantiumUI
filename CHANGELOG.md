@@ -637,6 +637,8 @@ All packages share one version.
 
 ### Fixed
 
+- A drop-down's row written in markup, chosen through automation before the list was ever opened, is selected and runs
+  the drop-down's command; it was taken for no row of the list.
 - A window whose frame was held back for want of room in a batch draws it again: the next frame, its buffers grown,
   was owed by nothing recorded, so the window kept the frame before until something else changed - and with two
   frames unshown the loop stopped recording at all, an application under automation never going idle. Seen when
