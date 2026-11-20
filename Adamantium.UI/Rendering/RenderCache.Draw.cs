@@ -2106,6 +2106,8 @@ public partial class RenderCache
             device?.WithholdFrame();
             StreamStaleBecause("deferredForRoom");
             Core.LoopSignal.Request();
+            // The next frame, its buffers grown, draws it: nothing recorded owes the surface that frame.
+            AskForFrame?.Invoke();
         }
 
         if (_copyFadeNotLive)
