@@ -7,6 +7,16 @@ All packages share one version.
 
 ### Added
 
+- `BindingBase.Delay`, in milliseconds, as WPF's: a binding that writes back waits that long after the target's last
+  change before it writes the source - a search typed letter by letter, the list filtered once the typing stops - each
+  change starting the wait again. What waits is written at once when the target loses the keyboard, when the binding is
+  told (`UpdateSource`), and when it lets its source go - another DataContext, a row recycled, another object on its
+  path - into the source it was typed for, not the next. A source that moves meanwhile drops what waited: the target
+  shows the source. Only what `UpdateSourceTrigger.PropertyChanged` writes waits. Written in markup as
+  `{Binding Query, Mode=TwoWay, Delay=300}` on a `{Binding}`, `{Ancestor}` or `{Self}`; a value that is not whole
+  milliseconds is a markup error, and a `MultiBinding`, which writes nothing back, takes no `Delay`.
+- A change waiting for the keyboard to leave (`UpdateSourceTrigger.LostFocus`) is written to its source when the binding
+  lets that source go - another DataContext, a row recycled with the focus in it - where it was lost.
 - `PlatformSettings.KeyRepeatDelay` and `KeyRepeatInterval`: how long a held key waits before it repeats and how
   often it then repeats, in milliseconds, as the user set them in the OS - on Windows its keyboard settings, on
   Wayland the seat's repeat info; 500 and 33 elsewhere. An interval of 0 says the user turned repeating off. A
@@ -771,7 +781,8 @@ All packages share one version.
 
 ### Removed
 
-- `BindingBase.Delay` and `BindingBase.IsAsync`: nothing read them, so a binding given either did as it would without.
+- `BindingBase.IsAsync`: nothing read it, so a binding given it did as it would without. (`Delay`, which nothing read
+  either, works now - see Added.)
 - `Ancestor.Apply` and `Self.Apply`: bind with `SetBinding`, as any binding.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 

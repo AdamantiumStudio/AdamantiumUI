@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Diagnostics;
+using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -171,6 +172,8 @@ public class BindingExpression : BindingExpressionBase
          Languages.Follow(this);
       }
 
+      // A change waiting was made for the source held until now: written there before another is resolved.
+      WriteWhatWaits();
       // Re-resolve against the (possibly new) DataContext BEFORE touching subscriptions.
       var previousObserved = _observed;
       UnwatchPassed();
@@ -228,6 +231,9 @@ public class BindingExpression : BindingExpressionBase
 
    public override void CloseConnection()
    {
+      // A change still waiting is the source's being let go, written while it is still the one held.
+      WriteWhatWaits();
+      StopDelay();
       Languages.Unfollow(this);
       UnwatchErrors();
       UnwatchPassed();
@@ -698,6 +704,11 @@ public class BindingExpression : BindingExpressionBase
       // F2: a runtime source change is batched + coalesced (applied once per frame), not pushed synchronously.
       if (ours)
       {
+         if (_delayed)
+         {
+            DropWhatWaits();
+         }
+
          MarkSourceAhead();
       }
    }
@@ -834,9 +845,72 @@ public class BindingExpression : BindingExpressionBase
          case UpdateSourceTrigger.LostFocus when Target is IInputComponent input && HoldsFocus(input):
             _sourceBehind = true;
             break;
+         case UpdateSourceTrigger.PropertyChanged when Binding.Delay > 0:
+            WriteAfterTheDelay();
+            break;
          default:
             UpdateSource();
             break;
+      }
+   }
+
+   // The delay's timer, made at the first change that waits, and whether the source waits on it.
+   private DispatcherTimer _delay;
+   private bool _delayed;
+
+   // Each change starts the wait again: the source is written once the changes stop.
+   private void WriteAfterTheDelay()
+   {
+      _sourceBehind = true;
+      _delayed = true;
+      if (_delay == null)
+      {
+         _delay = new DispatcherTimer();
+         _delay.Tick += OnDelayed;
+      }
+
+      // One tick, the delay after the last change: the interval as long, and the tick stops it.
+      var wait = TimeSpan.FromMilliseconds(Binding.Delay);
+      _delay.Interval = wait;
+      _delay.Start(wait);
+   }
+
+   private void OnDelayed(object sender, EventArgs e)
+   {
+      _delay?.Stop();
+      if (_delayed && _sourceBehind)
+      {
+         UpdateSource();
+      }
+   }
+
+   // The change waiting - out its delay, or for the keyboard to leave - written to the source still held: the one it was
+   // made for.
+   private void WriteWhatWaits()
+   {
+      if (_sourceBehind && ResolvedSource != null)
+      {
+         UpdateSource();
+      }
+   }
+
+   // The source moved while a change waited: the target shows what the source holds now, and the change waiting was made
+   // against what it held before.
+   private void DropWhatWaits()
+   {
+      _sourceBehind = false;
+      _delayed = false;
+      _delay?.Stop();
+   }
+
+   private void StopDelay()
+   {
+      _delayed = false;
+      if (_delay != null)
+      {
+         _delay.Tick -= OnDelayed;
+         _delay.Dispose();
+         _delay = null;
       }
    }
 
@@ -861,8 +935,9 @@ public class BindingExpression : BindingExpressionBase
 
    private void WatchFocus()
    {
+      // A change waiting out its delay is written, too, when the keyboard leaves: what was typed is the source's then.
       var watched = Mode is BindingMode.TwoWay or BindingMode.OneWayToSource && !IsProducer &&
-                    Trigger == UpdateSourceTrigger.LostFocus
+                    (Trigger == UpdateSourceTrigger.LostFocus || Trigger == UpdateSourceTrigger.PropertyChanged && Binding.Delay > 0)
          ? Target as IInputComponent
          : null;
       if (ReferenceEquals(watched, _focusWatched)) return;
@@ -1222,6 +1297,8 @@ public class BindingExpression : BindingExpressionBase
    public override void UpdateSource()
    {
       _sourceBehind = false;
+      _delayed = false;
+      _delay?.Stop();
       var sourceType = _leaf?.ValueType ?? _source?.ValueType;
       if (sourceType == null || !IsSourceWritable || TargetProperty == null) return;
       if (_leaf != null && !Walk()) return;

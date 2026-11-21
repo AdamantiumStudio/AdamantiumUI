@@ -72,6 +72,7 @@
     <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: type '{type}' could not be resolved."/>
     <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: Stop type '{type}' could not be resolved."/>
     <Phrase Key="ConverterInvalid" Text="{binding}: Converter must be a resource or converter markup extension."/>
+    <Phrase Key="DelayNotMilliseconds" Text="{binding}: Delay is a whole number of milliseconds, not '{delay}'."/>
     <Phrase Key="AncestorUnknownArgument" Text="Ancestor: unknown argument '{argument}'."/>
     <Phrase Key="SelfUnknownArgument" Text="Self: unknown argument '{argument}'."/>
     <Phrase Key="UnknownBindingProperty" Text="Unknown binding property '{name}'"/>
