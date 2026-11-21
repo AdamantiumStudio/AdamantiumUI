@@ -21,6 +21,10 @@ public class DragThresholdTests
         public Size<double> DragThreshold => new(4, 4);
 
         public uint HoverTime => 400;
+
+        public uint KeyRepeatDelay => 500;
+
+        public uint KeyRepeatInterval => 33;
     }
 
     private INativePlatformSettings _previous;

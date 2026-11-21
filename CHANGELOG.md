@@ -17,6 +17,10 @@ All packages share one version.
   milliseconds is a markup error, and a `MultiBinding`, which writes nothing back, takes no `Delay`.
 - A change waiting for the keyboard to leave (`UpdateSourceTrigger.LostFocus`) is written to its source when the binding
   lets that source go - another DataContext, a row recycled with the focus in it - where it was lost.
+- `PlatformSettings.KeyRepeatDelay` and `KeyRepeatInterval`: how long a held key waits before it repeats and how
+  often it then repeats, in milliseconds, as the user set them in the OS - on Windows its keyboard settings, on
+  Wayland the seat's repeat info; 500 and 33 elsewhere. An interval of 0 says the user turned repeating off. A
+  platform answers them through `INativePlatformSettings`.
 - `ToolBarGroup`: a section of a `ToolBar`, commands that belong together as a ribbon's group does. It is one item of
   its bar, so a bar short of room sends it to its overflow menu whole, never split; the bar draws a rule before it
   wherever a command stands before it, on the bar or in the menu. To automation it is a group named by its `Header`.
@@ -573,6 +577,10 @@ All packages share one version.
 
 ### Changed
 
+- `RepeatButton` and `NumericUpDown` repeat at the user's pace from the OS: `Delay`, `Interval` and `RepeatInterval`
+  are 0 by default, which waits and repeats as a held key does (`PlatformSettings.KeyRepeatDelay`,
+  `KeyRepeatInterval`); a number of their own still wins. Keys told not to repeat leave a repeat button at thirty a
+  second.
 - An `Ellipse` and an `EllipseGeometry` have a `StartAngle` and a `SweepAngle`, and no `StopAngle`: `Ellipse.StopAngle`,
   drawn as the sweep, is `SweepAngle`. Markup and setters write `SweepAngle="90"` where they wrote `StopAngle="90"`; a
   setter of `StopAngle` finds no property and sets nothing. `EllipseGeometry.StopAngleProperty` is `SweepAngleProperty`.
