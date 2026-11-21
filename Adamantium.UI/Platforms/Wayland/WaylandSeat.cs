@@ -182,6 +182,11 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public Size<double> DragThreshold => new(8, 8);
 
+    public uint KeyRepeatDelay => (uint)Math.Max(0, repeatDelay);
+
+    // The seat says repeats a second; none means keys do not repeat, and the neutral layer keeps its own pace.
+    public uint KeyRepeatInterval => repeatRate > 0 ? (uint)Math.Round(1000.0 / repeatRate) : 0;
+
     #endregion
 
     #region INativeCursors

@@ -27,4 +27,12 @@ public interface INativePlatformSettings
     /// threshold, the GTK/Qt start-drag distance) - honoring it is the difference between "clicks sometimes
     /// drag by accident" and the app feeling like the rest of the system.</summary>
     Size<double> DragThreshold { get; }
+
+    /// <summary>How long a held key waits before it repeats, in milliseconds (Win32 <c>SPI_GETKEYBOARDDELAY</c>, the
+    /// Wayland seat's repeat delay).</summary>
+    uint KeyRepeatDelay { get; }
+
+    /// <summary>How long between two repeats of a held key, in milliseconds (Win32 <c>SPI_GETKEYBOARDSPEED</c>, the
+    /// Wayland seat's repeat rate).</summary>
+    uint KeyRepeatInterval { get; }
 }

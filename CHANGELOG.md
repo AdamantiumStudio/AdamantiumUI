@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `PlatformSettings.KeyRepeatDelay` and `KeyRepeatInterval`: how long a held key waits before it repeats and how
+  often it then repeats, in milliseconds, as the user set them in the OS - on Windows its keyboard settings, on
+  Wayland the seat's repeat info; 500 and 33 elsewhere. A platform answers them through `INativePlatformSettings`.
 - `ToolBarGroup`: a section of a `ToolBar`, commands that belong together as a ribbon's group does. It is one item of
   its bar, so a bar short of room sends it to its overflow menu whole, never split; the bar draws a rule before it
   wherever a command stands before it, on the bar or in the menu. To automation it is a group named by its `Header`.
