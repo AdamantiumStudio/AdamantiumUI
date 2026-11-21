@@ -130,8 +130,7 @@ public class DataGridSearchPanel : Control
         if (Owner == null) return;
 
         e.Handled = true;
-        if (string.Equals(Owner.SearchText, _text?.Text)) Owner.FindNext();
-        else Find();
+        Owner.Find(_text?.Text);
     }
 
     private void OnFind(object sender, RoutedEventArgs e) => Find();

@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `TreeDataGrid.FindCommand` and `FindPreviousCommand`, and `Find(text)`: a search field outside the table binds its
+  Enter to them - a new text is searched, the same one goes on to its next match, Shift+Enter back - with the table's
+  own marks and steps, no strip of its own. A field bound to `SearchText` searches on its Enter all the same, and
+  emptied - its clear button - takes the marks away. The strip's Enter goes the same way.
+
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
   they come; a record open in its member comes back open when the rows are built again, and one whose member says anew
@@ -730,6 +735,9 @@ All packages share one version.
 
 ### Fixed
 
+- A universe of another process shown in a panel took no keys: the host was told of the focus on `GotFocus`, raised
+  before the panel holds the keyboard, so it heard it had none and was never told again. It is told on the keyboard's
+  own focus now.
 - `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
   with its row now. Cells selected below a branch opened or shut, the active cell, the Shift anchor and an open edit
   move with their rows; an edit whose row went is cancelled, never written into another record. Rows made again -
