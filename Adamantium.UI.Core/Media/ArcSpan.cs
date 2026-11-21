@@ -29,8 +29,8 @@ public readonly struct ArcSpan : IEquatable<ArcSpan>
         return Math.Abs(left) <= RoundingLeft ? Math.CopySign(Turn, sweep) : left;
     }
 
-    // Degrees past whole turns that are rounding, not an arc anybody meant.
-    private const double RoundingLeft = 1e-9;
+    // Degrees past whole turns that are rounding, not an arc anybody meant - single-precision sums too.
+    private const double RoundingLeft = 1e-5;
 
     /// <summary>Where the arc starts, in [0, 360).</summary>
     public double Start { get; }

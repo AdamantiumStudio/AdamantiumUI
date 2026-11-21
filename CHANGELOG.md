@@ -598,7 +598,8 @@ All packages share one version.
   is hit. `ArcSpan` (new) is the one statement of them: parametric degrees, as an HTML canvas measures them, so a
   sector's share of the area is its share of the turn; any start taken round the turn (`-90` starts at twelve); the
   sweep's sign its way round, negative counterclockwise; a sweep past a turn what is left over whole turns (`485` is
-  the arc of `125`), and whole turns (`720`) the whole ellipse. `Ellipse.StartAngle` and
+  the arc of `125`), and whole turns (`720`) the whole ellipse - so are whole turns and up to 0.00001° of rounding
+  past them, a ring summed from its shares. `Ellipse.StartAngle` and
   `SweepAngle` are kept as written - the start was held to no less than 0, the sweep to 0..360, so a start at twelve and
   a sweep backwards could not be written - and `Ellipse.Span`, `EllipseGeometry.Span` and `EllipsePayload.Span` say what
   they cover. The batch takes a sweep backwards as the same cut gone round clockwise; a dashed or trimmed pen, which

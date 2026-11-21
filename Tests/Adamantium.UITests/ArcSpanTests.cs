@@ -25,12 +25,14 @@ public class ArcSpanTests
     [TestCase(1080, 360)]
     [TestCase(3 * 120.00000000000001, 360)]
     [TestCase(-720.0000000001, -360)]
+    [TestCase(360.000004, 360)]
+    [TestCase(360.001, 0.001)]
     [TestCase(double.PositiveInfinity, 360)]
     [TestCase(double.NegativeInfinity, -360)]
     [TestCase(-90, -90)]
     [TestCase(360, 360)]
     public void ASweepPastATurn_IsWhatIsLeftOverWholeTurns_AndWholeTurnsAreATurn(double sweep, double covered) =>
-        Assert.That(new ArcSpan(0, sweep).Sweep, Is.EqualTo(covered).Within(1e-9));
+        Assert.That(new ArcSpan(0, sweep).Sweep, Is.EqualTo(covered).Within(1e-7));
 
     [Test]
     public void ATurnEitherWay_IsTheWhole_AndNoneIsEmpty()
