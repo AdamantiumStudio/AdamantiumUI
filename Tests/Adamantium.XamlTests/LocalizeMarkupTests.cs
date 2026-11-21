@@ -110,17 +110,22 @@ public class LocalizeMarkupTests
     [Test]
     public void APropertyHoldingOnlyABinding_RefusesALocalize()
     {
-        var project = Project("""
-            <Border>
-                <Border.Triggers>
-                    <DataTrigger Binding="{Localize Strings.Close}" Value="true">
-                        <Setter Property="Opacity" Value="0.5"/>
-                    </DataTrigger>
-                </Border.Triggers>
-            </Border>
-            """);
+        var project = AumlCodegenHarness.Project(new Dictionary<string, string>
+        {
+            ["Strings.en.alang"] = English,
+            ["Strings.ru.alang"] = Russian,
+            ["MainWindow.auml"] = AumlCodegenHarness.WindowHeader + " xmlns:local=\"clr-namespace:Test.App\">" +
+                "<local:Follower Follows=\"{Localize Strings.Close}\"/></Window>",
+        }, sources: ["""
+            namespace Test.App;
 
-        Assert.That(project.Errors.Select(e => e.GetMessage()), Has.Some.Contains("DataTrigger.Binding holds a Binding"));
+            public class Follower : Adamantium.UI.Controls.Decorators.Border
+            {
+                public Adamantium.UI.Core.Data.Binding Follows { get; set; }
+            }
+            """]);
+
+        Assert.That(project.Errors.Select(e => e.GetMessage()), Has.Some.Contains("Follower.Follows holds a Binding"));
     }
 
     // Where a theme writes its strings: a setter's value and an element of a control template.

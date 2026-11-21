@@ -4,7 +4,9 @@ namespace Adamantium.UI.Core.Resources.Triggers;
 
 public class DataTrigger : TriggerBase
 {
-    public Binding Binding { get; set; }
+    /// <summary>What the trigger tests: any binding - on the host's data, a property of an ancestor, of the host itself.
+    /// </summary>
+    public BindingBase Binding { get; set; }
     
     public object Value { get; set; }
 

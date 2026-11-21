@@ -22,7 +22,14 @@ All packages share one version.
   with commands of their own, rules between them, a palette, as a tool bar's buttons have. It is the button's logical
   child, so it is themed and takes the button's data; put away by a row, Escape or a press elsewhere, it closes the
   button, and dropped from the keyboard it takes the keyboard.
-
+- `RawKeyboardEventArgs.Origin`: a key the application presses itself (`KeyPressOrigin.Application`), as an on-screen
+  keyboard does, is down in `KeyboardDevice.IsKeyDown` and `Modifiers` until the application releases it, whatever the
+  system's keyboard says - a Ctrl it holds reaches code that asks `Keyboard.Modifiers`, and its `KeyDown` arrives with
+  `IsDown`. Before, the platform's live state answered alone, so such a key was always up.
+- `TreeDataGrid.FindCommand` and `FindPreviousCommand`, and `Find(text)`: a search field outside the table binds its
+  Enter to them - a new text is searched, the same one goes on to its next match, Shift+Enter back - with the table's
+  own marks and steps, no strip of its own. A field bound to `SearchText` searches on its Enter all the same, and
+  emptied - its clear button - takes the marks away. The strip's Enter goes the same way.
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
   they come; a record open in its member comes back open when the rows are built again, and one whose member says anew
@@ -549,6 +556,12 @@ All packages share one version.
 
 ### Changed
 
+- `{Ancestor}` and `{Self}` are bindings: they derive from `BindingBase`, so besides a property and a setter they go in
+  a `DataTrigger`'s `Binding`, a `MultiDataTrigger`'s `Condition` and a `MultiBinding`'s input, in markup and in code.
+  `DataTrigger.Binding` and `Condition.Binding` take any `BindingBase`. A trigger can test a property of the element its
+  host stands in, `{Ancestor ListBox, IsEnabled}`, next to the host's data. One that finds no ancestor is tested on its
+  `FallbackValue`, then its `TargetNullValue`, as a property bound to it shows them.
+- A binding's failure read by a trigger or another binding says so, where it named an empty property.
 - A type written in braces must be a markup extension: `{Name}` of any other type was made with `new` at every build;
   the build now reports it. The library's converters and the sandbox's derive
   from `ValueConverter` or `MultiValueConverter`.
@@ -725,6 +738,7 @@ All packages share one version.
 
 ### Removed
 
+- `Ancestor.Apply` and `Self.Apply`: bind with `SetBinding`, as any binding.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 
 - `CanvasMode`, `InfiniteCanvas.Mode`, `ICanvasItem.Mode`, `ICanvasTool.WorksIn` and `ElementTool.Mode`: what a canvas
@@ -735,7 +749,9 @@ All packages share one version.
 - A `ToolBar` heard nothing of a command on it shown, hidden or grown later: its panel was measured within the room
   the bar had given it, so its length looked unchanged and the bar did not share its commands between itself and its
   menu again. The bar's panel is now `ToolBarPanel`, which tells its bar when the length of its commands changes.
-
+- A universe of another process shown in a panel took no keys: the host was told of the focus on `GotFocus`, raised
+  before the panel holds the keyboard, so it heard it had none and was never told again. It is told on the keyboard's
+  own focus now.
 - `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
   with its row now. Cells selected below a branch opened or shut, the active cell, the Shift anchor and an open edit
   move with their rows; an edit whose row went is cancelled, never written into another record. Rows made again -

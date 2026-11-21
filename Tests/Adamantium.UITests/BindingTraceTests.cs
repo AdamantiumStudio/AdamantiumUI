@@ -104,7 +104,7 @@ public class BindingTraceTests
         var definition = new NumericProperty();
         host.AddLogicalChild(definition);
 
-        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(definition, "Minimum");
+        var e = definition.SetBinding("Minimum", new Ancestor { AncestorType = typeof(Grid), Path = "Width" });
         BindingUpdateQueue.Flush();
 
         Assert.Multiple(() =>

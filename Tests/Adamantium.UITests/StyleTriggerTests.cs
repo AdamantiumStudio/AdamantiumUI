@@ -216,6 +216,123 @@ public class StyleTriggerTests
         Assert.That(everRed, Is.False);
     }
 
+    // {Ancestor} is a binding like any other, so a trigger tests it as it tests the data: a property of the element the
+    // host stands in.
+    [Test]
+    public void DataTrigger_TestsAPropertyOfAnAncestor()
+    {
+        var panel = new Panels.StackPanel { Width = 10 };
+        var host = new Border();
+        panel.AddLogicalChild(host);
+
+        var trigger = new DataTrigger
+        {
+            Binding = new Ancestor { AncestorType = typeof(Panels.StackPanel), Path = "Width", Logical = true }, Value = "42"
+        };
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        var before = Red(host);
+        panel.Width = 42;
+        var matching = Red(host);
+        panel.Width = 7;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.False);
+            Assert.That(matching, Is.True);
+            Assert.That(Red(host), Is.False);
+        });
+    }
+
+    // With no such ancestor, the trigger tests what the binding falls back on.
+    [Test]
+    public void DataTrigger_OnAnAncestorNotThere_TestsItsFallback()
+    {
+        var panel = new Panels.StackPanel();
+        var host = new Border();
+        panel.AddLogicalChild(host);
+
+        var trigger = new DataTrigger
+        {
+            Binding = new Ancestor { AncestorType = typeof(Panels.Grid), Path = "Width", Logical = true, FallbackValue = "none" },
+            Value = "none"
+        };
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        Assert.That(Red(host), Is.True);
+    }
+
+    // ...and with no FallbackValue, on its TargetNullValue - as the same binding on a property shows.
+    [Test]
+    public void DataTrigger_OnAnAncestorNotThere_TestsItsTargetNullValue()
+    {
+        var panel = new Panels.StackPanel();
+        var host = new Border();
+        panel.AddLogicalChild(host);
+
+        var trigger = new DataTrigger
+        {
+            Binding = new Ancestor { AncestorType = typeof(Panels.Grid), Path = "Width", Logical = true, TargetNullValue = "none" },
+            Value = "none"
+        };
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        Assert.That(Red(host), Is.True);
+    }
+
+    // {Self} too: a property of the host itself.
+    [Test]
+    public void DataTrigger_TestsAPropertyOfTheHostItself()
+    {
+        var host = new Border { Width = 10 };
+
+        var trigger = new DataTrigger { Binding = new Self { Path = "Width" }, Value = "42" };
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        var before = Red(host);
+        host.Width = 42;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.False);
+            Assert.That(Red(host), Is.True);
+        });
+    }
+
+    // The data and an ancestor tested together - the host's data names what it is, the ancestor says what it allows -
+    // the ancestor found only once the host is placed under it.
+    [Test]
+    public void MultiDataTrigger_TestsTheDataAndAnAncestorTogether_TheAncestorFoundLater()
+    {
+        var host = new Border { DataContext = new PairVm { Kind = "Fire" } };
+        var trigger = new MultiDataTrigger();
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.Kind)), Value = "Fire" });
+        trigger.Conditions.Add(new Condition
+        {
+            Binding = new Ancestor { AncestorType = typeof(Panels.StackPanel), Path = "Width", Logical = true }, Value = "42"
+        });
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        var alone = Red(host);
+        var panel = new Panels.StackPanel { Width = 42 };
+        panel.AddLogicalChild(host);
+        var placed = Red(host);
+        host.DataContext = new PairVm { Kind = "Water" };
+        var otherData = Red(host);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(alone, Is.False, "no ancestor yet");
+            Assert.That(placed, Is.True, "found once placed under it");
+            Assert.That(otherData, Is.False);
+        });
+    }
+
     private static bool Red(Border host) => (host.Background as SolidColorBrush)?.Color == Colors.Red;
 
     private sealed class PairVm : System.ComponentModel.INotifyPropertyChanged

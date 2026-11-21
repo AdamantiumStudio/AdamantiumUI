@@ -31,6 +31,12 @@ public abstract class BindingExpressionBase
    /// answer it waits for, not a new suspect.</summary>
    internal bool IsRetrying { get; set; }
 
+   /// <summary>Where the binding stands, as a failure names it: the property it writes, or - a producer - what reads it.
+   /// </summary>
+   internal string Place => TargetProperty != null
+      ? $"{Target?.GetType().Name}.{TargetProperty.Name}"
+      : $"{Target?.GetType().Name} (read by a trigger or another binding)";
+
    internal void Fail(string message)
    {
       Status = BindingStatus.PathError;
@@ -157,6 +163,24 @@ public abstract class BindingExpressionBase
       inner.OwnerStyle = OwnerStyle;
       inner.TriggerToken = TriggerToken;
       return inner;
+   }
+
+   /// <summary>For an expression that reads through <paramref name="inner"/>: a producer of its own - a trigger's
+   /// condition, a MultiBinding's input - produces what the inner one does, as it does.</summary>
+   private protected T PassingValueOn<T>(T inner) where T : BindingExpressionBase
+   {
+      if (TargetProperty == null)
+      {
+         inner.ValueChanged += PassOn;
+      }
+
+      return inner;
+   }
+
+   private void PassOn(BindingExpressionBase inner)
+   {
+      ProducedValue = inner.ProducedValue;
+      RaiseValueChanged();
    }
 
    /// <summary>Whether the source property carries a value WRITTEN INTO IT, as against one arriving from a style, a

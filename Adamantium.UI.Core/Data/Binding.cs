@@ -31,7 +31,7 @@ public class Binding : BindingBase
    
    public override object Clone()
    {
-      return new Binding()
+      return CopiedInto(new Binding()
       {
          Mode = Mode,
          Source = Source,
@@ -39,16 +39,9 @@ public class Binding : BindingBase
          ConverterParameter = ConverterParameter,
          UpdateSourceTrigger = UpdateSourceTrigger,
          Path = Path,
-         IsAsync = IsAsync,
-         Delay = Delay,
-         FallbackValue = FallbackValue,
-         StringFormat = StringFormat,
-         Culture = Culture,
-         TargetNullValue = TargetNullValue,
          ElementName = ElementName,
-         IsImmediate = IsImmediate,
          WorkOnSourceThread = WorkOnSourceThread,
-      };
+      });
    }
 
    /// <summary>Whether the source lives on another thread and is written there: a value written back is not set at once

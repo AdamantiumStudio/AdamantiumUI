@@ -4,8 +4,9 @@ using Adamantium.UI.Core.MarkupExtensions;
 namespace Adamantium.UI.Core.Data;
 
 /// <summary><c>{Ancestor TitleBar, Foreground}</c>: binds to a property of the nearest ancestor of a type (is-a), walking
-/// the visual tree unless <see cref="Logical"/>. Re-resolves whenever the target re-attaches.</summary>
-public class Ancestor : MarkupExtension
+/// the visual tree unless <see cref="Logical"/>. Re-resolves whenever the target re-attaches. A binding like any other:
+/// it goes wherever one does - a trigger's condition, a MultiBinding's input.</summary>
+public class Ancestor : BindingBase
 {
     /// <summary>The ancestor type to search for (first positional). is-a: a base type / interface matches subtypes.</summary>
     [DefaultProperty]
@@ -36,30 +37,20 @@ public class Ancestor : MarkupExtension
 
     public object ConverterParameter { get; set; }
 
-    /// <summary>Value used when the ancestor / path can't be resolved (WPF FallbackValue).</summary>
-    public object FallbackValue { get; set; }
-
-    /// <summary>Value used when the resolved value is null (falls back to <see cref="FallbackValue"/> if unset).</summary>
-    public object TargetNullValue { get; set; }
-
-    /// <summary>Creates the live expression on <paramref name="target"/>'s <paramref name="propertyName"/> and registers
-    /// it so it re-establishes on tree changes. Mirrors <c>ThemeResource.Apply</c> / the codegen emission for bindings.</summary>
-    public AncestorBindingExpression Apply(IAdamantiumComponent target, string propertyName,
-        ValuePriority priority = ValuePriority.Binding)
+    public override object Clone() => CopiedInto(new Ancestor
     {
-        var expression = CreateExpression(target, target.GetProperty(propertyName));
-        expression.Priority = priority;
-        BindingEngine.Register(expression);
-        return expression;
-    }
+        AncestorType = AncestorType,
+        Path = Path,
+        Skip = Skip,
+        Name = Name,
+        Stop = Stop,
+        Logical = Logical,
+        Mode = Mode,
+        UpdateSourceTrigger = UpdateSourceTrigger,
+        Converter = Converter,
+        ConverterParameter = ConverterParameter,
+    });
 
-    internal AncestorBindingExpression CreateExpression(IAdamantiumComponent target, AdamantiumProperty property)
-        => new(target, property, this);
-
-    public override object ProvideObject(MarkupContext context)
-    {
-        if (context?.TargetObject is IAdamantiumComponent target && !string.IsNullOrEmpty(context.TargetPropertyName))
-            Apply(target, context.TargetPropertyName);
-        return this;
-    }
+    public override BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty) =>
+        new AncestorBindingExpression(target, targetProperty, this);
 }

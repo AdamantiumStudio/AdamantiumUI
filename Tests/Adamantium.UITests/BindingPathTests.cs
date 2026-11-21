@@ -144,11 +144,11 @@ public class BindingPathTests
             case Kind.Ancestor:
                 target = new Border();
                 holder.AddLogicalChild(target);
-                new Ancestor { AncestorType = typeof(Holder), Path = path, Logical = true, Mode = mode }.Apply(target, "Width");
+                target.SetBinding("Width", new Ancestor { AncestorType = typeof(Holder), Path = path, Logical = true, Mode = mode });
                 break;
             default:
                 target = holder;
-                new Self { Path = path, Mode = mode }.Apply(holder, "Width");
+                holder.SetBinding("Width", new Self { Path = path, Mode = mode });
                 break;
         }
 

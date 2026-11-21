@@ -29,7 +29,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        var e = new Ancestor { AncestorType = typeof(Panel), Path = "Width", Logical = true }.Apply(leaf, "Width");
+        var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Panel), Path = "Width", Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(111d));
         Assert.That(e.Status, Is.EqualTo(BindingStatus.Active));
@@ -44,7 +44,7 @@ public class AncestorBindingTests
         inner.AddLogicalChild(leaf);
         outer.AddLogicalChild(inner);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Skip = 1, Logical = true }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Skip = 1, Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(200d));   // skipped the nearest (inner), bound the outer
     }
@@ -58,7 +58,7 @@ public class AncestorBindingTests
         boundary.AddLogicalChild(leaf);
         stack.AddLogicalChild(boundary);
 
-        var e = new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Stop = typeof(Grid), Logical = true }.Apply(leaf, "Width");
+        var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Stop = typeof(Grid), Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(7d));      // boundary hit first -> unbound, keeps its own value
         Assert.That(e.Status, Is.EqualTo(BindingStatus.PathError));
@@ -73,7 +73,7 @@ public class AncestorBindingTests
         inner.AddLogicalChild(leaf);
         outer.AddLogicalChild(inner);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Name = "target", Logical = true }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Name = "target", Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(200d));    // skipped the unnamed inner, bound the named outer
     }
@@ -84,7 +84,7 @@ public class AncestorBindingTests
         var panel = new StackPanel { Width = 55 };
         var leaf = new TextBlock();
 
-        var e = new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true }.Apply(leaf, "Width");
+        var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true });
         Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached));   // no ancestor yet - quiet, waiting for attach
 
         panel.AddLogicalChild(leaf);                                    // attach -> re-resolves
@@ -101,7 +101,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         p1.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true });
         Assert.That(leaf.Width, Is.EqualTo(10d));
 
         p1.RemoveLogicalChild(leaf);
@@ -117,7 +117,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true });
         Assert.That(leaf.Width, Is.EqualTo(1d));
 
         panel.Width = 42;
@@ -132,7 +132,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Mode = BindingMode.TwoWay, Logical = true }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Mode = BindingMode.TwoWay, Logical = true });
         Assert.That(leaf.Width, Is.EqualTo(5d));
 
         leaf.Width = 99;                              // TwoWay: pushes back to the ancestor
@@ -146,11 +146,11 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        var expression = new Ancestor
+        var expression = leaf.SetBinding("Width", new Ancestor
         {
             AncestorType = typeof(StackPanel), Path = "Width", Mode = BindingMode.TwoWay,
             UpdateSourceTrigger = UpdateSourceTrigger.Explicit, Logical = true
-        }.Apply(leaf, "Width");
+        });
         leaf.Width = 99;
         var held = panel.Width;
         expression.UpdateSource();
@@ -167,10 +167,10 @@ public class AncestorBindingTests
     {
         var block = new TextBlock { Width = 5 };
 
-        var expression = new Self
+        var expression = block.SetBinding("Height", new Self
         {
             Path = "Width", Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit
-        }.Apply(block, "Height");
+        });
         block.Height = 99;
         var held = block.Width;
         expression.UpdateSource();
@@ -189,7 +189,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true }.Apply(leaf, "Width");
+        var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true });
 
         Assert.That(e.Status, Is.EqualTo(BindingStatus.PathError));   // rooted but no Grid ancestor -> flagged, not silent
     }
@@ -206,7 +206,7 @@ public class AncestorBindingTests
             var window = new Window { Width = 200, Height = 100, Content = leaf };
             WindowExtension.UpdateTree(window);
 
-            var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(leaf, "Width");
+            var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Grid), Path = "Width" });
             BindingUpdateQueue.Flush();
 
             Assert.Multiple(() =>
@@ -232,7 +232,7 @@ public class AncestorBindingTests
             var leaf = new TextBlock();
             var unrooted = new Border { Child = leaf };
 
-            var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(leaf, "Width");
+            var e = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Grid), Path = "Width" });
 
             Assert.Multiple(() =>
             {
@@ -262,7 +262,7 @@ public class AncestorBindingTests
             host.AddLogicalChild(page);
             DiscardedVisuals.PublishSubtree(page);
 
-            var binding = new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true }.Apply(leaf, "Width");
+            var binding = leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true });
             BindingUpdateQueue.Flush();
 
             Assert.Multiple(() =>
@@ -292,7 +292,7 @@ public class AncestorBindingTests
                 new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = host })
         };
 
-        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(line, "Step");
+        var e = line.SetBinding("Step", new Ancestor { AncestorType = typeof(Grid), Path = "Width" });
         Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached), "precondition: its host is in no tree yet");
 
         var grid = new Grid { Width = 3, Children = { control } };
@@ -319,7 +319,7 @@ public class AncestorBindingTests
         };
         _ = new Grid { Width = 3, Children = { control } };
 
-        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(line, "Step");
+        var e = line.SetBinding("Step", new Ancestor { AncestorType = typeof(Grid), Path = "Width" });
         Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached), "precondition: the template is not built yet");
 
         control.Visibility = Adamantium.UI.Core.Visibility.Visible;
@@ -334,7 +334,7 @@ public class AncestorBindingTests
     {
         var leaf = new TextBlock { Height = 50 };
 
-        var e = new Self { Path = "Height" }.Apply(leaf, "Width");
+        var e = leaf.SetBinding("Width", new Self { Path = "Height" });
 
         Assert.That(leaf.Width, Is.EqualTo(50d));
         Assert.That(e.Status, Is.EqualTo(BindingStatus.Active));
@@ -344,7 +344,7 @@ public class AncestorBindingTests
     public void Self_LiveSourceChange_Propagates()
     {
         var leaf = new TextBlock { Height = 1 };
-        new Self { Path = "Height" }.Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Self { Path = "Height" });
         Assert.That(leaf.Width, Is.EqualTo(1d));
 
         leaf.Height = 33;
@@ -359,8 +359,8 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Converter = new DoublingConverter(), Logical = true }
-            .Apply(leaf, "Width");
+        leaf.SetBinding("Width",
+            new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Converter = new DoublingConverter(), Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(20d));   // 10 * 2 via the converter
     }
@@ -372,8 +372,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(Grid), Path = "Width", FallbackValue = "42", Logical = true }
-            .Apply(leaf, "Width");
+        leaf.SetBinding("Width", new Ancestor { AncestorType = typeof(Grid), Path = "Width", FallbackValue = "42", Logical = true });
 
         Assert.That(leaf.Width, Is.EqualTo(42d));    // fallback string coerced to the double target
     }
@@ -386,7 +385,7 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", Logical = true }.Apply(leaf, "Text");
+        leaf.SetBinding("Text", new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", Logical = true });
 
         Assert.That(leaf.Text, Is.EqualTo("Alice"));
     }
@@ -398,7 +397,7 @@ public class AncestorBindingTests
         var panel = new StackPanel { DataContext = vm };
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", Logical = true }.Apply(leaf, "Text");
+        leaf.SetBinding("Text", new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", Logical = true });
         Assert.That(leaf.Text, Is.EqualTo("Alice"));
 
         vm.Name = "Bob";                             // leaf-owner (the VM) INotifyPropertyChanged is observed
@@ -414,8 +413,8 @@ public class AncestorBindingTests
         var leaf = new TextBlock();
         panel.AddLogicalChild(leaf);
 
-        new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", TargetNullValue = "none", Logical = true }
-            .Apply(leaf, "Text");
+        leaf.SetBinding("Text",
+            new Ancestor { AncestorType = typeof(StackPanel), Path = "DataContext.Name", TargetNullValue = "none", Logical = true });
 
         Assert.That(leaf.Text, Is.EqualTo("none"));
     }
@@ -432,6 +431,78 @@ public class AncestorBindingTests
         setter.Apply(leaf, null, null);
 
         Assert.That(leaf.Width, Is.EqualTo(77d));
+    }
+
+    // A MultiBinding's input may be an {Ancestor} or a {Self}, as any binding: each is read, and followed, with the rest.
+    [Test]
+    public void AncestorAndSelf_FeedAMultiBinding()
+    {
+        var panel = new StackPanel { Width = 10 };
+        var leaf = new TextBlock { Height = 3, DataContext = new Vm { Name = "Alice" } };
+        panel.AddLogicalChild(leaf);
+        var combined = new MultiBinding { StringFormat = "{0} {1} {2}" };
+        combined.Bindings.Add(new Binding(nameof(Vm.Name)));
+        combined.Bindings.Add(new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true });
+        combined.Bindings.Add(new Self { Path = "Height" });
+
+        leaf.SetBinding("Text", combined);
+        var first = leaf.Text;
+        panel.Width = 20;
+        leaf.Height = 4;
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo("Alice 10 3"));
+            Assert.That(leaf.Text, Is.EqualTo("Alice 20 4"));
+        });
+    }
+
+    // Read as text - a resource's key, a phrase's argument - an {Ancestor} or a {Self} is formatted as a {Binding} is.
+    [Test]
+    public void AncestorAndSelf_ReadAsText_AreFormatted()
+    {
+        var panel = new StackPanel { Width = 42 };
+        var leaf = new TextBlock { Height = 3 };
+        panel.AddLogicalChild(leaf);
+        var ancestor = new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true, StringFormat = "{0}Icon" }
+            .CreateExpression(leaf, null);
+        var self = new Self { Path = "Height", StringFormat = "{0}Icon" }.CreateExpression(leaf, null);
+        ancestor.ProducesText = true;
+        self.ProducesText = true;
+
+        ancestor.EstablishConnection();
+        self.EstablishConnection();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ancestor.ProducedValue, Is.EqualTo("42Icon"));
+            Assert.That(self.ProducedValue, Is.EqualTo("3Icon"));
+        });
+    }
+
+    // One read by a trigger or another binding has no property of its own: its failure says what reads it.
+    [Test]
+    public void AnAncestorReadByATrigger_NamesWhatReadsIt_WhenNotFound()
+    {
+        var messages = new List<string>();
+        BindingTrace.Sink = messages.Add;
+        try
+        {
+            var panel = new StackPanel();
+            var leaf = new TextBlock();
+            panel.AddLogicalChild(leaf);
+
+            new Ancestor { AncestorType = typeof(Grid), Path = "Width", Logical = true }.CreateExpression(leaf, null)
+                .EstablishConnection();
+            BindingUpdateQueue.Flush();
+
+            Assert.That(messages, Has.Some.Contains("{Ancestor} on TextBlock (read by a trigger or another binding): no Grid"));
+        }
+        finally
+        {
+            BindingTrace.Sink = null;
+        }
     }
 
     [Test]

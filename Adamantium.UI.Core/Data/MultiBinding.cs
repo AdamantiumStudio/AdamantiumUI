@@ -16,19 +16,12 @@ public class MultiBinding : BindingBase
 
    public override object Clone()
    {
-      var clone = new MultiBinding
+      var clone = CopiedInto(new MultiBinding
       {
          Mode = Mode,
          Converter = Converter,
          ConverterParameter = ConverterParameter,
-         StringFormat = StringFormat,
-         Culture = Culture,
-         FallbackValue = FallbackValue,
-         TargetNullValue = TargetNullValue,
-         IsAsync = IsAsync,
-         Delay = Delay,
-         IsImmediate = IsImmediate,
-      };
+      });
       foreach (var binding in Bindings)
          clone.Bindings.Add((BindingBase)binding.Clone());
       return clone;
