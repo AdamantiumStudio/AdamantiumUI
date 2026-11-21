@@ -4,6 +4,7 @@ using System.Text;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core;
@@ -29,8 +30,8 @@ public partial class TreeDataGrid : Selector
 
     public TreeDataGrid()
     {
-        FindCommand = new SearchCommand(text => Find(text as string));
-        FindPreviousCommand = new SearchCommand(_ => FindPrevious());
+        FindCommand = new CanvasCommand(text => Find(text as string));
+        FindPreviousCommand = new CanvasCommand(_ => FindPrevious());
         Columns.CollectionChanged += OnColumnsChanged;
         GroupDescriptions.CollectionChanged += OnGroupDescriptionsChanged;
         SortDescriptions.CollectionChanged += OnSortDescriptionsChanged;
@@ -1528,26 +1529,10 @@ public partial class TreeDataGrid : Selector
             return;
         }
 
+        var emptied = string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(SearchText);
         SetCurrentValue(SearchTextProperty, text);
-        Search();
-    }
-
-    // A search step a field outside the table binds to.
-    private sealed class SearchCommand(Action<object> step) : ICommand
-    {
-        public event EventHandler CanExecuteChanged
-        {
-            add { }
-            remove { }
-        }
-
-        public bool CanExecute(object parameter = null) => true;
-
-        public void Execute(object parameter = null) => step(parameter);
-
-        public void RaiseCanExecuteChanged()
-        {
-        }
+        // Emptied, the change has called the search off already.
+        if (!emptied) Search();
     }
 
     /// <summary>Whether the strip that searches the table is shown. TWO-WAY by default for the same reason: the strip
@@ -1899,6 +1884,8 @@ public partial class TreeDataGrid : Selector
     /// <summary>Forgets the search and the paint that goes with it.</summary>
     public void ClearSearch()
     {
+        // Forgotten, the same text is searched again, not stepped through matches that are gone.
+        _searched = null;
         if (_search.Count == 0 && _search.Current == 0) return;
 
         _search.Clear();

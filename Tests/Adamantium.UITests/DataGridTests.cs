@@ -3478,6 +3478,11 @@ public class DataGridTests
         grid.SearchText = "south";
         grid.FindCommand.Execute("south");
         Assert.That(grid.MatchCount, Is.EqualTo(3), "searched, not stepped");
+
+        // The search called off - the strip shut - the same text is searched again, not stepped through marks gone.
+        grid.ClearSearch();
+        grid.FindCommand.Execute("south");
+        Assert.That(grid.MatchCount, Is.EqualTo(3));
     }
 
     // Next and previous WRAP: a Find Next that stops at the last match leaves the reader scrolling back by hand.
