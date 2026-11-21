@@ -40,6 +40,8 @@ public static class MarkupMessages
         Say(nameof(UnknownPropertyOnType), ("property", property), ("type", type));
 
     public static string NotCreatable(string type) => Say(nameof(NotCreatable), ("type", type));
+    public static string ConditionWithoutBinding() => Say(nameof(ConditionWithoutBinding));
+    public static string ConditionWithoutProperty() => Say(nameof(ConditionWithoutProperty));
 
     public static string PropertySetTwice(string property, string element) =>
         Say(nameof(PropertySetTwice), ("property", property), ("element", element));

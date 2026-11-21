@@ -19,6 +19,26 @@ public class MultiDataTriggerMarkupTests
         "</MultiDataTrigger.Conditions>" +
         "<Setter Property=\"Background\" Value=\"Red\"/></MultiDataTrigger></Style></Border.Styles></Border>";
 
+    // A condition of the wrong kind would leave the trigger never holding without a word: the build says it.
+    [TestCase("MultiDataTrigger", "<Condition Property=\"IsEnabled\" Value=\"true\"/>", "MultiDataTrigger's Condition tests a Binding")]
+    [TestCase("MultiTrigger", "<Condition Binding=\"{Binding IsOn}\" Value=\"true\"/>", "MultiTrigger's Condition tests a Property")]
+    public void AConditionOfTheWrongKind_IsWarnedOf(string trigger, string condition, string warning)
+    {
+        var warnings = AumlCodegenHarness.Warnings(AumlCodegenHarness.WindowHeader + "><Border Classes=\"Pair\"><Border.Styles>" +
+            $"<Style Selector=\"Border.Pair\"><{trigger}><{trigger}.Conditions>{condition}</{trigger}.Conditions>" +
+            $"<Setter Property=\"Background\" Value=\"Red\"/></{trigger}></Style></Border.Styles></Border></Window>");
+
+        Assert.That(warnings, Has.Some.Contains(warning), string.Join(" | ", warnings));
+    }
+
+    [Test]
+    public void ARightCondition_IsNotWarnedOf()
+    {
+        var warnings = AumlCodegenHarness.Warnings(AumlCodegenHarness.WindowHeader + ">" + Body + "</Window>");
+
+        Assert.That(warnings, Has.None.Contains("Condition tests"), string.Join(" | ", warnings));
+    }
+
     [Test]
     public void TheGeneratedCode_Compiles()
     {

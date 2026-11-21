@@ -25,10 +25,11 @@ internal sealed class MultiDataTriggerActivator : TriggerActivatorBase
         var values = new object[conditions.Count];
         for (var i = 0; i < conditions.Count; i++)
         {
-            // A condition with no binding can never hold: the trigger stays inert, as a MultiTrigger with an unknown
-            // property does.
+            // A condition with no binding can never hold: the trigger stays inert, and says so.
             if (conditions[i].Binding == null)
             {
+                Serilog.Log.Logger.Warning("Trigger: a MultiDataTrigger on {Host} has a Condition with no Binding, so it never holds",
+                    _host.GetType().Name);
                 return;
             }
 
