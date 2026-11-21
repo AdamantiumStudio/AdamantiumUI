@@ -111,6 +111,8 @@ public static class MarkupMessages
     public static string AncestorTypeNotResolved(string type) => Say(nameof(AncestorTypeNotResolved), ("type", type));
     public static string AncestorStopTypeNotResolved(string type) => Say(nameof(AncestorStopTypeNotResolved), ("type", type));
     public static string ConverterInvalid(string binding) => Say(nameof(ConverterInvalid), ("binding", binding));
+    public static string DelayNotMilliseconds(string binding, string delay) =>
+        Say(nameof(DelayNotMilliseconds), ("binding", binding), ("delay", delay));
     public static string AncestorUnknownArgument(string argument) => Say(nameof(AncestorUnknownArgument), ("argument", argument));
     public static string SelfUnknownArgument(string argument) => Say(nameof(SelfUnknownArgument), ("argument", argument));
     public static string UnknownBindingProperty(string name) => Say(nameof(UnknownBindingProperty), ("name", name));
