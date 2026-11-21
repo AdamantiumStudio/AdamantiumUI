@@ -3485,8 +3485,9 @@ public class DataGridTests
         Assert.That(grid.MatchCount, Is.EqualTo(3));
     }
 
-    // A field's "previous" button pressed on a text not searched yet searches it first, as "next" does; on the same
-    // text it steps back.
+    // A field's "previous" button pressed on a text not searched yet searches it first, as "next" does, landing on the
+    // first match: the walk may still be reading, so there is no last match to land on yet. On the same text it steps
+    // back.
     [Test]
     public void FindPrevious_OnANewText_SearchesItFirst()
     {
@@ -3505,6 +3506,10 @@ public class DataGridTests
 
         grid.FindPreviousCommand.Execute("Item");
         Assert.That(grid.CurrentMatch, Is.EqualTo(6), "the same text steps back, round from the first");
+
+        // An emptied field - not bound to SearchText - calls the search off, as "next" does.
+        grid.FindPreviousCommand.Execute(string.Empty);
+        Assert.That(grid.MatchCount, Is.Zero);
     }
 
     // Every match is marked, not only the current one - in an open branch too.

@@ -1536,10 +1536,11 @@ public partial class TreeDataGrid : Selector
         if (!emptied) Search();
     }
 
-    /// <summary>Goes back to the match before the current one, or, given a text not searched yet, looks for it.</summary>
+    /// <summary>Goes back to the match before the current one, or, given a text not searched yet, looks for it - an
+    /// empty one calling the search off, as <see cref="Find"/> does. No text at all only steps back.</summary>
     public void FindPrevious(string text)
     {
-        if (string.IsNullOrEmpty(text) || string.Equals(_searched, text)) FindPrevious();
+        if (text == null || string.Equals(_searched, text)) FindPrevious();
         else Find(text);
     }
 
