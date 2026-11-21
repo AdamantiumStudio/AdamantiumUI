@@ -600,6 +600,9 @@ All packages share one version.
 - `Ellipse` is hit where it is drawn: its fill in its sector's wedge or its segment's side of the chord, out of a ring's
   hole; its pen on every piece of the outline it strokes - the arc, a sector's radii, a ring's inner arc and ends. It was
   hit anywhere in the whole ellipse, and its outline only along the rim.
+- `RingProgressBar` places its arc by the arc's own angles - `StartPosition` its start, `CounterClockwise` a sweep
+  backwards - instead of turning it with a render transform and mirroring it for counterclockwise. Its indicator has no
+  `RenderTransform` now, and a gradient or texture on it is no longer mirrored with the arc.
 - `RepeatButton` and `NumericUpDown` repeat at the user's pace from the OS: `Delay`, `Interval` and `RepeatInterval`
   are 0 by default, which waits and repeats as a held key does (`PlatformSettings.KeyRepeatDelay`,
   `KeyRepeatInterval`); a number of their own still wins. Keys told not to repeat leave a repeat button at thirty a
