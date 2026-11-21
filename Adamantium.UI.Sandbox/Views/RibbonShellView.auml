@@ -1144,9 +1144,9 @@
                                     <Grid>
                                         <ContentPresenter Content="{Binding Module}"
                                                           ContentTemplate="{ResourceReference ModuleRow}"
-                                                          Visibility="{Binding IsModule, Converter={conv:BoolToVisibilityConverter}}"/>
+                                                          Visibility="{Binding IsModule, Converter={BooleanToVisibilityConverter}}"/>
                                         <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Title}}"
-                                                   Visibility="{Binding IsCommand, Converter={conv:BoolToVisibilityConverter}}"/>
+                                                   Visibility="{Binding IsCommand, Converter={BooleanToVisibilityConverter}}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ContextMenu.ItemTemplate>
@@ -1395,7 +1395,7 @@
                                 <StackPanel Grid.Row="2"
                                             Orientation="Vertical"
                                             Margin="0 14 0 0"
-                                            Visibility="{Binding HasOwnTabs, Converter={conv:BoolToVisibilityConverter}}">
+                                            Visibility="{Binding HasOwnTabs, Converter={BooleanToVisibilityConverter}}">
                                     <TextBlock Text="{Localize RibbonShellStrings.OwnTabs}"
                                                FontSize="12"
                                                Foreground="{ResourceReference TextFillColorSecondary}"/>
@@ -1426,14 +1426,14 @@
                                                FontSize="12"
                                                Margin="0 4 0 0"
                                                Foreground="{ResourceReference TextFillColorSecondary}"
-                                               Visibility="{Binding HasDocumentData, Converter={conv:BoolToVisibilityConverter}}"/>
+                                               Visibility="{Binding HasDocumentData, Converter={BooleanToVisibilityConverter}}"/>
                                     <TextBlock Grid.Row="1"
                                                Grid.Column="1"
                                                Text="{Localize Table={Binding Phrases}, Key={Binding Content}}"
                                                FontSize="12"
                                                Margin="0 4 0 0"
                                                TextWrapping="WrapByWords"
-                                               Visibility="{Binding HasDocumentData, Converter={conv:BoolToVisibilityConverter}}"/>
+                                               Visibility="{Binding HasDocumentData, Converter={BooleanToVisibilityConverter}}"/>
                                 </Grid>
 
                                 <!-- The questions, each with its own way out, in the free space above the rule - scrolled
@@ -1448,7 +1448,7 @@
                                                 CornerRadius="6"
                                                 BorderThickness="1"
                                                 BorderBrush="{ResourceReference SystemFillColorCaution}"
-                                                Visibility="{Binding IsDetachAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                                Visibility="{Binding IsDetachAsked, Converter={BooleanToVisibilityConverter}}">
                                             <ContentPresenter Content="{Binding}"
                                                               ContentTemplate="{ResourceReference DetachQuestion}"/>
                                         </Border>
@@ -1456,7 +1456,7 @@
                                                 CornerRadius="6"
                                                 BorderThickness="1"
                                                 BorderBrush="{ResourceReference SystemFillColorCritical}"
-                                                Visibility="{Binding IsUninstallAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                                Visibility="{Binding IsUninstallAsked, Converter={BooleanToVisibilityConverter}}">
                                             <StackPanel Orientation="Vertical">
                                                 <TextBlock Text="{Localize RibbonShellStrings.UninstallTitle}"
                                                            FontSize="15"/>
@@ -1480,7 +1480,7 @@
                                                 CornerRadius="6"
                                                 BorderThickness="1"
                                                 BorderBrush="{ResourceReference SystemFillColorCritical}"
-                                                Visibility="{Binding IsDeleteAsked, Converter={conv:BoolToVisibilityConverter}}">
+                                                Visibility="{Binding IsDeleteAsked, Converter={BooleanToVisibilityConverter}}">
                                             <StackPanel Orientation="Vertical">
                                                 <TextBlock Text="{Localize RibbonShellStrings.DeleteDataTitle}"
                                                            FontSize="15"/>

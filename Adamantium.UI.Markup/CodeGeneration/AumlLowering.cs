@@ -1357,38 +1357,76 @@ public class AumlLowering
 
         if (value is AumlAstMarkupExtensionNode extension)
         {
-            var type = Metadata.TypeResolver.ResolveAssembly(extension.TypeReference.Assembly)
-                .Types.First(x => x.Name == extension.TypeReference.Name);
-            var name = GenerateNextElementName();
-            var created = Variable(name);
-            _writer.Add(new DeclareStep(name, new NewValue(Type(type))));
-
-            foreach (var arg in extension.Arguments)
+            var type = TypeOf(extension);
+            if (!IsConverter(type))
             {
-                if (arg.Value is AumlAstTypeReferenceValueNode typeValueNode)
-                {
-                    var fullTypeName = typeValueNode.TypeReference.GetFullTypeName();
-                    _writer.Add(new AssignStep(created, arg.Name, new TypeOfValue(Type(Qualified(fullTypeName)))));
-                }
-                else if (arg.Value is IAumlAstMarkupExtensionLiteral or IAumlAstMarkupExtensionNode
-                         || arg.Value is AumlAstObjectNode or AumlAstStaticMemberValueNode)
-                {
-                    var nested = ProcessNestedValue(arg.Value, diagnostics, isResource);
-                    _writer.Add(new AssignStep(created, arg.Name, nested));
-                }
-                else
-                {
-                    var resolvedMember = Metadata.TypeResolver.ResolveAssembly(arg.Value.TypeReference.Assembly).Types
-                        .First(x => x.Name == arg.Value.TypeReference.Name);
-                    _writer.Add(new AssignStep(created, arg.Name, BuildValueExpression(arg.Value.GetTextValue(), resolvedMember,
-                        diagnostics, $"{extension.TypeReference.Name} {arg.Name}=\"{arg.Value.GetTextValue()}\"")));
-                }
+                return EmitExtension(extension, type, diagnostics, isResource);
             }
 
-            return created;
+            // A converter is what its ProvideObject gives. Given only constants it is made once for its place and kept
+            // for every build of it - a template's thousandth copy makes none; given anything else, once per build.
+            if (!IsConstant(extension))
+            {
+                return Provided(type, EmitExtension(extension, type, diagnostics, isResource));
+            }
+
+            var shared = new SharedValueStep(Type(type), $"Shared_{GenerateNextElementName("converter")}");
+            Plan.SharedValues.Add(shared);
+            _writer.OpenAside(shared);
+            _writer.Add(new ReturnStep(Provided(type, EmitExtension(extension, type, diagnostics, isResource))));
+            _writer.Close();
+            return new SharedValue(shared);
         }
 
         return NullValue.Instance;
+    }
+
+    private static bool IsConverter(IResolvedType type) =>
+        type.InheritsFrom(ValueConverterBase) || type.InheritsFrom(MultiValueConverterBase);
+
+    private IResolvedType TypeOf(AumlAstMarkupExtensionNode extension) =>
+        Metadata.TypeResolver.ResolveAssembly(extension.TypeReference.Assembly).Types.First(x => x.Name == extension.TypeReference.Name);
+
+    // A converter given only what is the same at every build: text, a type, or a converter given only such. A static
+    // member is not: a property such as a language's current table changes.
+    private bool IsConstant(AumlAstMarkupExtensionNode converter) =>
+        converter.Arguments.All(argument => argument.Value is AumlAstTextNode or AumlAstTypeReferenceValueNode
+            || argument.Value is AumlAstMarkupExtensionNode nested && IsConverter(TypeOf(nested)) && IsConstant(nested));
+
+    private static CastValue Provided(IResolvedType type, BuildValue extension) =>
+        new(Type(type), new CallValue(extension, "ProvideObject", NullValue.Instance));
+
+    // The extension made and its arguments set.
+    private BuildValue EmitExtension(AumlAstMarkupExtensionNode extension, IResolvedType type, IDiagnosticSink diagnostics,
+        bool isResource)
+    {
+        var name = GenerateNextElementName();
+        var created = Variable(name);
+        _writer.Add(new DeclareStep(name, new NewValue(Type(type))));
+
+        foreach (var arg in extension.Arguments)
+        {
+            if (arg.Value is AumlAstTypeReferenceValueNode typeValueNode)
+            {
+                var fullTypeName = typeValueNode.TypeReference.GetFullTypeName();
+                _writer.Add(new AssignStep(created, arg.Name, new TypeOfValue(Type(Qualified(fullTypeName)))));
+            }
+            else if (arg.Value is IAumlAstMarkupExtensionLiteral or IAumlAstMarkupExtensionNode
+                     || arg.Value is AumlAstObjectNode or AumlAstStaticMemberValueNode)
+            {
+                var nested = ProcessNestedValue(arg.Value, diagnostics, isResource);
+                _writer.Add(new AssignStep(created, arg.Name, nested));
+            }
+            else
+            {
+                var resolvedMember = Metadata.TypeResolver.ResolveAssembly(arg.Value.TypeReference.Assembly).Types
+                    .First(x => x.Name == arg.Value.TypeReference.Name);
+                _writer.Add(new AssignStep(created, arg.Name, BuildValueExpression(arg.Value.GetTextValue(), resolvedMember,
+                    diagnostics, $"{extension.TypeReference.Name} {arg.Name}=\"{arg.Value.GetTextValue()}\"")));
+            }
+        }
+
+        return created;
     }
 
     // ---- bindings -------------------------------------------------------------------------------------------------
@@ -1432,6 +1470,8 @@ public class AumlLowering
     private const string UIComponentFqn = "global::Adamantium.UI.Core.IUIComponent";
     private const string BindingFqn = "global::Adamantium.UI.Core.Data.Binding";
     private const string MultiBindingFqn = "global::Adamantium.UI.Core.Data.MultiBinding";
+    private const string ValueConverterBase = "Adamantium.UI.Core.Data.ValueConverter";
+    private const string MultiValueConverterBase = "Adamantium.UI.Core.Data.MultiValueConverter";
     private const string PropertyPathFqn = "global::Adamantium.UI.Core.PropertyPath";
     private const string BindingModeFqn = "global::Adamantium.UI.Core.Data.BindingMode";
     private const string UpdateSourceTriggerFqn = "global::Adamantium.UI.Core.Data.UpdateSourceTrigger";

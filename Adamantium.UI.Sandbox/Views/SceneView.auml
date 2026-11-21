@@ -105,7 +105,7 @@
                     MarginTop="4"/>
             <StackPanel Orientation="Vertical"
                         MarginTop="10"
-                        Visibility="{Binding HasSelectedLight, Converter={conv:BoolToVisibilityConverter}}">
+                        Visibility="{Binding HasSelectedLight, Converter={BooleanToVisibilityConverter}}">
                 <TextBlock Text="{Localize SceneStrings.LightName, type={Binding SelectedLightType}}"
                            MarginBottom="4"
                            Foreground="{ResourceReference TextFillColorPrimary}"/>
@@ -134,7 +134,7 @@
                                LargeChange="1"
                                StringFormat="N2"/>
                 <StackPanel Orientation="Vertical"
-                            Visibility="{Binding HasRange, Converter={conv:BoolToVisibilityConverter}}">
+                            Visibility="{Binding HasRange, Converter={BooleanToVisibilityConverter}}">
                     <TextBlock x:Name="LightRangeLabel"
                                Text="{Localize SceneStrings.Range}"
                                MarginTop="6"
@@ -152,7 +152,7 @@
                                    StringFormat="N1"/>
                 </StackPanel>
                 <StackPanel Orientation="Vertical"
-                            Visibility="{Binding IsSpotSelected, Converter={conv:BoolToVisibilityConverter}}">
+                            Visibility="{Binding IsSpotSelected, Converter={BooleanToVisibilityConverter}}">
                     <TextBlock x:Name="ConeAngleLabel"
                                Text="{Localize SceneStrings.ConeAngle}"
                                MarginTop="6"

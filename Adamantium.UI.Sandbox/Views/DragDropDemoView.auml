@@ -1,6 +1,5 @@
 ﻿<View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
       xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Orientation="Vertical" Margin="24">
@@ -320,7 +319,7 @@
                                     <Grid>
                                         <BusyIndicator IsActive="{Binding IsLoading}" Width="28" Height="28"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                       Visibility="{Binding IsLoading, Converter={conv:BoolToVisibilityConverter}}"/>
+                                                       Visibility="{Binding IsLoading, Converter={BooleanToVisibilityConverter}}"/>
                                         <Image Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <Image.Behaviors>
                                                 <behaviors:AsyncPictureBehavior Picture="{Binding}"/>

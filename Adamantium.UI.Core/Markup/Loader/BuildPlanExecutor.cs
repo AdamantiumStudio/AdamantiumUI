@@ -21,6 +21,10 @@ internal sealed class BuildPlanExecutor
     private readonly List<string> _diagnostics;
     private readonly Dictionary<string, Type> _types = new(StringComparer.Ordinal);
     private readonly Dictionary<string, object> _fields = new(StringComparer.Ordinal);
+
+    // Each shared value, made the first time it is read and kept for as long as this loader lives - as the generated
+    // class keeps it in a static field.
+    private readonly Dictionary<SharedValueStep, object> _shared = new(ReferenceEqualityComparer.Instance);
     private object _root;
     private int _functionDepth;
 
@@ -259,10 +263,22 @@ internal sealed class BuildPlanExecutor
             CastValue cast => Evaluate(cast.Inner, ResolveType(cast.Type), frame),
             TypeOfValue typeOf => ResolveType(typeOf.Type),
             NameOfValue nameOf => nameOf.Member.Member,
+            SharedValue shared => Shared(shared.Step),
             _ => throw new NotSupportedException($"A build value the loader does not know: {value.GetType().Name}")
         };
 
         return expected == null ? result : Coerce(result, expected);
+    }
+
+    private object Shared(SharedValueStep step)
+    {
+        if (!_shared.TryGetValue(step, out var value))
+        {
+            value = RunBody(step, new BuildFrame(null));
+            _shared[step] = value;
+        }
+
+        return value;
     }
 
     private bool TryGetVariable(string name, BuildFrame frame, out object value)

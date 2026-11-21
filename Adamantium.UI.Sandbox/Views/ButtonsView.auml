@@ -1,7 +1,6 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels"
-      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels">
     <!-- DataContext is the ButtonsViewModel, injected by the TabControl's content presenter (no x:ViewModel here). -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Orientation="Vertical" Margin="24">
@@ -54,7 +53,7 @@
                             Height="34"/>
                     <Badge AutomationProperties.AutomationId="UpdatesBadge"
                            IsDot="True"
-                           Visibility="{Binding Notify, Converter={conv:BoolToVisibilityConverter}}"
+                           Visibility="{Binding Notify, Converter={BooleanToVisibilityConverter}}"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Top"
                            Margin="0,-4,-4,0"/>
@@ -185,7 +184,7 @@
                                        Margin="8,0,0,0"
                                        VerticalAlignment="Center"
                                        Foreground="{ResourceReference SystemFillColorCaution}"
-                                       Visibility="{Binding IsUnavailable, Converter={conv:BoolToVisibilityConverter}}"
+                                       Visibility="{Binding IsUnavailable, Converter={BooleanToVisibilityConverter}}"
                                        ToolTipService.ToolTip="{Localize ButtonsStrings.OutOfStock}"
                                        ToolTipService.ShowOnDisabled="True"/>
                             </StackPanel>
