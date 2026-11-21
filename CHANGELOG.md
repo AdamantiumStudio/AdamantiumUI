@@ -11,6 +11,9 @@ All packages share one version.
   keyboard does, is down in `KeyboardDevice.IsKeyDown` and `Modifiers` until the application releases it, whatever the
   system's keyboard says - a Ctrl it holds reaches code that asks `Keyboard.Modifiers`, and its `KeyDown` arrives with
   `IsDown`. Before, the platform's live state answered alone, so such a key was always up.
+- A property's value written as `"{}..."` is the text after `{}`, braces and all, in the build and the preview alike,
+  as in WPF: `ShiftText="{}{"` is `{`. Before, only a resource key took the escape, and any other value that began with
+  a brace was read as an unclosed markup extension.
 - `TreeDataGrid.FindCommand` and `FindPreviousCommand`, and `Find(text)`: a search field outside the table binds its
   Enter to them - a new text is searched, the same one goes on to its next match, Shift+Enter back - with the table's
   own marks and steps, no strip of its own. A field bound to `SearchText` searches on its Enter all the same, and
