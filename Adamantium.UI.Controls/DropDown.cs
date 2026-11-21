@@ -402,6 +402,8 @@ public class DropDown : Selector
             _popup.ContentBuilt -= OnPopupContentBuilt;
             _popup.ContentBuilt += OnPopupContentBuilt;
             _popup.IsOpen = IsDropDownOpen;
+            // A new template under an open list - a theme switched - shows the highlighted row in the new list too.
+            if (IsDropDownOpen && _highlightedIndex >= 0) ScrollIndexIntoView(_highlightedIndex);
         }
 
         DetachText();
@@ -789,7 +791,7 @@ public class DropDown : Selector
         else
         {
             dd.Highlight(-1);
-            dd.ScrollIndexIntoView(-1);   // a scroll still waiting does not wait for the next opening
+            dd.ForgetPendingScroll();   // a scroll still waiting does not wait for the next opening
         }
         AutomationEvents.RaiseExpandCollapse(dd, open);
     }

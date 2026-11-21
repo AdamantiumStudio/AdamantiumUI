@@ -206,10 +206,12 @@ public class DropDownListTests
         Assert.That(top, Is.InRange(0, viewer.RenderSize.Height - row.RenderSize.Height + 1));
     }
 
+    // A frame of the loop: what was posted for it, the window's layout, the popup layer's.
     private static void Pass(Window window, int times)
     {
         for (var i = 0; i < times; i++)
         {
+            Adamantium.UI.Core.LoopSignal.Drain();
             WindowExtension.UpdateTree(window);
             window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size<double>(window.Width, window.Height));
         }

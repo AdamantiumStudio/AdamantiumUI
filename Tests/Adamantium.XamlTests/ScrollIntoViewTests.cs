@@ -65,23 +65,45 @@ public class ScrollIntoViewTests
         Assert.That(list.ItemContainerGenerator.RealizedIndices, Does.Contain(250));
     }
 
+    // A later ask replaces one waiting; an unknown item or an index out of the items leaves it; forgotten, it is gone.
     [Test]
-    public void ALaterAsk_ReplacesOneWaiting_AndAnIndexOutOfTheItemsCancelsIt()
+    public void ALaterAsk_ReplacesOneWaiting_ANoneLeavesIt_AndForgottenItIsGone()
     {
         var replaced = List();
         replaced.ScrollIndexIntoView(250);
         replaced.ScrollIndexIntoView(120);
         Shown(replaced);
 
-        var cancelled = List();
-        cancelled.ScrollIndexIntoView(250);
-        cancelled.ScrollIndexIntoView(-1);
-        Shown(cancelled);
+        var left = List();
+        left.ScrollIndexIntoView(250);
+        left.ScrollIntoView("not in the list");
+        left.ScrollIndexIntoView(-1);
+        Shown(left);
+
+        var forgotten = List();
+        forgotten.ScrollIndexIntoView(250);
+        forgotten.ForgetPendingScroll();
+        Shown(forgotten);
 
         Assert.Multiple(() =>
         {
             Assert.That(replaced.ItemContainerGenerator.RealizedIndices, Does.Contain(120).And.Not.Contain(250));
-            Assert.That(cancelled.ItemContainerGenerator.RealizedIndices, Does.Contain(0).And.Not.Contain(250));
+            Assert.That(left.ItemContainerGenerator.RealizedIndices, Does.Contain(250));
+            Assert.That(forgotten.ItemContainerGenerator.RealizedIndices, Does.Contain(0).And.Not.Contain(250));
         });
+    }
+
+    // Items put in before the one waiting move it along: the scroll still goes to the item asked for.
+    [Test]
+    public void ItemsPutInBeforeTheOneWaiting_MoveItAlong()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<string>(Enumerable.Range(0, 300).Select(i => "Row " + i));
+        var list = new ListBox { Height = 200, ItemsSource = items };
+
+        list.ScrollIntoView("Row 250");
+        for (var i = 0; i < 10; i++) items.Insert(0, "New " + i);
+        Shown(list);
+
+        Assert.That(list.ItemContainerGenerator.RealizedIndices, Does.Contain(260));
     }
 }

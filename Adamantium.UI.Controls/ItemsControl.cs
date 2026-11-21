@@ -86,66 +86,88 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     /// <summary>Scrolls until <paramref name="item"/> is in view; a virtualizing panel makes its container on the way, as
     /// WPF's <c>ScrollIntoView</c> does. Of equal items, the first; see <see cref="ScrollIndexIntoView"/>.</summary>
-    public void ScrollIntoView(object item) => ScrollIndexIntoView(Items.IndexOf(item));
+    public void ScrollIntoView(object item)
+    {
+        if (Items.IndexOf(item) is >= 0 and var index)
+        {
+            ScrollIndexIntoView(index);
+        }
+    }
 
-    /// <summary>Scrolls until the item at <paramref name="index"/> is in view. Asked before the list is laid out - its
-    /// template not built, its popup not yet shown, its viewport not known - the scroll waits for the list's next layout,
-    /// as WPF's does: an offset set earlier would be clamped back to the top. A later ask replaces it; an index out of the
-    /// items cancels it.</summary>
+    /// <summary>Scrolls until the item at <paramref name="index"/> is in view; an index out of the items is ignored.
+    /// Asked before the list is laid out - its template not built, its popup not yet shown, its items just changed - the
+    /// scroll waits for the list's next layout, as WPF's does: an offset set earlier would be clamped to the old extent.
+    /// It follows its item as items are added or removed before it; a later ask replaces it. A panel that cannot tell
+    /// where a row it has not made stands shows only the rows it made.</summary>
     public void ScrollIndexIntoView(int index)
     {
-        _pendingScroll = index >= 0 && index < Items.Count ? index : -1;
-        if (_pendingScroll >= 0 && TryScroll(_pendingScroll))
+        if (index < 0 || index >= Items.Count)
         {
-            _pendingScroll = -1;
+            return;
         }
+
+        _pendingScroll = index;
+        ScrollIfLaidOut(arranging: false);
     }
+
+    /// <summary>Forgets a scroll still waiting for the list's layout - a list put away before it was shown.</summary>
+    internal void ForgetPendingScroll() => _pendingScroll = -1;
 
     // The list was laid out: a scroll asked before it could be made is made now.
-    internal void OnItemsArranged()
-    {
-        if (_pendingScroll >= 0 && (_pendingScroll >= Items.Count || TryScroll(_pendingScroll)))
-        {
-            _pendingScroll = -1;
-        }
-    }
+    internal void OnItemsArranged() => ScrollIfLaidOut(arranging: true);
 
-    // False while there is nowhere to scroll to yet. A list with no scroll viewer has nothing to scroll; a panel that
-    // cannot say where a row stands shows the row it made.
-    private bool TryScroll(int index)
+    // Only over a layout that holds - measured and arranged since the items last changed, with a viewport both ways.
+    // From inside the list's arrange, a row is shown by where the panel says it stands (content coordinates); a row
+    // found only by its container is shown once the arrange is over, when the row knows where it is on screen.
+    private void ScrollIfLaidOut(bool arranging)
     {
-        var panel = ItemsHostPanel;
-        if (panel == null || panel.RenderSize.Height <= 0 && panel.RenderSize.Width <= 0)
+        var index = _pendingScroll;
+        var panel = ItemsHostPanel as Base.MeasurableUIComponent;
+        if (index < 0 || panel == null || !panel.IsMeasureValid || !panel.IsArrangeValid
+            || panel.RenderSize.Width <= 0 || panel.RenderSize.Height <= 0)
         {
-            return false;
+            return;
         }
 
         var viewer = panel.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
         if (viewer == null)
         {
-            return true;
+            _pendingScroll = -1;
+            return;
         }
 
         if (panel is VirtualizingPanel { IsVirtualizing: true } virtualizing)
         {
-            if (virtualizing.Viewport.Height <= 0 && virtualizing.Viewport.Width <= 0)
+            if (virtualizing.Viewport.Width <= 0 || virtualizing.Viewport.Height <= 0)
             {
-                return false;
+                return;
             }
 
             if (virtualizing.TryGetItemRect(index, out var rect))
             {
+                _pendingScroll = -1;
                 viewer.BringIntoView(rect);
-                return true;
+                return;
             }
         }
 
-        if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent container)
+        _pendingScroll = -1;
+        if (arranging)
         {
-            container.BringIntoView();
+            LoopSignal.Post(() => ShowMadeRow(index));
         }
+        else
+        {
+            ShowMadeRow(index);
+        }
+    }
 
-        return true;
+    private void ShowMadeRow(int index)
+    {
+        if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent row)
+        {
+            row.BringIntoView();
+        }
     }
 
     public IEnumerable ItemsSource
@@ -344,6 +366,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         }
 
         MoveKeyboardWith(e);
+        if (_pendingScroll >= 0) _pendingScroll = Followed(_pendingScroll, e);   // still the item asked for
         _presenter?.OnItemsChanged(e);
         LetGoOfRemovedItems(e);
         LetGoOfParkedItems(e);
@@ -675,60 +698,45 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     private void MoveKeyboardWith(NotifyCollectionChangedEventArgs e)
     {
-        if (KeyboardIndex < 0)
+        if (KeyboardIndex >= 0 && Followed(KeyboardIndex, e) is var followed && followed != KeyboardIndex)
         {
-            return;
+            KeyboardIndex = followed;
         }
+    }
 
+    // Where an item's index stands after the items change: moved with the items before it, -1 once its item is gone or
+    // the list is reset.
+    private static int Followed(int index, NotifyCollectionChangedEventArgs e)
+    {
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add:
-                if (e.NewStartingIndex < 0)
-                {
-                    KeyboardIndex = -1;
-                }
-                else if (e.NewStartingIndex <= KeyboardIndex)
-                {
-                    KeyboardIndex += e.NewItems.Count;
-                }
-
-                break;
+                if (e.NewStartingIndex < 0) return -1;
+                return e.NewStartingIndex <= index ? index + e.NewItems.Count : index;
 
             case NotifyCollectionChangedAction.Remove:
-                if (e.OldStartingIndex < 0 || KeyboardIndex < e.OldStartingIndex + e.OldItems.Count && KeyboardIndex >= e.OldStartingIndex)
+                if (e.OldStartingIndex < 0 || index < e.OldStartingIndex + e.OldItems.Count && index >= e.OldStartingIndex)
                 {
-                    KeyboardIndex = -1;
-                }
-                else if (e.OldStartingIndex < KeyboardIndex)
-                {
-                    KeyboardIndex -= e.OldItems.Count;
+                    return -1;
                 }
 
-                break;
+                return e.OldStartingIndex < index ? index - e.OldItems.Count : index;
 
             case NotifyCollectionChangedAction.Move:
-                var moved = KeyboardIndex >= e.OldStartingIndex && KeyboardIndex < e.OldStartingIndex + e.OldItems.Count;
-                if (moved)
+                if (index >= e.OldStartingIndex && index < e.OldStartingIndex + e.OldItems.Count)
                 {
-                    KeyboardIndex = e.NewStartingIndex + (KeyboardIndex - e.OldStartingIndex);
-                    break;
+                    return e.NewStartingIndex + (index - e.OldStartingIndex);
                 }
 
-                if (e.OldStartingIndex < KeyboardIndex)
-                {
-                    KeyboardIndex -= e.OldItems.Count;
-                }
-
-                if (e.NewStartingIndex <= KeyboardIndex)
-                {
-                    KeyboardIndex += e.OldItems.Count;
-                }
-
-                break;
+                if (e.OldStartingIndex < index) index -= e.OldItems.Count;
+                if (e.NewStartingIndex <= index) index += e.OldItems.Count;
+                return index;
 
             case NotifyCollectionChangedAction.Reset:
-                KeyboardIndex = -1;
-                break;
+                return -1;
+
+            default:
+                return index;
         }
     }
 
