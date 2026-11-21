@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using NUnit.Framework;
@@ -70,6 +71,25 @@ public class KeyRepeatSettingsTests
         PlatformSettings.Platform = new Settings(600, 0);
 
         Assert.That(PlatformSettings.KeyRepeatInterval, Is.Zero);
+    }
+
+    [Test]
+    public void ARepeatButton_LeftAtNought_RepeatsAtTheUsersPace()
+    {
+        PlatformSettings.Platform = new Settings(750, 50);
+
+        Assert.That(RepeatButton.DelayOrTheUsers(0), Is.EqualTo(750));
+        Assert.That(RepeatButton.IntervalOrTheUsers(0), Is.EqualTo(50));
+        Assert.That(RepeatButton.DelayOrTheUsers(400), Is.EqualTo(400), "its own delay");
+        Assert.That(RepeatButton.IntervalOrTheUsers(80), Is.EqualTo(80), "its own interval");
+    }
+
+    [Test]
+    public void ARepeatButton_GoesOnRepeating_WhereKeysAreToldNotTo()
+    {
+        PlatformSettings.Platform = new Settings(600, 0);
+
+        Assert.That(RepeatButton.IntervalOrTheUsers(0), Is.EqualTo(33));
     }
 
     [Test]

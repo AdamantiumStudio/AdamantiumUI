@@ -567,6 +567,10 @@ All packages share one version.
 
 ### Changed
 
+- `RepeatButton` and `NumericUpDown` repeat at the user's pace from the OS: `Delay`, `Interval` and `RepeatInterval`
+  are 0 by default, which waits and repeats as a held key does (`PlatformSettings.KeyRepeatDelay`,
+  `KeyRepeatInterval`); a number of their own still wins. Keys told not to repeat leave a repeat button at thirty a
+  second.
 - An `Ellipse` and an `EllipseGeometry` have a `StartAngle` and a `SweepAngle`, and no `StopAngle`: `Ellipse.StopAngle`,
   drawn as the sweep, is `SweepAngle`. Markup and setters write `SweepAngle="90"` where they wrote `StopAngle="90"`; a
   setter of `StopAngle` finds no property and sets nothing. `EllipseGeometry.StopAngleProperty` is `SweepAngleProperty`.
