@@ -597,7 +597,8 @@ All packages share one version.
 - An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it
   is hit. `ArcSpan` (new) is the one statement of them: parametric degrees, as an HTML canvas measures them, so a
   sector's share of the area is its share of the turn; any start taken round the turn (`-90` starts at twelve); the
-  sweep's sign its way round, negative counterclockwise; a turn or more the whole ellipse. `Ellipse.StartAngle` and
+  sweep's sign its way round, negative counterclockwise; a sweep past a turn what is left over whole turns (`485` is
+  the arc of `125`), and whole turns (`720`) the whole ellipse. `Ellipse.StartAngle` and
   `SweepAngle` are kept as written - the start was held to no less than 0, the sweep to 0..360, so a start at twelve and
   a sweep backwards could not be written - and `Ellipse.Span`, `EllipseGeometry.Span` and `EllipsePayload.Span` say what
   they cover. The batch takes a sweep backwards as the same cut gone round clockwise; a dashed or trimmed pen, which
@@ -823,10 +824,11 @@ All packages share one version.
 
 ### Fixed
 
-- An ellipse whose sweep is more than a turn was drawn by the tessellator - an `EllipseGeometry`, the fallback of a
-  batched ellipse, a PDF - as that sweep less whole turns: 720 as nothing, 400 as a sliver of 40. It is the whole
-  ellipse, as the batch drew it. A ring swept backwards was the solid sector, no hole; and a whole ellipse of a
-  gradient, a pattern or a texture, started anywhere but 0, was not batched.
+- An ellipse swept past a turn was two shapes: the batch drew it whole, the tessellator - an `EllipseGeometry`, the
+  fallback of a batched ellipse, a PDF - what is left over whole turns, and whole turns as nothing (720). Both draw
+  what is left now (485 as 125) - the batch too, where 400 was whole and is 40 - and whole turns the whole ellipse. A
+  ring swept backwards was the solid sector, no hole; and a whole ellipse of a gradient, a pattern or a texture,
+  started anywhere but 0, was not batched.
 - A `DropDown`'s list made a row for every item each time it opened, not the dozen it shows: its scroll viewer did
   not hand scrolling to the list's virtualizing panel, so the panel was measured unbounded. 300 items took about a
   second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into

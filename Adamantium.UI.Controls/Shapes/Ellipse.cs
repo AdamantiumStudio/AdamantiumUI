@@ -41,7 +41,8 @@ public class Ellipse : Shape
    }
 
    /// <summary>How far the arc runs from <see cref="StartAngle"/>, in degrees: negative counterclockwise, 0 nothing, a
-   /// turn or more the whole ellipse. Kept as written; drawn as at most a turn.</summary>
+   /// turn the whole ellipse; past a turn, what is left over whole turns (485 as 125), whole turns the whole ellipse.
+   /// Kept as written.</summary>
    public Double SweepAngle
    {
       get => GetValue<Double>(SweepAngleProperty);

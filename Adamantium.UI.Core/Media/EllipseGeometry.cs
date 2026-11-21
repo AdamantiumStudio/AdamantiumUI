@@ -117,7 +117,7 @@ public sealed class EllipseGeometry : Geometry
    }
 
    /// <summary>The part of the ellipse it is (<see cref="ArcSpan"/>): <see cref="StartAngle"/> taken round the turn,
-   /// <see cref="SweepAngle"/> held to a turn either way.</summary>
+   /// <see cref="SweepAngle"/> past a turn what is left over whole turns, whole turns a turn.</summary>
    public ArcSpan Span => new(StartAngle, SweepAngle);
 
    public override Rect Bounds => bounds;

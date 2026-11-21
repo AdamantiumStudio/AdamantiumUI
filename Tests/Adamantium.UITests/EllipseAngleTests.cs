@@ -44,10 +44,13 @@ public class EllipseAngleTests
 
     private static bool Hits(Ellipse arc, double x, double y) => arc.HitTestCore(new Vector2<double>(x, y));
 
-    // From twelve to three: the top right quarter, written forwards from -90 or 270, or backwards from 0.
+    // From twelve to three: the top right quarter, written forwards from -90 or 270, or backwards from 0 - or past a turn,
+    // the quarter left over it.
     [TestCase(-90, 90)]
     [TestCase(0, -90)]
     [TestCase(270, 90)]
+    [TestCase(270, 450)]
+    [TestCase(0, -450)]
     public void ASector_IsHitInItsWedgeOnly(double start, double sweep)
     {
         var arc = Laid(start, sweep);
