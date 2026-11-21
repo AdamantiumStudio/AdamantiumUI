@@ -33,7 +33,7 @@
                                 RingThickness="{TemplateBinding RingThickness}"
                                 EllipseType="Sector"
                                 StartAngle="0"
-                                StopAngle="0"
+                                SweepAngle="0"
                                 RenderTransformOrigin="0.5,0.5"/>
                         <!-- The number inside is BODY size, not a subtitle: at this ring's diameter a subtitle does not
                              fit, and a gauge whose label is clipped says less than one with no label at all. -->

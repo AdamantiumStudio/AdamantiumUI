@@ -77,7 +77,7 @@
                                                                       StrokeThickness="4" Fill="Transparent" EllipseType="EdgeToEdge"/>
                                                     <Ellipse Stroke="{ThemeResource AccentFillColorDefault}"
                                                                       StrokeThickness="4" Fill="Transparent" EllipseType="EdgeToEdge"
-                                                                      StartAngle="0" StopAngle="90" RenderTransformOrigin="0.5,0.5">
+                                                                      StartAngle="0" SweepAngle="90" RenderTransformOrigin="0.5,0.5">
                                                         <Ellipse.RenderTransform>
                                                             <Transform x:Name="RingSpin"/>
                                                         </Ellipse.RenderTransform>

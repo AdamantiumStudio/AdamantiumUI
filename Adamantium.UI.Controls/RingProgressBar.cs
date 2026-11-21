@@ -82,8 +82,8 @@ public class RingProgressBar : RangeBase
         _indicator = GetTemplateChild("PART_Indicator") as Ellipse;
         if (_indicator != null)
         {
-            // The Ellipse arc always sweeps from its own angle 0 (at 3 o'clock) in ONE direction (its StopAngle is a
-            // sweep span, clamped >= 0 - it can't render a negative sweep). So the arc transform does two things: a
+            // The Ellipse arc always sweeps from its own angle 0 (at 3 o'clock) in ONE direction (its SweepAngle is
+            // clamped >= 0 - it can't render a negative sweep). So the arc transform does two things: a
             // rotation puts the 0% end at StartPosition, and a vertical flip (ScaleY = -1) reverses the winding for the
             // NON-native Direction (see ApplyArcTransform for which one that is, and why it was measured).
             _startRotate = new Transform();
@@ -142,9 +142,9 @@ public class RingProgressBar : RangeBase
         return square;
     }
 
-    // Sweep the arc to Percentage and refresh the center label. StopAngle is a SWEEP span from StartAngle, so the arc is
-    // always [start 0, sweep fraction*360]; StartPosition (rotation) and Direction (flip) are handled by the transform.
-    // Size-independent, so - unlike a linear fill - this needs no arrange.
+    // Sweep the arc to Percentage and refresh the center label. The arc is always [start 0, sweep fraction*360];
+    // StartPosition (rotation) and Direction (flip) are handled by the transform. Size-independent, so - unlike a linear
+    // fill - this needs no arrange.
     private void UpdateIndicator()
     {
         var fraction = Math.Clamp(Percentage, 0.0, 1.0);
@@ -152,7 +152,7 @@ public class RingProgressBar : RangeBase
 
         if (_indicator == null) return;
         _indicator.StartAngle = 0;
-        _indicator.StopAngle = fraction * 360.0;
+        _indicator.SweepAngle = fraction * 360.0;
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ProgressBarAutomationPeer(this);

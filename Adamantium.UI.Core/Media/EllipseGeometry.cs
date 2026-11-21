@@ -20,7 +20,7 @@ public sealed class EllipseGeometry : Geometry
    public static readonly AdamantiumProperty StartAngleProperty = AdamantiumProperty.Register(nameof(StartAngle),
       typeof(Double), typeof(EllipseGeometry), new PropertyMetadata((Double)0, PropertyMetadataOptions.AffectsRender));
 
-   public static readonly AdamantiumProperty StopAngleProperty = AdamantiumProperty.Register(nameof(SweepAngle),
+   public static readonly AdamantiumProperty SweepAngleProperty = AdamantiumProperty.Register(nameof(SweepAngle),
       typeof(Double), typeof(EllipseGeometry), new PropertyMetadata((Double)360, PropertyMetadataOptions.AffectsRender));
    
    public static readonly AdamantiumProperty EllipseTypeProperty = AdamantiumProperty.Register(nameof(EllipseType),
@@ -47,8 +47,8 @@ public sealed class EllipseGeometry : Geometry
 
    public Double SweepAngle
    {
-      get => GetValue<Double>(StopAngleProperty);
-      set => SetValue(StopAngleProperty, value);
+      get => GetValue<Double>(SweepAngleProperty);
+      set => SetValue(SweepAngleProperty, value);
    }
 
    public EllipseType EllipseType

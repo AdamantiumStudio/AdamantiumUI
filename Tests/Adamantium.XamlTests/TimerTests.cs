@@ -184,7 +184,7 @@ public class TimerTests
         var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(1), ShowDurationField = false });
         var left = Within<Ellipse>(timer.Clock).Single(e => e.Classes.Contains("ClockRemaining"));
 
-        Assert.That(left.StopAngle, Is.EqualTo(360).Within(0.01), "all of it is left");
+        Assert.That(left.SweepAngle, Is.EqualTo(360).Within(0.01), "all of it is left");
         Assert.That(left.RingThickness, Is.GreaterThan(0), "a ring round the rim, not a disc under the hands");
         Assert.That(left.RenderSize.Width, Is.EqualTo(timer.Clock.Face.RenderSize.Width).Within(0.5), "at the rim");
         Assert.That(left.StartAngle, Is.EqualTo(270), "from twelve");

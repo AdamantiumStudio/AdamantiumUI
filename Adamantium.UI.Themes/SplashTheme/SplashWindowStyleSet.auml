@@ -54,7 +54,7 @@
                     <Grid>
                         <Ellipse Stroke="#3A3A40" StrokeThickness="3" Fill="Transparent" EllipseType="EdgeToEdge"/>
                         <Ellipse Stroke="#4CC2FF" StrokeThickness="3" Fill="Transparent" EllipseType="EdgeToEdge"
-                                 StartAngle="0" StopAngle="90" RenderTransformOrigin="0.5,0.5">
+                                 StartAngle="0" SweepAngle="90" RenderTransformOrigin="0.5,0.5">
                             <Ellipse.RenderTransform>
                                 <Transform x:Name="RingSpin"/>
                             </Ellipse.RenderTransform>

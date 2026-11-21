@@ -623,7 +623,7 @@ public class Clock : Control
         }
 
         var left = total > TimeSpan.Zero ? Math.Clamp(Counted() / total, 0, 1) : 0;
-        _remaining.StopAngle = left * 360;
+        _remaining.SweepAngle = left * 360;
     }
 
     private void ShowHands(DateTime? shown)

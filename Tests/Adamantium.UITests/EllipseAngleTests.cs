@@ -3,19 +3,19 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// StopAngle is drawn as the sweep from StartAngle, so neither angle is held to the other.
+// SweepAngle is drawn from StartAngle, so neither angle is held to the other.
 [TestFixture]
 public class EllipseAngleTests
 {
     [Test]
     public void TheSweep_IsKept_WhateverTheStart()
     {
-        var arc = new Ellipse { StartAngle = 270, StopAngle = 45 };
+        var arc = new Ellipse { StartAngle = 270, SweepAngle = 45 };
 
         Assert.Multiple(() =>
         {
             Assert.That(arc.StartAngle, Is.EqualTo(270));
-            Assert.That(arc.StopAngle, Is.EqualTo(45));
+            Assert.That(arc.SweepAngle, Is.EqualTo(45));
         });
     }
 
@@ -23,8 +23,8 @@ public class EllipseAngleTests
     [TestCase(400, 360)]
     public void TheSweep_IsHeldToOneTurn(double asked, double kept)
     {
-        var arc = new Ellipse { StartAngle = 90, StopAngle = asked };
+        var arc = new Ellipse { StartAngle = 90, SweepAngle = asked };
 
-        Assert.That(arc.StopAngle, Is.EqualTo(kept));
+        Assert.That(arc.SweepAngle, Is.EqualTo(kept));
     }
 }
