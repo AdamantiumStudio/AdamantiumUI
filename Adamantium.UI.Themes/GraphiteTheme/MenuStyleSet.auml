@@ -124,6 +124,19 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A section's name over its rows: quiet caption ink, set where the rows' labels start their padding. -->
+    <Style Selector="MenuHeader">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuHeader">
+                    <TextBlock Text="{TemplateBinding Text}" Margin="8 6 8 2"
+                               Foreground="{ObservableResource TextFillColorSecondary}"
+                               FontSize="{ResourceReference FontSizeCaption}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The rule between groups of commands. A hairline inset from both ends, so it separates without cutting the card
          in two - a full-width rule reads as the end of the menu rather than a break inside it. -->
     <Style Selector="Separator">

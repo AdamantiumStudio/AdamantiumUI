@@ -1,4 +1,5 @@
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -51,23 +52,14 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
     {
         if (a is not RibbonDropDownButton button) return;
 
-        if (e.OldValue is ContextMenu old)
+        var menu = (ContextMenu)e.NewValue;
+        button._menu ??= new DroppedMenu(button, button.OnMenuPutAway);
+        button._menu.Take(menu);
+        if (menu != null)
         {
-            old.PropertyChanged -= button.OnMenuPropertyChanged;
-            old.IsOpen = false;
-            button.RemoveLogicalChild(old);
-        }
-
-        if (e.NewValue is ContextMenu menu)
-        {
-            button.AddLogicalChild(menu);
-            // The BUTTON owns the close (IsDropDownOpen drives the flyout), so its own press must not light-dismiss first -
-            // the dismiss would close, the click would re-open, and the second press would look like it did nothing.
-            menu.IgnoreTargetPress = true;
-            menu.PropertyChanged += button.OnMenuPropertyChanged;
             if (button.IsDropDownOpen)
             {
-                menu.Open(button);
+                button._menu.Drop();
             }
         }
         else if (button.IsDropDownOpen)
@@ -78,11 +70,8 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
 
     // The menu closed itself (an outside press, Escape, or a row picked). Nothing else hears that, so the command would
     // stay lit over a flyout that is gone.
-    private void OnMenuPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    private void OnMenuPutAway()
     {
-        if (e.Property != ContextMenu.IsOpenProperty) return;
-        if (!Equals(e.NewValue, false)) return;
-
         // Dropped by a click and put away with nothing picked - Escape, a press elsewhere - the keyboard goes back to the
         // field the ribbon acts for, as after a command; dropped from the keyboard, it stays on the button.
         var returnFocus = _droppedByPointer && ReferenceEquals(FocusManager.Focused, this);
@@ -94,6 +83,7 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         }
     }
 
+    private DroppedMenu _menu;
     private bool _pressedByPointer;
     private bool _droppedByPointer;
     private bool _toggling;
@@ -152,7 +142,7 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
             button._droppedByPointer = button._pressedByPointer;
             button._pressedByPointer = false;
             AutomationEvents.RaiseExpandCollapse(button, true);
-            menu.Open(button);
+            button._menu.Drop();
             return;
         }
 
@@ -168,29 +158,14 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         }
 
         AutomationEvents.RaiseExpandCollapse(button, false);
-        if (menu != null) menu.IsOpen = false;
+        button._menu?.PutAway();
     }
 
-    /// <summary>The menu is not in the visual tree, so it goes with the button the way its context menu does: one of its
-    /// own is discarded, one a style shares is only unhooked.</summary>
+    /// <summary>The menu goes with the button, as its context menu does.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
-
-        if (DropDownMenu is not { } menu) return;
-
-        // Unhooked whoever it belongs to: a menu a style shares would otherwise keep every button that ever showed it.
-        menu.PropertyChanged -= OnMenuPropertyChanged;
-        if (!ReferenceEquals(menu.LogicalParent, this)) return;
-
-        if (OwnsMenu(menu, GetBaseValuePriority(DropDownMenuProperty)))
-        {
-            DiscardedVisuals.PublishSubtree(menu);
-        }
-        else
-        {
-            RemoveLogicalChild(menu);
-        }
+        _menu?.Release(GetBaseValuePriority(DropDownMenuProperty));
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new RibbonDropDownButtonAutomationPeer(this);

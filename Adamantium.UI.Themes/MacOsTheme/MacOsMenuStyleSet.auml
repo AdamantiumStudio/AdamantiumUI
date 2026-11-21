@@ -116,6 +116,19 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A section's name over its rows, as a macOS menu's section title: small secondary ink at the rows' inset. -->
+    <Style Selector="MenuHeader">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuHeader">
+                    <TextBlock Text="{TemplateBinding Text}" Margin="15 5 15 1"
+                               Foreground="{ObservableResource TextFillColorSecondary}"
+                               FontSize="{ResourceReference FontSizeCaption}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style Selector="Separator">
         <Setter Property="Template">
             <Setter.Value>

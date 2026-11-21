@@ -544,6 +544,169 @@ public class ToolBarTrayTests
         });
     }
 
+    private static ToolBarGroup Group(string header, int commands)
+    {
+        var group = new ToolBarGroup { Header = header };
+        for (var i = 0; i < commands; i++)
+        {
+            group.Items.Add(new Button { Name = header + i, Width = CommandWidth, Height = 24, Content = header + i });
+        }
+
+        Style(group);
+        return group;
+    }
+
+    private static Separator RuleOf(ToolBarGroup group) => (Separator)group.GetTemplateChild("PART_Separator");
+
+    // A section goes to the menu whole, never split between the bar and the menu; a rule stands before a section only
+    // where a command stands before it, on the bar or in the menu.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ASection_GoesToTheMenuWhole_AndItsRuleStandsOnlyAfterACommand(System.Type styleSet)
+    {
+        Use(styleSet);
+        var bar = new ToolBar { Header = "Home" };
+        var first = Group("Clipboard", 3);
+        var second = Group("Font", 3);
+        var third = Group("Paragraph", 3);
+        bar.Items.Add(first);
+        bar.Items.Add(second);
+        bar.Items.Add(third);
+        var tray = Tray(bar);
+        var root = Shown(tray, 1000);
+        var allOnBar = new[] { RuleOf(first).Visibility, RuleOf(second).Visibility, RuleOf(third).Visibility };
+        var whole = tray.DesiredSize.Width;
+
+        // A command short of the whole: the last section goes, whole, though one command less would have fitted.
+        root.Width = whole - CommandWidth;
+        Show(root);
+        var thirdInMenu = IsInOverflow(bar, third);
+        var secondInMenu = IsInOverflow(bar, second);
+        var thirdsRuleInMenu = RuleOf(third).Visibility;
+
+        // Two sections short: in the menu the first of them has no rule, the next one has.
+        root.Width = whole - CommandWidth * 5;
+        Show(root);
+        var both = new[] { IsInOverflow(bar, first), IsInOverflow(bar, second), IsInOverflow(bar, third) };
+        var rulesInMenu = new[] { RuleOf(second).Visibility, RuleOf(third).Visibility };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(allOnBar, Is.EqualTo(new[] { Visibility.Collapsed, Visibility.Visible, Visibility.Visible }),
+                "the first thing on the bar has no rule before it");
+            Assert.That(thirdInMenu, Is.True);
+            Assert.That(secondInMenu, Is.False);
+            Assert.That(third.Items.Cast<IUIComponent>().All(command => ReferenceEquals(command.GetVisualAncestors()
+                .OfType<ToolBarGroup>().FirstOrDefault(), third)), Is.True, "its commands stay together in it");
+            Assert.That(thirdsRuleInMenu, Is.EqualTo(Visibility.Collapsed), "first in the menu, no rule");
+            Assert.That(both, Is.EqualTo(new[] { false, true, true }));
+            Assert.That(rulesInMenu, Is.EqualTo(new[] { Visibility.Collapsed, Visibility.Visible }));
+        });
+    }
+
+    // A command before the first section shown or hidden puts the section's rule there or takes it away.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ACommandShownOrHiddenBeforeASection_PutsItsRuleThereOrTakesItAway(System.Type styleSet)
+    {
+        Use(styleSet);
+        var undo = new Button { Width = CommandWidth, Height = 24, Visibility = Visibility.Collapsed };
+        var clipboard = Group("Clipboard", 2);
+        var bar = new ToolBar { Header = "Home", Items = { undo, clipboard } };
+        var root = Shown(Tray(bar), 1000);
+        var hidden = RuleOf(clipboard).Visibility;
+
+        undo.Visibility = Visibility.Visible;
+        Show(root);
+        var shown = RuleOf(clipboard).Visibility;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(new[] { hidden, shown }, Is.EqualTo(new[] { Visibility.Collapsed, Visibility.Visible }));
+            Assert.That(bar.FullLength, Is.GreaterThanOrEqualTo(CommandWidth * 3), "the bar measured again with it");
+        });
+    }
+
+    // Each command of a section stands at its own width, not at the width of the first.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ASectionsCommands_EachStandAtItsOwnWidth(System.Type styleSet)
+    {
+        Use(styleSet);
+        var group = new ToolBarGroup { Header = "Align" };
+        var narrow = new Button { Width = 30, Height = 24 };
+        var wide = new Button { Width = 70, Height = 24 };
+        group.Items.Add(narrow);
+        group.Items.Add(wide);
+        Style(group);
+        var bar = new ToolBar { Header = "Home", Items = { group } };
+        Shown(Tray(bar), 1000);
+
+        Assert.That(new[] { narrow.RenderSize.Width, wide.RenderSize.Width }, Is.EqualTo(new[] { 30.0, 70.0 }));
+    }
+
+    // Contextual bars are listed apart, under a header of their own, checked while shown and not switched by the user;
+    // the user's bars get a header too. With no contextual bar the menu has no headers.
+    [TestCaseSource(nameof(StyleSets))]
+    public void TheTraysMenu_ListsContextualBarsApart_UnderTheirHeader_AndDoesNotSwitchThem(System.Type styleSet)
+    {
+        Use(styleSet);
+        var home = Bar("Home", 0, 0);
+        var table = Bar("Table", 1, 0);
+        table.IsContextual = true;
+        var tray = Tray(home, table);
+        tray.BarsHeader = "Tabs";
+        tray.ContextualBarsHeader = "Contextual";
+        Shown(tray, 1000);
+        var menu = tray.ContextMenu;
+
+        menu.Open(tray);
+        var rows = menu.Items.Cast<object>().ToList();
+        menu.IsOpen = false;
+        table.IsContextual = false;
+        menu.Open(tray);
+        var plain = menu.Items.Cast<object>().ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((MenuHeader)rows[0]).Text, Is.EqualTo("Tabs"));
+            Assert.That(((MenuItem)rows[1]).Header, Is.EqualTo("Home"));
+            Assert.That(((MenuHeader)rows[2]).Text, Is.EqualTo("Contextual"));
+            Assert.That(((MenuItem)rows[3]).Header, Is.EqualTo("Table"));
+            Assert.That(((MenuItem)rows[3]).IsEnabled, Is.False, "what the user is on shows it, not the user");
+            Assert.That(((MenuItem)rows[3]).IsChecked, Is.True);
+            Assert.That(rows[4], Is.InstanceOf<Separator>());
+            Assert.That(plain.OfType<MenuHeader>(), Is.Empty);
+        });
+    }
+
+    // A tray that keeps its bars lets none go to another tray, and takes none from one.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ATrayThatKeepsItsBars_LetsNoneGo_AndTakesNone(System.Type styleSet)
+    {
+        Use(styleSet);
+        var mine = Bar("Mine", 0, 0);
+        var top = Tray(mine, Bar("Stays", 0, 1));
+        top.SharesBars = false;
+        var other = Bar("Other", 0, 0);
+        var bottom = Tray(other);
+        var root = new Border
+        {
+            Width = 1000, Height = 400,
+            Child = new StackPanel { Children = { top, new Border { Height = 100 }, bottom } }
+        };
+        Show(root);
+        var mineAt = At(mine, root);
+
+        Drag(mine, root, At(other, root) + new Vector2<double>(other.RenderSize.Width - 2, other.RenderSize.Height / 2));
+        Drag(other, root, mineAt + new Vector2<double>(2, mine.RenderSize.Height / 2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(top.Items, Does.Contain(mine));
+            Assert.That(bottom.Items, Does.Not.Contain(mine));
+            Assert.That(bottom.Items, Does.Contain(other));
+            Assert.That(top.Items, Does.Not.Contain(other));
+        });
+    }
+
     private sealed class BarModel(string name)
     {
         public string Name { get; } = name;

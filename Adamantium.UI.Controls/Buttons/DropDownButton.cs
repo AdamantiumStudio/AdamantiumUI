@@ -1,6 +1,7 @@
 using System;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -38,10 +39,16 @@ public class DropDownButton : ItemsControl
     public static readonly AdamantiumProperty BackgroundPressedProperty = AdamantiumProperty.Register(
         nameof(BackgroundPressed), typeof(Brush), typeof(DropDownButton), new PropertyMetadata(default(Brush)));
 
+    /// <summary>A menu the button drops in place of its list - rows with commands of their own, rules between them, a
+    /// palette - as a tool bar's buttons have. Held as a logical child, so it is themed and inherits the button's data.</summary>
+    public static readonly AdamantiumProperty DropDownMenuProperty = AdamantiumProperty.Register(nameof(DropDownMenu),
+        typeof(ContextMenu), typeof(DropDownButton), new PropertyMetadata(null, OnDropDownMenuChanged));
+
     private const InputModifiers Alt = InputModifiers.LeftAlt | InputModifiers.RightAlt;
 
     private readonly System.Collections.Generic.HashSet<DropDownButtonItem> _styled = new();
     private Popup _popup;
+    private DroppedMenu _menu;
     private DropDownButtonItem _lit;
     private CommandSourceListener<DropDownButton> _itemCommandListener;
     private bool _refusing;
@@ -98,6 +105,12 @@ public class DropDownButton : ItemsControl
         set => SetValue(BackgroundPressedProperty, value);
     }
 
+    public ContextMenu DropDownMenu
+    {
+        get => GetValue<ContextMenu>(DropDownMenuProperty);
+        set => SetValue(DropDownMenuProperty, value);
+    }
+
     /// <summary>Raised when an item is picked, after its own command and <see cref="ItemCommand"/> ran.</summary>
     public event EventHandler<DropDownButtonItemClickEventArgs> ItemClick;
 
@@ -115,7 +128,7 @@ public class DropDownButton : ItemsControl
             _popup.Closed += OnPopupClosed;
             _popup.ContentBuilt -= OnPopupContentBuilt;
             _popup.ContentBuilt += OnPopupContentBuilt;
-            _popup.IsOpen = IsDropDownOpen;
+            _popup.IsOpen = IsDropDownOpen && DropDownMenu == null;
         }
     }
 
@@ -151,10 +164,12 @@ public class DropDownButton : ItemsControl
     /// in place.</summary>
     protected void Open(bool open) => SetCurrentValue(IsDropDownOpenProperty, open);
 
+    // The focus going into the list's rows or the menu's is not leaving the button.
     protected override void OnLostFocus(RoutedEventArgs e)
     {
         base.OnLostFocus(e);
-        if (IsDropDownOpen && !(FocusManager.Focused is DropDownButtonItem row && ReferenceEquals(row.Owner, this)))
+        if (IsDropDownOpen && _menu?.HasFocus != true
+                           && !(FocusManager.Focused is DropDownButtonItem row && ReferenceEquals(row.Owner, this)))
         {
             Open(false);
         }
@@ -181,7 +196,30 @@ public class DropDownButton : ItemsControl
         {
             if (e.Key == Key.F4 || e.Key == Key.DownArrow && (e.Modifiers & Alt) != 0 || OpensOn(e.Key))
             {
-                if (!e.IsRepeated) Open(true);
+                if (!e.IsRepeated)
+                {
+                    Open(true);
+                    // Dropped from the keyboard, the menu takes the keyboard, so its rows are reachable from it.
+                    if (IsDropDownOpen) DropDownMenu?.MoveKeyboardInsideWhenReady();
+                }
+
+                e.Handled = true;
+            }
+
+            return;
+        }
+
+        // A dropped menu answers its own keys once the keyboard is in it; dropped by a click, the arrows step in.
+        if (DropDownMenu is { } menu)
+        {
+            if (e.Key == Key.F4 || e.Key == Key.UpArrow && (e.Modifiers & Alt) != 0)
+            {
+                if (!e.IsRepeated) Open(false);
+                e.Handled = true;
+            }
+            else if (e.Key is Key.DownArrow or Key.UpArrow)
+            {
+                menu.MoveKeyboardInsideWhenReady();
                 e.Handled = true;
             }
 
@@ -430,10 +468,57 @@ public class DropDownButton : ItemsControl
             return;
         }
 
-        if (button._popup != null) button._popup.IsOpen = open;
+        if (button.DropDownMenu != null)
+        {
+            if (open) button._menu.Drop();
+            else button._menu.PutAway();
+        }
+        else if (button._popup != null)
+        {
+            button._popup.IsOpen = open;
+        }
+
         button.Highlight(null);
         button.OnDropDownOpenChanged(open);
         AutomationEvents.RaiseExpandCollapse(button, open);
+    }
+
+    private static void OnDropDownMenuChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        // A menu given while open takes the list's place, or the old menu's; none left, the button is closed.
+        var button = (DropDownButton)a;
+        var menu = (ContextMenu)e.NewValue;
+        button._menu ??= new DroppedMenu(button, button.OnMenuPutAway);
+        button._menu.Take(menu);
+        if (!button.IsDropDownOpen)
+        {
+            return;
+        }
+
+        if (menu == null)
+        {
+            button.Open(false);
+            return;
+        }
+
+        if (button._popup != null) button._popup.IsOpen = false;
+        button._menu.Drop();
+    }
+
+    // The menu put itself away - a row picked, Escape, a press elsewhere: the button is closed too.
+    private void OnMenuPutAway()
+    {
+        if (IsDropDownOpen)
+        {
+            Open(false);
+        }
+    }
+
+    /// <summary>The menu goes with the button, as its context menu does.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        _menu?.Release(GetBaseValuePriority(DropDownMenuProperty));
     }
 
     private void TellRefusal()

@@ -365,6 +365,8 @@ public class ContextMenu : ItemsControl
             menu._popup.IsOpen = (bool)e.NewValue;
             menu._popup.LayerPass -= menu.OnOpenedPass;
             if ((bool)e.NewValue) menu._popup.LayerPass += menu.OnOpenedPass;
+            // Put away with no row stepped into, the keyboard is not taken on a later opening it was not asked for.
+            else menu._popup.LayerPass -= menu.OnLayerPass;
         }
         if ((bool)e.NewValue)
         {

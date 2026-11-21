@@ -117,6 +117,19 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A section's name over its rows: quiet caption ink, set where the rows' labels start their padding. -->
+    <Style Selector="MenuHeader">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuHeader">
+                    <TextBlock Text="{TemplateBinding Text}" Margin="10 8 10 2"
+                               Foreground="{ObservableResource TextFillColorSecondary}"
+                               FontSize="{ResourceReference FontSizeCaption}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Separator: a 1px divider rule between menu rows. -->
     <Style Selector="Separator">
         <Setter Property="Template">

@@ -9,6 +9,8 @@
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="Padding" Value="2,1"/>
+        <Setter Property="BarsHeader" Value="{Localize ToolBarStrings.Bars}"/>
+        <Setter Property="ContextualBarsHeader" Value="{Localize ToolBarStrings.ContextualBars}"/>
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -98,7 +100,7 @@
                                       Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </ToggleButton>
-                            <StackPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
+                            <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                         Orientation="{TemplateBinding Orientation}"
                                         VerticalAlignment="Center"/>
                             <Popup x:Name="PART_OverflowPopup"
@@ -143,6 +145,38 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsMoving" Value="true">
             <Setter Property="Opacity" Value="0.8"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- A section of a bar: a rule before it where a command stands before it, then its commands along the bar. -->
+    <Style Selector="ToolBarGroup">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <!-- Not virtualized: commands of different widths, each its own, not a cell sized by the first. -->
+                    <StackPanel Orientation="{TemplateBinding Orientation}" Spacing="{ResourceReference ToolBarSpacing}"
+                                IsVirtualizing="False"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBarGroup">
+                    <StackPanel Orientation="{TemplateBinding Orientation}">
+                        <Separator x:Name="PART_Separator" Orientation="Vertical" Visibility="Collapsed"/>
+                        <ItemsPresenter x:Name="PART_ItemsPresenter" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="ToolBarGroup">
+        <PropertyTrigger Property="ShowsSeparator" Value="true">
+            <Setter TargetName="PART_Separator" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Orientation" Value="Vertical">
+            <Setter TargetName="PART_Separator" Property="Orientation" Value="Horizontal"/>
         </PropertyTrigger>
     </Style>
 

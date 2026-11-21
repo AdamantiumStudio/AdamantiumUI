@@ -43,6 +43,43 @@
             </ToolBar>
         </ToolBarTray>
 
+        <!-- A bar in sections, each going to the bar's menu whole; a contextual bar shown by what the user is on; a tray
+             that keeps its bars - none goes to another tray, and none comes from one. -->
+        <TextBlock Text="{Localize ToolBarsStrings.Sections}" FontSize="14" MarginBottom="4"/>
+        <TextBlock Text="{Localize ToolBarsStrings.SectionsHint}" TextWrapping="WrapByWords"
+                   FontSize="13" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="8"/>
+        <StackPanel Orientation="Horizontal" MarginBottom="10">
+            <TextBlock x:Name="SectionsWidthLabel" Text="{Localize ToolBarsStrings.SectionsWidth}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Slider x:Name="SectionsWidth" Width="240" Minimum="120" Maximum="900"
+                    AutomationProperties.LabeledBy="{Binding ElementName=SectionsWidthLabel}"
+                    Value="{Binding SectionsWidth, Mode=TwoWay}" Margin="0,0,24,0"/>
+            <CheckBox x:Name="InTable" Content="{Localize ToolBarsStrings.InTable}" IsChecked="{Binding InTable, Mode=TwoWay}"
+                      VerticalAlignment="Center"/>
+        </StackPanel>
+        <ToolBarTray x:Name="SectionsTray" SharesBars="False" Width="{Binding SectionsWidth}" HorizontalAlignment="Left"
+                     MarginBottom="16">
+            <ToolBar x:Name="FormatBar" Header="{Localize ToolBarsStrings.Format}">
+                <ToolBarGroup x:Name="ClipboardGroup" Header="{Localize ToolBarsStrings.Clipboard}">
+                    <Button x:Name="SectionCutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
+                    <Button x:Name="SectionPasteCommand" Content="{Localize ToolBarsStrings.Paste}" Command="{Binding PressCommand}" CommandParameter="Paste"/>
+                </ToolBarGroup>
+                <ToolBarGroup x:Name="FontGroup" Header="{Localize ToolBarsStrings.Font}">
+                    <ToggleButton x:Name="SectionBoldCommand" Content="{Localize ToolBarsStrings.Bold}" Command="{Binding PressCommand}" CommandParameter="Bold"/>
+                    <ToggleButton x:Name="SectionItalicCommand" Content="{Localize ToolBarsStrings.Italic}" Command="{Binding PressCommand}" CommandParameter="Italic"/>
+                </ToolBarGroup>
+                <ToolBarGroup x:Name="AlignGroup" Header="{Localize ToolBarsStrings.Align}">
+                    <Button x:Name="SectionLeftCommand" Content="{Localize ToolBarsStrings.Left}" Command="{Binding PressCommand}" CommandParameter="Left"/>
+                    <Button x:Name="SectionCenterCommand" Content="{Localize ToolBarsStrings.Center}" Command="{Binding PressCommand}" CommandParameter="Center"/>
+                    <Button x:Name="SectionRightCommand" Content="{Localize ToolBarsStrings.Right}" Command="{Binding PressCommand}" CommandParameter="Right"/>
+                </ToolBarGroup>
+            </ToolBar>
+            <ToolBar x:Name="TableBar" Header="{Localize ToolBarsStrings.Table}" IsContextual="True" Band="1"
+                     Visibility="{Binding InTable, Converter={BooleanToVisibilityConverter}}">
+                <Button x:Name="InsertRowCommand" Content="{Localize ToolBarsStrings.InsertRow}" Command="{Binding PressCommand}" CommandParameter="InsertRow"/>
+                <Button x:Name="DeleteRowCommand" Content="{Localize ToolBarsStrings.DeleteRow}" Command="{Binding PressCommand}" CommandParameter="DeleteRow"/>
+            </ToolBar>
+        </ToolBarTray>
+
         <TextBlock x:Name="ToolBarsReport"
                    Text="{Localize ToolBarsStrings.Report, command={Localize ToolBarsStrings, Key={Binding Pressed}}}"/>
     </StackPanel>

@@ -2,4 +2,6 @@
     <Phrase Key="MoreCommands" Text="Ещё команды"/>
     <Phrase Key="LockToolBars" Text="Закрепить панели"/>
     <Phrase Key="Grip" Text="Переместить панель"/>
+    <Phrase Key="Bars" Text="Панели"/>
+    <Phrase Key="ContextualBars" Text="Контекстные - сами, по месту"/>
 </Language>
