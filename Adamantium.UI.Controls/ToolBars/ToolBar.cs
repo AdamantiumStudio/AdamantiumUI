@@ -16,7 +16,8 @@ namespace Adamantium.UI.Controls;
 /// <summary>
 /// A bar of commands - any controls, drawn as their theme draws them - in a <see cref="ToolBarTray"/>, which places it by
 /// its <see cref="Band"/> and <see cref="BandIndex"/> and moves it when its grip is dragged. When the bar is short of
-/// room, its last commands go to its overflow menu, as each command's <see cref="OverflowModeProperty"/> allows.
+/// room, its last commands go to its overflow menu, as each command's <see cref="OverflowModeProperty"/> allows - or, as
+/// <see cref="CommandWrapping"/> says, onto new lines of the bar.
 /// </summary>
 public class ToolBar : ItemsControl
 {
@@ -65,6 +66,12 @@ public class ToolBar : ItemsControl
     /// <summary>The room between two commands, on the bar and in its overflow menu - a theme metric.</summary>
     public static readonly AdamantiumProperty SpacingProperty = AdamantiumProperty.Register(nameof(Spacing),
         typeof(double), typeof(ToolBar), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where the commands that do not fit on the bar's line go: to its overflow menu, or onto a new line.</summary>
+    public static readonly AdamantiumProperty CommandWrappingProperty = AdamantiumProperty.Register(nameof(CommandWrapping),
+        typeof(CommandWrapping), typeof(ToolBar),
+        new PropertyMetadata(CommandWrapping.NoWrap, PropertyMetadataOptions.AffectsMeasure,
+            static (a, _) => ((ToolBar)a).OnCommandWrappingChanged()));
 
     /// <summary>Where a command stands when its bar is short of room; set on the command.</summary>
     public static readonly AdamantiumProperty OverflowModeProperty = AdamantiumProperty.RegisterAttached("OverflowMode",
@@ -156,6 +163,19 @@ public class ToolBar : ItemsControl
         set => SetValue(IsContextualProperty, value);
     }
 
+    /// <summary>Where the commands that do not fit on the bar's line go: <see cref="Controls.CommandWrapping.NoWrap"/>,
+    /// to its overflow menu, the last first; <see cref="Controls.CommandWrapping.Wrap"/>, onto a new line of the bar, each
+    /// whole, the bar growing across - a section is never split, and its rule is hidden where it begins a line.</summary>
+    public CommandWrapping CommandWrapping
+    {
+        get => GetValue<CommandWrapping>(CommandWrappingProperty);
+        set => SetValue(CommandWrappingProperty, value);
+    }
+
+    /// <summary>Whether the commands go onto new lines: only a panel of its own lays them in lines, so a template with
+    /// another one keeps them on one.</summary>
+    internal bool Wraps => CommandWrapping == CommandWrapping.Wrap && _onBar is ToolBarPanel;
+
     public double Spacing
     {
         get => GetValue<double>(SpacingProperty);
@@ -171,7 +191,8 @@ public class ToolBar : ItemsControl
     /// <summary>How long the bar is with every command it can show on it.</summary>
     internal double FullLength { get; private set; } = double.NaN;
 
-    /// <summary>How short the bar can be: its grip, the commands that never overflow and the overflow button.</summary>
+    /// <summary>How short the bar can be: its grip, the commands that never overflow and the overflow button - and on a
+    /// bar whose commands wrap, its longest command, since each goes onto a line whole.</summary>
     internal double ShortestLength { get; private set; } = double.NaN;
 
     internal ToolBarTray Tray => this.GetVisualAncestors().OfType<ToolBarTray>().FirstOrDefault();
@@ -186,6 +207,7 @@ public class ToolBar : ItemsControl
         TakeCommandsOut();
         base.OnApplyTemplate();
         _onBar = GetTemplateChild("PART_Items") as Panel;
+
         HookOverflow(GetTemplateChild("PART_OverflowItems") as Panel);
         HookGrip(GetTemplateChild("PART_Grip") as Thumb);
 
@@ -259,6 +281,13 @@ public class ToolBar : ItemsControl
         InvalidateMeasure();
     }
 
+    // The commands back on the bar to be shared out again: wrapping, none goes to the menu but those set to.
+    private void OnCommandWrappingChanged()
+    {
+        // The panel reads it from the bar, measured on its own: told nothing, it would keep its old lines.
+        _onBar?.InvalidateMeasure();
+    }
+
     // Turned, the bar measures its commands again along the new way, its sections turned with it.
     private void OnOrientationChanged()
     {
@@ -270,7 +299,8 @@ public class ToolBar : ItemsControl
     }
 
     // A section's rule stands where a shown command stands before it, in the same place - the bar or the menu - so the
-    // first thing on the bar, or in the menu, has none.
+    // first thing on the bar, or in the menu, has none. On a bar that wraps, a section beginning a line keeps its rule's
+    // room and hides it (ToolBarGroup.BeginsLine): taking the room away would let it back onto the line before.
     private void MarkSeparators()
     {
         var shownOnBar = false;
@@ -282,6 +312,11 @@ public class ToolBar : ItemsControl
             if (command is ToolBarGroup group)
             {
                 group.ShowsSeparator = before;
+                if (_overflowing[i])
+                {
+                    // The menu has no lines: what began one on the bar shows its rule there.
+                    group.BeginsLine = false;
+                }
             }
 
             if (command.Visibility == Visibility.Collapsed)
@@ -398,8 +433,11 @@ public class ToolBar : ItemsControl
         var margin = horizontal ? Margin.Left + Margin.Right : Margin.Top + Margin.Bottom;
         FullLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode == ToolBarOverflowMode.Always)) +
                      (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0);
-        ShortestLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
-                         (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
+        // A bar that wraps is as short as its longest command: the rest go onto new lines.
+        ShortestLength = Wraps
+            ? margin + _chrome + Longest(lengths) + (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0)
+            : margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
+              (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
         return size;
     }
 
@@ -438,7 +476,7 @@ public class ToolBar : ItemsControl
     {
         var chrome = double.IsNaN(_chrome) ? 0 : _chrome;
         var overflowing = Overflowing(mode => mode == ToolBarOverflowMode.Always);
-        if (chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
+        if (Wraps || chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
             room + Tolerance)
         {
             return overflowing;
@@ -486,6 +524,20 @@ public class ToolBar : ItemsControl
         }
 
         return length + Math.Max(0, Spacing) * Math.Max(0, shown - 1);
+    }
+
+    private double Longest(double[] lengths)
+    {
+        var longest = 0.0;
+        for (var i = 0; i < lengths.Length; i++)
+        {
+            if (GetOverflowMode(_commands[i]) != ToolBarOverflowMode.Always && _commands[i].Visibility != Visibility.Collapsed)
+            {
+                longest = Math.Max(longest, lengths[i]);
+            }
+        }
+
+        return longest;
     }
 
     private const double Tolerance = 1e-6;
