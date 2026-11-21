@@ -85,4 +85,18 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
     public Size<double> DragThreshold => new(
         Win32Interop.GetSystemMetrics(SystemMetrics.Cxdrag),
         Win32Interop.GetSystemMetrics(SystemMetrics.Cydrag));
+
+    // SPI_GETKEYBOARDDELAY: 0 to 3, a quarter of a second each, from 250 ms.
+    public uint KeyRepeatDelay => ReadSystemParameter(SPI.GetKeyboardDelay) is { } step ? (uint)((step + 1) * 250) : 0;
+
+    // SPI_GETKEYBOARDSPEED: 0 to 31, from about 2.5 repeats a second to about 30; unread, thirty a second.
+    public uint KeyRepeatInterval => ReadSystemParameter(SPI.GetKeyboardSpeed) is { } step
+        ? (uint)Math.Round(1000 / (2.5 + step * 27.5 / 31))
+        : 33;
+
+    private static int? ReadSystemParameter(SPI parameter)
+    {
+        var value = new int[1];
+        return Win32Interop.SystemParametersInfo(parameter, 0, value, 0) ? value[0] : null;
+    }
 }

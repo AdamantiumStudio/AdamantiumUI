@@ -13,10 +13,10 @@ namespace Adamantium.UI.Controls.Primitives;
 public class RepeatButton : ButtonBase
 {
     public static readonly AdamantiumProperty DelayProperty = AdamantiumProperty.Register(nameof(Delay),
-        typeof(int), typeof(RepeatButton), new PropertyMetadata(500));
+        typeof(int), typeof(RepeatButton), new PropertyMetadata(0));
 
     public static readonly AdamantiumProperty IntervalProperty = AdamantiumProperty.Register(nameof(Interval),
-        typeof(int), typeof(RepeatButton), new PropertyMetadata(33));
+        typeof(int), typeof(RepeatButton), new PropertyMetadata(0));
 
     private DispatcherTimer _timer;
 
@@ -29,14 +29,16 @@ public class RepeatButton : ButtonBase
         ClickModeProperty.OverrideMetadata(typeof(RepeatButton), new PropertyMetadata(ClickMode.Press));
     }
 
-    /// <summary>Milliseconds the button must be held before auto-repeat begins.</summary>
+    /// <summary>Milliseconds the button must be held before auto-repeat begins; 0, the default, waits as a held key
+    /// does in the OS (<see cref="PlatformSettings.KeyRepeatDelay"/>).</summary>
     public int Delay
     {
         get => GetValue<int>(DelayProperty);
         set => SetValue(DelayProperty, value);
     }
 
-    /// <summary>Milliseconds between repeats once auto-repeat has begun.</summary>
+    /// <summary>Milliseconds between repeats once auto-repeat has begun; 0, the default, repeats as a held key does in
+    /// the OS (<see cref="PlatformSettings.KeyRepeatInterval"/>).</summary>
     public int Interval
     {
         get => GetValue<int>(IntervalProperty);
@@ -91,9 +93,18 @@ public class RepeatButton : ButtonBase
     private void StartTimer()
     {
         _timer ??= CreateTimer();
-        _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(1, Interval));
-        _timer.Start(TimeSpan.FromMilliseconds(Math.Max(1, Delay)));   // first repeat after Delay, then every Interval
+        _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(1, IntervalOrTheUsers(Interval)));
+        _timer.Start(TimeSpan.FromMilliseconds(Math.Max(1, DelayOrTheUsers(Delay))));   // first repeat after Delay, then every Interval
     }
+
+    /// <summary><paramref name="delay"/>, or the OS's key repeat delay where it is 0.</summary>
+    internal static int DelayOrTheUsers(int delay) => delay > 0 ? delay : (int)PlatformSettings.KeyRepeatDelay;
+
+    /// <summary><paramref name="interval"/>, or the OS's key repeat interval where it is 0. Keys the user stopped from
+    /// repeating say nothing of a button made to repeat: it keeps thirty a second.</summary>
+    internal static int IntervalOrTheUsers(int interval) => interval > 0
+        ? interval
+        : PlatformSettings.KeyRepeatInterval is > 0 and var pace ? (int)pace : 33;
 
     private void StopTimer() => _timer?.Stop();
 
