@@ -457,7 +457,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             var hasKey = marker.Arguments.Any(argument => (string.IsNullOrEmpty(argument.Name) || argument.Name == "Key")
                                                           && (!string.IsNullOrWhiteSpace(argument.Value?.GetTextValue())
                                                               || marker.TypeReference.Name == "ObservableResource"
-                                                              && argument.Value is AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" }));
+                                                              && MarkupBindings.IsBinding(argument.Value)));
             if (!hasKey)
             {
                 diagnostics.ReportError(document.FileName,
@@ -715,7 +715,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
 
         static bool IsFollowed(IAumlAstValueNode value) =>
-            value is AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" or "MultiBinding" or "TemplateBinding" };
+            MarkupBindings.IsBinding(value) || value is AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" };
 
         void ReportNoTable(string prefix, string table, AumlAstMarkupExtensionNode localize) =>
             diagnostics.ReportError(document.FileName,
@@ -1192,7 +1192,9 @@ public class DefaultAumlTransformer : IAumlTransformer
                         {
                             var parsed = MarkupExtensionParser.Parse(new ParserContext(null), condition,
                                 directive.GetLineInfo(), document.NamespaceMappings.ToList());
-                            if (parsed is AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" or "MultiBinding" })
+                            // Any binding but {Self}: the condition is bound on the slot that stands in for the
+                            // element, which is not built yet, so {Self} would read the slot.
+                            if (MarkupBindings.IsBinding(parsed) && parsed is not AumlAstMarkupExtensionNode { TypeReference.Name: "Self" })
                             {
                                 directive.Value = ProcessValueNode(parsed);
                                 queue.Enqueue(directive.Value);

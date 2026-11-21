@@ -110,9 +110,8 @@ public static class MarkupMessages
     public static string TemplateBindingOutsideTemplate() => Say(nameof(TemplateBindingOutsideTemplate));
     public static string AncestorTypeNotResolved(string type) => Say(nameof(AncestorTypeNotResolved), ("type", type));
     public static string AncestorStopTypeNotResolved(string type) => Say(nameof(AncestorStopTypeNotResolved), ("type", type));
-    public static string AncestorConverterInvalid() => Say(nameof(AncestorConverterInvalid));
+    public static string ConverterInvalid(string binding) => Say(nameof(ConverterInvalid), ("binding", binding));
     public static string AncestorUnknownArgument(string argument) => Say(nameof(AncestorUnknownArgument), ("argument", argument));
-    public static string SelfConverterInvalid() => Say(nameof(SelfConverterInvalid));
     public static string SelfUnknownArgument(string argument) => Say(nameof(SelfUnknownArgument), ("argument", argument));
     public static string UnknownBindingProperty(string name) => Say(nameof(UnknownBindingProperty), ("name", name));
 

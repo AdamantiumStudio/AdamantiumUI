@@ -297,6 +297,27 @@ public class ObservableResourceTests
         Assert.That(button.Content, Is.EqualTo("COPY"));
     }
 
+    // Any binding names the key: {Self} reads it off the element itself.
+    [Test]
+    public void AKeyFromTheElementItself_IsWrittenInMarkup_AndFollowed()
+    {
+        _rm.AddSource(new Border(), typeof(Icons), ResourceScope.Global);
+
+        var load = Adamantium.UI.Core.Markup.AumlLoader.Load(
+            "<Button xmlns=\"http://adamantium/ui\" Tag=\"CutIcon\" Content=\"{ObservableResource {Self Tag}}\"/>");
+        var button = (Button)load.Root;
+        var first = button.Content;
+        button.Tag = "CopyIcon";
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(load.Diagnostics, Is.Empty);
+            Assert.That(first, Is.EqualTo("CUT"));
+            Assert.That(button.Content, Is.EqualTo("COPY"));
+        });
+    }
+
     private sealed class Named : System.ComponentModel.INotifyPropertyChanged
     {
         private string _icon;
