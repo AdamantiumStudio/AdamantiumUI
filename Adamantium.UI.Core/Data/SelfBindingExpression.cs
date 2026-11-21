@@ -15,6 +15,7 @@ public class SelfBindingExpression : BindingExpressionBase
     {
         Target = target;
         TargetProperty = targetProperty;
+        BindingBase = def;
         _def = def;
     }
 
@@ -25,20 +26,15 @@ public class SelfBindingExpression : BindingExpressionBase
 
         if (!AncestorBindingExpression.HasFirstLink(Target, _def.Path))
         {
-            Fail($"{{Self}} on {Target.GetType().Name}.{TargetProperty?.Name}: no '{_def.Path}' property on the element.");
+            Fail($"{{Self}} on {Place}: no '{_def.Path}' property on the element.");
             return;
         }
 
-        _path ??= WritingHere(new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
-        {
-            Source = Target,
-            Mode = _def.Mode,
-            UpdateSourceTrigger = _def.UpdateSourceTrigger,
-            Converter = _def.Converter,
-            ConverterParameter = _def.ConverterParameter,
-            FallbackValue = _def.FallbackValue,
-            TargetNullValue = _def.TargetNullValue
-        }));
+        _path ??= PassingValueOn(WritingHere(new BindingExpression(Target, TargetProperty, RelativeBindingPipeline.Following(
+            _def, _def.Path, _def.Mode, _def.UpdateSourceTrigger, _def.Converter, _def.ConverterParameter))));
+        _path.Binding.Source = Target;
+        // A producer read as text - a key, a phrase's argument - is formatted where the value is read.
+        _path.ProducesText = ProducesText;
         _path.EstablishConnection();
         _connected = true;
         Status = _path.Status;

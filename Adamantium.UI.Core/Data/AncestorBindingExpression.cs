@@ -24,6 +24,7 @@ public class AncestorBindingExpression : BindingExpressionBase
     {
         Target = target;
         TargetProperty = targetProperty;
+        BindingBase = def;
         _def = def;
     }
 
@@ -192,7 +193,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         if (IsTargetAttached())
         {
             StopWaiting();
-            Fail($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: no {_def.AncestorType?.Name} ancestor found in the {(_def.Logical ? "logical" : "visual")} tree.");
+            Fail($"{{Ancestor}} on {Place}: no {_def.AncestorType?.Name} ancestor found in the {(_def.Logical ? "logical" : "visual")} tree.");
         }
         else
         {
@@ -205,7 +206,14 @@ public class AncestorBindingExpression : BindingExpressionBase
     // target. With neither set this produces Unset and leaves the target at its default.
     private void ApplyFallback()
     {
-        if (TargetProperty == null) return;
+        if (TargetProperty == null)
+        {
+            // A producer - a trigger's condition, a MultiBinding's input - reads what it falls back on, or nothing.
+            ProducedValue = Substitute(_def.FallbackValue) ?? Substitute(_def.TargetNullValue);
+            RaiseValueChanged();
+            return;
+        }
+
         var value = RelativeBindingPipeline.Produce(RelativeBindingPipeline.Unset, _def.Converter, _def.ConverterParameter,
             TargetProperty.PropertyType, Substitute(_def.FallbackValue), Substitute(_def.TargetNullValue));
         if (!ReferenceEquals(value, RelativeBindingPipeline.Unset)) WriteTarget(value);
@@ -250,20 +258,15 @@ public class AncestorBindingExpression : BindingExpressionBase
 
         if (!HasFirstLink(_source, _def.Path))
         {
-            Fail($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: {_def.AncestorType?.Name} has no '{_def.Path}' property.");
+            Fail($"{{Ancestor}} on {Place}: {_def.AncestorType?.Name} has no '{_def.Path}' property.");
             return;
         }
 
-        _path ??= WritingHere(new BindingExpression(Target, TargetProperty, new Binding(_def.Path)
-        {
-            Mode = _def.Mode,
-            UpdateSourceTrigger = _def.UpdateSourceTrigger,
-            Converter = _def.Converter,
-            ConverterParameter = _def.ConverterParameter,
-            FallbackValue = _def.FallbackValue,
-            TargetNullValue = _def.TargetNullValue
-        }));
+        _path ??= PassingValueOn(WritingHere(new BindingExpression(Target, TargetProperty, RelativeBindingPipeline.Following(
+            _def, _def.Path, _def.Mode, _def.UpdateSourceTrigger, _def.Converter, _def.ConverterParameter))));
         _path.Binding.Source = _source;
+        // A producer read as text - a key, a phrase's argument - is formatted where the value is read.
+        _path.ProducesText = ProducesText;
         _path.EstablishConnection();
         Status = _path.Status;
     }

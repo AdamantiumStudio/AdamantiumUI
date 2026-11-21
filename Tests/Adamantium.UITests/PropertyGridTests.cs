@@ -242,7 +242,7 @@ public class PropertyGridTests
         var closed = new Folding { IsExpanded = false };
         var source = new ObservableCollection<object> { open };
         var section = new PropertySection { DataType = typeof(Folding), Header = "Folding" };
-        new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay }.Apply(section, nameof(PropertySection.IsExpanded));
+        section.SetBinding(nameof(PropertySection.IsExpanded), new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay });
         var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source };
         grid.Sections.Add(section);
         Settle(grid);
@@ -400,8 +400,8 @@ public class PropertyGridTests
         var before = section.HasMenu;
 
         var item = new MenuItem { Header = "Remove" };
-        new Ancestor { AncestorType = typeof(PropertySection), Path = nameof(PropertySection.Target), Logical = true }
-            .Apply(item, nameof(MenuItem.CommandParameter));
+        item.SetBinding(nameof(MenuItem.CommandParameter),
+            new Ancestor { AncestorType = typeof(PropertySection), Path = nameof(PropertySection.Target), Logical = true });
         var menu = new ContextMenu();
         menu.Items.Add(item);
         section.ContextMenu = menu;
@@ -431,7 +431,7 @@ public class PropertyGridTests
         var source = new ObservableCollection<object> { folded };
         var section = new PropertySection { DataType = typeof(Folding), Header = "Folding" };
         section.Properties.Add(new StringProperty { Header = "Offset", Binding = new Binding("Name") });
-        new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay }.Apply(section, nameof(PropertySection.IsExpanded));
+        section.SetBinding(nameof(PropertySection.IsExpanded), new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay });
         var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source };
         grid.Sections.Add(section);
         Settle(grid);
@@ -1304,7 +1304,7 @@ public class PropertyGridTests
         var target = new Target { IsEnabled = true };
         var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
 
-        new Self { Path = "Inspected.IsEnabled" }.Apply(scale, nameof(PropertyDefinition.IsVisible));
+        scale.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.IsEnabled" });
 
         var grid = Built(Section(target, scale));
 
@@ -1327,8 +1327,7 @@ public class PropertyGridTests
         var two = new Target { IsEnabled = true };
         var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
 
-        new Self { Path = "Inspected.IsEnabled", FallbackValue = false }
-            .Apply(scale, nameof(PropertyDefinition.IsVisible));
+        scale.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.IsEnabled", FallbackValue = false });
 
         var section = new PropertySection { Header = "General", IsExpanded = true };
 

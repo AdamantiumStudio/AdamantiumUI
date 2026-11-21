@@ -35,6 +35,21 @@ public abstract class BindingBase: MarkupExtension, ICloneable
 
    public abstract object Clone();
 
+   /// <summary>Gives <paramref name="binding"/> what every kind of binding says of its value - fallbacks, format,
+   /// timing - as this one says it: the one place a clone, or a binding made to follow this one's path, copies them.
+   /// </summary>
+   protected internal T CopiedInto<T>(T binding) where T : BindingBase
+   {
+      binding.Delay = Delay;
+      binding.FallbackValue = FallbackValue;
+      binding.StringFormat = StringFormat;
+      binding.Culture = Culture;
+      binding.TargetNullValue = TargetNullValue;
+      binding.IsAsync = IsAsync;
+      binding.IsImmediate = IsImmediate;
+      return binding;
+   }
+
    /// <summary>The live expression this kind of binding is: not yet connected, writing to <paramref name="targetProperty"/>
    /// of <paramref name="target"/>, or producing a value for a parent binding when the property is null.</summary>
    public abstract BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty);

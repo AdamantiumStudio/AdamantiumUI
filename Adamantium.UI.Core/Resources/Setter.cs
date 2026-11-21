@@ -62,12 +62,6 @@ public class Setter : ISetter, IEquatable<Setter>
             case ObservableResource observableResource:
                 observableResource.Apply(component, Property, SlotFor(property, style), style);
                 break;
-            case Ancestor ancestor:
-                Connect(ancestor.CreateExpression(component, property), style);
-                break;
-            case Self self:
-                Connect(self.CreateExpression(component, property), style);
-                break;
 
             // x:Shared="False": build this element its OWN value. Everything else in this switch hands out one object to
             // every target, which is right for a brush and wrong for anything that belongs to the element it sits on.
@@ -171,8 +165,6 @@ public class Setter : ISetter, IEquatable<Setter>
         switch (Value)
         {
             case BindingBase:
-            case Ancestor:
-            case Self:
                 BindingEngine.ClearOwned(component, property, style);
                 component.RemoveStyleValue(Property, style);
                 break;

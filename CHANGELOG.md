@@ -533,6 +533,12 @@ All packages share one version.
 
 ### Changed
 
+- `{Ancestor}` and `{Self}` are bindings: they derive from `BindingBase`, so besides a property and a setter they go in
+  a `DataTrigger`'s `Binding`, a `MultiDataTrigger`'s `Condition` and a `MultiBinding`'s input, in markup and in code.
+  `DataTrigger.Binding` and `Condition.Binding` take any `BindingBase`. A trigger can test a property of the element its
+  host stands in, `{Ancestor ListBox, IsEnabled}`, next to the host's data. One that finds no ancestor is tested on its
+  `FallbackValue`, then its `TargetNullValue`, as a property bound to it shows them.
+- A binding's failure read by a trigger or another binding says so, where it named an empty property.
 - A type written in braces must be a markup extension: `{Name}` of any other type was made with `new` at every build;
   the build now reports it. The library's converters and the sandbox's derive
   from `ValueConverter` or `MultiValueConverter`.
@@ -709,6 +715,7 @@ All packages share one version.
 
 ### Removed
 
+- `Ancestor.Apply` and `Self.Apply`: bind with `SetBinding`, as any binding.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 
 - `CanvasMode`, `InfiniteCanvas.Mode`, `ICanvasItem.Mode`, `ICanvasTool.WorksIn` and `ElementTool.Mode`: what a canvas
