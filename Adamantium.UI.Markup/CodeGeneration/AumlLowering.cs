@@ -739,13 +739,10 @@ public class AumlLowering
                             var extensionTarget = isRoot ? VariableValue.This : Variable(CurrentParent);
                             var provided = ProvidedFor(extension, extensionTarget, propRef.Name, resolvedType, diagnostics,
                                 isResource);
-                            // Inside a template at the template's priority, as its plain values are, so its triggers outrank it.
-                            if (propRef.IsAttachedProperty && CurrentTemplate != null)
-                            {
-                                _writer.Add(Invoke(extensionTarget, "SetValue",
-                                    new MemberValue(OwnerOf(propRef), $"{propRef.Name}Property"), provided, Priority("Template")));
-                            }
-                            else if (propRef.IsAttachedProperty)
+                            // An attached property goes through its owner's setter, in a template too: the owner may do
+                            // more than keep the value - ResourceContext.SetSource registers the dictionary it links.
+                            // A property of the element, inside a template, stands at the template's priority.
+                            if (propRef.IsAttachedProperty)
                             {
                                 _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", extensionTarget, provided));
                             }

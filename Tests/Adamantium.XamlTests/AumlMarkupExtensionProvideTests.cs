@@ -56,7 +56,7 @@ public class AumlMarkupExtensionProvideTests
     {
         var result = AumlLoader.Load(
             "<ContentControl " + Namespaces + "><ContentControl.ContentTemplate><DataTemplate>" +
-            "<TextBlock Text=\"{t:WhereWritten}\" Width=\"{t:Twice Value=5}\" Grid.Row=\"{t:Row Index=2}\"/>" +
+            "<TextBlock Text=\"{t:WhereWritten}\" Width=\"{t:Twice Value=5}\" Grid.Row=\"{t:Row Index=2}\" t:Noted.Note=\"{t:WhereWritten}\"/>" +
             "</DataTemplate></ContentControl.ContentTemplate></ContentControl>");
         var template = ((ContentControl)result.Root)?.ContentTemplate;
         Assert.That(template, Is.Not.Null, string.Join(" | ", result.Diagnostics));
@@ -70,9 +70,33 @@ public class AumlMarkupExtensionProvideTests
             Assert.That(Grid.GetRow(built), Is.EqualTo(2));
             Assert.That(built.IsSet(Adamantium.UI.Controls.Base.MeasurableUIComponent.WidthProperty, Adamantium.UI.Core.ValuePriority.Template),
                 Is.True, "at the template's priority, so its triggers outrank it");
-            Assert.That(built.IsSet(Grid.RowProperty, Adamantium.UI.Core.ValuePriority.Template), Is.True, "an attached property too");
+            // An attached property's owner may do more than keep the value - ResourceContext.SetSource registers the
+            // dictionary it links - so the value goes through the owner's setter, in a template too.
+            Assert.That(Noted.GetNote(built), Is.EqualTo("TextBlock.Note"));
+            Assert.That(Noted.GetSeen(built), Is.True, "set through the owner's SetNote");
         });
     }
+}
+
+/// <summary>An attached note whose setter does more than keep it: it marks the element as seen.</summary>
+public static class Noted
+{
+    public static readonly Adamantium.UI.Core.AdamantiumProperty NoteProperty =
+        Adamantium.UI.Core.AdamantiumProperty.RegisterAttached<string>("Note", typeof(Adamantium.UI.Core.AdamantiumComponent));
+
+    public static readonly Adamantium.UI.Core.AdamantiumProperty SeenProperty =
+        Adamantium.UI.Core.AdamantiumProperty.RegisterAttached("Seen", typeof(bool), typeof(Adamantium.UI.Core.AdamantiumComponent),
+            new Adamantium.UI.Core.PropertyMetadata(false));
+
+    public static string GetNote(Adamantium.UI.Core.AdamantiumComponent element) => element.GetValue<string>(NoteProperty);
+
+    public static void SetNote(Adamantium.UI.Core.AdamantiumComponent element, string value)
+    {
+        element.SetValue(NoteProperty, value);
+        element.SetValue(SeenProperty, true);
+    }
+
+    public static bool GetSeen(Adamantium.UI.Core.AdamantiumComponent element) => element.GetValue<bool>(SeenProperty);
 }
 
 /// <summary>Twice its <see cref="Value"/>.</summary>
