@@ -460,7 +460,7 @@
                          Stroke="{Binding Arc.StrokeBrush}"
                          StrokeThickness="{Binding Arc.StrokeWidth}"
                          StartAngle="{Binding Arc.StartAngle}"
-                         StopAngle="{Binding Arc.SweepAngle}"
+                         SweepAngle="{Binding Arc.SweepAngle}"
                          EllipseType="{Binding Arc.Kind}"
                          RingThickness="{Binding Arc.RingThickness}"/>
             </Border>

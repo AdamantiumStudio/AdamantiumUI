@@ -65,10 +65,10 @@ public class Grid: Panel
       AdamantiumProperty.Register(nameof(ShowGridLines), typeof(Boolean), typeof(Grid),
          new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
 
-   public static readonly AdamantiumProperty IndividualRowSpacingProperty = AdamantiumProperty.Register(nameof(IndividualRowSpacingProperty),
+   public static readonly AdamantiumProperty IndividualRowSpacingProperty = AdamantiumProperty.Register(nameof(IndividualRowSpacing),
       typeof(Boolean), typeof(Grid), new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
 
-   public static readonly AdamantiumProperty IndividualColumnSpacingProperty = AdamantiumProperty.Register(nameof(IndividualColumnSpacingProperty),
+   public static readonly AdamantiumProperty IndividualColumnSpacingProperty = AdamantiumProperty.Register(nameof(IndividualColumnSpacing),
       typeof(Boolean), typeof(Grid), new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
 
    public static readonly AdamantiumProperty RowSpacingProperty = AdamantiumProperty.Register(nameof(RowSpacing),

@@ -26,7 +26,7 @@
                                           Fill="Transparent"
                                           EllipseType="EdgeToEdge"
                                           StartAngle="0"
-                                          StopAngle="90"
+                                          SweepAngle="90"
                                           RenderTransformOrigin="0.5,0.5">
                             <Ellipse.RenderTransform>
                                 <Transform x:Name="RingSpin"/>

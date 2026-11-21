@@ -538,6 +538,14 @@ All packages share one version.
 
 ### Changed
 
+- An `Ellipse` and an `EllipseGeometry` have a `StartAngle` and a `SweepAngle`, and no `StopAngle`: `Ellipse.StopAngle`,
+  drawn as the sweep, is `SweepAngle`. Markup and setters write `SweepAngle="90"` where they wrote `StopAngle="90"`; a
+  setter of `StopAngle` finds no property and sets nothing. `EllipseGeometry.StopAngleProperty` is `SweepAngleProperty`.
+- Every property is registered under the name of its field: `Ellipse.SweepAngleProperty` was registered as `StopAngle`,
+  `EllipseGeometry`'s as `SweepAngle` under the field `StopAngleProperty`, and `Grid.IndividualRowSpacing` and
+  `IndividualColumnSpacing` as `IndividualRowSpacingProperty` and `IndividualColumnSpacingProperty`, so a setter, a
+  trigger or an animation of them found nothing. `FundamentalUIComponent.UidProperty` is `IdProperty`, the field of
+  `Id`. A test holds every field of the library to the name it registers.
 - `{Ancestor}` and `{Self}` are bindings: they derive from `BindingBase`, so besides a property and a setter they go in
   a `DataTrigger`'s `Binding`, a `MultiDataTrigger`'s `Condition` and a `MultiBinding`'s input, in markup and in code.
   `DataTrigger.Binding` and `Condition.Binding` take any `BindingBase`. A trigger can test a property of the element its

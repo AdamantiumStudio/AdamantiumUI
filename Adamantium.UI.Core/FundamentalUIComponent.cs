@@ -51,7 +51,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         typeof(Classes), typeof(FundamentalUIComponent),
         new PropertyMetadata(null, ClassesChangedCallBack));
     
-    public static readonly AdamantiumProperty UidProperty = AdamantiumProperty.Register(nameof(Id),
+    public static readonly AdamantiumProperty IdProperty = AdamantiumProperty.Register(nameof(Id),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
     
     public static readonly AdamantiumProperty AllowDropProperty = AdamantiumProperty.Register(nameof(AllowDrop),
@@ -545,8 +545,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     public string Id
     {
-        get => GetValue<string>(UidProperty);
-        set => SetValue(UidProperty, value);
+        get => GetValue<string>(IdProperty);
+        set => SetValue(IdProperty, value);
     }
 
     public Classes ClassNames => _classNames ??= new Classes();

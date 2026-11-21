@@ -25,19 +25,19 @@ public class Ellipse : Shape
          PropertyMetadataOptions.AffectsRender,
          StartAngleValueCallback));
 
-   public static readonly AdamantiumProperty SweepAngleProperty = AdamantiumProperty.Register(nameof(StopAngle),
+   public static readonly AdamantiumProperty SweepAngleProperty = AdamantiumProperty.Register(nameof(SweepAngle),
       typeof(Double), typeof(Ellipse),
       new PropertyMetadata(360.0,
          PropertyMetadataOptions.AffectsRender,
-         StopAngleValueCallback));
+         SweepAngleValueCallback));
    
    public static readonly AdamantiumProperty EllipseTypeProperty = AdamantiumProperty.Register(nameof(EllipseType),
       typeof(EllipseType), typeof(Ellipse),
       new PropertyMetadata(EllipseType.Sector,
          PropertyMetadataOptions.AffectsRender));
 
-   // StopAngle is drawn as the SWEEP from StartAngle, so it is kept to a turn on its own, whatever the start.
-   private static object StopAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue) =>
+   // The sweep runs from StartAngle, so it is kept to a turn on its own, whatever the start.
+   private static object SweepAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue) =>
       Math.Clamp((Double)baseValue, 0.0, 360.0);
 
    private static object StartAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue) =>
@@ -49,7 +49,9 @@ public class Ellipse : Shape
       set => SetValue(StartAngleProperty, value);
    }
 
-   public Double StopAngle
+   /// <summary>How far the arc runs from <see cref="StartAngle"/>, in degrees: 0 draws nothing, 360 the whole ellipse.
+   /// </summary>
+   public Double SweepAngle
    {
       get => GetValue<Double>(SweepAngleProperty);
       set => SetValue(SweepAngleProperty, value);
@@ -76,13 +78,13 @@ public class Ellipse : Shape
 
    protected override void OnRender(IDrawingContext context)
    {
-      if (StopAngle <= 0)
+      if (SweepAngle <= 0)
       {
          return;
       }
 
       var destRect = Rect.Deflate(StrokeThickness / 2);
-      context.ForControl(this).DrawEllipse(destRect, Fill, StartAngle, StopAngle, EllipseType, GetPen(), RingThickness);
+      context.ForControl(this).DrawEllipse(destRect, Fill, StartAngle, SweepAngle, EllipseType, GetPen(), RingThickness);
    }
 
    // Tight hit test: inside the ellipse (the bounding-box corners are excluded - the main false positive), and for an
