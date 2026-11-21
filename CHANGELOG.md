@@ -11,7 +11,12 @@ All packages share one version.
   the property what its `ProvideObject` gives, told the element and the property in its `MarkupContext` - as WPF's
   `ProvideValue` is. On an attached property too, and in a template at the template's priority, as its plain values
   are. Before, the extension itself was assigned, through the property's owner type, so it did not build.
-
+- `MultiDataTrigger`, as WPF has one: its setters and actions hold only while every one of its `Conditions` holds, each
+  a `{Binding}` on the host's data and the value it is to resolve to - `Condition` takes a `Binding` beside its
+  `Property`. What several of a view model's values decide together is written as a trigger, not a multi-value
+  converter: the sandbox's noise stand hides its colors so, and its `CombustibleColorsVisibilityConverter` is gone.
+  A condition of the wrong kind - a `MultiDataTrigger`'s with no `Binding`, a `MultiTrigger`'s with no `Property` -
+  would leave the trigger never holding: the build warns of it, and a trigger made in code logs it.
 - `BooleanToVisibilityConverter` (`Adamantium.UI.Controls.Converters`), as WPF has one: true shows, false collapses, and
   back, so a switch and what it shows bind two-way. `InverseBooleanToVisibilityConverter` is its inverse, for what shows
   while the switch is off. The sandbox's own copy is gone: its pages use these.

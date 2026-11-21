@@ -16,6 +16,15 @@ internal sealed class MultiTriggerActivator : TriggerActivatorBase
         List<(AdamantiumProperty, object)> resolved = [];
         foreach (var condition in blueprint.Conditions)
         {
+            // A condition naming no property is a mistake, and says so; one naming a property this host has not is the
+            // ordinary case of a selector's condition on another kind of control, and stays quiet.
+            if (string.IsNullOrEmpty(condition.Property))
+            {
+                Serilog.Log.Logger.Warning("Trigger: a MultiTrigger on {Host} has a Condition with no Property, so it never holds",
+                    host.GetType().Name);
+                return;
+            }
+
             var property = host.GetProperty(condition.Property);
             if (property == null) return;   // an unresolvable condition leaves _conditions null -> the trigger is inert
             resolved.Add((property, TypeCastFactory.CastFromString(condition.Value, property.PropertyType)));

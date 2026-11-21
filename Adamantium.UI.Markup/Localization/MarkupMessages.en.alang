@@ -31,6 +31,8 @@
     <Phrase Key="PropertyNotFoundIn" Text="Property {property} could not be found in {type}"/>
     <Phrase Key="UnknownPropertyOnType" Text="Unknown property {property} on type {type}"/>
     <Phrase Key="NotCreatable" Text="{type} cannot be written as an element: it is abstract, static or an interface, or has no public constructor without parameters"/>
+    <Phrase Key="ConditionWithoutBinding" Text="A MultiDataTrigger's Condition tests a Binding, and this one has none: the trigger will never hold"/>
+    <Phrase Key="ConditionWithoutProperty" Text="A MultiTrigger's Condition tests a Property, and this one has none: the trigger will never hold"/>
     <Phrase Key="NotAMarkupExtension" Text="{type} cannot be written in braces: it is not a markup extension. A converter derives from ValueConverter or MultiValueConverter"/>
     <Phrase Key="PropertySetTwice" Text="{property} is set twice on {element}: the second would replace the first"/>
     <Phrase Key="ReadOnlyProperty" Text="{type}.{property} is read-only: markup cannot set it"/>
