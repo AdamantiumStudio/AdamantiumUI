@@ -31,6 +31,8 @@
     <Phrase Key="PropertyNotFoundIn" Text="Свойство {property} не найдено в {type}"/>
     <Phrase Key="UnknownPropertyOnType" Text="Неизвестное свойство {property} у типа {type}"/>
     <Phrase Key="NotCreatable" Text="{type} нельзя записать элементом: это абстрактный или статический тип либо интерфейс, или у него нет открытого конструктора без параметров"/>
+    <Phrase Key="ConditionWithoutBinding" Text="Условие MultiDataTrigger проверяет Binding, а у этого его нет: триггер никогда не сработает"/>
+    <Phrase Key="ConditionWithoutProperty" Text="Условие MultiTrigger проверяет Property, а у этого его нет: триггер никогда не сработает"/>
     <Phrase Key="NotAMarkupExtension" Text="{type} нельзя записать в фигурных скобках: это не расширение разметки. Конвертер наследуется от ValueConverter или MultiValueConverter"/>
     <Phrase Key="PropertySetTwice" Text="{property} задано у {element} дважды: второе заменило бы первое"/>
     <Phrase Key="ReadOnlyProperty" Text="{type}.{property} только для чтения: разметка не может его задать"/>

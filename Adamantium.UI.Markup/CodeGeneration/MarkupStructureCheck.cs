@@ -459,9 +459,28 @@ internal sealed class MarkupStructureCheck
                         foreach (var condition in conditions.Values.OfType<AumlAstObjectNode>())
                         {
                             var conditionSet = Properties(condition);
+                            if (!conditionSet.ContainsKey("Property"))
+                            {
+                                Warn(MarkupMessages.ConditionWithoutProperty(), condition);
+                            }
+
                             if (Part(conditionSet, "SourceName", target, parts, template, out var conditionSource))
                             {
                                 Member(conditionSource, conditionSet);
+                            }
+                        }
+                    }
+
+                    break;
+                // A data condition tests a binding: one with none makes the whole trigger never hold.
+                case "MultiDataTrigger":
+                    if (set.TryGetValue("Conditions", out var dataConditions))
+                    {
+                        foreach (var condition in dataConditions.Values.OfType<AumlAstObjectNode>())
+                        {
+                            if (!Properties(condition).ContainsKey("Binding"))
+                            {
+                                Warn(MarkupMessages.ConditionWithoutBinding(), condition);
                             }
                         }
                     }
@@ -673,4 +692,6 @@ internal sealed class MarkupStructureCheck
         node.TypeReference is { } reference ? _resolver.Resolve(reference.GetFullTypeName()) : null;
 
     private void Report(string message, IAumlLineInfo at) => _diagnostics.ReportError(_file, message, at);
+
+    private void Warn(string message, IAumlLineInfo at) => _diagnostics.ReportWarning(_file, message, at);
 }
