@@ -466,7 +466,7 @@ public class BindingExpression : BindingExpressionBase
          {
             if (anchor.IsAttachedToVisualTree)
             {
-               Fail($"{Target?.GetType().Name}.{TargetProperty?.Name}: no element named '{Binding.ElementName}' in the tree.");
+               Fail($"{Place}: no element named '{Binding.ElementName}' in the tree.");
             }
             else
             {
@@ -571,7 +571,7 @@ public class BindingExpression : BindingExpressionBase
 
    private void ReportMissing(Type owner, string member)
    {
-      Fail($"{Target?.GetType().Name}.{TargetProperty?.Name}: path '{Binding.Path?.Path}' breaks at '{member}' - {owner.Name} has no such property.");
+      Fail($"{Place}: path '{Binding.Path?.Path}' breaks at '{member}' - {owner.Name} has no such property.");
    }
 
    // {Binding Path, ElementName=X}: the source is the element named X in the target's tree (not the DataContext). Resolved

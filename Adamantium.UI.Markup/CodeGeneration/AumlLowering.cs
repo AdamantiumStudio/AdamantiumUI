@@ -547,6 +547,8 @@ public class AumlLowering
                         }
                         case "Binding":
                         case "MultiBinding":
+                        case "Ancestor":
+                        case "Self":
                         {
                             var bindingVar = EmitBinding(extension, diagnostics, isResource);
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
@@ -554,7 +556,7 @@ public class AumlLowering
                                 // {Binding} as a Setter/trigger value: store the binding OBJECT so Setter.Apply establishes
                                 // it as a live binding on the styled element (resolved against ITS DataContext) - this is
                                 // what lets an ItemContainerStyle bind a generated container's props from the data item.
-                                // Mirrors the ResourceReference/Ancestor/Self markers above.
+                                // Mirrors the ResourceReference marker above.
                                 _writer.Add(new AssignStep(symbolTarget, propRef.Name, bindingVar));
                             }
                             else if (IsBindingTypedProperty(resolvedType))
@@ -567,169 +569,6 @@ public class AumlLowering
                                 // Ordinary property: establish a live binding on it.
                                 var bindingTarget = isRoot ? "this" : CurrentParent;
                                 _writer.Add(EmitSetBinding(bindingTarget, propRef, bindingVar));
-                            }
-                            break;
-                        }
-                        case "Ancestor":
-                        {
-                            // {Ancestor Type, Path, Skip=, Name=, Stop=, Logical=, Mode=} -> resolve the ancestor type
-                            // (short name -> typeof, preserving is-a) and wire a live ancestor binding via .Apply, which
-                            // (re)resolves against the tree on attach. Works in a ControlTemplate, a DataTemplate, or on a
-                            // plain element - target is just the current element.
-                            var acVar = GenerateNextElementName("anc");
-                            var ancestor = Variable(acVar);
-                            _writer.Add(new DeclareStep(acVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
-
-                            var positional = 0;
-                            foreach (var argument in extension.Arguments)
-                            {
-                                var text = argument.Value is AumlAstTypeReferenceValueNode typeValue
-                                    ? typeValue.TypeReference.Name
-                                    : argument.Value.GetTextValue();
-                                if (string.IsNullOrEmpty(argument.Name))
-                                {
-                                    if (positional == 0)
-                                    {
-                                        var resolved = ResolveTypeArgument(argument.Value);
-                                        if (resolved == null)
-                                        {
-                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorTypeNotResolved(text), extension);
-                                        }
-                                        else
-                                        {
-                                            _writer.Add(new AssignStep(ancestor, "AncestorType", new TypeOfValue(Type(resolved))));
-                                        }
-                                    }
-                                    else if (positional == 1)
-                                    {
-                                        _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text)));
-                                    }
-                                    positional++;
-                                }
-                                else
-                                {
-                                    switch (argument.Name)
-                                    {
-                                        case "Path": _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text))); break;
-                                        case "Skip": _writer.Add(new AssignStep(ancestor, "Skip", new LiteralValue(text))); break;
-                                        case "Name": _writer.Add(new AssignStep(ancestor, "Name", Unescaped(text))); break;
-                                        case "Logical": _writer.Add(new AssignStep(ancestor, "Logical", new LiteralValue(text.ToLowerInvariant()))); break;
-                                        case "Stop":
-                                        {
-                                            var st = ResolveTypeArgument(argument.Value);
-                                            if (st == null)
-                                            {
-                                                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorStopTypeNotResolved(text), extension);
-                                            }
-                                            else
-                                            {
-                                                _writer.Add(new AssignStep(ancestor, "Stop", new TypeOfValue(Type(st))));
-                                            }
-
-                                            break;
-                                        }
-                                        case "Mode" or "UpdateSourceTrigger":
-                                            _writer.Add(new AssignStep(ancestor, argument.Name,
-                                                new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
-                                            break;
-                                        case "Converter":
-                                            var acConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                                            if (acConv != null)
-                                            {
-                                                _writer.Add(new AssignStep(ancestor, "Converter", acConv));
-                                            }
-                                            else
-                                            {
-                                                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
-                                            }
-
-                                            break;
-                                        case "ConverterParameter":
-                                            _writer.Add(new AssignStep(ancestor, "ConverterParameter",
-                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                                            break;
-                                        case "FallbackValue" or "TargetNullValue":
-                                            _writer.Add(new AssignStep(ancestor, argument.Name,
-                                                EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
-                                            break;
-                                        default:
-                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
-                                            break;
-                                    }
-                                }
-                            }
-
-                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
-                            {
-                                // {Ancestor ...} as a Setter/trigger value: store the marker; Setter.Apply (or the trigger
-                                // activator) calls .Apply against each matched element when the setter fires.
-                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, ancestor));
-                            }
-                            else
-                            {
-                                var acTarget = isRoot ? "this" : CurrentParent;
-                                _writer.Add(CurrentTemplate != null
-                                    ? Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name), Priority("Template"))
-                                    : Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name)));
-                            }
-                            break;
-                        }
-                        case "Self":
-                        {
-                            // {Self Path, Mode=} -> bind a target property to another property on the SAME element.
-                            var slfVar = GenerateNextElementName("self");
-                            var self = Variable(slfVar);
-                            _writer.Add(new DeclareStep(slfVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
-                            foreach (var argument in extension.Arguments)
-                            {
-                                var text = argument.Value.GetTextValue();
-                                if (string.IsNullOrEmpty(argument.Name) || argument.Name == "Path")
-                                {
-                                    _writer.Add(new AssignStep(self, "Path", Unescaped(text)));
-                                    continue;
-                                }
-
-                                switch (argument.Name)
-                                {
-                                    case "Mode" or "UpdateSourceTrigger":
-                                        _writer.Add(new AssignStep(self, argument.Name,
-                                            new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
-                                        break;
-                                    case "Converter":
-                                        var slfConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                                        if (slfConv != null)
-                                        {
-                                            _writer.Add(new AssignStep(self, "Converter", slfConv));
-                                        }
-                                        else
-                                        {
-                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
-                                        }
-
-                                        break;
-                                    case "ConverterParameter":
-                                        _writer.Add(new AssignStep(self, "ConverterParameter",
-                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                                        break;
-                                    case "FallbackValue" or "TargetNullValue":
-                                        _writer.Add(new AssignStep(self, argument.Name,
-                                            EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
-                                        break;
-                                    default:
-                                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
-                                        break;
-                                }
-                            }
-                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
-                            {
-                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, self));
-                            }
-                            else
-                            {
-                                var slfTarget = isRoot ? "this" : CurrentParent;
-                                _writer.Add(CurrentTemplate != null
-                                    ? Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name), Priority("Template"))
-                                    : Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name)));
                             }
                             break;
                         }
@@ -1516,10 +1355,11 @@ public class AumlLowering
     }
 
     // A Binding/MultiBinding written as a markup extension ({Binding}/{MultiBinding}) or as an element
-    // (<Binding/>, <MultiBinding>...</MultiBinding>). The codegen treats these by NAME (like ResourceReference).
+    // (<Binding/>, <MultiBinding>...</MultiBinding>), or {Ancestor}/{Self}, which are bindings too. The codegen treats
+    // these by NAME (like ResourceReference).
     private static bool IsBindingNode(IAumlAstNode node) => node switch
     {
-        AumlAstMarkupExtensionNode me => me.TypeReference?.Name is "Binding" or "MultiBinding",
+        AumlAstMarkupExtensionNode me => me.TypeReference?.Name is "Binding" or "MultiBinding" or "Ancestor" or "Self",
         AumlAstObjectNode obj => obj.TypeReference?.Name is "Binding" or "MultiBinding",
         _ => false,
     };
@@ -1565,6 +1405,8 @@ public class AumlLowering
     {
         AumlAstMarkupExtensionNode me when me.TypeReference?.Name == "MultiBinding"
             => EmitMultiBindingFromMarkup(me, diagnostics, isResource),
+        AumlAstMarkupExtensionNode me when me.TypeReference?.Name == "Ancestor" => EmitAncestor(me, diagnostics, isResource),
+        AumlAstMarkupExtensionNode me when me.TypeReference?.Name == "Self" => EmitSelf(me, diagnostics, isResource),
         AumlAstMarkupExtensionNode me => EmitBindingFromMarkup(me, diagnostics, isResource),
         AumlAstObjectNode obj when obj.TypeReference?.Name == "MultiBinding"
             => EmitMultiBindingFromObject(obj, diagnostics, isResource),
@@ -1644,6 +1486,147 @@ public class AumlLowering
         }
 
         return templateBinding;
+    }
+
+    // {Ancestor Type, Path, Skip=, Name=, Stop=, Logical=, Mode=}: the ancestor type is resolved (short name -> typeof,
+    // preserving is-a); the binding (re)resolves against the tree on attach. Works in a ControlTemplate, a DataTemplate,
+    // or on a plain element.
+    private BuildValue EmitAncestor(AumlAstMarkupExtensionNode extension, IDiagnosticSink diagnostics, bool isResource)
+    {
+        var acVar = GenerateNextElementName("anc");
+        var ancestor = Variable(acVar);
+        _writer.Add(new DeclareStep(acVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
+
+        var positional = 0;
+        foreach (var argument in extension.Arguments)
+        {
+            var text = argument.Value is AumlAstTypeReferenceValueNode typeValue
+                ? typeValue.TypeReference.Name
+                : argument.Value.GetTextValue();
+            if (string.IsNullOrEmpty(argument.Name))
+            {
+                if (positional == 0)
+                {
+                    var resolved = ResolveTypeArgument(argument.Value);
+                    if (resolved == null)
+                    {
+                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorTypeNotResolved(text), extension);
+                    }
+                    else
+                    {
+                        _writer.Add(new AssignStep(ancestor, "AncestorType", new TypeOfValue(Type(resolved))));
+                    }
+                }
+                else if (positional == 1)
+                {
+                    _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text)));
+                }
+                positional++;
+            }
+            else
+            {
+                switch (argument.Name)
+                {
+                    case "Path": _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text))); break;
+                    case "Skip": _writer.Add(new AssignStep(ancestor, "Skip", new LiteralValue(text))); break;
+                    case "Name": _writer.Add(new AssignStep(ancestor, "Name", Unescaped(text))); break;
+                    case "Logical": _writer.Add(new AssignStep(ancestor, "Logical", new LiteralValue(text.ToLowerInvariant()))); break;
+                    case "Stop":
+                    {
+                        var st = ResolveTypeArgument(argument.Value);
+                        if (st == null)
+                        {
+                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorStopTypeNotResolved(text), extension);
+                        }
+                        else
+                        {
+                            _writer.Add(new AssignStep(ancestor, "Stop", new TypeOfValue(Type(st))));
+                        }
+
+                        break;
+                    }
+                    case "Mode" or "UpdateSourceTrigger":
+                        _writer.Add(new AssignStep(ancestor, argument.Name,
+                            new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
+                        break;
+                    case "Converter":
+                        var acConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
+                        if (acConv != null)
+                        {
+                            _writer.Add(new AssignStep(ancestor, "Converter", acConv));
+                        }
+                        else
+                        {
+                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
+                        }
+
+                        break;
+                    case "ConverterParameter":
+                        _writer.Add(new AssignStep(ancestor, "ConverterParameter",
+                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
+                        break;
+                    case "FallbackValue" or "TargetNullValue":
+                        _writer.Add(new AssignStep(ancestor, argument.Name,
+                            EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
+                        break;
+                    default:
+                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
+                        break;
+                }
+            }
+        }
+
+        return ancestor;
+    }
+
+    // {Self Path, Mode=}: a binding to another property on the SAME element.
+    private BuildValue EmitSelf(AumlAstMarkupExtensionNode extension, IDiagnosticSink diagnostics, bool isResource)
+    {
+        var slfVar = GenerateNextElementName("self");
+        var self = Variable(slfVar);
+        _writer.Add(new DeclareStep(slfVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
+        foreach (var argument in extension.Arguments)
+        {
+            var text = argument.Value.GetTextValue();
+            if (string.IsNullOrEmpty(argument.Name) || argument.Name == "Path")
+            {
+                _writer.Add(new AssignStep(self, "Path", Unescaped(text)));
+                continue;
+            }
+
+            switch (argument.Name)
+            {
+                case "Mode" or "UpdateSourceTrigger":
+                    _writer.Add(new AssignStep(self, argument.Name,
+                        new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
+                    break;
+                case "Converter":
+                    var slfConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
+                    if (slfConv != null)
+                    {
+                        _writer.Add(new AssignStep(self, "Converter", slfConv));
+                    }
+                    else
+                    {
+                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
+                    }
+
+                    break;
+                case "ConverterParameter":
+                    _writer.Add(new AssignStep(self, "ConverterParameter",
+                        EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
+                    break;
+                case "FallbackValue" or "TargetNullValue":
+                    _writer.Add(new AssignStep(self, argument.Name,
+                        EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
+                    break;
+                default:
+                    diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
+                    break;
+            }
+        }
+
+        return self;
     }
 
     private BuildValue EmitBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)

@@ -228,14 +228,6 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 Connect(setter, component, prop, ((BindingBase)binding.Clone()).CreateExpression(component, prop));
                 break;
 
-            case Ancestor ancestor when element != null:
-                Connect(setter, component, prop, ancestor.CreateExpression(element, prop));
-                break;
-
-            case Self self when element != null:
-                Connect(setter, component, prop, self.CreateExpression(element, prop));
-                break;
-
             case PerTargetValue perTarget:
                 component.SetTriggerValue(prop, perTarget.Create(), setter);
                 _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));

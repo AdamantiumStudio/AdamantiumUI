@@ -27,8 +27,8 @@ public class RibbonApplicationMenuDeferredPageTests
                 var back = new Button();
                 var presenter = new ItemsPresenter();
                 var rail = new Border { Child = presenter };
-                new Ancestor { AncestorType = typeof(RibbonApplicationMenu), Path = "RailWidth", Logical = true }
-                    .Apply(rail, nameof(Border.Width));
+                rail.SetBinding(nameof(Border.Width),
+                    new Ancestor { AncestorType = typeof(RibbonApplicationMenu), Path = "RailWidth", Logical = true });
 
                 var grid = new Grid();
                 grid.Children.Add(back);

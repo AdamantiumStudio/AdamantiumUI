@@ -17,7 +17,7 @@ internal sealed class DataTriggerActivator : TriggerActivatorBase
         _blueprint = blueprint;
         _host = context.HostComponent;
         if (_host != null && blueprint.Binding != null)
-            _expression = new BindingExpression(_host, (AdamantiumProperty)null, blueprint.Binding);
+            _expression = blueprint.Binding.CreateExpression(_host, null);
     }
 
     public override void Activate()
