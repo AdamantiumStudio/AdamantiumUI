@@ -484,9 +484,11 @@ public class AumlLowering
                             BuildValue observable;
                             string key;
                             string keyed = null;
-                            if (IsBindingNode(keyValue))
+                            if (MarkupBindings.IsBinding(keyValue))
                             {
-                                key = "{Binding}";
+                                // A failure names the binding as it is written: {Binding}, {Self}, ...
+                                key = "{" + ((keyValue as AumlAstMarkupExtensionNode)?.TypeReference?.Name
+                                             ?? (keyValue as AumlAstObjectNode)?.TypeReference?.Name) + "}";
                                 keyed = GenerateNextElementName("or");
                                 _writer.Add(new DeclareStep(keyed, new NewValue(Type(Metadata.DefaultTypeContainer.ObservableResource))));
                                 _writer.Add(new AssignStep(Variable(keyed), "KeySource", EmitBinding(keyValue, diagnostics, isResource)));
@@ -672,7 +674,7 @@ public class AumlLowering
                     {
                         // <X.Y><Binding/></X.Y> or <X.Y><MultiBinding>...</MultiBinding></X.Y> -> a live binding, unless the
                         // property itself holds a binding object (e.g. DataTrigger.Binding), in which case assign it.
-                        if (IsBindingNode(propertyValue))
+                        if (MarkupBindings.IsBinding(propertyValue))
                         {
                             var bindingVar = EmitBinding(propertyValue, diagnostics, isResource);
                             if (IsBindingTypedProperty(resolvedType))
@@ -1044,6 +1046,8 @@ public class AumlLowering
                 case not null when TypeNamedBy(templateNode, prop) is { } type:
                     _writer.Add(new AssignStep(template, name, new TypeOfValue(Type(type))));
                     break;
+                // Read by the control as a {Binding} on each item - a HierarchicalDataTemplate's ItemsSource - so an
+                // {Ancestor} or a {Self} would be taken and then passed over.
                 case AumlAstMarkupExtensionNode me when me.TypeReference?.Name is "Binding" or "MultiBinding":
                     _writer.Add(new AssignStep(template, name, EmitBinding(me, diagnostics, isResource)));
                     break;
@@ -1388,16 +1392,6 @@ public class AumlLowering
         return null;
     }
 
-    // A Binding/MultiBinding written as a markup extension ({Binding}/{MultiBinding}) or as an element
-    // (<Binding/>, <MultiBinding>...</MultiBinding>), or {Ancestor}/{Self}, which are bindings too. The codegen treats
-    // these by NAME (like ResourceReference).
-    private static bool IsBindingNode(IAumlAstNode node) => node switch
-    {
-        AumlAstMarkupExtensionNode me => me.TypeReference?.Name is "Binding" or "MultiBinding" or "Ancestor" or "Self",
-        AumlAstObjectNode obj => obj.TypeReference?.Name is "Binding" or "MultiBinding",
-        _ => false,
-    };
-
     // True when a property is typed to HOLD a binding object itself (Binding/MultiBinding/BindingBase) - e.g.
     // DataTrigger.Binding. Such a property takes the {Binding} value by direct assignment; an ordinary property instead
     // gets a live binding established on it via SetBinding.
@@ -1484,7 +1478,7 @@ public class AumlLowering
 
         BuildValue Followed(IAumlAstValueNode value) => value switch
         {
-            _ when IsBindingNode(value) => EmitBinding(value, diagnostics, isResource),
+            _ when MarkupBindings.IsBinding(value) => EmitBinding(value, diagnostics, isResource),
             AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } templateBinding =>
                 CurrentTemplate == null && !isResource
                     ? ReportOutsideTemplate(diagnostics, templateBinding)
@@ -1579,32 +1573,13 @@ public class AumlLowering
 
                         break;
                     }
-                    case "Mode" or "UpdateSourceTrigger":
-                        _writer.Add(new AssignStep(ancestor, argument.Name,
-                            new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
-                        break;
-                    case "Converter":
-                        var acConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                        if (acConv != null)
+                    default:
+                        if (!EmitSharedBindingProperty(ancestor, "Ancestor", argument.Name, argument.Value, isMulti: false,
+                                diagnostics, isResource))
                         {
-                            _writer.Add(new AssignStep(ancestor, "Converter", acConv));
-                        }
-                        else
-                        {
-                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
+                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
                         }
 
-                        break;
-                    case "ConverterParameter":
-                        _writer.Add(new AssignStep(ancestor, "ConverterParameter",
-                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                        break;
-                    case "FallbackValue" or "TargetNullValue":
-                        _writer.Add(new AssignStep(ancestor, argument.Name,
-                            EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
-                        break;
-                    default:
-                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
                         break;
                 }
             }
@@ -1628,35 +1603,9 @@ public class AumlLowering
                 continue;
             }
 
-            switch (argument.Name)
+            if (!EmitSharedBindingProperty(self, "Self", argument.Name, argument.Value, isMulti: false, diagnostics, isResource))
             {
-                case "Mode" or "UpdateSourceTrigger":
-                    _writer.Add(new AssignStep(self, argument.Name,
-                        new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
-                    break;
-                case "Converter":
-                    var slfConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                    if (slfConv != null)
-                    {
-                        _writer.Add(new AssignStep(self, "Converter", slfConv));
-                    }
-                    else
-                    {
-                        diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
-                    }
-
-                    break;
-                case "ConverterParameter":
-                    _writer.Add(new AssignStep(self, "ConverterParameter",
-                        EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                    break;
-                case "FallbackValue" or "TargetNullValue":
-                    _writer.Add(new AssignStep(self, argument.Name,
-                        EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
-                    break;
-                default:
-                    diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
-                    break;
+                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
             }
         }
 
@@ -1691,7 +1640,7 @@ public class AumlLowering
         {
             if (string.IsNullOrEmpty(arg.Name))                       // positional = a child binding
             {
-                if (IsBindingNode(arg.Value))
+                if (MarkupBindings.IsBinding(arg.Value))
                 {
                     _writer.Add(Invoke(bindings, "Add", EmitBinding(arg.Value, diagnostics, isResource)));
                 }
@@ -1710,7 +1659,7 @@ public class AumlLowering
         {
             switch (child)
             {
-                case AumlAstObjectNode childObj when IsBindingNode(childObj):
+                case AumlAstObjectNode childObj when MarkupBindings.IsBinding(childObj):
                     _writer.Add(Invoke(bindings, "Add", EmitBinding(childObj, diagnostics, isResource)));
                     break;
                 case AumlAstPropertyNode { Property: AumlAstPropertyReference pref } pn when pn.Values.Count > 0:
@@ -1718,7 +1667,7 @@ public class AumlLowering
                     {
                         foreach (var v in pn.Values)
                         {
-                            if (IsBindingNode(v))
+                            if (MarkupBindings.IsBinding(v))
                             {
                                 _writer.Add(Invoke(bindings, "Add", EmitBinding(v, diagnostics, isResource)));
                             }
@@ -1744,15 +1693,48 @@ public class AumlLowering
                 }
 
                 break;
+            case "Source":
+                var source = EmitValueExpression(value, "object", diagnostics, isResource);
+                if (source != null)
+                {
+                    _writer.Add(new AssignStep(binding, "Source", source));
+                }
+
+                break;
+            case "ElementName":
+                if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } elementName)
+                {
+                    _writer.Add(new AssignStep(binding, "ElementName", Unescaped(elementName)));
+                }
+
+                break;
+            default:
+                if (!EmitSharedBindingProperty(binding, isMulti ? "MultiBinding" : "Binding", name, value, isMulti, diagnostics,
+                        isResource))
+                {
+                    diagnostics.ReportError(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
+                }
+
+                break;
+        }
+    }
+
+    // What markup lets every kind of binding say of its value - how it flows, what converts it, its format and
+    // fallbacks - written the same on each. False for a name that is none of these.
+    private bool EmitSharedBindingProperty(VariableValue binding, string kind, string name, IAumlAstValueNode value,
+        bool isMulti, IDiagnosticSink diagnostics, bool isResource)
+    {
+        switch (name)
+        {
             case "Mode":
-                if ((value as AumlAstTextNode)?.Text is { Length: > 0 } mode)
+                if (value.GetTextValue()?.Trim() is { Length: > 0 } mode)
                 {
                     _writer.Add(new AssignStep(binding, "Mode", new MemberValue(Type(BindingModeFqn), mode)));
                 }
 
                 break;
             case "UpdateSourceTrigger" when !isMulti:
-                if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } trigger)
+                if (value.GetTextValue()?.Trim() is { Length: > 0 } trigger)
                 {
                     _writer.Add(new AssignStep(binding, "UpdateSourceTrigger",
                         new MemberValue(Type(UpdateSourceTriggerFqn), trigger)));
@@ -1764,6 +1746,10 @@ public class AumlLowering
                 if (converter != null)
                 {
                     _writer.Add(new AssignStep(binding, "Converter", converter));
+                }
+                else
+                {
+                    diagnostics.ReportError(Metadata.ClassName, MarkupMessages.ConverterInvalid(kind), value);
                 }
 
                 break;
@@ -1782,21 +1768,6 @@ public class AumlLowering
                 }
 
                 break;
-            case "Source":
-                var source = EmitValueExpression(value, "object", diagnostics, isResource);
-                if (source != null)
-                {
-                    _writer.Add(new AssignStep(binding, "Source", source));
-                }
-
-                break;
-            case "ElementName":
-                if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } elementName)
-                {
-                    _writer.Add(new AssignStep(binding, "ElementName", Unescaped(elementName)));
-                }
-
-                break;
             case "FallbackValue" or "TargetNullValue":
                 if (EmitFallbackExpression(value, diagnostics, isResource) is { } fallback)
                 {
@@ -1805,9 +1776,10 @@ public class AumlLowering
 
                 break;
             default:
-                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
-                break;
+                return false;
         }
+
+        return true;
     }
 
     // A FallbackValue / TargetNullValue: a {ResourceReference} stays a reference the binding looks up from its target
@@ -1835,6 +1807,8 @@ public class AumlLowering
                 return string.IsNullOrEmpty(key)
                     ? null
                     : new CallValue(Type(ResourceResolverFqn), "Resolve", [Type(targetTypeFqn)], Unescaped(key));
+            case AumlAstStaticMemberValueNode member:                           // {x:Static Type.Member}
+                return new MemberValue(Type(Qualified(member.TypeReference.GetFullTypeName())), member.MemberName);
             case AumlAstMarkupExtensionNode me:
                 return ProcessNestedValue(me, diagnostics, isResource);          // converter authored as a markup extension
             case AumlAstObjectNode obj:

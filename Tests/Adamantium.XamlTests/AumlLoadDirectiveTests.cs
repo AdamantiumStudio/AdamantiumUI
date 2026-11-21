@@ -80,6 +80,15 @@ public class AumlLoadDirectiveTests
         Assert.That(string.Join(" ", errors.Select(e => e.GetMessage())), Does.Contain("x:Load"));
     }
 
+    // The condition is bound on the slot standing in for an element not built yet: {Self} would read the slot.
+    [Test]
+    public void ASelfCondition_FailsTheBuild()
+    {
+        AumlCodegenHarness.Generate(WindowWith("<Border x:Load=\"{Self Tag}\"/>"), out var errors);
+
+        Assert.That(string.Join(" ", errors.Select(e => e.GetMessage())), Does.Contain("x:Load takes"));
+    }
+
     [Test]
     public void ANamedHeldBackElement_IsReachedThroughItsSlot_NotANullField()
     {

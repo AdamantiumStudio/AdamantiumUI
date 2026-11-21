@@ -539,6 +539,13 @@ All packages share one version.
   host stands in, `{Ancestor ListBox, IsEnabled}`, next to the host's data. One that finds no ancestor is tested on its
   `FallbackValue`, then its `TargetNullValue`, as a property bound to it shows them.
 - A binding's failure read by a trigger or another binding says so, where it named an empty property.
+- Markup takes `{Ancestor}` and `{Self}` wherever it reads a binding: an `{ObservableResource}` key, a `{Localize}`
+  key or table, and an `x:Load` condition - `{Ancestor}` only there, since the condition is read before the element
+  it holds back is built. They take `StringFormat` as `{Binding}` does, and what they say of their value - `Mode`,
+  `UpdateSourceTrigger`, `Converter`, `ConverterParameter`, the fallbacks, the format - is written by the same code as
+  `{Binding}`'s. A converter markup cannot build is an error on every binding, where `{Binding}` dropped it.
+- A binding's `ConverterParameter`, `FallbackValue` or `TargetNullValue` written as `{x:Static Type.Member}` reaches
+  it: it was dropped without a word.
 - A type written in braces must be a markup extension: `{Name}` of any other type was made with `new` at every build;
   the build now reports it. The library's converters and the sandbox's derive
   from `ValueConverter` or `MultiValueConverter`.

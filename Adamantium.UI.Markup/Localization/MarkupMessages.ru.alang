@@ -71,9 +71,8 @@
     <Phrase Key="TemplateBindingOutsideTemplate" Text="TemplateBinding можно использовать только внутри ControlTemplate."/>
     <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: тип '{type}' не найден."/>
     <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: тип Stop '{type}' не найден."/>
-    <Phrase Key="AncestorConverterInvalid" Text="Ancestor: Converter должен быть ресурсом или расширением разметки конвертера."/>
+    <Phrase Key="ConverterInvalid" Text="{binding}: Converter должен быть ресурсом или расширением разметки конвертера."/>
     <Phrase Key="AncestorUnknownArgument" Text="Ancestor: неизвестный аргумент '{argument}'."/>
-    <Phrase Key="SelfConverterInvalid" Text="Self: Converter должен быть ресурсом или расширением разметки конвертера."/>
     <Phrase Key="SelfUnknownArgument" Text="Self: неизвестный аргумент '{argument}'."/>
     <Phrase Key="UnknownBindingProperty" Text="Неизвестное свойство привязки '{name}'"/>
 

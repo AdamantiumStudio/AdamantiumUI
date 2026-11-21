@@ -266,6 +266,29 @@ public class LocalizeMarkupTests
         });
     }
 
+    // A key read off an ancestor is followed as one read from the data: the phrase it names, in the language shown.
+    [Test]
+    public void AKeyReadFromAnAncestor_IsTheWordItNames()
+    {
+        var panel = new StackPanel { Tag = "Close" };
+        var text = new TextBlock();
+        panel.AddLogicalChild(text);
+        text.SetBinding(TextBlock.TextProperty, new Localize(DesignerTable(), null)
+        {
+            KeySource = new Ancestor { AncestorType = typeof(StackPanel), Path = nameof(StackPanel.Tag), Logical = true }
+        });
+
+        var english = text.Text;
+        Languages.Current = "ru";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(english, Is.EqualTo("Close"));
+            Assert.That(text.Text, Is.EqualTo("Закрыть"));
+        });
+    }
+
     // The phrase's own format for a placeholder goes first and the binding's around it; a MultiBinding, which formats
     // as it combines, is written once.
     [Test]
