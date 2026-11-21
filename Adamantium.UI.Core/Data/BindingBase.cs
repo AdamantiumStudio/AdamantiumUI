@@ -4,8 +4,6 @@ namespace Adamantium.UI.Core.Data;
 
 public abstract class BindingBase: MarkupExtension, ICloneable
 {
-   public uint Delay { get; set; }
-
    public object FallbackValue { get; set; }
 
    public string StringFormat { get; set; }
@@ -15,8 +13,6 @@ public abstract class BindingBase: MarkupExtension, ICloneable
    public string Culture { get; set; }
 
    public object TargetNullValue { get; set; }
-
-   public bool IsAsync { get; set; }
 
    // F2 binding-storm batching: by default a runtime source change is coalesced and applied to the target once per
    // frame (the target sees the frame-final value, not every intermediate). Set true to opt a side-effect binding back
@@ -40,12 +36,10 @@ public abstract class BindingBase: MarkupExtension, ICloneable
    /// </summary>
    protected internal T CopiedInto<T>(T binding) where T : BindingBase
    {
-      binding.Delay = Delay;
       binding.FallbackValue = FallbackValue;
       binding.StringFormat = StringFormat;
       binding.Culture = Culture;
       binding.TargetNullValue = TargetNullValue;
-      binding.IsAsync = IsAsync;
       binding.IsImmediate = IsImmediate;
       return binding;
    }

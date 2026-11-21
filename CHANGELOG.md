@@ -584,6 +584,9 @@ All packages share one version.
   `{Binding}`'s. A converter markup cannot build is an error on every binding, where `{Binding}` dropped it.
 - A binding's `ConverterParameter`, `FallbackValue` or `TargetNullValue` written as `{x:Static Type.Member}` reaches
   it: it was dropped without a word.
+- Every binding takes `Culture` and `IsImmediate` in markup - `{Binding Price, StringFormat='{}{0:N2}', Culture=de-DE}`,
+  `{Self Text, IsImmediate=True}` - as it did only in code. A `StringFormat` that starts with the escape `{}` drops it,
+  as WPF's does: it was kept, and the format then failed.
 - A type written in braces must be a markup extension: `{Name}` of any other type was made with `new` at every build;
   the build now reports it. The library's converters and the sandbox's derive
   from `ValueConverter` or `MultiValueConverter`.
@@ -760,6 +763,7 @@ All packages share one version.
 
 ### Removed
 
+- `BindingBase.Delay` and `BindingBase.IsAsync`: nothing read them, so a binding given either did as it would without.
 - `Ancestor.Apply` and `Self.Apply`: bind with `SetBinding`, as any binding.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 

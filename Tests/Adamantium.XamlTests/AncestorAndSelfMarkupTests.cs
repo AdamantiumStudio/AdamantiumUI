@@ -38,6 +38,23 @@ public class AncestorAndSelfMarkupTests
         Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("Height 3"));
     }
 
+    // A binding's culture and its timing are written in markup as on any binding: the number in another language's
+    // rules, and a change shown at once, before the frame's flush.
+    [Test]
+    public void ABindingsCultureAndTiming_AreWrittenInMarkup()
+    {
+        var panel = Load("<TextBlock Text=\"{Ancestor StackPanel, Width, StringFormat='{}{0:N1} wide', Culture=de-DE}\"/>" +
+                         "<TextBlock Text=\"{Ancestor StackPanel, Tag, IsImmediate=True}\"/>", "Tag=\"before\"");
+        var formatted = ((TextBlock)panel.Children[0]).Text;
+        panel.Tag = "after";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(formatted, Is.EqualTo("42,0 wide"), "the escape '{}' is no part of the format");
+            Assert.That(((TextBlock)panel.Children[1]).Text, Is.EqualTo("after"), "no flush asked for");
+        });
+    }
+
     [Test]
     public void AnXLoadCondition_OnAnAncestor_BuildsTheElementWhileItHolds()
     {

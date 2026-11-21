@@ -47,18 +47,11 @@ public class Localize : BindingBase
 
     public override object Clone()
     {
-        var clone = new Localize(Table, Key)
+        var clone = CopiedInto(new Localize(Table, Key)
         {
             TableSource = TableSource is BindingBase tableSource ? tableSource.Clone() : TableSource,
             KeySource = KeySource is BindingBase source ? source.Clone() : KeySource,
-            Delay = Delay,
-            FallbackValue = FallbackValue,
-            Culture = Culture,
-            TargetNullValue = TargetNullValue,
-            IsAsync = IsAsync,
-            IsImmediate = IsImmediate,
-            StringFormat = StringFormat,
-        };
+        });
         foreach (var (name, value) in Arguments)
         {
             clone.Arguments[name] = value is BindingBase binding ? binding.Clone() : value;

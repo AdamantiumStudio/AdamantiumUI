@@ -1764,7 +1764,24 @@ public class AumlLowering
             case "StringFormat":
                 if ((value as AumlAstTextNode)?.Text is { } format)
                 {
-                    _writer.Add(new AssignStep(binding, "StringFormat", new StringValue(format)));
+                    // "{}" ahead of a format that starts with a placeholder is the escape that keeps it from being read
+                    // as a markup extension - WPF's '{}{0:N2}' - and no part of the format.
+                    _writer.Add(new AssignStep(binding, "StringFormat",
+                        new StringValue(format.StartsWith("{}", StringComparison.Ordinal) ? format.Substring(2) : format)));
+                }
+
+                break;
+            case "Culture":
+                if (value.GetTextValue()?.Trim() is { Length: > 0 } culture)
+                {
+                    _writer.Add(new AssignStep(binding, "Culture", new StringValue(culture)));
+                }
+
+                break;
+            case "IsImmediate":
+                if (value.GetTextValue()?.Trim() is { Length: > 0 } immediate)
+                {
+                    _writer.Add(new AssignStep(binding, "IsImmediate", new LiteralValue(immediate.ToLowerInvariant())));
                 }
 
                 break;
