@@ -19,6 +19,9 @@
     <PaletteColor Key="SolidBackgroundFillColorSecondary" Color="#11151A"/>
     <PaletteColor Key="SolidBackgroundFillColorTertiary" Color="#1A1F26"/>
     <PaletteColor Key="CardBackgroundFillColorDefault" Color="#1E242B"/>
+    <!-- The flyout surface - menus, drop-downs, a tool bar's overflow: Fluent answers this role with a material; this
+         theme has none, so it answers with its card, solid, and nothing under a flyout shows through it. -->
+    <PaletteColor Key="FlyoutSurfaceFill" Color="#1E242B"/>
     <PaletteColor Key="SmokeFillColorDefault" Color="#A6000000"/>
     <PaletteColor Key="LayerFillColorDefault" Color="#4C222831"/>
     <PaletteColor Key="TileFillColorDefault" Color="#0DFFFFFF"/>

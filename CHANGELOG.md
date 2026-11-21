@@ -772,6 +772,10 @@ All packages share one version.
 
 ### Fixed
 
+- In Graphite every flyout that asked for `FlyoutSurfaceFill` was see-through: a tool bar's overflow menu, a table's
+  column chooser, a date and time field's drop-down, a canvas tool rail's choice list. The role is a material in Fluent
+  and macOS; Graphite did not answer it and the surface got a clear brush, so what was in the flyout mixed with what
+  was under it. Graphite answers it with its card, solid, in both variants.
 - A `ToolBar` heard nothing of a command on it shown, hidden or grown later: its panel was measured within the room
   the bar had given it, so its length looked unchanged and the bar did not share its commands between itself and its
   menu again. The bar's panel is now `ToolBarPanel`, which tells its bar when the length of its commands changes.
