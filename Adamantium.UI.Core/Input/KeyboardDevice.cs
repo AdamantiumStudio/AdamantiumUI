@@ -159,6 +159,9 @@ public class KeyboardDevice
    /// focused, so the first Tab can step into the tree.</summary>
    public void ProcessEvent(RawInputEventArgs eventArgs, IInputComponent fallback = null)
    {
+      if (eventArgs is RawKeyboardEventArgs { Origin: KeyPressOrigin.Application } pressed)
+         TrackApplicationKey(pressed.ChangedKey, pressed.EventType == RawKeyboardEventType.KeyDown);
+
       var target = FocusedComponent ?? fallback;
       if (target != null)
       {
@@ -168,9 +171,6 @@ public class KeyboardDevice
             {
                case RawKeyboardEventType.KeyDown:
                case RawKeyboardEventType.KeyUp:
-                  if (e.Origin == KeyPressOrigin.Application)
-                     TrackApplicationKey(e.ChangedKey, e.EventType == RawKeyboardEventType.KeyDown);
-
                   var parameters = e.Press;
                   parameters.PressTime = e.Timestamp;
                   KeyEventArgs args = new KeyEventArgs(this, e.ChangedKey, e.InputModifiers,

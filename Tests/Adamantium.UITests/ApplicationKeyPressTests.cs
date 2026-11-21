@@ -71,6 +71,19 @@ public class ApplicationKeyPressTests
     }
 
     [Test]
+    public void AKeyTheApplicationReleases_WithNothingFocused_IsUp()
+    {
+        var device = KeyboardDevice.CurrentDevice;
+
+        Press(device, new Border(), Key.LeftCtrl, RawKeyboardEventType.KeyDown, KeyPressOrigin.Application);
+        device.SetFocusedElement(null);
+        device.ProcessEvent(new RawKeyboardEventArgs(Key.LeftCtrl, RawKeyboardEventType.KeyUp,
+            new KeyPressInfo { CurrentState = KeyState.Up }, InputModifiers.LeftControl, 0, KeyPressOrigin.Application));
+
+        Assert.That(device.IsKeyDown(Key.LeftCtrl), Is.False, "no element took the release, the key is still up");
+    }
+
+    [Test]
     public void AKeyFromTheSystem_LeavesItsStateToThePlatform()
     {
         var device = KeyboardDevice.CurrentDevice;
