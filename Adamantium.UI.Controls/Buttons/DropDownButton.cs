@@ -1,6 +1,7 @@
 using System;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -47,6 +48,7 @@ public class DropDownButton : ItemsControl
 
     private readonly System.Collections.Generic.HashSet<DropDownButtonItem> _styled = new();
     private Popup _popup;
+    private DroppedMenu _menu;
     private DropDownButtonItem _lit;
     private CommandSourceListener<DropDownButton> _itemCommandListener;
     private bool _refusing;
@@ -126,7 +128,7 @@ public class DropDownButton : ItemsControl
             _popup.Closed += OnPopupClosed;
             _popup.ContentBuilt -= OnPopupContentBuilt;
             _popup.ContentBuilt += OnPopupContentBuilt;
-            _popup.IsOpen = IsDropDownOpen;
+            _popup.IsOpen = IsDropDownOpen && DropDownMenu == null;
         }
     }
 
@@ -162,11 +164,11 @@ public class DropDownButton : ItemsControl
     /// in place.</summary>
     protected void Open(bool open) => SetCurrentValue(IsDropDownOpenProperty, open);
 
-    // The focus going into a dropped menu is not leaving it: the menu puts itself away on a press elsewhere.
+    // The focus going into the list's rows or the menu's is not leaving the button.
     protected override void OnLostFocus(RoutedEventArgs e)
     {
         base.OnLostFocus(e);
-        if (IsDropDownOpen && DropDownMenu == null
+        if (IsDropDownOpen && _menu?.HasFocus != true
                            && !(FocusManager.Focused is DropDownButtonItem row && ReferenceEquals(row.Owner, this)))
         {
             Open(false);
@@ -207,9 +209,20 @@ public class DropDownButton : ItemsControl
             return;
         }
 
-        // A dropped menu answers its own keys.
-        if (DropDownMenu != null)
+        // A dropped menu answers its own keys once the keyboard is in it; dropped by a click, the arrows step in.
+        if (DropDownMenu is { } menu)
         {
+            if (e.Key == Key.F4 || e.Key == Key.UpArrow && (e.Modifiers & Alt) != 0)
+            {
+                if (!e.IsRepeated) Open(false);
+                e.Handled = true;
+            }
+            else if (e.Key is Key.DownArrow or Key.UpArrow)
+            {
+                menu.MoveKeyboardInsideWhenReady();
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -455,10 +468,10 @@ public class DropDownButton : ItemsControl
             return;
         }
 
-        if (button.DropDownMenu is { } menu)
+        if (button.DropDownMenu != null)
         {
-            if (open) menu.Open(button);
-            else menu.IsOpen = false;
+            if (open) button._menu.Drop();
+            else button._menu.PutAway();
         }
         else if (button._popup != null)
         {
@@ -472,61 +485,40 @@ public class DropDownButton : ItemsControl
 
     private static void OnDropDownMenuChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
+        // A menu given while open takes the list's place, or the old menu's; none left, the button is closed.
         var button = (DropDownButton)a;
-        if (e.OldValue is ContextMenu old)
+        var menu = (ContextMenu)e.NewValue;
+        button._menu ??= new DroppedMenu(button, button.OnMenuPutAway);
+        button._menu.Take(menu);
+        if (!button.IsDropDownOpen)
         {
-            old.PropertyChanged -= button.OnMenuPropertyChanged;
-            old.IsOpen = false;
-            button.RemoveLogicalChild(old);
+            return;
         }
 
-        if (e.NewValue is ContextMenu menu)
+        if (menu == null)
         {
-            button.AddLogicalChild(menu);
-            // The button owns the close, so its own press must not light-dismiss the menu first - it would close, the
-            // click would open it again, and the press would look as if it did nothing.
-            menu.IgnoreTargetPress = true;
-            menu.PropertyChanged += button.OnMenuPropertyChanged;
-            if (button.IsDropDownOpen)
-            {
-                menu.Open(button);
-            }
+            button.Open(false);
+            return;
         }
+
+        if (button._popup != null) button._popup.IsOpen = false;
+        button._menu.Drop();
     }
 
     // The menu put itself away - a row picked, Escape, a press elsewhere: the button is closed too.
-    private void OnMenuPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    private void OnMenuPutAway()
     {
-        if (e.Property == ContextMenu.IsOpenProperty && Equals(e.NewValue, false) && IsDropDownOpen)
+        if (IsDropDownOpen)
         {
             Open(false);
         }
     }
 
-    /// <summary>The menu is not in the visual tree, so it goes with the button as its context menu does: one of its own
-    /// is discarded, one a style shares only let go of.</summary>
+    /// <summary>The menu goes with the button, as its context menu does.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
-        if (DropDownMenu is not { } menu)
-        {
-            return;
-        }
-
-        menu.PropertyChanged -= OnMenuPropertyChanged;
-        if (!ReferenceEquals(menu.LogicalParent, this))
-        {
-            return;
-        }
-
-        if (OwnsMenu(menu, GetBaseValuePriority(DropDownMenuProperty)))
-        {
-            DiscardedVisuals.PublishSubtree(menu);
-        }
-        else
-        {
-            RemoveLogicalChild(menu);
-        }
+        _menu?.Release(GetBaseValuePriority(DropDownMenuProperty));
     }
 
     private void TellRefusal()

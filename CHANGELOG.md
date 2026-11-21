@@ -20,8 +20,10 @@ All packages share one version.
 - The sandbox's Toolbars page has a tray of sections that keeps its bars, and a table's contextual bar.
 - `DropDownButton.DropDownMenu`: a menu the button - or a `SplitButton`'s arrow - drops in place of its list: rows
   with commands of their own, rules between them, a palette, as a tool bar's buttons have. It is the button's logical
-  child, so it is themed and takes the button's data; put away by a row, Escape or a press elsewhere, it closes the
-  button, and dropped from the keyboard it takes the keyboard.
+  child, so it is themed and takes the button's data; put away by a row, Escape, a press elsewhere or the focus going
+  elsewhere, it closes the button. Dropped from the keyboard it takes the keyboard; dropped by a click, the arrows step
+  into it and F4 puts it away. To automation it is the button's child. It keeps the menu the ribbon's drop-down
+  buttons keep, by one mechanism.
 - `RawKeyboardEventArgs.Origin`: a key the application presses itself (`KeyPressOrigin.Application`), as an on-screen
   keyboard does, is down in `KeyboardDevice.IsKeyDown` and `Modifiers` until the application releases it, whatever the
   system's keyboard says - a Ctrl it holds reaches code that asks `Keyboard.Modifiers`, and its `KeyDown` arrives with
@@ -749,6 +751,10 @@ All packages share one version.
 - A `ToolBar` heard nothing of a command on it shown, hidden or grown later: its panel was measured within the room
   the bar had given it, so its length looked unchanged and the bar did not share its commands between itself and its
   menu again. The bar's panel is now `ToolBarPanel`, which tells its bar when the length of its commands changes.
+- A `ContextMenu` dropped from the keyboard with no row to step into - all disabled - took the keyboard on a later
+  opening by a click: its wait to step in outlived its closing. It ends with the menu.
+- A `RibbonDropDownButton` discarded while its menu, shared by a style, was dropped left the menu on screen; it is put
+  away now. A menu taken from the button is given back as it came, not left ignoring its target's presses.
 - A universe of another process shown in a panel took no keys: the host was told of the focus on `GotFocus`, raised
   before the panel holds the keyboard, so it heard it had none and was never told again. It is told on the keyboard's
   own focus now.

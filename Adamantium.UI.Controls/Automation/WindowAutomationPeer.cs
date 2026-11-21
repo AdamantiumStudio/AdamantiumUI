@@ -126,6 +126,7 @@ public class WindowAutomationPeer : UIComponentAutomationPeer, IWindowProvider, 
     {
         DropDown or MenuItem or Ribbon or RibbonApplicationMenu or RibbonGroup or RibbonGallery or ColorPickerButton or SlidePanel => true,
         ContextMenu { PlacementTarget: RibbonDropDownButton button } menu => ReferenceEquals(button.DropDownMenu, menu),
+        ContextMenu { PlacementTarget: Buttons.DropDownButton button } menu => ReferenceEquals(button.DropDownMenu, menu),
         _ => false
     };
 }

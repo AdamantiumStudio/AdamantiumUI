@@ -5,6 +5,7 @@ using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -224,6 +225,218 @@ public class DropDownButtonTests
             Assert.That(body, Is.EqualTo(1), "Enter presses the body");
             Assert.That(opened, Is.True);
             Assert.That(button.IsDropDownOpen, Is.False);
+        });
+    }
+
+    // A press on the button, as the pointer's: it takes the focus and drops what the button drops.
+    private void Click(DropDownButton button)
+    {
+        button.Focus();
+        button.SetCurrentValue(DropDownButton.IsDropDownOpenProperty, !button.IsDropDownOpen);
+        Settle();
+    }
+
+    private static Popup ListOf(DropDownButton button) => (Popup)button.GetTemplateChild("PART_Popup");
+
+    private static ContextMenu Menu(params string[] rows)
+    {
+        var menu = new ContextMenu();
+        foreach (var row in rows) menu.Items.Add(new MenuItem { Header = row });
+        return menu;
+    }
+
+    // The menu taken away while dropped: the button is closed with it, not left open over nothing.
+    [Test]
+    public void AMenuTakenAwayWhileDropped_ClosesTheButton()
+    {
+        var menu = Menu("Bottom");
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu });
+        Press(button, Key.F4);
+        Settle();
+
+        button.DropDownMenu = null;
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.False);
+            Assert.That(button.IsDropDownOpen, Is.False);
+            Assert.That(menu.IgnoreTargetPress, Is.False, "the menu is given back as it came");
+        });
+    }
+
+    // A menu given while the list is dropped takes the list's place: never both at once.
+    [Test]
+    public void AMenuGivenWhileTheListIsDropped_TakesItsPlace()
+    {
+        var button = Shown(new DropDownButton { Content = "Export", ItemsSource = new[] { "PDF" } });
+        Press(button, Key.F4);
+        Settle();
+        var menu = Menu("Bottom");
+
+        button.DropDownMenu = menu;
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True);
+            Assert.That(ListOf(button).IsOpen, Is.False);
+        });
+    }
+
+    // A button open from the start with a menu drops the menu alone, not the list's empty card beside it.
+    [Test]
+    public void AButtonOpenFromTheStart_WithAMenu_DropsTheMenuAlone()
+    {
+        var menu = Menu("Bottom");
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu, IsDropDownOpen = true });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True);
+            Assert.That(ListOf(button).IsOpen, Is.False);
+        });
+    }
+
+    // The focus moved elsewhere from the keyboard puts a dropped menu away, as it does a dropped list.
+    [Test]
+    public void TheFocusMovedElsewhere_PutsADroppedMenuAway()
+    {
+        var menu = Menu("Bottom");
+        var button = new DropDownButton { Content = "Borders", DropDownMenu = menu };
+        var other = new Button { Content = "Other" };
+        _window = new Window
+        {
+            Width = 800, Height = 600,
+            Content = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, Children = { button, other } },
+        };
+        _window.ApplyCurrentTheme();
+        Settle();
+        FocusManager.Focus(button, NavigationMethod.Tab);
+        Click(button);
+        var dropped = menu.IsOpen;
+
+        FocusManager.Focus(other, NavigationMethod.Tab);
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dropped, Is.True);
+            Assert.That(menu.IsOpen, Is.False);
+            Assert.That(button.IsDropDownOpen, Is.False);
+        });
+    }
+
+    // Dropped by a click, the menu is still reached from the keyboard: Down steps into its rows, F4 puts it away.
+    [Test]
+    public void AMenuDroppedByAClick_IsReachedFromTheKeyboard()
+    {
+        var menu = Menu("Bottom", "Top");
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu });
+        Click(button);
+
+        Press(button, Key.DownArrow);
+        Settle();
+        var stepped = FocusManager.Focused;
+        FocusManager.Focus(button, NavigationMethod.Tab);
+        Press(button, Key.F4);
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stepped, Is.InstanceOf<MenuItem>());
+            Assert.That(button.IsDropDownOpen, Is.False, "F4 puts it away");
+        });
+    }
+
+    // A menu dropped from the keyboard with nothing to step into does not take the keyboard on a later click.
+    [Test]
+    public void AMenuWithNoRowToStepInto_DoesNotTakeTheKeyboardOnALaterClick()
+    {
+        var row = new MenuItem { Header = "Bottom", IsEnabled = false };
+        var menu = new ContextMenu { Items = { row } };
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu });
+        Press(button, Key.F4);
+        Settle();
+        menu.IsOpen = false;
+        Settle();
+        row.IsEnabled = true;
+
+        Click(button);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True);
+            Assert.That(FocusManager.Focused, Is.SameAs(button), "a click leaves the keyboard on the button");
+        });
+    }
+
+    // A menu a style shares, dropped from a button that goes, is put away with it.
+    [Test]
+    public void ASharedMenu_DroppedFromAButtonThatGoes_IsPutAway()
+    {
+        var menu = Menu("Bottom");
+        var button = new DropDownButton { Content = "Borders" };
+        button.SetValue(DropDownButton.DropDownMenuProperty, menu, ValuePriority.Style);
+        Shown(button);
+        Press(button, Key.F4);
+        Settle();
+
+        _window.Content = null;
+        DiscardedVisuals.PublishSubtree(button);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(button.IsDiscarded, Is.True);
+            Assert.That(menu.IsOpen, Is.False);
+            Assert.That(menu.IgnoreTargetPress, Is.False, "given back as it came");
+        });
+    }
+
+    // The ribbon's drop-down button keeps its menu by the same mechanism: shared and dropped, it is put away with the
+    // button, and given back as it came.
+    [Test]
+    public void ARibbonButtonsSharedMenu_DroppedFromAButtonThatGoes_IsPutAway()
+    {
+        var menu = Menu("Bottom");
+        var button = new RibbonDropDownButton { Content = "Borders" };
+        button.SetValue(RibbonDropDownButton.DropDownMenuProperty, menu, ValuePriority.Style);
+        _window = new Window { Width = 800, Height = 600, Content = button };
+        _window.ApplyCurrentTheme();
+        Settle();
+        button.IsDropDownOpen = true;
+        Settle();
+        var dropped = menu.IsOpen;
+
+        _window.Content = null;
+        DiscardedVisuals.PublishSubtree(button);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dropped, Is.True);
+            Assert.That(menu.IsOpen, Is.False);
+            Assert.That(menu.IgnoreTargetPress, Is.False);
+        });
+    }
+
+    // To automation the dropped menu is the button's child, not a window's stray.
+    [Test]
+    public void ADroppedMenu_IsTheButtonsChild_ToAutomation()
+    {
+        var menu = Menu("Bottom");
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu });
+        Press(button, Key.F4);
+        Settle();
+
+        var children = button.GetAutomationPeer().GetChildren();
+        var windowChildren = _window.GetAutomationPeer().GetChildren();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(children, Does.Contain(menu.GetAutomationPeer()));
+            Assert.That(windowChildren, Does.Not.Contain(menu.GetAutomationPeer()));
         });
     }
 

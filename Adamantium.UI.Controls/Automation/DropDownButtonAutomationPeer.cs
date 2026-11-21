@@ -32,9 +32,14 @@ public class DropDownButtonAutomationPeer : ItemsControlAutomationPeer, IExpandC
     /// <summary>What the button shows: its content when it is text, else the text it draws.</summary>
     protected override string NameCore() => ((DropDownButton)Owner).Content as string ?? TextOf(Owner);
 
-    /// <summary>The rows of the list, while it is open; a closed button has none to act on.</summary>
-    protected override IReadOnlyList<AutomationPeer> ChildrenCore() =>
-        ((DropDownButton)Owner).IsDropDownOpen ? base.ChildrenCore() : [];
+    /// <summary>The rows of the list, or the menu dropped in its place, while it is open; a closed button has none to act
+    /// on.</summary>
+    protected override IReadOnlyList<AutomationPeer> ChildrenCore() => (DropDownButton)Owner switch
+    {
+        { IsDropDownOpen: false } => [],
+        { DropDownMenu: { } menu } => menu.IsOpen && menu.GetAutomationPeer() is { } open ? [open] : [],
+        _ => base.ChildrenCore()
+    };
 }
 
 /// <summary>The peer of a <see cref="DropDownButtonItem"/>: an entry of the list, invoked as a click on it.</summary>
