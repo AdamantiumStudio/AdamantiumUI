@@ -19,6 +19,17 @@
     <Phrase Key="ZoomIn" Text="Крупнее"/>
     <Phrase Key="ZoomOut" Text="Мельче"/>
     <Phrase Key="Help" Text="Справка"/>
+    <Phrase Key="Sections" Text="Разделы и контекстная полоса"/>
+    <Phrase Key="SectionsHint" Text="Сузьте лоток: последние разделы полосы уйдут в её меню целиком. Встаньте в таблицу: появится её полоса, а меню лотка покажет её отдельно. Этот лоток не отдаёт свои полосы и не берёт чужие."/>
+    <Phrase Key="SectionsWidth" Text="Ширина лотка с разделами"/>
+    <Phrase Key="InTable" Text="В таблице"/>
+    <Phrase Key="Format" Text="Формат"/>
+    <Phrase Key="Clipboard" Text="Буфер обмена"/>
+    <Phrase Key="Font" Text="Шрифт"/>
+    <Phrase Key="Align" Text="Выравнивание"/>
+    <Phrase Key="Table" Text="Таблица"/>
+    <Phrase Key="InsertRow" Text="Вставить строку"/>
+    <Phrase Key="DeleteRow" Text="Удалить строку"/>
     <Phrase Key="Nothing" Text="пока ничего"/>
     <Phrase Key="Report" Text="Нажато: {command}"/>
 </Language>

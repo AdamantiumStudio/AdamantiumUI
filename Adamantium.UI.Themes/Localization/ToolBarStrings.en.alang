@@ -2,4 +2,6 @@
     <Phrase Key="MoreCommands" Text="More commands"/>
     <Phrase Key="LockToolBars" Text="Lock the toolbars"/>
     <Phrase Key="Grip" Text="Move the toolbar"/>
+    <Phrase Key="Bars" Text="Toolbars"/>
+    <Phrase Key="ContextualBars" Text="Contextual - shown where you are"/>
 </Language>

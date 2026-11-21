@@ -24,4 +24,20 @@
   <RightClick Target="id=LowerTray" />
   <Click Target="name=Lock the toolbars" />
   <Wait Target="id=LowerTray/id=ExtraBar/id=PART_Grip" Offscreen="True" Timeout="5s" />
+  <!-- The tray of sections narrowed: the Alignment section goes to the bar's menu whole, and Center is pressed there. -->
+  <Expect Target="id=FontGroup" Type="Group" Name="Font" />
+  <Set Target="id=SectionsWidth" Value="330" />
+  <Wait Target="id=FormatBar/id=PART_OverflowButton" Offscreen="False" />
+  <Click Target="id=FormatBar/id=PART_OverflowButton" />
+  <Click Target="id=SectionCenterCommand" />
+  <Expect Target="id=ToolBarsReport" Name="Pressed: Center" />
+  <Set Target="id=SectionsWidth" Value="900" />
+  <Wait Target="id=FormatBar/id=PART_OverflowButton" Offscreen="True" Timeout="5s" />
+  <!-- In a table its bar shows; the tray's menu lists it apart, under its header, and does not switch it. -->
+  <Toggle Target="id=InTable" />
+  <Wait Target="id=TableBar" Offscreen="False" Timeout="5s" />
+  <RightClick Target="id=SectionsTray" />
+  <Wait Target="name=Contextual - shown where you are" />
+  <Expect Target="type=MenuItem,name=Table" Enabled="False" Toggle="On" />
+  <Key Keys="Escape" Into="id=MainWindow" />
 </Scenario>

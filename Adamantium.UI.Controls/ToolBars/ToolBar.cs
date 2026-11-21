@@ -34,7 +34,7 @@ public class ToolBar : ItemsControl
     private static readonly AdamantiumPropertyKey OrientationPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(Orientation), typeof(Orientation), typeof(ToolBar),
         new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsMeasure,
-            static (a, _) => ((ToolBar)a)._lengths.Clear()));
+            static (a, _) => ((ToolBar)a).OnOrientationChanged()));
 
     public static readonly AdamantiumProperty OrientationProperty = OrientationPropertyKey.Property;
 
@@ -51,6 +51,11 @@ public class ToolBar : ItemsControl
         nameof(IsMoving), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty IsMovingProperty = IsMovingPropertyKey.Property;
+
+    /// <summary>Whether the bar is shown by what the user is on - a table, a picture - rather than by the user, as a
+    /// ribbon's contextual tab is: its tray's menu lists it apart, and does not switch it.</summary>
+    public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.Register(nameof(IsContextual),
+        typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
     /// <summary>How long the overflow button is along the bar - a theme metric, reserved whenever commands overflow.</summary>
     public static readonly AdamantiumProperty OverflowButtonLengthProperty = AdamantiumProperty.Register(
@@ -145,6 +150,12 @@ public class ToolBar : ItemsControl
         internal set => SetValue(IsMovingPropertyKey, value);
     }
 
+    public bool IsContextual
+    {
+        get => GetValue<bool>(IsContextualProperty);
+        set => SetValue(IsContextualProperty, value);
+    }
+
     public double Spacing
     {
         get => GetValue<double>(SpacingProperty);
@@ -164,6 +175,9 @@ public class ToolBar : ItemsControl
     internal double ShortestLength { get; private set; } = double.NaN;
 
     internal ToolBarTray Tray => this.GetVisualAncestors().OfType<ToolBarTray>().FirstOrDefault();
+
+    /// <summary>Whether the bar is measuring its commands itself: its panel, measured then, has nothing to tell it.</summary>
+    internal bool IsMeasuringCommands { get; private set; }
 
     public override Panel ItemsHostPanel => _onBar;
 
@@ -230,13 +244,60 @@ public class ToolBar : ItemsControl
         {
             if (ItemContainerGenerator.Realize(i) is IMeasurableComponent command)
             {
+                if (command is ToolBarGroup group)
+                {
+                    group.Orientation = Orientation;
+                }
+
                 _commands.Add(command);
                 _overflowing.Add(false);
                 _onBar.Children.Add(command);
             }
         }
 
+        MarkSeparators();
         InvalidateMeasure();
+    }
+
+    // Turned, the bar measures its commands again along the new way, its sections turned with it.
+    private void OnOrientationChanged()
+    {
+        _lengths.Clear();
+        foreach (var group in _commands.OfType<ToolBarGroup>())
+        {
+            group.Orientation = Orientation;
+        }
+    }
+
+    // A section's rule stands where a shown command stands before it, in the same place - the bar or the menu - so the
+    // first thing on the bar, or in the menu, has none.
+    private void MarkSeparators()
+    {
+        var shownOnBar = false;
+        var shownInOverflow = false;
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            var command = _commands[i];
+            var before = _overflowing[i] ? shownInOverflow : shownOnBar;
+            if (command is ToolBarGroup group)
+            {
+                group.ShowsSeparator = before;
+            }
+
+            if (command.Visibility == Visibility.Collapsed)
+            {
+                continue;
+            }
+
+            if (_overflowing[i])
+            {
+                shownInOverflow = true;
+            }
+            else
+            {
+                shownOnBar = true;
+            }
+        }
     }
 
     private void TakeCommandsOut()
@@ -289,6 +350,19 @@ public class ToolBar : ItemsControl
     // last measured on the bar, so the decision does not change what it was made from.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
+        IsMeasuringCommands = true;
+        try
+        {
+            return MeasureCommandsAndBar(availableSize);
+        }
+        finally
+        {
+            IsMeasuringCommands = false;
+        }
+    }
+
+    private Size<double> MeasureCommandsAndBar(Size<double> availableSize)
+    {
         var horizontal = Orientation == Orientation.Horizontal;
         if (_onBar == null)
         {
@@ -300,6 +374,10 @@ public class ToolBar : ItemsControl
 
         var room = horizontal ? availableSize.Width : availableSize.Height;
         var across = horizontal ? availableSize.Height : availableSize.Width;
+
+        // A command shown or hidden since the last pass moves the rules of the sections after it: marked before the
+        // sections are measured, so they are measured as they will be drawn.
+        MarkSeparators();
         var lengths = MeasureCommands(horizontal, across);
 
         PlaceCommands(Overflowing(room, lengths));
@@ -429,6 +507,8 @@ public class ToolBar : ItemsControl
                 _overflowing[i] = overflowing[i];
                 (overflowing[i] ? _inOverflow : _onBar)?.Children.Add(_commands[i]);
             }
+
+            MarkSeparators();
         }
 
         HasOverflowItems = overflowing.Contains(true);

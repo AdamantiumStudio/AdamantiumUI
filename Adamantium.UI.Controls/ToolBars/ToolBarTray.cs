@@ -33,6 +33,19 @@ public class ToolBarTray : ItemsControl
         typeof(bool), typeof(AdamantiumComponent),
         new PropertyMetadata(false, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.BindsTwoWayByDefault));
 
+    /// <summary>Whether the tray's bars may go to another tray of the window, and another's come to it - when each holds
+    /// its bars as items of its own. A control whose bars are its own parts says no: they move only within it.</summary>
+    public static readonly AdamantiumProperty SharesBarsProperty = AdamantiumProperty.Register(nameof(SharesBars),
+        typeof(bool), typeof(ToolBarTray), new PropertyMetadata(true));
+
+    /// <summary>Over the bars the user shows and hides, in the tray's menu, when it lists contextual bars too.</summary>
+    public static readonly AdamantiumProperty BarsHeaderProperty = AdamantiumProperty.Register(nameof(BarsHeader),
+        typeof(string), typeof(ToolBarTray), new PropertyMetadata(null));
+
+    /// <summary>Over the contextual bars, in the tray's menu.</summary>
+    public static readonly AdamantiumProperty ContextualBarsHeaderProperty = AdamantiumProperty.Register(
+        nameof(ContextualBarsHeader), typeof(string), typeof(ToolBarTray), new PropertyMetadata(null));
+
     /// <summary>Locks the tray's bars, or frees them; checked while they are locked. Its menu runs it.</summary>
     public static RoutedCommand LockCommand { get; } = new(nameof(LockCommand), typeof(ToolBarTray));
 
@@ -40,8 +53,8 @@ public class ToolBarTray : ItemsControl
     private const double NewRowReach = 16;
     private const double CueThickness = 8;
 
-    private readonly List<MenuItem> _menuBars = [];
-    private Separator _menuSeparator;
+    // What the tray put in its menu when it last opened: its bars, the headers over them and the rule after them.
+    private readonly List<IUIComponent> _menuMade = [];
     private Moving _moving;
 
     static ToolBarTray()
@@ -75,6 +88,26 @@ public class ToolBarTray : ItemsControl
     {
         get => GetValue<bool>(IsLockedProperty);
         set => SetValue(IsLockedProperty, value);
+    }
+
+    public bool SharesBars
+    {
+        get => GetValue<bool>(SharesBarsProperty);
+        set => SetValue(SharesBarsProperty, value);
+    }
+
+    /// <summary>The theme gives its own words; none, no header.</summary>
+    public string BarsHeader
+    {
+        get => GetValue<string>(BarsHeaderProperty);
+        set => SetValue(BarsHeaderProperty, value);
+    }
+
+    /// <summary>The theme gives its own words; none, no header.</summary>
+    public string ContextualBarsHeader
+    {
+        get => GetValue<string>(ContextualBarsHeaderProperty);
+        set => SetValue(ContextualBarsHeaderProperty, value);
     }
 
     /// <summary>The bars shown in the tray, row by row.</summary>
@@ -189,29 +222,32 @@ public class ToolBarTray : ItemsControl
         return index >= 0 && index < Items.Count ? Items[index] : null;
     }
 
-    // The bars by name, each checked while shown, before what the theme's menu holds - locking them among it. A menu
-    // shared with other trays names the bars of the tray it opens on.
+    // The bars by name, each checked while shown, before what the theme's menu holds - locking them among it. Contextual
+    // bars stand apart under a header of their own, checked while shown but not switched: what the user is on shows them.
+    // A menu shared with other trays names the bars of the tray it opens on.
     private void OnMenuOpening(object sender, ContextMenuOpeningEventArgs e)
     {
         var menu = (ContextMenu)sender;
-        foreach (var made in _menuBars)
+        foreach (var made in _menuMade)
         {
             menu.Items.Remove(made);
         }
 
-        _menuBars.Clear();
-        if (_menuSeparator != null)
-        {
-            menu.Items.Remove(_menuSeparator);
-            _menuSeparator = null;
-        }
-
+        _menuMade.Clear();
         if (e.Target == null || (!ReferenceEquals(e.Target, this) && !e.Target.GetVisualAncestors().Contains(this)))
         {
             return;
         }
 
-        foreach (var bar in Bars.Where(bar => bar.Header != null))
+        var named = Bars.Where(bar => bar.Header != null).ToList();
+        var contextual = named.Where(bar => bar.IsContextual).ToList();
+        var headed = contextual.Count > 0 && contextual.Count < named.Count;
+        if (headed && BarsHeader != null)
+        {
+            AddToMenu(menu, new MenuHeader { Text = BarsHeader });
+        }
+
+        foreach (var bar in named.Where(bar => !bar.IsContextual))
         {
             var entry = new MenuItem
             {
@@ -221,15 +257,36 @@ public class ToolBarTray : ItemsControl
             };
             entry.Click += (_, _) => bar.SetCurrentValue(VisibilityProperty,
                 entry.IsChecked ? Visibility.Visible : Visibility.Collapsed);
-            menu.Items.Insert(_menuBars.Count, entry);
-            _menuBars.Add(entry);
+            AddToMenu(menu, entry);
         }
 
-        if (_menuBars.Count > 0 && menu.Items.Count > _menuBars.Count)
+        if (headed && ContextualBarsHeader != null)
         {
-            _menuSeparator = new Separator();
-            menu.Items.Insert(_menuBars.Count, _menuSeparator);
+            AddToMenu(menu, new MenuHeader { Text = ContextualBarsHeader });
         }
+
+        foreach (var bar in contextual)
+        {
+            AddToMenu(menu, new MenuItem
+            {
+                Header = bar.Header,
+                IsCheckable = true,
+                IsChecked = bar.Visibility == Visibility.Visible,
+                IsEnabled = false
+            });
+        }
+
+        if (_menuMade.Count > 0 && menu.Items.Count > _menuMade.Count)
+        {
+            AddToMenu(menu, new Separator());
+        }
+    }
+
+    // Put in after what the tray has already put in, before the theme's own rows.
+    private void AddToMenu(ContextMenu menu, IUIComponent made)
+    {
+        menu.Items.Insert(_menuMade.Count, made);
+        _menuMade.Add(made);
     }
 
     // --- Moving a bar by its grip ---------------------------------------------------------------------------------
@@ -322,8 +379,10 @@ public class ToolBarTray : ItemsControl
         }
     }
 
-    // A bar goes from one tray to another only as an item each holds of its own; bars made for a source stay in theirs.
-    private bool CanTakeFrom(ToolBarTray tray) => ItemsSource == null && tray.ItemsSource == null;
+    // A bar goes from one tray to another only as an item each holds of its own, and only where both share their bars;
+    // bars made for a source stay in theirs.
+    private bool CanTakeFrom(ToolBarTray tray) =>
+        SharesBars && tray.SharesBars && ItemsSource == null && tray.ItemsSource == null;
 
     private static IUIComponent RootOf(IUIComponent component)
     {

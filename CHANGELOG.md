@@ -7,6 +7,18 @@ All packages share one version.
 
 ### Added
 
+- `ToolBarGroup`: a section of a `ToolBar`, commands that belong together as a ribbon's group does. It is one item of
+  its bar, so a bar short of room sends it to its overflow menu whole, never split; the bar draws a rule before it
+  wherever a command stands before it, on the bar or in the menu. To automation it is a group named by its `Header`.
+- `ToolBar.IsContextual`: a bar shown by what the user is on - a table, a picture - as a ribbon's contextual tab. The
+  tray's menu lists such bars apart, under `ToolBarTray.ContextualBarsHeader`, checked while shown and not switched;
+  the user's bars then stand under `ToolBarTray.BarsHeader`. Each theme gives both its own words.
+- `ToolBarTray.SharesBars`: false keeps a tray's bars to it - none goes to another tray, and none comes from one - for
+  a control whose bars are its own parts.
+- `MenuHeader`: the name of a section of a menu, over its rows; not a command, so it takes no focus. Styled in Fluent,
+  Graphite and macOS.
+- The sandbox's Toolbars page has a tray of sections that keeps its bars, and a table's contextual bar.
+
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
   they come; a record open in its member comes back open when the rows are built again, and one whose member says anew
@@ -715,6 +727,10 @@ All packages share one version.
   shows is which control it is.
 
 ### Fixed
+
+- A `ToolBar` heard nothing of a command on it shown, hidden or grown later: its panel was measured within the room
+  the bar had given it, so its length looked unchanged and the bar did not share its commands between itself and its
+  menu again. The bar's panel is now `ToolBarPanel`, which tells its bar when the length of its commands changes.
 
 - `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
   with its row now. Cells selected below a branch opened or shut, the active cell, the Shift anchor and an open edit

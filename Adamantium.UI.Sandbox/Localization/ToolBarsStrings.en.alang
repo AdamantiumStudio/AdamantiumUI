@@ -19,6 +19,17 @@
     <Phrase Key="ZoomIn" Text="Zoom in"/>
     <Phrase Key="ZoomOut" Text="Zoom out"/>
     <Phrase Key="Help" Text="Help"/>
+    <Phrase Key="Sections" Text="Sections and a contextual bar"/>
+    <Phrase Key="SectionsHint" Text="Narrow it: the bar's last sections go to its menu whole. Stand in a table: its bar shows, and the tray's menu lists it apart. This tray keeps its bars: none goes to another tray, and none comes from one."/>
+    <Phrase Key="SectionsWidth" Text="Width of the tray of sections"/>
+    <Phrase Key="InTable" Text="In a table"/>
+    <Phrase Key="Format" Text="Format"/>
+    <Phrase Key="Clipboard" Text="Clipboard"/>
+    <Phrase Key="Font" Text="Font"/>
+    <Phrase Key="Align" Text="Alignment"/>
+    <Phrase Key="Table" Text="Table"/>
+    <Phrase Key="InsertRow" Text="Insert row"/>
+    <Phrase Key="DeleteRow" Text="Delete row"/>
     <Phrase Key="Nothing" Text="nothing yet"/>
     <Phrase Key="Report" Text="Pressed: {command}"/>
 </Language>
