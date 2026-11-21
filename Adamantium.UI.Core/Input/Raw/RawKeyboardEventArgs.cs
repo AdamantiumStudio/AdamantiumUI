@@ -9,11 +9,15 @@ public class RawKeyboardEventArgs : RawInputEventArgs
    /// out of its own message format before handing the event over - this layer never sees a raw LPARAM.</summary>
    public KeyPressInfo Press { get; }
 
+   /// <summary>Whether the system's keyboard or the application pressed the key.</summary>
+   public KeyPressOrigin Origin { get; }
+
    public RawKeyboardEventArgs(Key changedKey, RawKeyboardEventType eventType, KeyPressInfo press,
-      InputModifiers modifiers, uint timeStep) : base(modifiers, timeStep)
+      InputModifiers modifiers, uint timeStep, KeyPressOrigin origin = KeyPressOrigin.System) : base(modifiers, timeStep)
    {
       ChangedKey = changedKey;
       EventType = eventType;
       Press = press;
+      Origin = origin;
    }
 }
