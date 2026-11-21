@@ -27,6 +27,8 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     private FundamentalUIComponent _containersHeldBy;
     private ItemsPresenter _presenter;
     private bool _ringWasVisible;
+    // The index a scroll was asked to before the list could make it, or -1.
+    private int _pendingScroll = -1;
 
     public static readonly AdamantiumProperty ItemsSourceProperty = AdamantiumProperty.Register(nameof(ItemsSource),
         typeof(IEnumerable), typeof(ItemsControl), new PropertyMetadata(null, OnItemsSourceChanged));
@@ -83,25 +85,67 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     public virtual Panel ItemsHostPanel => _presenter?.Panel;
 
     /// <summary>Scrolls until <paramref name="item"/> is in view; a virtualizing panel makes its container on the way, as
-    /// WPF's <c>ScrollIntoView</c> does.</summary>
-    public void ScrollIntoView(object item)
+    /// WPF's <c>ScrollIntoView</c> does. Of equal items, the first; see <see cref="ScrollIndexIntoView"/>.</summary>
+    public void ScrollIntoView(object item) => ScrollIndexIntoView(Items.IndexOf(item));
+
+    /// <summary>Scrolls until the item at <paramref name="index"/> is in view. Asked before the list is laid out - its
+    /// template not built, its popup not yet shown, its viewport not known - the scroll waits for the list's next layout,
+    /// as WPF's does: an offset set earlier would be clamped back to the top. A later ask replaces it; an index out of the
+    /// items cancels it.</summary>
+    public void ScrollIndexIntoView(int index)
     {
-        var index = Items.IndexOf(item);
-        var panel = ItemsHostPanel;
-        var viewer = panel?.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
-        if (index < 0 || viewer == null)
+        _pendingScroll = index >= 0 && index < Items.Count ? index : -1;
+        if (_pendingScroll >= 0 && TryScroll(_pendingScroll))
         {
-            return;
+            _pendingScroll = -1;
+        }
+    }
+
+    // The list was laid out: a scroll asked before it could be made is made now.
+    internal void OnItemsArranged()
+    {
+        if (_pendingScroll >= 0 && (_pendingScroll >= Items.Count || TryScroll(_pendingScroll)))
+        {
+            _pendingScroll = -1;
+        }
+    }
+
+    // False while there is nowhere to scroll to yet. A list with no scroll viewer has nothing to scroll; a panel that
+    // cannot say where a row stands shows the row it made.
+    private bool TryScroll(int index)
+    {
+        var panel = ItemsHostPanel;
+        if (panel == null || panel.RenderSize.Height <= 0 && panel.RenderSize.Width <= 0)
+        {
+            return false;
         }
 
-        if (panel is VirtualizingPanel virtualizing && virtualizing.TryGetItemRect(index, out var rect))
+        var viewer = panel.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+        if (viewer == null)
         {
-            viewer.BringIntoView(rect);
+            return true;
         }
-        else if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent container)
+
+        if (panel is VirtualizingPanel { IsVirtualizing: true } virtualizing)
+        {
+            if (virtualizing.Viewport.Height <= 0 && virtualizing.Viewport.Width <= 0)
+            {
+                return false;
+            }
+
+            if (virtualizing.TryGetItemRect(index, out var rect))
+            {
+                viewer.BringIntoView(rect);
+                return true;
+            }
+        }
+
+        if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent container)
         {
             container.BringIntoView();
         }
+
+        return true;
     }
 
     public IEnumerable ItemsSource
@@ -593,7 +637,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
             return null;
         }
 
-        ScrollIntoView(Items[KeyboardIndex]);
+        ScrollIndexIntoView(KeyboardIndex);
         return this;
     }
 

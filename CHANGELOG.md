@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ItemsControl.ScrollIndexIntoView`: a scroll to an item by its index, so of equal items the one asked is shown.
+  Asked before the list is laid out - its template not built, its popup not yet shown, its viewport not known - a
+  scroll, by index or by `ScrollIntoView`, waits for the list's next layout instead of being clamped back to the top,
+  as WPF's does; a later ask replaces it.
 - `ToolBarGroup`: a section of a `ToolBar`, commands that belong together as a ribbon's group does. It is one item of
   its bar, so a bar short of room sends it to its overflow menu whole, never split; the bar draws a rule before it
   wherever a command stands before it, on the bar or in the menu. To automation it is a group named by its `Header`.

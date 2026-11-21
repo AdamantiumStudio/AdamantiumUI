@@ -190,47 +190,8 @@ public class DropDown : Selector
         SetHighlight(_highlightedIndex, false);
         _highlightedIndex = index;
         SetHighlight(_highlightedIndex, true);
-        if (show && IsDropDownOpen) ShowHighlighted();
-    }
-
-    // The highlighted row brought into the list's view: the list makes only the rows it shows, so a row far down is made
-    // where it stands. Until the list is laid out there is nowhere to scroll to, so the popup's next pass tries again.
-    private void ShowHighlighted()
-    {
-        if (_popup == null) return;
-        _popup.LayerPass -= OnShowHighlightedPass;
-        if (!TryShowHighlighted()) _popup.LayerPass += OnShowHighlightedPass;
-    }
-
-    private void OnShowHighlightedPass(object sender, EventArgs e)
-    {
-        if (!IsDropDownOpen || TryShowHighlighted()) ((Popup)sender).LayerPass -= OnShowHighlightedPass;
-    }
-
-    // By index, so of two equal items the one highlighted is shown. Not before the list is laid out: an offset set while
-    // it has no viewport is clamped back to the top. A panel that cannot say where a row stands shows the row made.
-    private bool TryShowHighlighted()
-    {
-        var index = _highlightedIndex;
-        if (index < 0 || index >= Items.Count) return true;
-        var panel = ItemsHostPanel;
-        var viewer = panel?.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
-        if (viewer == null || viewer.RenderSize.Height <= 0
-            || panel is Panels.VirtualizingPanel { IsVirtualizing: true, Viewport.Height: <= 0 })
-        {
-            return false;
-        }
-
-        if (panel is Panels.VirtualizingPanel { IsVirtualizing: true } list && list.TryGetItemRect(index, out var rect))
-        {
-            viewer.BringIntoView(rect);
-        }
-        else if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent row)
-        {
-            row.BringIntoView();
-        }
-
-        return true;
+        // By index, so of two equal items the highlighted one is shown; made when the list is laid out, if it is not yet.
+        if (show && IsDropDownOpen) ScrollIndexIntoView(index);
     }
 
     // A row written in markup is its own item: it holds its highlight made or not.
@@ -441,8 +402,6 @@ public class DropDown : Selector
             _popup.ContentBuilt -= OnPopupContentBuilt;
             _popup.ContentBuilt += OnPopupContentBuilt;
             _popup.IsOpen = IsDropDownOpen;
-            // A new template under an open list - a theme switched - shows the highlighted row in the new one too.
-            if (IsDropDownOpen) ShowHighlighted();
         }
 
         DetachText();
@@ -465,7 +424,6 @@ public class DropDown : Selector
         {
             _popup.Closed -= OnPopupClosed;
             _popup.ContentBuilt -= OnPopupContentBuilt;
-            _popup.LayerPass -= OnShowHighlightedPass;
         }
         _popup = null;
         DetachText();
@@ -831,7 +789,7 @@ public class DropDown : Selector
         else
         {
             dd.Highlight(-1);
-            if (dd._popup != null) dd._popup.LayerPass -= dd.OnShowHighlightedPass;
+            dd.ScrollIndexIntoView(-1);   // a scroll still waiting does not wait for the next opening
         }
         AutomationEvents.RaiseExpandCollapse(dd, open);
     }
