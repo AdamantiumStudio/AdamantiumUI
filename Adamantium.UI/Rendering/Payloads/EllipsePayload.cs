@@ -41,9 +41,18 @@ public class EllipsePayload(
 
     public Rect DestinationRect { get; } = destinationRect;
 
-    public Double StartAngle { get; } = startAngle;
+    /// <summary>The part of the ellipse drawn, its angles taken round the turn - the one statement of them every way of
+    /// drawing it reads.</summary>
+    public ArcSpan Span { get; } = new(startAngle, sweepAngle);
 
-    public Double SweepAngle { get; } = sweepAngle;
+    /// <summary>Where the arc starts, in [0, 360).</summary>
+    public Double StartAngle => Span.Start;
+
+    /// <summary>How far it goes, in [-360, 360]: negative counterclockwise.</summary>
+    public Double SweepAngle => Span.Sweep;
+
+    /// <summary>Whether the whole ellipse is drawn - its start nothing to it.</summary>
+    public bool IsWhole => Span.IsWhole;
 
     public EllipseType EllipseType { get; } = ellipseType;
 

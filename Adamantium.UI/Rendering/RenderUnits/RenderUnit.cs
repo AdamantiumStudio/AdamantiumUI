@@ -1036,7 +1036,7 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
     {
         var outer = new EllipseGeometry(payload.DestinationRect, payload.StartAngle, payload.SweepAngle, payload.EllipseType);
         // A ring swept through nothing is nothing: the empty sector says so without cutting one nothing from another.
-        if (!payload.HasRing || payload.SweepAngle <= 0) return outer;
+        if (!payload.HasRing || payload.Span.IsEmpty) return outer;
 
         var t = payload.RingThickness;
         var inner = payload.DestinationRect.Deflate(new Thickness(t));
@@ -1044,7 +1044,8 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         // nonsense, so it is the solid shape that answers there.
         if (inner.Width <= 0 || inner.Height <= 0) return outer;
 
-        return RingBand(payload.DestinationRect, inner, payload.StartAngle, Math.Min(payload.SweepAngle, 360));
+        // Outlined the way it was swept, where a dash or a trim along it begins and goes; the band itself is the same.
+        return RingBand(payload.DestinationRect, inner, payload.StartAngle, payload.SweepAngle);
     }
 
     // Degrees of an arc between its points: a ring's arcs as smooth as the ellipse's own, whatever their sweep.
@@ -1052,17 +1053,17 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
 
     private static Geometry RingBand(Rect outer, Rect inner, double start, double sweep)
     {
-        var steps = Math.Max(2, (int)Math.Ceiling(sweep / RingStepDegrees));
+        var steps = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / RingStepDegrees));
         var band = new StreamGeometry { FillRule = FillRule.EvenOdd };
         var figures = band.Open();
-        if (sweep >= 360)
+        if (Math.Abs(sweep) >= 360)
         {
             // A whole turn: the outer ring and the inner, the hole between them by the even-odd rule.
             // The last point of a whole turn is its first: the figure closes on it instead.
             figures.BeginFigure(ArcPoint(outer, start), true, true)
-                .PolylineLineTo(Arc(outer, start, 360, steps).Skip(1).Take(steps - 1));
+                .PolylineLineTo(Arc(outer, start, sweep, steps).Skip(1).Take(steps - 1));
             figures.BeginFigure(ArcPoint(inner, start), true, true)
-                .PolylineLineTo(Arc(inner, start, 360, steps).Skip(1).Take(steps - 1));
+                .PolylineLineTo(Arc(inner, start, sweep, steps).Skip(1).Take(steps - 1));
             return band;
         }
 
@@ -1073,8 +1074,8 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         return band;
     }
 
-    // Points along the ellipse in rect from start through sweep degrees, clockwise on the screen, as EllipseGeometry
-    // measures its sectors.
+    // Points along the ellipse in rect from start through sweep degrees, clockwise on the screen and a negative sweep
+    // counterclockwise, as EllipseGeometry measures its sectors.
     private static List<Vector2<double>> Arc(Rect rect, double start, double sweep, int steps)
     {
         var points = new List<Vector2<double>>(steps + 1);

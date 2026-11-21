@@ -192,7 +192,7 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
         if (!Enabled) return false;
         if (p.Brush is not (PatternBrush or NoiseBrush)) return false;
         if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
-        return p.StartAngle <= 0.0 && p.SweepAngle >= 360.0;
+        return EllipseBatchCollector.IsWholeBatchable(p);
     }
 
     public bool CanBatchEllipse(EllipsePayload p) => WantsBatchEllipse(p);

@@ -82,10 +82,8 @@ public class RingProgressBar : RangeBase
         _indicator = GetTemplateChild("PART_Indicator") as Ellipse;
         if (_indicator != null)
         {
-            // The Ellipse arc always sweeps from its own angle 0 (at 3 o'clock) in ONE direction (its SweepAngle is
-            // clamped >= 0 - it can't render a negative sweep). So the arc transform does two things: a
-            // rotation puts the 0% end at StartPosition, and a vertical flip (ScaleY = -1) reverses the winding for the
-            // NON-native Direction (see ApplyArcTransform for which one that is, and why it was measured).
+            // The arc sweeps from angle 0 (at 3 o'clock) clockwise, and the transform places it: a rotation puts the 0%
+            // end at StartPosition, and a vertical flip (ScaleY = -1) reverses the winding for CounterClockwise.
             _startRotate = new Transform();
             _indicator.RenderTransform = _startRotate;
         }

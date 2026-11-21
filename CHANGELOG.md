@@ -581,6 +581,18 @@ All packages share one version.
 
 ### Changed
 
+- An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it
+  is hit. `ArcSpan` (new) is the one statement of them: parametric degrees, as an HTML canvas measures them, so a
+  sector's share of the area is its share of the turn; any start taken round the turn (`-90` starts at twelve); the
+  sweep's sign its way round, negative counterclockwise; a turn or more the whole ellipse. `Ellipse.StartAngle` and
+  `SweepAngle` are kept as written - the start was held to no less than 0, the sweep to 0..360, so a start at twelve and
+  a sweep backwards could not be written - and `Ellipse.Span`, `EllipseGeometry.Span` and `EllipsePayload.Span` say what
+  they cover. The batch takes a sweep backwards as the same cut gone round clockwise; a dashed or trimmed pen, which
+  follows the way round, still goes to the tessellator. A whole ellipse's stroke, a ring's too, begins at its start and
+  goes its way round, where its dashes and trim follow - it began at three o'clock and went clockwise.
+- `Ellipse` is hit where it is drawn: its fill in its sector's wedge or its segment's side of the chord, out of a ring's
+  hole; its pen on every piece of the outline it strokes - the arc, a sector's radii, a ring's inner arc and ends. It was
+  hit anywhere in the whole ellipse, and its outline only along the rim.
 - `RepeatButton` and `NumericUpDown` repeat at the user's pace from the OS: `Delay`, `Interval` and `RepeatInterval`
   are 0 by default, which waits and repeats as a held key does (`PlatformSettings.KeyRepeatDelay`,
   `KeyRepeatInterval`); a number of their own still wins. Keys told not to repeat leave a repeat button at thirty a
@@ -795,6 +807,10 @@ All packages share one version.
 
 ### Fixed
 
+- An ellipse whose sweep is more than a turn was drawn by the tessellator - an `EllipseGeometry`, the fallback of a
+  batched ellipse, a PDF - as that sweep less whole turns: 720 as nothing, 400 as a sliver of 40. It is the whole
+  ellipse, as the batch drew it. A ring swept backwards was the solid sector, no hole; and a whole ellipse of a
+  gradient, a pattern or a texture, started anywhere but 0, was not batched.
 - A `DropDown`'s list made a row for every item each time it opened, not the dozen it shows: its scroll viewer did
   not hand scrolling to the list's virtualizing panel, so the panel was measured unbounded. 300 items took about a
   second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into
