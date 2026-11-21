@@ -19,6 +19,33 @@ public class AumlCodegenBindingTests
 
     private static string Errors(IReadOnlyList<Diagnostic> errors) => AumlCodegenHarness.Errors(errors);
 
+    // A binding's delay is written in markup as on any binding, in milliseconds.
+    [Test]
+    public void ABindingsDelay_IsWrittenInMarkup()
+    {
+        var code = Generate(WindowHeader + "><TextBox Text=\"{Binding Query, Mode=TwoWay, Delay=300}\"/></Window>", out var errors);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(errors, Is.Empty, Errors(errors));
+            Assert.That(code, Does.Contain(".Delay = 300"));
+        });
+    }
+
+    // Not milliseconds - and a MultiBinding, which writes nothing back to wait for: the markup says so, not the C#.
+    [TestCase("<TextBox Text=\"{Binding Query, Mode=TwoWay, Delay=0.3}\"/>",
+        "Binding: Delay is a whole number of milliseconds, not '0.3'")]
+    [TestCase("<TextBox Text=\"{Binding Query, Mode=TwoWay, Delay=soon}\"/>",
+        "Binding: Delay is a whole number of milliseconds, not 'soon'")]
+    [TestCase("<TextBox><TextBox.Text><MultiBinding Delay=\"300\"><Binding Path=\"A\"/></MultiBinding></TextBox.Text></TextBox>",
+        "Delay")]
+    public void ADelayNotTaken_IsAMarkupError(string element, string error)
+    {
+        Generate(WindowHeader + ">" + element + "</Window>", out var errors);
+
+        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains(error), Errors(errors));
+    }
+
     [Test]
     public void Harness_GeneratesControl_WithoutErrors()
     {

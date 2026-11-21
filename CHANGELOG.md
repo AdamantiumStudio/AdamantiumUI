@@ -11,6 +11,16 @@ All packages share one version.
   Asked before the list is laid out - its template not built, its popup not yet shown, its viewport not known - a
   scroll, by index or by `ScrollIntoView`, waits for the list's next layout instead of being clamped back to the top,
   as WPF's does; a later ask replaces it.
+- `BindingBase.Delay`, in milliseconds, as WPF's: a binding that writes back waits that long after the target's last
+  change before it writes the source - a search typed letter by letter, the list filtered once the typing stops - each
+  change starting the wait again. What waits is written at once when the target loses the keyboard, when the binding is
+  told (`UpdateSource`), and when it lets its source go - another DataContext, a row recycled, another object on its
+  path - into the source it was typed for, not the next. A source that moves meanwhile drops what waited: the target
+  shows the source. Only what `UpdateSourceTrigger.PropertyChanged` writes waits. Written in markup as
+  `{Binding Query, Mode=TwoWay, Delay=300}` on a `{Binding}`, `{Ancestor}` or `{Self}`; a value that is not whole
+  milliseconds is a markup error, and a `MultiBinding`, which writes nothing back, takes no `Delay`.
+- A change waiting for the keyboard to leave (`UpdateSourceTrigger.LostFocus`) is written to its source when the binding
+  lets that source go - another DataContext, a row recycled with the focus in it - where it was lost.
 - `PlatformSettings.KeyRepeatDelay` and `KeyRepeatInterval`: how long a held key waits before it repeats and how
   often it then repeats, in milliseconds, as the user set them in the OS - on Windows its keyboard settings, on
   Wayland the seat's repeat info; 500 and 33 elsewhere. An interval of 0 says the user turned repeating off. A
@@ -775,7 +785,8 @@ All packages share one version.
 
 ### Removed
 
-- `BindingBase.Delay` and `BindingBase.IsAsync`: nothing read them, so a binding given either did as it would without.
+- `BindingBase.IsAsync`: nothing read it, so a binding given it did as it would without. (`Delay`, which nothing read
+  either, works now - see Added.)
 - `Ancestor.Apply` and `Self.Apply`: bind with `SetBinding`, as any binding.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 
@@ -789,6 +800,15 @@ All packages share one version.
   second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into
   view - on opening, on the current value far down, and as the arrows walk past the rows shown; the pointer's
   highlight leaves the list where it is. Of two equal items the highlighted one is lit, not the first like it.
+- A site asking to sign in over a page still loading - an address typed, or the page reloaded, while the page before
+  was finishing - was asked and at once not: the page gone on from ended its load a moment later, and `WebView` took
+  that end for the asking page's and refused its question. The browser counts its main frame's navigations, and a
+  question belongs to the one under way when that one's origin asks it, else to the page shown: the end of the page
+  shown takes only what was asked of it. A navigation that comes to no page - a download, a stop - leaves nothing under
+  way once loading stops. A question is taken for a refusal of the last answer only when the same navigation asks it
+  again, so an answer kept for a site is not forgotten as wrong when the next page of that site asks. The sandbox's sign-in scenario failed on this most
+  runs, its start page being out on the network. It runs on a desktop of its own now, as the generated scenarios do,
+  and posts its mouse to the application's own window there (`AutomationSession.DesktopName`, new).
 - In Graphite every flyout that asked for `FlyoutSurfaceFill` was see-through: a tool bar's overflow menu, a table's
   column chooser, a date and time field's drop-down, a canvas tool rail's choice list. The role is a material in Fluent
   and macOS; Graphite did not answer it and the surface got a clear brush, so what was in the flyout mixed with what

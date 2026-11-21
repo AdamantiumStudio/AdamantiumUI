@@ -67,7 +67,10 @@ internal sealed unsafe class WebViewRequestHandler : CefObject
             var owner = From<WebViewRequestHandler>(self).browser;
             var target = new WebSignInTarget(CefStrings.Read(host), port, CefStrings.Read(realm), CefStrings.Read(scheme),
                 isProxy != 0);
-            request = new WebViewSignInRequest(target, CefStrings.Read(originUrl), callback);
+            // Counted here, on the IO thread, as it is asked: a navigation's request goes out only after it began, so a
+            // question the loop takes later is not counted to a navigation that began meanwhile.
+            var origin = CefStrings.Read(originUrl);
+            request = new WebViewSignInRequest(target, origin, owner.NavigationAsking(origin), callback);
             LoopSignal.Post(() => owner.OnSignInRequested(request));
             taken = true;
         }

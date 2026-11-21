@@ -23,6 +23,8 @@ public partial class WebView
     private string answeredUserName;
     private bool answeredFromStore;
     private long answeredAt;
+    // ...and the navigation it was asked of: asked again by another, it is a first asking, not a refusal.
+    private int answeredNavigation;
 
     private void TakeSignInDialog(WebViewSignInDialog dialog)
     {
@@ -44,7 +46,7 @@ public partial class WebView
             return false;
         }
 
-        var isRetry = IsRetry(request.Target);
+        var isRetry = IsRetry(request);
         // What the store gave was refused: it is not offered again.
         if (isRetry && answeredFromStore)
         {
@@ -106,20 +108,41 @@ public partial class WebView
         return true;
     }
 
-    // The page loaded, or failed to: whoever asks from now on asks anew, and what was asked before belonged to that
-    // load - or to a request Chromium gave up without saying, which an answer would no longer reach.
-    private void SignInsLoaded()
+    // The page shown loaded, or failed to: what was asked of it belonged to that load - or to a request Chromium gave up
+    // without saying, which an answer would no longer reach - and goes. A page the user went on from ends its load after
+    // the next one asks, the next one not in yet: what the next one asked stays, and so does its last answer.
+    private void SignInsLoaded(WebViewBrowser from)
     {
-        if (askedSignIns.Count > 0)
+        var shown = askedSignIns.Count > 0 ? askedSignIns[0] : null;
+        for (var i = askedSignIns.Count - 1; i >= 0; i--)
         {
-            RefuseSignIns();
+            if (from.IsOfThePageShown(askedSignIns[i]))
+            {
+                askedSignIns[i].Refuse();
+                askedSignIns.RemoveAt(i);
+            }
         }
 
-        answeredSignIn = null;
+        if (shown != null && askedSignIns.Count == 0)
+        {
+            CloseSignInDialog();
+        }
+        else if (shown != null && askedSignIns[0] != shown)
+        {
+            ShowSignIn(askedSignIns[0], IsRetry(askedSignIns[0]));
+        }
+
+        // The last answer stays while the next page is still coming, to tell its refusal from a first asking.
+        if (!from.IsGoingOn)
+        {
+            answeredSignIn = null;
+        }
     }
 
-    private bool IsRetry(WebSignInTarget target) =>
-        target == answeredSignIn && Environment.TickCount64 - answeredAt < RetryWindowMs;
+    // Asked again of the same navigation, by the same, soon after its answer: the answer was refused.
+    private bool IsRetry(WebViewSignInRequest request) =>
+        request.Target == answeredSignIn && request.Navigation == answeredNavigation &&
+        Environment.TickCount64 - answeredAt < RetryWindowMs;
 
     // What the store keeps for the target; null for nothing, or a store that failed to say.
     private WebCredential FindKept(WebSignInTarget target)
@@ -218,6 +241,7 @@ public partial class WebView
 
     private void Answer(WebViewSignInRequest request, WebCredential credential, bool fromStore)
     {
+        answeredNavigation = request.Navigation;
         answeredSignIn = request.Target;
         answeredUserName = credential.UserName;
         answeredFromStore = fromStore;
@@ -273,7 +297,7 @@ public partial class WebView
 
         if (askedSignIns.Count > 0)
         {
-            ShowSignIn(askedSignIns[0], IsRetry(askedSignIns[0].Target));
+            ShowSignIn(askedSignIns[0], IsRetry(askedSignIns[0]));
             return;
         }
 

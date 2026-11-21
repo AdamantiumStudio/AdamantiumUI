@@ -19,6 +19,13 @@ public abstract class BindingBase: MarkupExtension, ICloneable
    // into synchronous application (applied the instant the source changes). The initial connect push is always synchronous.
    public bool IsImmediate { get; set; }
 
+   /// <summary>Milliseconds a binding that writes back waits, after the target's last change, before it writes the
+   /// source - a search typed letter by letter, the list filtered once the typing stops. 0 writes at once. Only what
+   /// <see cref="UpdateSourceTrigger.PropertyChanged"/> writes waits; what waits is written at once when the target loses
+   /// the keyboard, the binding is asked to (<see cref="BindingExpressionBase.UpdateSource"/>), or it lets its source go,
+   /// so the last change is never lost.</summary>
+   public int Delay { get; set; }
+
    // When the markup context gives us the target element + property, establish a live binding through the engine
    // (which dispatches to a BindingExpression or MultiBindingExpression). Without a usable target we just hand back
    // the binding object itself.
@@ -41,6 +48,7 @@ public abstract class BindingBase: MarkupExtension, ICloneable
       binding.Culture = Culture;
       binding.TargetNullValue = TargetNullValue;
       binding.IsImmediate = IsImmediate;
+      binding.Delay = Delay;
       return binding;
    }
 

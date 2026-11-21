@@ -58,6 +58,24 @@ public class UpdateSourceTriggerTests
         });
     }
 
+    // Typed in, then another DataContext - a row recycled with the focus still in it: what was typed is the old item's,
+    // written there before the binding moves on, not lost and not the new item's.
+    [Test]
+    public void LostFocus_AnotherSourceWhileTyped_TheChangeGoesToTheOld()
+    {
+        var (form, box, _) = Bound(UpdateSourceTrigger.LostFocus);
+        FocusManager.Focus(box);
+        box.SetCurrentValue(TextBox.TextProperty, "typed");
+        var next = new Form();
+        box.DataContext = next;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(form.Name, Is.EqualTo("typed"));
+            Assert.That(next.Name, Is.EqualTo("old"));
+        });
+    }
+
     // Changed with the focus elsewhere - a clear button that takes no focus, a value set from code - there is no leaving
     // to wait for.
     [Test]
