@@ -62,6 +62,9 @@ public class BuildPlanParityTests
         ViewHeader + "<StackPanel><ListBox ItemsSource=\"{Binding Items}\"><ListBox.ItemTemplate><DataTemplate>" +
         "<TextBlock Text=\"{Binding}\" Opacity=\"0.5\"/></DataTemplate></ListBox.ItemTemplate></ListBox>" +
         "<Border Width=\"Auto\" HorizontalAlignment=\"Left\" Visibility=\"{Binding Hidden, Mode=OneWay}\"/></StackPanel></View>",
+        ViewHeader + "<ListBox ItemsSource=\"{Binding Items}\"><ListBox.ItemTemplate><DataTemplate>" +
+        "<TextBlock Text=\"{Binding Name}\" Visibility=\"{Binding Shown, Converter={BooleanToVisibilityConverter}}\"/>" +
+        "</DataTemplate></ListBox.ItemTemplate></ListBox></View>",
     ];
 
     [TestCaseSource(nameof(Views))]
@@ -90,6 +93,15 @@ public class BuildPlanParityTests
 
         var mismatch = FirstMismatch(Lines(generated), Lines(printed));
         Assert.That(mismatch, Is.Null, mismatch);
+
+        // The values made once for their places, members of the class: the same too.
+        if (lowered.Plan.SharedValues.Count > 0)
+        {
+            var members = new TextGenerator();
+            BuildPlanEmitter.EmitMembers(lowered.Plan, members);
+            mismatch = FirstMismatch(Lines(generated), Lines(members));
+            Assert.That(mismatch, Is.Null, mismatch);
+        }
     }
 
     [TestCaseSource(nameof(ThemeFiles))]

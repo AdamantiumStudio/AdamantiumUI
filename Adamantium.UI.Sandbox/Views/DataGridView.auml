@@ -1,6 +1,5 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
       xmlns:val="clr-namespace:Adamantium.UI.Sandbox.Validation">
     <!-- A column stands in the grid's LOGICAL tree, so everything on it binds like anything else: its value against the
          row's item, its list of choices against this page's view-model. -->
@@ -424,7 +423,7 @@
                      another element) can hold a toolbar or postpone a refresh while a cell is open. -->
                 <TextBlock Text="{Localize GridPageStrings.Editing}" Margin="0,10,0,0"
                            Foreground="{ObservableResource TextFillColorSecondary}"
-                           Visibility="{Binding IsEditing, ElementName=Table, Converter={conv:BoolToVisibilityConverter}}"/>
+                           Visibility="{Binding IsEditing, ElementName=Table, Converter={BooleanToVisibilityConverter}}"/>
             </StackPanel>
         </ScrollViewer>
     </Border>

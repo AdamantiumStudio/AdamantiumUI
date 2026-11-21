@@ -95,7 +95,7 @@
                 <!-- Only with a picture of one's own - the real wallpaper is pinned to the desktop by nature. Drag the
                      window to tell them apart: Desktop stays put while the window moves over it, Window travels with
                      it, Element travels AND turns with the shape. -->
-                <StackPanel Orientation="Vertical" Visibility="{Binding HasOwnSource, Converter={conv:BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Vertical" Visibility="{Binding HasOwnSource, Converter={BooleanToVisibilityConverter}}">
                     <TextBlock x:Name="AnchorLabel" Text="{Localize BrushesStrings.AnchorHint}"
                                Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <DropDown AutomationProperties.LabeledBy="{Binding ElementName=AnchorLabel}" ItemsSource="{Binding MaterialAnchors}" SelectedItem="{Binding MaterialAnchor, Mode=TwoWay}"

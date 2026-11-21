@@ -271,7 +271,7 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                                 <Button Command="{Binding FeatureCommand}"
-                                        Visibility="{Binding CanMove, Converter={conv:BoolToVisibilityConverter}}"
+                                        Visibility="{Binding CanMove, Converter={BooleanToVisibilityConverter}}"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Top"
                                         Margin="4"
