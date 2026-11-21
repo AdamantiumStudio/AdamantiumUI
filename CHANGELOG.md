@@ -28,7 +28,6 @@ All packages share one version.
   the tray's markup or made for the view models of its `ItemsSource`, each the root of the template its
   `ItemTemplateSelector` picks. To automation a tray is a pane and a bar a tool bar named by its header. Styled in
   Fluent, Graphite and macOS; the sandbox has a Toolbars page.
-
 - A scenario checks what an element shows: `Brightness="150..255"` on `Expect` or `Wait` reads how bright the brightest
   hundredth of its pixels are in the window's frame, 0 to 255 - a picture drawn black, or not at all, reads near 0; one
   with something lit, high, however much dark space is round it.
@@ -699,6 +698,8 @@ All packages share one version.
 
 ### Fixed
 
+- A ribbon put away - collapsed, or in a collapsed part of the window, as when an application shows tool bars in its
+  place - leaves Alt to the window: it showed key tips over the hidden strip and took the letters typed after Alt.
 - Command sources ask their commands again after `AnimationManager.Reset` even when asked before the next frame: a
   requery the reset dropped was taken as still waiting until a frame came, so in a run of tests the next test's
   buttons kept the state they were made with. They ask at most once a frame also when a menu requeried at once in it,

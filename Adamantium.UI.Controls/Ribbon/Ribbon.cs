@@ -940,7 +940,7 @@ public class Ribbon : Selector
     /// Latin layout. Office matches what was actually typed, and so does this.</summary>
     private void OnKeyTipText(object sender, TextInputEventArgs e)
     {
-        if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text)) return;
+        if (_keyTips is not { IsActive: true } || string.IsNullOrEmpty(e.Text) || !IsShown()) return;
 
         // With Alt held a letter is a shortcut, not a key tip, and autorepeat is not a new keystroke; both are swallowed.
         if (_altDown || _altAlone.LastWasRepeat)
@@ -965,7 +965,7 @@ public class Ribbon : Selector
     private void OnKeyTipKeyUp(object sender, KeyEventArgs e)
     {
         var completes = _altAlone.KeyUp(e);
-        if (!e.Key.IsAlt()) return;
+        if (!e.Key.IsAlt() || !IsShown()) return;
 
         _altDown = false;
         if (completes) Toggle();
@@ -988,12 +988,18 @@ public class Ribbon : Selector
         _altAlone.KeyDown(e);
         if (e.Key.IsAlt())
         {
+            // A ribbon put away leaves Alt to the window: no key tips over a strip nobody sees.
+            if (!IsShown())
+            {
+                return;
+            }
+
             _altDown = true;
             e.Handled = true;
             return;
         }
 
-        if (_keyTips is not { IsActive: true }) return;
+        if (_keyTips is not { IsActive: true } || !IsShown()) return;
 
         if (e.Key == Key.Escape)
         {
@@ -1011,6 +1017,24 @@ public class Ribbon : Selector
 
     /// <summary>Whether the key tips are up.</summary>
     internal bool ShowsKeyTips => _keyTips is { IsActive: true };
+
+    // Shown: nothing from the ribbon up to its window is collapsed or hidden. Put away while its key tips are up, it ends
+    // them, so they take no more keys.
+    private bool IsShown()
+    {
+        if (KeyboardNavigation.IsShown(this))
+        {
+            return true;
+        }
+
+        if (_keyTips is { IsActive: true })
+        {
+            _keyTips.End();
+        }
+
+        _altDown = false;
+        return false;
+    }
 
     private void Toggle()
     {
