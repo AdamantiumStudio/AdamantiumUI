@@ -7,11 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `RawKeyboardEventArgs.Origin`: a key the application presses itself (`KeyPressOrigin.Application`), as an on-screen
+  keyboard does, is down in `KeyboardDevice.IsKeyDown` and `Modifiers` until the application releases it, whatever the
+  system's keyboard says - a Ctrl it holds reaches code that asks `Keyboard.Modifiers`, and its `KeyDown` arrives with
+  `IsDown`. Before, the platform's live state answered alone, so such a key was always up.
 - `TreeDataGrid.FindCommand` and `FindPreviousCommand`, and `Find(text)`: a search field outside the table binds its
   Enter to them - a new text is searched, the same one goes on to its next match, Shift+Enter back - with the table's
   own marks and steps, no strip of its own. A field bound to `SearchText` searches on its Enter all the same, and
   emptied - its clear button - takes the marks away. The strip's Enter goes the same way.
-
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
   they come; a record open in its member comes back open when the rows are built again, and one whose member says anew

@@ -6,6 +6,9 @@ public class KeyboardDevice
 {
    // Live key state comes from the platform (Keyboard.Platform); nothing here caches an OS-shaped state array.
    private readonly Dictionary<Key, KeyPressInfo> keyStates = new Dictionary<Key, KeyPressInfo>();
+   private readonly HashSet<Key> _heldByApplication = [];
+   private readonly Lock _heldByApplicationLock = new();
+   private int _heldByApplicationCount;
 
    private static KeyboardDevice currentDevice;
 
@@ -96,13 +99,16 @@ public class KeyboardDevice
       keyStates.Clear();
    }
 
-   /// <summary>
-   /// Whether the key is down.
-   /// </summary>
+   /// <summary>Whether the key is down: held by the application (<see cref="KeyPressOrigin.Application"/>) or on the
+   /// system's keyboard.</summary>
    public bool IsKeyDown(Key key)
    {
-      // The OS's live state when there is a platform, else what our own events tracked.
-      if (Keyboard.Platform is { } platform) return platform.IsKeyDown(key);
+      if (IsHeldByApplication(key))
+         return true;
+
+      if (Keyboard.Platform is { } platform)
+         return platform.IsKeyDown(key);
+
       return keyStates.TryGetValue(key, out var tracked) && tracked.CurrentState == KeyState.Down;
    }
 
@@ -153,6 +159,9 @@ public class KeyboardDevice
    /// focused, so the first Tab can step into the tree.</summary>
    public void ProcessEvent(RawInputEventArgs eventArgs, IInputComponent fallback = null)
    {
+      if (eventArgs is RawKeyboardEventArgs { Origin: KeyPressOrigin.Application } pressed)
+         TrackApplicationKey(pressed.ChangedKey, pressed.EventType == RawKeyboardEventType.KeyDown);
+
       var target = FocusedComponent ?? fallback;
       if (target != null)
       {
@@ -218,6 +227,30 @@ public class KeyboardDevice
                }
             });
          }
+      }
+   }
+
+   private bool IsHeldByApplication(Key key)
+   {
+      if (Volatile.Read(ref _heldByApplicationCount) == 0)
+         return false;
+
+      lock (_heldByApplicationLock)
+      {
+         return _heldByApplication.Contains(key);
+      }
+   }
+
+   private void TrackApplicationKey(Key key, bool isDown)
+   {
+      lock (_heldByApplicationLock)
+      {
+         if (isDown)
+            _heldByApplication.Add(key);
+         else
+            _heldByApplication.Remove(key);
+
+         Volatile.Write(ref _heldByApplicationCount, _heldByApplication.Count);
       }
    }
 
