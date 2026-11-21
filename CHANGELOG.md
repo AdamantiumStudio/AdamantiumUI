@@ -9,7 +9,8 @@ All packages share one version.
 
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
-  they come; a record open in its member comes back open when the rows are built again. A cell's `State` of `Changed`
+  they come; a record open in its member comes back open when the rows are built again, and one whose member says anew
+  that it has children - or none - takes the expander, or loses it. A cell's `State` of `Changed`
   is drawn in the accent by the themes - a value another than it was.
 - `MultiDataTrigger`, as WPF has one: its setters and actions hold only while every one of its `Conditions` holds, each
   a `{Binding}` on the host's data and the value it is to resolve to - `Condition` takes a `Binding` beside its

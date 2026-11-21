@@ -352,6 +352,9 @@ public partial class TreeDataGrid : Selector
         if (moved) RefreshCellSelectionVisuals();
     }
 
+    // A record read again - it has children now, or none: its row shows the expander, or not.
+    private void OnRowReread(TreeRow row) => RefreshRealizedRows();
+
     // Whether anything selected, active or edited moved.
     private bool FollowRowsIn(int index, int count)
     {
@@ -595,9 +598,11 @@ public partial class TreeDataGrid : Selector
             var hasChildren = HasChildrenPath is { Length: > 0 } hasChildrenPath
                 ? TreeChildResolver.ForBoolPath(hasChildrenPath)
                 : null;
+            // A record whose member says anew whether it has children is read again: its expander comes or goes.
             _flattener = new TreeFlattener(ShapedChildrenOf, node => IsGroupOpen(node) || isExpanded(node),
                 static _ => false, DetailsFor,
-                hasChildren: hasChildren == null ? null : node => node is DataGridGroup ? null : hasChildren(node));
+                hasChildren: hasChildren == null ? null : node => node is DataGridGroup ? null : hasChildren(node),
+                hasChildrenMember: HasChildrenPath is { Length: > 0 } member && !member.Contains('.') ? member : null);
             _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : roots));
             _flattener.SetRoots(_shapedRoots);
         }
@@ -611,9 +616,11 @@ public partial class TreeDataGrid : Selector
         Items.SetSource(_flattener.Rows);
         // AFTER the items: their containers are placed anew by the time the selection is drawn on them.
         flattener.Rows.CollectionChanged += OnFlatRowsChanged;
+        flattener.RowReread += OnRowReread;
         Follow(nameof(_flattener), () =>
         {
             flattener.Rows.CollectionChanged -= OnFlatRowsChanged;
+            flattener.RowReread -= OnRowReread;
             flattener.Clear();
         });
         PutSelectionBack(held);

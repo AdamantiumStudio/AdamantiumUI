@@ -447,6 +447,44 @@ public class DataGridTests
         });
     }
 
+    // A value null at one stop and an object at the next: its member says so, and the row takes the expander.
+    private sealed class FlippingRow : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _hasChildren;
+
+        public string Name { get; init; }
+        public ObservableCollection<FlippingRow> Children { get; } = new();
+
+        public bool HasChildren
+        {
+            get => _hasChildren;
+            set
+            {
+                _hasChildren = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(HasChildren)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    [Test]
+    public void ARowWhoseMemberSaysItHasChildrenNow_TakesTheExpander()
+    {
+        var row = new FlippingRow { Name = "orbit" };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ChildrenPath = "Children";
+        grid.HasChildrenPath = "HasChildren";
+        grid.ItemsSource = new List<FlippingRow> { row };
+        Assume.That(grid.Rows[0].HasChildren, Is.False);
+
+        row.HasChildren = true;
+        Assert.That(grid.Rows[0].HasChildren, Is.True, "the expander comes");
+
+        row.HasChildren = false;
+        Assert.That(grid.Rows[0].HasChildren, Is.False, "and goes");
+    }
+
     // Children a debugger gives only when asked: the row says it has some, they are loaded as it opens.
     private sealed class LoadedRow
     {

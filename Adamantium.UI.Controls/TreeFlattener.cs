@@ -16,6 +16,7 @@ internal sealed class TreeFlattener
     private readonly Func<object, object> _detailsOf;
     private readonly Func<object, bool?> _hasChildren;
     private readonly string _childrenMember;
+    private readonly string _hasChildrenMember;
     private readonly Dictionary<TreeRow, Subscription> _subs = new();
     private readonly Dictionary<INotifyPropertyChanged, TreeRow> _nodes = new(ReferenceEqualityComparer.Instance);
     private IEnumerable _roots;
@@ -24,10 +25,11 @@ internal sealed class TreeFlattener
     // isExpanded/isSelected restore a node's persisted state on (re)build; detailsOf yields an optional details row
     // after a node; childrenMember names the node's member childrenOf reads, whose change reads the row again;
     // hasChildren says whether a node has children without reading them - children loaded as the branch opens - null
-    // from it meaning they are to be read. Null means none.
+    // from it meaning they are to be read; hasChildrenMember names the member it reads, whose change reads the row
+    // again. Null means none.
     public TreeFlattener(Func<object, IEnumerable> childrenOf, Func<object, bool> isExpanded = null,
         Func<object, bool> isSelected = null, Func<object, object> detailsOf = null, string childrenMember = null,
-        Func<object, bool?> hasChildren = null)
+        Func<object, bool?> hasChildren = null, string hasChildrenMember = null)
     {
         _childrenOf = childrenOf;
         _isExpanded = isExpanded ?? (static _ => false);
@@ -35,13 +37,17 @@ internal sealed class TreeFlattener
         _detailsOf = detailsOf ?? (static _ => null);
         _hasChildren = hasChildren ?? (static _ => null);
         _childrenMember = childrenMember;
+        _hasChildrenMember = hasChildrenMember;
         _changes = new CrossThreadChanges<(Subscription, NotifyCollectionChangedEventArgs)>(ApplyChildrenChange);
         _rereads = new CrossThreadChanges<object>(Reread);
-        if (_childrenMember != null)
+        if (WatchesNodes)
         {
             Rows.CollectionChanged += OnRowsChanged;
         }
     }
+
+    // Whether a node's members are followed: what gives its children, or says it has any.
+    private bool WatchesNodes => _childrenMember != null || _hasChildrenMember != null;
 
     private readonly CrossThreadChanges<(Subscription From, NotifyCollectionChangedEventArgs Change)> _changes;
     private readonly CrossThreadChanges<object> _rereads;
@@ -75,7 +81,7 @@ internal sealed class TreeFlattener
         _changes.Clear();
         _rereads.Clear();
         UnwatchAllNodes();
-        if (_childrenMember != null)
+        if (WatchesNodes)
         {
             Rows.CollectionChanged -= OnRowsChanged;
         }
@@ -148,7 +154,8 @@ internal sealed class TreeFlattener
 
     private void OnNodePropertyChanged(object sender, PropertyChangedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _childrenMember)
+        if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _childrenMember &&
+            e.PropertyName != _hasChildrenMember)
         {
             return;
         }
