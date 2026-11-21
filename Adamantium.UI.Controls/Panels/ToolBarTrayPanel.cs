@@ -7,7 +7,8 @@ namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>The items host of a <see cref="ToolBarTray"/>: its bars in rows by <see cref="ToolBar.Band"/>, each row in
 /// <see cref="ToolBar.BandIndex"/> order. A row short of room shortens its bars from the last, each down to its shortest,
-/// and the commands that no longer fit go to their bar's overflow menu.</summary>
+/// and the commands that no longer fit go to their bar's overflow menu - or, on a bar whose commands wrap, onto its next
+/// line, the row growing across.</summary>
 public class ToolBarTrayPanel : Panel
 {
     private readonly List<ToolBarBand> _bands = [];

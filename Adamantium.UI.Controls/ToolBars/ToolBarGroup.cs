@@ -27,6 +27,13 @@ public class ToolBarGroup : ItemsControl
 
     public static readonly AdamantiumProperty ShowsSeparatorProperty = ShowsSeparatorPropertyKey.Property;
 
+    // No AffectsMeasure: the rule keeps its room either way, so beginning a line changes how the section looks, not where
+    // the lines break.
+    private static readonly AdamantiumPropertyKey BeginsLinePropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(BeginsLine), typeof(bool), typeof(ToolBarGroup), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty BeginsLineProperty = BeginsLinePropertyKey.Property;
+
     /// <summary>The section's name, to automation.</summary>
     public object Header
     {
@@ -47,6 +54,21 @@ public class ToolBarGroup : ItemsControl
         get => GetValue<bool>(ShowsSeparatorProperty);
         internal set => SetValue(ShowsSeparatorPropertyKey, value);
     }
+
+    /// <summary>Whether it begins a line of a bar whose commands wrap - not the first line: its rule is hidden there and
+    /// keeps its room, so hiding it cannot let the section back onto the line before.</summary>
+    public bool BeginsLine
+    {
+        get => GetValue<bool>(BeginsLineProperty);
+        internal set => SetValue(BeginsLinePropertyKey, value);
+    }
+
+    /// <summary>How much of the section along its bar its rule takes, margin included: a section beginning a line stands
+    /// that much back, its hidden rule past the line's start, so its commands line up with the line above.</summary>
+    internal double RuleLength =>
+        GetTemplateChild("PART_Separator") is IMeasurableComponent rule
+            ? Orientation == Orientation.Horizontal ? rule.DesiredSize.Width : rule.DesiredSize.Height
+            : 0;
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ToolBarGroupAutomationPeer(this);
 }

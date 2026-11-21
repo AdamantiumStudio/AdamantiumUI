@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `ToolBar.CommandWrapping`: where the commands that do not fit on a bar's line go - `NoWrap`, to its overflow menu, as
+  before; `Wrap`, onto a new line of the bar, each command whole, so a section (`ToolBarGroup`) is never split, and the
+  bar grows across. The bar is then as short as its longest command; a command set always to the menu still goes
+  there. A section beginning a line hides its rule and stands back by it, its commands in line with the line above
+  (`ToolBarGroup.BeginsLine`) - the rule keeps its room, so hiding it never moves the lines. The arrows across the bar
+  go from line to line, to the command nearest the focus. In Fluent, Graphite and
+  macOS; the sandbox's Toolbars page switches the bar of sections between the two.
 - `ItemsControl.ScrollIndexIntoView`: a scroll to an item by its index, so of equal items the one asked is shown.
   Asked before the list is laid out - its template not built, its popup not yet shown, its viewport not known - a
   scroll, by index or by `ScrollIntoView`, waits for the list's next layout instead of being clamped back to the top,

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Toolbars page: a command pressed on a bar says so below; a bar dragged by its grip into the first row and another into the lower tray; the upper tray narrowed, so a bar's last commands go to its menu, and one run from there; the lower tray locked from its menu, its grips gone.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Toolbars page: a command pressed on a bar says so below; a bar dragged by its grip into the first row and another into the lower tray; the upper tray narrowed, so a bar's last commands go to its menu, and one run from there; the lower tray locked from its menu, its grips gone; the bar of sections narrowed - its last section to the menu, then set to wrap onto a new line of the bar - and a table's contextual bar.">
   <Select Target="id=GalleryTabs/id=ToolBars" />
   <Wait Target="id=ToolBarsView/id=UpperTray" Timeout="20s" />
   <Invoke Target="id=CutCommand" />
@@ -33,6 +33,17 @@
   <Expect Target="id=ToolBarsReport" Name="Pressed: Center" />
   <Set Target="id=SectionsWidth" Value="900" />
   <Wait Target="id=FormatBar/id=PART_OverflowButton" Offscreen="True" Timeout="5s" />
+  <!-- Set to wrap and narrowed again: no menu - the Alignment section stands on a new line, and Center is pressed there. -->
+  <Expand Target="id=SectionsWrapping" />
+  <Select Target="id=SectionsWrapping/name=Wrap" />
+  <Set Target="id=SectionsWidth" Value="330" />
+  <Wait Target="id=SectionCenterCommand" Offscreen="False" Timeout="5s" />
+  <Expect Target="id=FormatBar/id=PART_OverflowButton" Offscreen="True" />
+  <Click Target="id=SectionCenterCommand" />
+  <Expect Target="id=ToolBarsReport" Name="Pressed: Center" />
+  <Set Target="id=SectionsWidth" Value="900" />
+  <Expand Target="id=SectionsWrapping" />
+  <Select Target="id=SectionsWrapping/name=NoWrap" />
   <!-- In a table its bar shows; the tray's menu lists it apart, under its header, and does not switch it. -->
   <Toggle Target="id=InTable" />
   <Wait Target="id=TableBar" Offscreen="False" Timeout="5s" />

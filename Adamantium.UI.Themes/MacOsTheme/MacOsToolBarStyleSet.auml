@@ -172,6 +172,10 @@
         <PropertyTrigger Property="ShowsSeparator" Value="true">
             <Setter TargetName="PART_Separator" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- Beginning a line of a bar that wraps: the rule hidden, its room kept, so the lines break as they did. -->
+        <PropertyTrigger Property="BeginsLine" Value="true">
+            <Setter TargetName="PART_Separator" Property="Visibility" Value="Hidden"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="Orientation" Value="Vertical">
             <Setter TargetName="PART_Separator" Property="Orientation" Value="Horizontal"/>
         </PropertyTrigger>
