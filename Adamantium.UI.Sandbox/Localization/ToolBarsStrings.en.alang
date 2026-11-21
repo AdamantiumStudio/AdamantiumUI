@@ -20,9 +20,10 @@
     <Phrase Key="ZoomOut" Text="Zoom out"/>
     <Phrase Key="Help" Text="Help"/>
     <Phrase Key="Sections" Text="Sections and a contextual bar"/>
-    <Phrase Key="SectionsHint" Text="Narrow it: the bar's last sections go to its menu whole. Stand in a table: its bar shows, and the tray's menu lists it apart. This tray keeps its bars: none goes to another tray, and none comes from one."/>
+    <Phrase Key="SectionsHint" Text="Narrow it: the bar's last sections go to its menu whole - or, set to wrap, onto a new line of the bar. Stand in a table: its bar shows, and the tray's menu lists it apart. This tray keeps its bars: none goes to another tray, and none comes from one."/>
     <Phrase Key="SectionsWidth" Text="Width of the tray of sections"/>
     <Phrase Key="InTable" Text="In a table"/>
+    <Phrase Key="SectionsWrapping" Text="Sections that do not fit"/>
     <Phrase Key="Format" Text="Format"/>
     <Phrase Key="Clipboard" Text="Clipboard"/>
     <Phrase Key="Font" Text="Font"/>

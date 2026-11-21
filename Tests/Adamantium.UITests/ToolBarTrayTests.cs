@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -600,6 +602,158 @@ public class ToolBarTrayTests
             Assert.That(thirdsRuleInMenu, Is.EqualTo(Visibility.Collapsed), "first in the menu, no rule");
             Assert.That(both, Is.EqualTo(new[] { false, true, true }));
             Assert.That(rulesInMenu, Is.EqualTo(new[] { Visibility.Collapsed, Visibility.Visible }));
+        });
+    }
+
+    // Wrapping, a section that does not fit goes onto a new line of the bar, whole, not to the menu: the bar grows across,
+    // and the section beginning the line hides its rule. The layout settles: passes more leave it as it is.
+    [TestCaseSource(nameof(StyleSets))]
+    public void WrappingSections_GoOntoANewLine_Whole_TheOneBeginningItWithNoRule(System.Type styleSet)
+    {
+        Use(styleSet);
+        var first = Group("Clipboard", 3);
+        var second = Group("Font", 3);
+        var third = Group("Paragraph", 3);
+        var bar = new ToolBar { Header = "Home", CommandWrapping = CommandWrapping.Wrap, Items = { first, second, third } };
+        var tray = Tray(bar);
+        var root = Shown(tray, 1000);
+        var oneLine = bar.RenderSize.Height;
+        var whole = tray.DesiredSize.Width;
+
+        root.Width = whole - CommandWidth;
+        Show(root);
+        var placed = At(third, root);
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bar.IsMeasureValid && bar.IsArrangeValid, Is.True, "settled");
+            Assert.That(At(third, root), Is.EqualTo(placed), "where the passes before put it");
+            Assert.That(bar.HasOverflowItems, Is.False, "nothing in the menu");
+            Assert.That(IsInOverflow(bar, third), Is.False);
+            Assert.That(At(third, root).Y, Is.GreaterThan(At(first, root).Y + first.RenderSize.Height - 1), "on the next line");
+            Assert.That(At((IUIComponent)third.Items[0], root).X, Is.EqualTo(At((IUIComponent)first.Items[0], root).X).Within(0.5),
+                "its first command in line with the first line's");
+            Assert.That(bar.RenderSize.Height, Is.GreaterThan(oneLine + first.RenderSize.Height - 1));
+            Assert.That(third.Items.Cast<IUIComponent>().Select(command => At(command, root).Y).Distinct().Count(), Is.EqualTo(1),
+                "its commands on one line");
+            Assert.That(new[] { RuleOf(second).Visibility, RuleOf(third).Visibility },
+                Is.EqualTo(new[] { Visibility.Visible, Visibility.Hidden }), "hidden, its room kept");
+            Assert.That(third.BeginsLine, Is.True);
+            Assert.That(bar.RenderSize.Width, Is.LessThanOrEqualTo(root.Width + 0.5), "within the room");
+        });
+    }
+
+    // A command that began a line, taken off a bar no longer wrapping, is not kept alive by the bar. Unstyled commands:
+    // a style attached to one holds it itself.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ACommandThatBeganALine_TakenOff_IsLetGo(System.Type styleSet)
+    {
+        Use(styleSet);
+        var bar = new ToolBar { Header = "Home", CommandWrapping = CommandWrapping.Wrap };
+        var taken = WrapAndTakeOff(bar);
+        // What the frame would let go of on its own: the queues of visuals taken off and of what to draw again.
+        while (DiscardedVisuals.Drain(64) > 0) { }
+        RenderDirty.Clear();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(taken.IsAlive, Is.False);
+        GC.KeepAlive(bar);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static WeakReference WrapAndTakeOff(ToolBar bar)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            bar.Items.Add(new Button { Width = CommandWidth * 3, Height = 24 });
+        }
+
+        var tray = Tray(bar);
+        var root = Shown(tray, 1000);
+        root.Width = tray.DesiredSize.Width - CommandWidth;
+        Show(root);
+        var third = bar.Items[2];
+        var wrapped = ((IUIComponent)third).TranslatePoint(new Vector2<double>(0, 0), root).Y > 1;
+        bar.CommandWrapping = CommandWrapping.NoWrap;
+        root.Width = 1000;
+        Show(root);
+        bar.Items.Remove(third);
+        Show(root);
+        Assert.That(wrapped, Is.True, "it began the second line");
+        return new WeakReference(third);
+    }
+
+    // Down from a line goes to the line below, Up back; and a section that began a line, gone to the menu when the bar
+    // stops wrapping, no longer begins one.
+    [TestCaseSource(nameof(StyleSets))]
+    public void OnAWrappingBar_TheArrowsAcrossGoFromLineToLine_AndTheMenuHasNoLines(System.Type styleSet)
+    {
+        Use(styleSet);
+        var first = Group("Clipboard", 3);
+        var second = Group("Font", 3);
+        var third = Group("Paragraph", 3);
+        var bar = new ToolBar { Header = "Home", CommandWrapping = CommandWrapping.Wrap, Items = { first, second, third } };
+        var tray = Tray(bar);
+        var root = Shown(tray, 1000);
+        root.Width = tray.DesiredSize.Width - CommandWidth;
+        Show(root);
+
+        // From the last command of the first line's first section: under it stands the third section's last command.
+        FocusManager.Focus((IInputComponent)first.Items[2]);
+        var down = KeyboardNavigation.Move(FocusNavigationDirection.Down);
+        var below = FocusManager.Focused;
+        var up = KeyboardNavigation.Move(FocusNavigationDirection.Up);
+        var above = FocusManager.Focused;
+
+        bar.CommandWrapping = CommandWrapping.NoWrap;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(down, Is.True);
+            Assert.That(below, Is.SameAs(third.Items[2]), "the command right under it, not the section's first");
+            Assert.That(up, Is.True);
+            Assert.That(above, Is.SameAs(first.Items[2]), "the command right over it, not the section's last");
+            Assert.That(IsInOverflow(bar, third), Is.True);
+            Assert.That(third.BeginsLine, Is.False, "the menu has no lines");
+        });
+    }
+
+    // A wrapping bar is as short as its longest command; one set always to the menu still goes there; switched back, the
+    // commands share out between the bar and the menu again.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AWrappingBar_IsAsShortAsItsLongestCommand_AndKeepsTheMenuForTheAlways(System.Type styleSet)
+    {
+        Use(styleSet);
+        var groups = new[] { Group("Clipboard", 3), Group("Font", 4), Group("Paragraph", 2) };
+        var always = new Button { Width = CommandWidth, Height = 24, Content = "More" };
+        ToolBar.SetOverflowMode(always, ToolBarOverflowMode.Always);
+        Style(always);
+        var bar = new ToolBar { Header = "Home", CommandWrapping = CommandWrapping.Wrap };
+        foreach (var group in groups) bar.Items.Add(group);
+        bar.Items.Add(always);
+        var root = Shown(Tray(bar), 1000);
+        var shortest = bar.ShortestLength;
+        var fontLength = groups[1].DesiredSize.Width;
+
+        root.Width = 150;
+        Show(root);
+        var wrappedHasMenu = bar.HasOverflowItems;
+        var alwaysInMenu = IsInOverflow(bar, always);
+
+        bar.CommandWrapping = CommandWrapping.NoWrap;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shortest, Is.LessThan(fontLength + 80), "the longest section and the bar's own chrome");
+            Assert.That(shortest, Is.GreaterThanOrEqualTo(fontLength));
+            Assert.That(wrappedHasMenu, Is.True);
+            Assert.That(alwaysInMenu, Is.True);
+            Assert.That(groups.Count(group => IsInOverflow(bar, group)), Is.GreaterThan(0), "no longer wrapping, to the menu");
         });
     }
 

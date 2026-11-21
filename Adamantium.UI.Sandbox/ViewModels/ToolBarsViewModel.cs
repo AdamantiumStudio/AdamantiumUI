@@ -19,6 +19,9 @@ public partial class ToolBarsViewModel : TabPageViewModel
     /// <summary>Whether the user stands in a table, as the caret would: the table's contextual bar shows while so.</summary>
     [Bindable] private bool _inTable;
 
+    /// <summary>Where the sections that do not fit on the bar of sections go: to its menu, or onto a new line.</summary>
+    [Bindable] private Adamantium.UI.Controls.CommandWrapping _sectionsWrapping;
+
     public ToolBarsViewModel() : base("ToolBars")
     {
     }

@@ -54,11 +54,16 @@
                     AutomationProperties.LabeledBy="{Binding ElementName=SectionsWidthLabel}"
                     Value="{Binding SectionsWidth, Mode=TwoWay}" Margin="0,0,24,0"/>
             <CheckBox x:Name="InTable" Content="{Localize ToolBarsStrings.InTable}" IsChecked="{Binding InTable, Mode=TwoWay}"
-                      VerticalAlignment="Center"/>
+                      VerticalAlignment="Center" Margin="0,0,24,0"/>
+            <TextBlock x:Name="SectionsWrappingLabel" Text="{Localize ToolBarsStrings.SectionsWrapping}" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <DropDown x:Name="SectionsWrapping" Width="120" EnumType="{x:Type CommandWrapping}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=SectionsWrappingLabel}"
+                      SelectedItem="{Binding SectionsWrapping, Mode=TwoWay}"/>
         </StackPanel>
         <ToolBarTray x:Name="SectionsTray" SharesBars="False" Width="{Binding SectionsWidth}" HorizontalAlignment="Left"
                      MarginBottom="16">
-            <ToolBar x:Name="FormatBar" Header="{Localize ToolBarsStrings.Format}">
+            <ToolBar x:Name="FormatBar" Header="{Localize ToolBarsStrings.Format}" CommandWrapping="{Binding SectionsWrapping}">
                 <ToolBarGroup x:Name="ClipboardGroup" Header="{Localize ToolBarsStrings.Clipboard}">
                     <Button x:Name="SectionCutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
                     <Button x:Name="SectionPasteCommand" Content="{Localize ToolBarsStrings.Paste}" Command="{Binding PressCommand}" CommandParameter="Paste"/>
