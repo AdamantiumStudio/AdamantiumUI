@@ -202,12 +202,12 @@ public class EllipseCutRenderTests
         });
     }
 
-    // A turn and more is the whole ellipse, whichever way round and in both paths - the tessellator once took 720 for
-    // nothing at all, and 400 for a sliver of forty.
+    // Whole turns are the whole ellipse, whichever way round and in both paths - the tessellator once took 720 for
+    // nothing at all.
     [TestCase(720)]
-    [TestCase(400)]
-    [TestCase(-400)]
-    public void ASweepOfATurnOrMore_IsTheWholeEllipse(double sweep)
+    [TestCase(-720)]
+    [TestCase(1080)]
+    public void WholeTurns_AreTheWholeEllipse(double sweep)
     {
         var whole = (true, true, true, true);
 
@@ -215,6 +215,21 @@ public class EllipseCutRenderTests
         {
             Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector)), Is.EqualTo(whole), "batched");
             Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector, batched: false)), Is.EqualTo(whole), "tessellated");
+        });
+    }
+
+    // A sweep past a turn goes round and on: from thirty by 485 is the 125 past the turn, thirty to 155; backwards, the
+    // 125 back from thirty. In both paths.
+    [TestCase(485, true, true, false, false)]
+    [TestCase(-485, false, false, false, true)]
+    public void ASweepPastATurn_IsWhatIsLeftOverIt(double sweep, bool rightDown, bool leftDown, bool leftUp, bool rightUp)
+    {
+        var expected = (rightDown, leftDown, leftUp, rightUp);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector)), Is.EqualTo(expected), "batched");
+            Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector, batched: false)), Is.EqualTo(expected), "tessellated");
         });
     }
 
