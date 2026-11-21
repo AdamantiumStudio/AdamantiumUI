@@ -443,9 +443,10 @@ public static class FocusManager
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();
 
-   // The window an element is in - through the popup that shows it, for a popup's content, whose visual tree ends at
-   // its overlay root: focus in a window's popup is that window's to remember, release and restore.
-   private static IUIComponent RootOf(IUIComponent node)
+   /// <summary>The window <paramref name="node"/> is in - through the popup that shows it, for a popup's or a dialog's
+   /// content, whose visual tree ends at its overlay root: focus in a window's popup is that window's to remember,
+   /// release and restore. The element itself when it is in no window.</summary>
+   public static IUIComponent WindowOf(IUIComponent node)
    {
       while (node != null && ParentOf(node) is { } parent) node = parent;
       return node;
@@ -453,7 +454,7 @@ public static class FocusManager
 
    private static void Remember(IInputComponent element)
    {
-      if (RootOf(element) is not { } root) return;
+      if (WindowOf(element) is not { } root) return;
       FocusByRoot.Remove(root);
       FocusByRoot.Add(root, element);
    }
@@ -471,7 +472,7 @@ public static class FocusManager
 
       // It has to still be IN this window: the remembered element may have been removed with a closed tab, or moved to
       // another window entirely by a tear-off.
-      if (!ReferenceEquals(RootOf(remembered), root))
+      if (!ReferenceEquals(WindowOf(remembered), root))
          return false;
 
       return Focus(remembered);
@@ -494,7 +495,7 @@ public static class FocusManager
    /// longer receives keys - which is what stopped the newly activated window from responding at all.</summary>
    public static void LeaveWindow(IUIComponent root)
    {
-      if (Focused == null || !ReferenceEquals(RootOf(Focused), root))
+      if (Focused == null || !ReferenceEquals(WindowOf(Focused), root))
          return;
 
       Remember(Focused);

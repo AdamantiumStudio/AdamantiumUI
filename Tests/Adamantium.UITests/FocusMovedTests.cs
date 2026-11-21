@@ -110,6 +110,27 @@ public class FocusMovedTests
             "The move to the element that passed the focus on is over before it is told.");
     }
 
+    [Test]
+    public void ThePopupsContent_IsInTheWindowThatShowsIt()
+    {
+        // Where a control's template puts it: in the window's tree, its content shown on the window's layer.
+        var field = new Border { Focusable = true };
+        var popup = new Adamantium.UI.Controls.Popup { Child = new Border { Child = field } };
+        var window = new Adamantium.UI.Controls.Window { Content = new Border { Child = popup } };
+        popup.PlacementTarget = window;
+        popup.IsOpen = true;
+        try
+        {
+            Assert.That(FocusManager.WindowOf(field), Is.SameAs(window));
+            Assert.That(FocusManager.WindowOf(_from), Is.SameAs(_from), "In no window, itself.");
+        }
+        finally
+        {
+            popup.IsOpen = false;
+            window.Close();
+        }
+    }
+
     private string Name(IInputComponent element) =>
         element == null ? "none"
         : ReferenceEquals(element, _from) ? "from"
