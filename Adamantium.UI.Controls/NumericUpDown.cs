@@ -126,10 +126,10 @@ public class NumericUpDown : RangeLimitsBase
         nameof(IsReadOnly), typeof(bool), typeof(NumericUpDown), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty DelayProperty = AdamantiumProperty.Register(nameof(Delay),
-        typeof(int), typeof(NumericUpDown), new PropertyMetadata(500));
+        typeof(int), typeof(NumericUpDown), new PropertyMetadata(0));
 
     public static readonly AdamantiumProperty RepeatIntervalProperty = AdamantiumProperty.Register(
-        nameof(RepeatInterval), typeof(int), typeof(NumericUpDown), new PropertyMetadata(33));
+        nameof(RepeatInterval), typeof(int), typeof(NumericUpDown), new PropertyMetadata(0));
 
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(NumericUpDown), new PropertyMetadata(null, OnCommandChanged));
@@ -365,14 +365,16 @@ public class NumericUpDown : RangeLimitsBase
         set => SetValue(IsReadOnlyProperty, value);
     }
 
-    /// <summary>Milliseconds a button must be held before it starts repeating.</summary>
+    /// <summary>Milliseconds a button must be held before it starts repeating; 0, the default, as a held key in the OS.
+    /// </summary>
     public int Delay
     {
         get => GetValue<int>(DelayProperty);
         set => SetValue(DelayProperty, value);
     }
 
-    /// <summary>Milliseconds between repeats once a held button has started repeating.</summary>
+    /// <summary>Milliseconds between repeats once a held button has started repeating; 0, the default, as a held key in
+    /// the OS.</summary>
     public int RepeatInterval
     {
         get => GetValue<int>(RepeatIntervalProperty);
@@ -709,7 +711,7 @@ public class NumericUpDown : RangeLimitsBase
         if (!IsSpeedupEnabled) return SmallChange;
 
         var now = Environment.TickCount64;
-        var continues = now - _lastStepTime <= Math.Max(100, RepeatInterval * 3);
+        var continues = now - _lastStepTime <= Math.Max(100, RepeatButton.IntervalOrTheUsers(RepeatInterval) * 3);
         _heldSteps = continues ? _heldSteps + 1 : 0;
         _lastStepTime = now;
 
