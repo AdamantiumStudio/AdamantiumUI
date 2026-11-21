@@ -108,8 +108,10 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         panel.SizeChanged += OnSizeChanged;
         panel.PointerMoved += OnPointerMoved;
         panel.PointerExited += OnPointerExited;
-        panel.GotFocus += OnFocusChanged;
-        panel.LostFocus += OnFocusChanged;
+        // The keyboard's own focus, not GotFocus: that is raised before the panel holds the keyboard, and the host was told
+        // it had none - never told again.
+        panel.GotKeyboardFocus += OnKeyboardFocusChanged;
+        panel.LostKeyboardFocus += OnKeyboardFocusChanged;
         panel.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
         WatchWindow();
         Resize();
@@ -198,8 +200,8 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         panel.SizeChanged -= OnSizeChanged;
         panel.PointerMoved -= OnPointerMoved;
         panel.PointerExited -= OnPointerExited;
-        panel.GotFocus -= OnFocusChanged;
-        panel.LostFocus -= OnFocusChanged;
+        panel.GotKeyboardFocus -= OnKeyboardFocusChanged;
+        panel.LostKeyboardFocus -= OnKeyboardFocusChanged;
         panel.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
         UnwatchWindow();
         lock (_sync)
@@ -391,7 +393,7 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         LiveHost?.MovePointer((float)(at.X * scale), (float)(at.Y * scale), isOver);
     }
 
-    private void OnFocusChanged(object sender, RoutedEventArgs e) => TellFocus();
+    private void OnKeyboardFocusChanged(object sender, RoutedEventArgs e) => TellFocus();
 
     // The host lets go of every key once it loses the keyboard, and so does the viewer: a key let go elsewhere would
     // stay held here, and a modifier held for the next press would not be sent.
