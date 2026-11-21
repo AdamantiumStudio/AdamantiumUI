@@ -3485,6 +3485,39 @@ public class DataGridTests
         Assert.That(grid.MatchCount, Is.EqualTo(3));
     }
 
+    // Every match is marked, not only the current one - in an open branch too.
+    [Test]
+    public void EveryMatch_IsMarked_InAnOpenBranchToo()
+    {
+        var root = new Row { Name = "this", Note = "n" };
+        root.Children.Add(new Row { Name = "IsExpanded", Note = "n" });
+        root.Children.Add(new Row { Name = "Other", Note = "n" });
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ChildrenPath = "Children";
+        grid.ItemsSource = new List<Row> { root };
+        grid.Expand(root);
+        Relayout(grid, width: 400);
+
+        grid.FindCommand.Execute("is");
+        Relayout(grid, width: 400);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.MatchCount, Is.EqualTo(2));
+            Assert.That(grid.CellFor(0, 0).IsCurrentSearchMatch, Is.True, "this, the current one");
+            Assert.That(grid.CellFor(1, 0).IsSearchMatch, Is.True, "IsExpanded, marked as well");
+            Assert.That(grid.CellFor(2, 0).IsSearchMatch, Is.False);
+        });
+
+        // Enter again: on to the match in the branch, the keyboard - and the view - with it.
+        grid.FindCommand.Execute("is");
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.CurrentMatch, Is.EqualTo(2));
+            Assert.That(grid.ActiveRow, Is.EqualTo(1));
+        });
+    }
+
     // Next and previous WRAP: a Find Next that stops at the last match leaves the reader scrolling back by hand.
     [Test]
     public void SteppingThroughMatches_WrapsRound()

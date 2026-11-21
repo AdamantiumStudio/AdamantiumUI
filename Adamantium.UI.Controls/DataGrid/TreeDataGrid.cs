@@ -1722,7 +1722,7 @@ public partial class TreeDataGrid : Selector
         }
 
         var items = new List<object>();
-        CollectItems(_shapedRoots, items);
+        CollectSearched(items);
         _searchItems = items;
 
         // OFF THE INTERFACE'S THREAD when every column it has to read can be read there - see
@@ -2076,6 +2076,44 @@ public partial class TreeDataGrid : Selector
             }
 
             into.Add(node);
+        }
+    }
+
+    // What a search looks through, in the order it is shown: the records of every group - a match in a shut one opens
+    // it - and, unlike a total, the children of every branch that is open, as a reader sees them under it.
+    private void CollectSearched(List<object> into)
+    {
+        var open = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        if (Rows is { } rows)
+        {
+            foreach (var row in rows)
+            {
+                if (row.IsExpanded && row.Node is not DataGridGroup and not null) open.Add(row.Node);
+            }
+        }
+
+        // Depth first, as the rows stand: a node's children come right after it.
+        var pending = new Stack<IEnumerator>();
+        if (_shapedRoots != null) pending.Push(_shapedRoots.GetEnumerator());
+        while (pending.Count > 0)
+        {
+            var at = pending.Peek();
+            if (!at.MoveNext())
+            {
+                pending.Pop();
+                continue;
+            }
+
+            switch (at.Current)
+            {
+                case DataGridGroup group:
+                    pending.Push(group.Children.GetEnumerator());
+                    break;
+                case { } node:
+                    into.Add(node);
+                    if (open.Contains(node) && ShapedChildrenOf(node) is { } children) pending.Push(children.GetEnumerator());
+                    break;
+            }
         }
     }
 
