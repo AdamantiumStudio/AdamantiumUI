@@ -3450,6 +3450,36 @@ public class DataGridTests
         Assert.That(grid.MatchCount, Is.EqualTo(0), "the Region column is the grouping now");
     }
 
+    // A search field outside the table, its Enter bound to FindCommand: a new text searches, the same one steps on,
+    // Shift+Enter steps back; emptied by its clear button, the marks go.
+    [Test]
+    public void ASearchFieldOutside_FindsStepsAndClearsThroughTheCommands()
+    {
+        var grid = GroupableGrid(6);
+
+        grid.FindCommand.Execute("north");
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SearchText, Is.EqualTo("north"));
+            Assert.That(grid.MatchCount, Is.EqualTo(3));
+            Assert.That(grid.CurrentMatch, Is.EqualTo(1));
+        });
+
+        grid.FindCommand.Execute("north");
+        Assert.That(grid.CurrentMatch, Is.EqualTo(2), "the same text goes on to the next match");
+
+        grid.FindPreviousCommand.Execute(null);
+        Assert.That(grid.CurrentMatch, Is.EqualTo(1));
+
+        grid.SearchText = string.Empty;
+        Assert.That(grid.MatchCount, Is.Zero, "emptied, nothing is marked");
+
+        // A field bound to SearchText has written it before its Enter: that Enter still searches.
+        grid.SearchText = "south";
+        grid.FindCommand.Execute("south");
+        Assert.That(grid.MatchCount, Is.EqualTo(3), "searched, not stepped");
+    }
+
     // Next and previous WRAP: a Find Next that stops at the last match leaves the reader scrolling back by hand.
     [Test]
     public void SteppingThroughMatches_WrapsRound()

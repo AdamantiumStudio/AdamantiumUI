@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Text;
+using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core.Automation;
@@ -28,6 +29,8 @@ public partial class TreeDataGrid : Selector
 
     public TreeDataGrid()
     {
+        FindCommand = new SearchCommand(text => Find(text as string));
+        FindPreviousCommand = new SearchCommand(_ => FindPrevious());
         Columns.CollectionChanged += OnColumnsChanged;
         GroupDescriptions.CollectionChanged += OnGroupDescriptionsChanged;
         SortDescriptions.CollectionChanged += OnSortDescriptionsChanged;
@@ -1496,7 +1499,56 @@ public partial class TreeDataGrid : Selector
     /// here, so a page binding it and never learning what was typed would be the binding lying about the control.</summary>
     public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
         typeof(String), typeof(TreeDataGrid),
-        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault));
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSearchTextChanged));
+
+    // Emptied - a field's clear button - the search is called off and its marks go: there is nothing to walk.
+    private static void OnSearchTextChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is TreeDataGrid grid && string.IsNullOrEmpty(e.NewValue as string) && !string.IsNullOrEmpty(e.OldValue as string))
+            grid.Search();
+    }
+
+    /// <summary>Finds the text given as its parameter, as Enter in the search strip does: a new text is looked for, the
+    /// same one goes on to its next match. What a search field outside the table binds Enter to.</summary>
+    public ICommand FindCommand { get; }
+
+    /// <summary>Goes back to the match before the current one - Shift+Enter in a search field outside the table.</summary>
+    public ICommand FindPreviousCommand { get; }
+
+    // The text the last search ran for.
+    private string _searched;
+
+    /// <summary>Looks for <paramref name="text"/>, or, already looking for it, goes on to its next match.</summary>
+    public void Find(string text)
+    {
+        // Against what was searched, not what is typed: a field bound to SearchText has it before its Enter.
+        if (!string.IsNullOrEmpty(text) && string.Equals(_searched, text))
+        {
+            FindNext();
+            return;
+        }
+
+        SetCurrentValue(SearchTextProperty, text);
+        Search();
+    }
+
+    // A search step a field outside the table binds to.
+    private sealed class SearchCommand(Action<object> step) : ICommand
+    {
+        public event EventHandler CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool CanExecute(object parameter = null) => true;
+
+        public void Execute(object parameter = null) => step(parameter);
+
+        public void RaiseCanExecuteChanged()
+        {
+        }
+    }
 
     /// <summary>Whether the strip that searches the table is shown. TWO-WAY by default for the same reason: the strip
     /// closes ITSELF from its own button, and a one-way binding would leave the switch that opened it standing on.</summary>
@@ -1669,6 +1721,7 @@ public partial class TreeDataGrid : Selector
     public void Search()
     {
         var sought = SearchText;
+        _searched = sought;
         _search.Begin(sought);
 
         // A RUN of its own, so a search started while another is still walking simply takes over: the old one sees a
