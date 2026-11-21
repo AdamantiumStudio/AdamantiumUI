@@ -14,6 +14,7 @@ internal sealed class TreeFlattener
     private readonly Func<object, bool> _isExpanded;
     private readonly Func<object, bool> _isSelected;
     private readonly Func<object, object> _detailsOf;
+    private readonly Func<object, bool?> _hasChildren;
     private readonly string _childrenMember;
     private readonly Dictionary<TreeRow, Subscription> _subs = new();
     private readonly Dictionary<INotifyPropertyChanged, TreeRow> _nodes = new(ReferenceEqualityComparer.Instance);
@@ -21,15 +22,18 @@ internal sealed class TreeFlattener
     private Subscription _rootsSub;
 
     // isExpanded/isSelected restore a node's persisted state on (re)build; detailsOf yields an optional details row
-    // after a node; childrenMember names the node's member childrenOf reads, whose change reads the row again. Null
-    // means none.
+    // after a node; childrenMember names the node's member childrenOf reads, whose change reads the row again;
+    // hasChildren says whether a node has children without reading them - children loaded as the branch opens - null
+    // from it meaning they are to be read. Null means none.
     public TreeFlattener(Func<object, IEnumerable> childrenOf, Func<object, bool> isExpanded = null,
-        Func<object, bool> isSelected = null, Func<object, object> detailsOf = null, string childrenMember = null)
+        Func<object, bool> isSelected = null, Func<object, object> detailsOf = null, string childrenMember = null,
+        Func<object, bool?> hasChildren = null)
     {
         _childrenOf = childrenOf;
         _isExpanded = isExpanded ?? (static _ => false);
         _isSelected = isSelected ?? (static _ => false);
         _detailsOf = detailsOf ?? (static _ => null);
+        _hasChildren = hasChildren ?? (static _ => null);
         _childrenMember = childrenMember;
         _changes = new CrossThreadChanges<(Subscription, NotifyCollectionChangedEventArgs)>(ApplyChildrenChange);
         _rereads = new CrossThreadChanges<object>(Reread);
@@ -166,7 +170,7 @@ internal sealed class TreeFlattener
         }
 
         var children = _childrenOf(row.Node);
-        row.HasChildren = HasAny(children);
+        row.HasChildren = _hasChildren(row.Node) ?? HasAny(children);
         if (row.IsExpanded)
         {
             RebuildChildrenRegion(row);
@@ -198,9 +202,10 @@ internal sealed class TreeFlattener
 
         // Re-evaluate children LIVE rather than trusting the cached flag: a node that was a leaf when its row was built may
         // have gained children since (a drop into it, a lazy load). Refresh the row's flag too, so a former leaf now shows
-        // an expander and can open - a stale HasChildren=false would silently swallow the new child.
+        // an expander and can open - a stale HasChildren=false would silently swallow the new child. One said to have
+        // children opens on none yet: they come as it loads them.
         var children = _childrenOf(row.Node);
-        row.HasChildren = HasAny(children);
+        row.HasChildren = _hasChildren(row.Node) ?? HasAny(children);
         if (!row.HasChildren)
         {
             return;
@@ -476,7 +481,7 @@ internal sealed class TreeFlattener
         }
     }
 
-    private bool HasChildren(object node) => HasAny(_childrenOf(node));
+    private bool HasChildren(object node) => _hasChildren(node) ?? HasAny(_childrenOf(node));
 
     private static bool HasAny(IEnumerable children)
     {

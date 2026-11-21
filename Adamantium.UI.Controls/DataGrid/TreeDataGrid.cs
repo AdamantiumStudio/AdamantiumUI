@@ -149,6 +149,32 @@ public partial class TreeDataGrid : Selector
         set => SetValue(ChildrenPathProperty, value);
     }
 
+    /// <summary>Member saying whether a record has children, e.g. <c>HasChildren</c>, for children read only as its
+    /// branch opens - loaded then, from a debugger or a service: the expander shows without asking for them. Empty means
+    /// the children are looked at.</summary>
+    public static readonly AdamantiumProperty HasChildrenPathProperty = AdamantiumProperty.Register(
+        nameof(HasChildrenPath), typeof(String), typeof(TreeDataGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnChildrenPathChanged));
+
+    public String HasChildrenPath
+    {
+        get => GetValue<String>(HasChildrenPathProperty);
+        set => SetValue(HasChildrenPathProperty, value);
+    }
+
+    /// <summary>Member holding whether a record's branch is open, e.g. <c>IsExpanded</c>: read as the rows are built, so
+    /// a branch open in the record comes back open; written as it opens or closes - when a record may load its children.
+    /// </summary>
+    public static readonly AdamantiumProperty IsExpandedPathProperty = AdamantiumProperty.Register(
+        nameof(IsExpandedPath), typeof(String), typeof(TreeDataGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnChildrenPathChanged));
+
+    public String IsExpandedPath
+    {
+        get => GetValue<String>(IsExpandedPathProperty);
+        set => SetValue(IsExpandedPathProperty, value);
+    }
+
     /// <summary>The member a record is known BY, when the tree is a flat list joined on keys rather than records
     /// holding their own children. Set with <see cref="ParentKeyPath"/>; either alone says nothing.
     /// <para>This is the shape data arrives in from a database or a service - rows with an id and a parent id - and it
@@ -286,16 +312,18 @@ public partial class TreeDataGrid : Selector
     internal void ToggleRow(TreeRow row)
     {
         if (row is not { HasChildren: true }) return;
-        _flattener.Toggle(row);
-        RememberGroup(row);
-        RefreshRealizedRows();
+        if (row.IsExpanded) CollapseRow(row);
+        else ExpandRow(row);
     }
 
     internal void ExpandRow(TreeRow row)
     {
         if (row is not { HasChildren: true } || row.IsExpanded) return;
+        // A record is told BEFORE its children are read: one loading them as it opens has them there, a sorted table's
+        // copy of them too.
+        if (row.Node is not DataGridGroup) _setExpanded(row.Node, true);
         _flattener.Expand(row);
-        RememberGroup(row);
+        RememberOpen(row);
         RefreshRealizedRows();
     }
 
@@ -303,7 +331,7 @@ public partial class TreeDataGrid : Selector
     {
         if (row is not { IsExpanded: true }) return;
         _flattener.Collapse(row);
-        RememberGroup(row);
+        RememberOpen(row);
         RefreshRealizedRows();
     }
 
@@ -432,8 +460,15 @@ public partial class TreeDataGrid : Selector
             _rawChildren = ChildrenSelector
                            ?? (_relation != null ? _relation.ChildrenOf : TreeChildResolver.ForPath(ChildrenPath));
             // Groups start shut like branches, since grouping is for folding; one the user opened comes back open (by
-            // path).
-            _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
+            // path). A record comes back as its own member says, when IsExpandedPath names one.
+            var isExpanded = TreeChildResolver.ForBoolPath(IsExpandedPath);
+            _setExpanded = TreeChildResolver.SetterForBoolPath(IsExpandedPath);
+            var hasChildren = HasChildrenPath is { Length: > 0 } hasChildrenPath
+                ? TreeChildResolver.ForBoolPath(hasChildrenPath)
+                : null;
+            _flattener = new TreeFlattener(ShapedChildrenOf, node => IsGroupOpen(node) || isExpanded(node),
+                static _ => false, DetailsFor,
+                hasChildren: hasChildren == null ? null : node => node is DataGridGroup ? null : hasChildren(node));
             _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : roots));
             _flattener.SetRoots(_shapedRoots);
         }
@@ -459,6 +494,7 @@ public partial class TreeDataGrid : Selector
     }
 
     private Func<object, IEnumerable> _rawChildren = static _ => null;
+    private Action<object, bool> _setExpanded = static (_, _) => { };
 
     /// <summary>The keys the rows are sorted by, in PRIORITY order: the first decides, the next breaks its ties. The
     /// collection IS the mechanism - a page states its sort here, the strip shows it, and both are looking at the one
@@ -981,9 +1017,14 @@ public partial class TreeDataGrid : Selector
 
     private bool IsGroupOpen(object node) => node is DataGridGroup group && _openGroups.Contains(group.Path);
 
-    private void RememberGroup(TreeRow row)
+    // A group by its path; a record in its own member, when IsExpandedPath names one.
+    private void RememberOpen(TreeRow row)
     {
-        if (row?.Node is not DataGridGroup group) return;
+        if (row?.Node is not DataGridGroup group)
+        {
+            if (row != null) _setExpanded(row.Node, row.IsExpanded);
+            return;
+        }
 
         if (row.IsExpanded) _openGroups.Add(group.Path);
         else _openGroups.Remove(group.Path);

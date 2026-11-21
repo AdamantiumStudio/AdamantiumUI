@@ -339,6 +339,76 @@ public class DataGridTests
         Assert.That(grid.Rows.Count, Is.EqualTo(1), "and out again");
     }
 
+    // Children a debugger gives only when asked: the row says it has some, they are loaded as it opens.
+    private sealed class LoadedRow
+    {
+        private bool _isExpanded;
+
+        public string Name { get; init; }
+        public bool HasChildren { get; init; }
+        public int Reads { get; private set; }
+        public ObservableCollection<LoadedRow> Loaded { get; } = new();
+
+        public ObservableCollection<LoadedRow> Children
+        {
+            get
+            {
+                Reads++;
+                return Loaded;
+            }
+        }
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                _isExpanded = value;
+                if (value && Loaded.Count == 0)
+                {
+                    Loaded.Add(new LoadedRow { Name = Name + "-1" });
+                    Loaded.Add(new LoadedRow { Name = Name + "-2" });
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void ARowSaidToHaveChildren_OpensAndTakesThemAsTheyAreLoaded()
+    {
+        var root = new LoadedRow { Name = "Root", HasChildren = true };
+        var leaf = new LoadedRow { Name = "Leaf" };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ChildrenPath = "Children";
+        grid.HasChildrenPath = "HasChildren";
+        grid.IsExpandedPath = "IsExpanded";
+        grid.ItemsSource = new List<LoadedRow> { root, leaf };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Rows[0].HasChildren, Is.True, "the expander shows");
+            Assert.That(grid.Rows[1].HasChildren, Is.False);
+            Assert.That(root.Reads, Is.Zero, "with its children not asked for");
+        });
+
+        grid.Expand(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.IsExpanded, Is.True, "the record is told it opened");
+            Assert.That(grid.Rows.Select(row => ((LoadedRow)row.Node).Name), Is.EqualTo(new[] { "Root", "Root-1", "Root-2", "Leaf" }),
+                "and what it loaded then is shown under it");
+        });
+
+        grid.Collapse(root);
+        Assert.That(root.IsExpanded, Is.False, "told it closed too");
+        Assert.That(grid.Rows.Count, Is.EqualTo(2));
+
+        // Built again over the same records, the one open comes back open.
+        root.IsExpanded = true;
+        grid.ItemsSource = new List<LoadedRow> { root, leaf };
+        Assert.That(grid.Rows.Count, Is.EqualTo(4));
+    }
+
     // Addressed by ITEM, because the row being opened usually has no container - that is the case that has to work.
     [Test]
     public void ExpandingIsAddressedByItem_NotByContainer()

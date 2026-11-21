@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
+  as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
+  they come; a record open in its member comes back open when the rows are built again. A cell's `State` of `Changed`
+  is drawn in the accent by the themes - a value another than it was.
+
 - `ToolBarTray` and `ToolBar`: an application's tool bars in rows, each a batch of commands - any controls, drawn as the
   theme draws them - shown and hidden as a whole. A bar stands by its `Band` and `BandIndex`, which bind two-way so an
   application keeps its layout. Its grip moves it to another place of its row, another row, a new row above the first
