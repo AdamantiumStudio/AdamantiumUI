@@ -360,7 +360,7 @@ public class ParserContext
 
     private IAumlAstValueNode ParseTextOrMarkupExtension(string extension, XElement element, IAumlLineInfo info)
     {
-        if (extension.StartsWith("{}"))
+        if (extension.StartsWith("{}", StringComparison.Ordinal))
             return new AumlAstTextNode(info, extension.Substring(2));
 
         if (extension.StartsWith("{"))
