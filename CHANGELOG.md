@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- An application's own markup extension works on an element's property: markup makes it, sets its arguments and gives
+  the property what its `ProvideObject` gives, told the element and the property in its `MarkupContext` - as WPF's
+  `ProvideValue` is. On an attached property too, and in a template at the template's priority, as its plain values
+  are. Before, the extension itself was assigned, through the property's owner type, so it did not build.
+
 - `BooleanToVisibilityConverter` (`Adamantium.UI.Controls.Converters`), as WPF has one: true shows, false collapses, and
   back, so a switch and what it shows bind two-way. `InverseBooleanToVisibilityConverter` is its inverse, for what shows
   while the switch is off. The sandbox's own copy is gone: its pages use these.
