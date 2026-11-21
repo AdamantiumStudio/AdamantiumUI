@@ -8,6 +8,23 @@
   <Wait Target="id=Stand/id=PatternStandView" />
   <Select Target="id=BrushesView/name=Noise" />
   <Wait Target="id=Stand/id=NoiseStandView" />
+  <!-- The colors hide while a combustible Voronoi wears its fire palette - a trigger on both values - and come back when
+       the palette is turned off. The page is scrolled down to them first: below the fold they are offscreen anyway. -->
+  <Scroll Target="id=BrushesView>type=Pane" Vertical="100" />
+  <Expect Target="id=NoiseColorsLabel" Offscreen="False" />
+  <Expand Target="id=NoiseTypeBox" />
+  <Select Target="id=NoiseTypeBox/name=Combustible Voronoi" />
+  <Wait Target="id=NoiseColorsLabel" Offscreen="True" />
+  <Toggle Target="id=FirePaletteBox" />
+  <Wait Target="id=NoiseColorsLabel" Offscreen="False" />
+  <Toggle Target="id=FirePaletteBox" />
+  <Wait Target="id=NoiseColorsLabel" Offscreen="True" />
+  <Expand Target="id=NoiseTypeBox" />
+  <Select Target="id=NoiseTypeBox/name=Simplex" />
+  <!-- Simplex shows its scale, octaves and seed again above the colors, so the page is longer. -->
+  <Scroll Target="id=BrushesView>type=Pane" Vertical="100" />
+  <Wait Target="id=NoiseColorsLabel" Offscreen="False" />
+  <Scroll Target="id=BrushesView>type=Pane" Vertical="0" />
   <Select Target="id=BrushesView/name=Fractal" />
   <Wait Target="id=Stand/id=FractalStandView" />
   <!-- The live fractal zoomed and panned through automation, and back as it opened. -->

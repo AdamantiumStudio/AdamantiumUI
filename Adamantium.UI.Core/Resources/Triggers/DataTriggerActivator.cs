@@ -43,14 +43,13 @@ internal sealed class DataTriggerActivator : TriggerActivatorBase
 
     private void OnProducedValueChanged(BindingExpressionBase _) => Evaluate();
 
-    private void Evaluate() => ApplyState(Matches(_expression.ProducedValue));
+    private void Evaluate() => ApplyState(Matches(_expression.ProducedValue, _blueprint.Value));
 
     // Compare the bound value to the trigger's declared Value. The bound value's type is only known at runtime, so a
     // string Value from markup (e.g. Value="True") is converted to that type before comparing; an already-typed Value
-    // (set in code) is compared directly.
-    private bool Matches(object produced)
+    // (set in code) is compared directly. A MultiDataTrigger's conditions are compared the same way.
+    internal static bool Matches(object produced, object expected)
     {
-        var expected = _blueprint.Value;
         if (produced == null) return expected == null;
         if (expected == null) return false;
         if (produced.GetType().IsInstanceOfType(expected)) return Equals(produced, expected);

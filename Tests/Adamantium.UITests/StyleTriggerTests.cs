@@ -141,6 +141,111 @@ public class StyleTriggerTests
         Assert.That((host.Background as SolidColorBrush)?.Color, Is.Not.EqualTo(Colors.Red), "undone when the bound value no longer matches");
     }
 
+    // MultiDataTrigger: active only while EVERY binding resolves to its value - the AND of several data triggers.
+    [Test]
+    public void MultiDataTrigger_AppliesSetter_OnlyWhileAllBoundValuesMatch()
+    {
+        var vm = new PairVm { Kind = "Fire", IsOn = false };
+        var host = new Border { DataContext = vm };
+
+        var trigger = new MultiDataTrigger();
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.Kind)), Value = "Fire" });
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.IsOn)), Value = "true" });
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        var oneOfTwo = Red(host);
+        vm.IsOn = true;
+        var both = Red(host);
+        vm.Kind = "Water";
+        var otherAgain = Red(host);
+        vm.Kind = "Fire";
+        var bothAgain = Red(host);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(oneOfTwo, Is.False, "one condition of two holds");
+            Assert.That(both, Is.True, "both hold");
+            Assert.That(otherAgain, Is.False, "undone when the other stops holding");
+            Assert.That(bothAgain, Is.True);
+        });
+    }
+
+    // The tree is built before its data, so the trigger reads the conditions again when the DataContext comes, and again
+    // when it is another.
+    [Test]
+    public void MultiDataTrigger_ReadsItsConditionsAgain_WhenTheDataContextChanges()
+    {
+        var host = new Border();
+        var trigger = new MultiDataTrigger();
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.Kind)), Value = "Fire" });
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.IsOn)), Value = true });
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+
+        var none = Red(host);
+        host.DataContext = new PairVm { Kind = "Fire", IsOn = true };
+        var matching = Red(host);
+        host.DataContext = new PairVm { Kind = "Fire", IsOn = false };
+        var other = Red(host);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(none, Is.False, "no data, nothing holds");
+            Assert.That(matching, Is.True, "a typed value is compared as it is");
+            Assert.That(other, Is.False);
+        });
+    }
+
+    // Another DataContext is read whole: a condition already reading the new data and one still reading the old never
+    // hold together, so a trigger that holds in neither applies nothing, not for a moment.
+    [Test]
+    public void MultiDataTrigger_NeverHoldsOnHalfOfAnotherDataContext()
+    {
+        var host = new Border { DataContext = new PairVm { Kind = "Water", IsOn = true } };
+        var trigger = new MultiDataTrigger();
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.Kind)), Value = "Fire" });
+        trigger.Conditions.Add(new Condition { Binding = new Binding(nameof(PairVm.IsOn)), Value = true });
+        trigger.Add(new Setter { Property = "Background", Value = "Red" });
+        trigger.Apply(new PartContext(host, theme: null));
+        var everRed = false;
+        host.PropertyChanged += (_, _) => everRed |= Red(host);
+
+        host.DataContext = new PairVm { Kind = "Fire", IsOn = false };
+
+        Assert.That(everRed, Is.False);
+    }
+
+    private static bool Red(Border host) => (host.Background as SolidColorBrush)?.Color == Colors.Red;
+
+    private sealed class PairVm : System.ComponentModel.INotifyPropertyChanged
+    {
+        private string _kind;
+        private bool _isOn;
+
+        public string Kind
+        {
+            get => _kind;
+            set
+            {
+                _kind = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Kind)));
+            }
+        }
+
+        public bool IsOn
+        {
+            get => _isOn;
+            set
+            {
+                _isOn = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsOn)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
     // Regression: a trigger/style setter on Width (or Height) that is later CLEARED must not crash. The size callback
     // cast e.NewValue to double, which threw on the UnsetValue a cleared setter produces (guarded now).
     [Test]

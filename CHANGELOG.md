@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `MultiDataTrigger`, as WPF has one: its setters and actions hold only while every one of its `Conditions` holds, each
+  a `{Binding}` on the host's data and the value it is to resolve to - `Condition` takes a `Binding` beside its
+  `Property`. What several of a view model's values decide together is written as a trigger, not a multi-value
+  converter: the sandbox's noise stand hides its colors so, and its `CombustibleColorsVisibilityConverter` is gone.
+
 - `ToolBarTray` and `ToolBar`: an application's tool bars in rows, each a batch of commands - any controls, drawn as the
   theme draws them - shown and hidden as a whole. A bar stands by its `Band` and `BandIndex`, which bind two-way so an
   application keeps its layout. Its grip moves it to another place of its row, another row, a new row above the first

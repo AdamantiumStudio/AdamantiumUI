@@ -40,7 +40,7 @@
                     </StackPanel>
                 </StackPanel>
                 <TextBlock x:Name="NoiseTypeLabel" Text="{Localize BrushesStrings.NoiseType}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <DropDown AutomationProperties.LabeledBy="{Binding ElementName=NoiseTypeLabel}" ItemsSource="{Binding NoiseTypes}" SelectedItem="{Binding NoiseKind, Mode=TwoWay}" Width="280" MarginBottom="10">
+                <DropDown x:Name="NoiseTypeBox" AutomationProperties.LabeledBy="{Binding ElementName=NoiseTypeLabel}" ItemsSource="{Binding NoiseTypes}" SelectedItem="{Binding NoiseKind, Mode=TwoWay}" Width="280" MarginBottom="10">
                     <DropDown.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
@@ -114,15 +114,22 @@
                                        Value="{Binding NoiseGain, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6" AutomationProperties.LabeledBy="{Binding ElementName=GainLabel}"/>
                     </StackPanel>
                 </StackPanel>
-                <CheckBox Content="{Localize BrushesStrings.FirePalette}" IsChecked="{Binding NoiseFirePalette, Mode=TwoWay}" MarginBottom="6"
+                <CheckBox x:Name="FirePaletteBox" Content="{Localize BrushesStrings.FirePalette}" IsChecked="{Binding NoiseFirePalette, Mode=TwoWay}" MarginBottom="6"
                           Visibility="{Binding NoiseKind, Converter={conv:NoiseParamVisibilityConverter}, ConverterParameter=FirePalette}"/>
-                <StackPanel Orientation="Vertical">
-                    <StackPanel.Visibility>
-                        <MultiBinding Converter="{conv:CombustibleColorsVisibilityConverter}">
-                            <Binding Path="NoiseKind"/>
-                            <Binding Path="NoiseFirePalette"/>
-                        </MultiBinding>
-                    </StackPanel.Visibility>
+                <!-- The colors are the fire palette's while a combustible Voronoi wears it: both values decide, so the
+                     panel hides by a trigger on the two of them. -->
+                <StackPanel Orientation="Vertical" Classes="NoiseColors">
+                    <StackPanel.Styles>
+                        <Style Selector="StackPanel.NoiseColors">
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding NoiseKind}" Value="CombustibleVoronoi"/>
+                                    <Condition Binding="{Binding NoiseFirePalette}" Value="true"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </MultiDataTrigger>
+                        </Style>
+                    </StackPanel.Styles>
                     <CheckBox Content="{Localize BrushesStrings.MidColor}" IsChecked="{Binding NoiseUseMid, Mode=TwoWay}" MarginBottom="6"/>
                     <TextBlock x:Name="NoiseColorsLabel" Text="{Localize BrushesStrings.NoiseColors}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=NoiseColorsLabel}" Orientation="Horizontal">
