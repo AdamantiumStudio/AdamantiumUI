@@ -1375,6 +1375,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
+        // Not loading, nothing is under way: a navigation that went to a download, an empty answer or a stop came to no
+        // page, and the page shown is the one there is.
+        if (!isLoading)
+        {
+            Volatile.Write(ref navigationShown, NavigationsBegun);
+        }
+
         if (!isLoading)
         {
             var host = LiveHost();
@@ -1402,10 +1409,47 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     // A page's icons, 16 device-independent pixels across as a tab shows them.
     private const int IconSize = 16;
 
+    // The main frame's navigations begun and where the last one goes - written on the UI loop, read on the IO thread as a
+    // sign-in is asked - and the one whose document is shown, or whose failure is: a navigation is in once its document
+    // starts loading, and none is under way once the page stops loading.
+    private int navigationsBegun;
+    private string goingTo;
+    private int navigationShown;
+
+    /// <summary>How many navigations the page's main frame has begun.</summary>
+    internal int NavigationsBegun => Volatile.Read(ref navigationsBegun);
+
+    /// <summary>Whether the page is going on to another, not in yet: the page shown is one it is leaving.</summary>
+    internal bool IsGoingOn => NavigationsBegun > navigationShown;
+
+    /// <summary>The navigation a sign-in asked now for <paramref name="origin"/> belongs to: the one under way, when it is
+    /// asked by the origin that navigation goes to - else the page shown's, a frame of it or a request of its own. On the
+    /// IO thread: the count is read before the address it was written after.</summary>
+    internal int NavigationAsking(string origin)
+    {
+        var begun = NavigationsBegun;
+        var to = Volatile.Read(ref goingTo);
+        return begun > Volatile.Read(ref navigationShown) && !SameOrigin(origin, to) ? Volatile.Read(ref navigationShown) : begun;
+    }
+
+    /// <summary>Whether <paramref name="request"/> was asked of the page shown - by it, or by the navigation that brought
+    /// it - rather than by one the page is going on to: the end of the page shown's load is its end too.</summary>
+    internal bool IsOfThePageShown(WebViewSignInRequest request) => request.Navigation <= navigationShown;
+
+    private static bool SameOrigin(string origin, string address) =>
+        Uri.TryCreate(origin, UriKind.Absolute, out var asking) && Uri.TryCreate(address, UriKind.Absolute, out var going) &&
+        Uri.Compare(asking, going, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
+
     /// <summary>A new page in the main frame: its icon is not known yet, and no icon asked for the last one is shown.
     /// </summary>
     internal void OnLoadStart(string url)
     {
+        // The blank page the browser is made with is not one navigated to, and says nothing of the one that is.
+        if (!OfTheBlankPage(url))
+        {
+            Volatile.Write(ref navigationShown, NavigationsBegun);
+        }
+
         // What the page left asked is asked no more: Chromium puts its prompts away itself, a media request is refused.
         for (var i = permissionsAsked.Count - 1; i >= 0; i--)
         {
@@ -1553,6 +1597,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
         errorPageFor = error.Address;
         failedAddress = error.Address;
+        // The navigation failing is over: what it asked goes with it.
+        Volatile.Write(ref navigationShown, NavigationsBegun);
         view.LoadFailed(this, error);
         view.NavigationCompleted(this, error.Address, error);
     }
@@ -2079,6 +2125,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             }
 
             return true;
+        }
+
+        // A redirect is the same navigation going on elsewhere. The address before the count: the IO thread reads the count
+        // first.
+        Volatile.Write(ref goingTo, url);
+        if (!isRedirect)
+        {
+            Interlocked.Increment(ref navigationsBegun);
         }
 
         errorPageFor = null;

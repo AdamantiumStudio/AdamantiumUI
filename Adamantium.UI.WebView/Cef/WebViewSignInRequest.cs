@@ -11,10 +11,11 @@ internal sealed unsafe class WebViewSignInRequest
     private readonly Lock gate = new();
     private CefAuthCallback* callback;
 
-    public WebViewSignInRequest(WebSignInTarget target, string address, CefAuthCallback* callback)
+    public WebViewSignInRequest(WebSignInTarget target, string address, int navigation, CefAuthCallback* callback)
     {
         Target = target;
         Address = address;
+        Navigation = navigation;
         this.callback = callback;
         CefRefCounting.AddRefCef(callback);
     }
@@ -24,6 +25,10 @@ internal sealed unsafe class WebViewSignInRequest
 
     /// <summary>The address the page was going to.</summary>
     public string Address { get; }
+
+    /// <summary>The navigation of the page's main frame it was asked of (<see cref="WebViewBrowser.NavigationAsking"/>):
+    /// the page shown's, or one being gone to (<see cref="WebViewBrowser.IsOfThePageShown"/>).</summary>
+    public int Navigation { get; }
 
     /// <summary>Whether it is answered.</summary>
     public bool IsAnswered

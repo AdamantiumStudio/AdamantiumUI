@@ -35,6 +35,10 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>The application's process when the session started it; null otherwise.</summary>
     public Process Process => _process;
 
+    /// <summary>The Windows desktop the application was started on, of its own (<see cref="LaunchOptions.VirtualDisplay"/>);
+    /// null for the user's. Its windows are found there - by a test that posts them Windows' own messages.</summary>
+    public string DesktopName => _desktop != null ? HiddenDesktop.Name : null;
+
     /// <summary>Windows built in this process, with no application loop: the caller's thread is the loop, and the
     /// session lays them out itself.</summary>
     public static AutomationSession InProcess(params IWindow[] windows)
