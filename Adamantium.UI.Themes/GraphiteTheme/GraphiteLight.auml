@@ -22,6 +22,8 @@
     <PaletteColor Key="SolidBackgroundFillColorSecondary" Color="#E9ECF1"/>
     <PaletteColor Key="SolidBackgroundFillColorTertiary" Color="#F7F9FB"/>
     <PaletteColor Key="CardBackgroundFillColorDefault" Color="#FFFFFF"/>
+    <!-- The flyout surface: this theme's card, solid - see the dark variant. -->
+    <PaletteColor Key="FlyoutSurfaceFill" Color="#FFFFFF"/>
     <PaletteColor Key="SmokeFillColorDefault" Color="#59000000"/>
     <PaletteColor Key="LayerFillColorDefault" Color="#80FFFFFF"/>
     <PaletteColor Key="TileFillColorDefault" Color="#0D000000"/>
