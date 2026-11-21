@@ -339,6 +339,53 @@ public class DataGridTests
         Assert.That(grid.Rows.Count, Is.EqualTo(1), "and out again");
     }
 
+    // The selection is of rows by their place: a branch shut takes its rows away, and a cell selected in them goes with
+    // them - it must not land on the row that moved up into that place.
+    [Test]
+    public void ACellSelectedInABranch_GoesWhenTheBranchCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) },
+            new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.Expand(root);
+        grid.SelectCell(2, 1);
+
+        grid.Collapse(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.IsEmpty, Is.True, "the cell went with its row");
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.False, "not moved onto the row below the branch");
+            Assert.That(grid.ActiveRow, Is.EqualTo(-1));
+        });
+    }
+
+    // Rows opened above a selected cell push it down: it stays on its record.
+    [Test]
+    public void ACellSelectedBelowABranch_StaysOnItsRow_AsTheBranchOpensAndCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.SelectCell(1, 0);
+
+        grid.Expand(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.ContainsRow(3), Is.True, "moved down with its row");
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.False);
+            Assert.That(grid.ActiveRow, Is.EqualTo(3));
+        });
+
+        grid.Collapse(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.True, "and back up");
+            Assert.That(grid.ActiveRow, Is.EqualTo(1));
+        });
+    }
+
     // Children a debugger gives only when asked: the row says it has some, they are loaded as it opens.
     private sealed class LoadedRow
     {

@@ -703,6 +703,9 @@ All packages share one version.
 
 ### Fixed
 
+- `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
+  with its row now. Cells selected below a branch opened or shut, the active cell and the Shift anchor move with their
+  rows.
 - A ribbon put away - collapsed, or in a collapsed part of the window, as when an application shows tool bars in its
   place - leaves Alt to the window: it showed key tips over the hidden strip and took the letters typed after Alt.
 - Command sources ask their commands again after `AnimationManager.Reset` even when asked before the next frame: a

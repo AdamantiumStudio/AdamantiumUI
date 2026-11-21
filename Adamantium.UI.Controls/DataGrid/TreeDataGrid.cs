@@ -336,8 +336,50 @@ public partial class TreeDataGrid : Selector
     }
 
     // Any change of the flat list - a branch opened or shut, a record added or removed in the source - MOVES the rows
-    // below it, and the details panels' exceptions are indexes into that list, so they are found again here.
-    private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e) => RebuildRowExceptions();
+    // below it, and the details panels' exceptions are indexes into that list, so they are found again here. So are the
+    // selection, the active cell and the anchor: they go with their rows, and with rows taken away they go too.
+    private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        RebuildRowExceptions();
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add when e.NewItems != null:
+                FollowRowsIn(e.NewStartingIndex, e.NewItems.Count);
+                break;
+            case NotifyCollectionChangedAction.Remove when e.OldItems != null:
+                FollowRowsOut(e.OldStartingIndex, e.OldItems.Count);
+                break;
+            case NotifyCollectionChangedAction.Reset:
+            case NotifyCollectionChangedAction.Move:
+                // Places no longer say which rows: nothing is left selected on the wrong ones.
+                SelectedCells.Clear();
+                ActiveRow = -1;
+                _anchorRow = -1;
+                break;
+        }
+
+        RefreshCellSelectionVisuals();
+    }
+
+    private void FollowRowsIn(int index, int count)
+    {
+        if (index < 0) return;
+        SelectedCells.InsertRows(index, count);
+        if (ActiveRow >= index) ActiveRow += count;
+        if (_anchorRow >= index) _anchorRow += count;
+    }
+
+    private void FollowRowsOut(int index, int count)
+    {
+        if (index < 0) return;
+        SelectedCells.RemoveRows(index, count);
+        ActiveRow = RowAfterRemoving(ActiveRow, index, count);
+        _anchorRow = RowAfterRemoving(_anchorRow, index, count);
+    }
+
+    // A row's place once count rows from index went: gone with them is -1.
+    private static int RowAfterRemoving(int row, int index, int count) =>
+        row < index ? row : row < index + count ? -1 : row - count;
 
     // Rows keep their own copy of depth, band and expander state, so a splice above them changes what they should show.
     internal void RefreshRealizedRows()

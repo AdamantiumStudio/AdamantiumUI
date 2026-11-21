@@ -133,6 +133,71 @@ public class DataGridSelection
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Rows came in at <paramref name="index"/> - a branch opened: the cells selected below move down with
+    /// their rows, and a rectangle the rows came into is parted round them, the new rows not selected.</summary>
+    public void InsertRows(int index, int count)
+    {
+        if (count <= 0 || _ranges.Count == 0) return;
+
+        var kept = new List<CellRange>(_ranges.Count + 1);
+        var changed = false;
+        foreach (var range in _ranges)
+        {
+            if (range.LastRow < index)
+            {
+                kept.Add(range);
+                continue;
+            }
+
+            changed = true;
+            if (range.FirstRow >= index)
+            {
+                kept.Add(new CellRange(range.FirstRow + count, range.FirstColumn, range.LastRow + count, range.LastColumn));
+                continue;
+            }
+
+            kept.Add(new CellRange(range.FirstRow, range.FirstColumn, index - 1, range.LastColumn));
+            kept.Add(new CellRange(index + count, range.FirstColumn, range.LastRow + count, range.LastColumn));
+        }
+
+        if (!changed) return;
+
+        _ranges.Clear();
+        _ranges.AddRange(kept);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Rows went from <paramref name="index"/> - a branch shut: the cells selected in them go with them, those
+    /// below move up with their rows.</summary>
+    public void RemoveRows(int index, int count)
+    {
+        if (count <= 0 || _ranges.Count == 0) return;
+
+        var end = index + count;
+        var kept = new List<CellRange>(_ranges.Count);
+        var changed = false;
+        foreach (var range in _ranges)
+        {
+            if (range.LastRow < index)
+            {
+                kept.Add(range);
+                continue;
+            }
+
+            changed = true;
+            // What is left of it above the rows gone and below them, those below moved up.
+            var first = range.FirstRow < index ? range.FirstRow : Math.Max(range.FirstRow, end) - count;
+            var last = range.LastRow >= end ? range.LastRow - count : index - 1;
+            if (first <= last) kept.Add(new CellRange(first, range.FirstColumn, last, range.LastColumn));
+        }
+
+        if (!changed) return;
+
+        _ranges.Clear();
+        _ranges.AddRange(kept);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>The smallest rectangle covering everything selected - what a copy walks.</summary>
     public bool TryGetBounds(out CellRange bounds)
     {
