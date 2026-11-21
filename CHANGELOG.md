@@ -716,6 +716,9 @@ All packages share one version.
 
 ### Fixed
 
+- A universe of another process shown in a panel took no keys: the host was told of the focus on `GotFocus`, raised
+  before the panel holds the keyboard, so it heard it had none and was never told again. It is told on the keyboard's
+  own focus now.
 - `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
   with its row now. Cells selected below a branch opened or shut, the active cell, the Shift anchor and an open edit
   move with their rows; an edit whose row went is cancelled, never written into another record. Rows made again -
