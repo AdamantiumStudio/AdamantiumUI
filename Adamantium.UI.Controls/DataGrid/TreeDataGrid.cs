@@ -341,45 +341,129 @@ public partial class TreeDataGrid : Selector
     private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         RebuildRowExceptions();
-        switch (e.Action)
+        var moved = e.Action switch
         {
-            case NotifyCollectionChangedAction.Add when e.NewItems != null:
-                FollowRowsIn(e.NewStartingIndex, e.NewItems.Count);
-                break;
-            case NotifyCollectionChangedAction.Remove when e.OldItems != null:
-                FollowRowsOut(e.OldStartingIndex, e.OldItems.Count);
-                break;
-            case NotifyCollectionChangedAction.Reset:
-            case NotifyCollectionChangedAction.Move:
-                // Places no longer say which rows: nothing is left selected on the wrong ones.
-                SelectedCells.Clear();
-                ActiveRow = -1;
-                _anchorRow = -1;
-                break;
+            NotifyCollectionChangedAction.Add when e.NewItems != null => FollowRowsIn(e.NewStartingIndex, e.NewItems.Count),
+            NotifyCollectionChangedAction.Remove when e.OldItems != null => FollowRowsOut(e.OldStartingIndex, e.OldItems.Count),
+            NotifyCollectionChangedAction.Reset or NotifyCollectionChangedAction.Move => ForgetPlaces(),
+            _ => false
+        };
+
+        if (moved) RefreshCellSelectionVisuals();
+    }
+
+    // Whether anything selected, active or edited moved.
+    private bool FollowRowsIn(int index, int count)
+    {
+        if (index < 0 || count <= 0) return false;
+
+        var moved = SelectedCells.InsertRows(index, count);
+        if (ActiveRow >= index) { ActiveRow += count; moved = true; }
+        if (_anchorRow >= index) _anchorRow += count;
+        if (EditingRow >= index) { EditingRow += count; moved = true; }
+        return moved;
+    }
+
+    private bool FollowRowsOut(int index, int count)
+    {
+        if (index < 0 || count <= 0) return false;
+
+        var moved = SelectedCells.RemoveRows(index, count);
+        var active = RowAfterRemoving(ActiveRow, index, count);
+        moved |= active != ActiveRow;
+        ActiveRow = active;
+        _anchorRow = RowAfterRemoving(_anchorRow, index, count);
+        // The record edited went with its rows: its edit goes too, never written into the row now in its place.
+        if (EditingRow >= index)
+        {
+            var editing = RowAfterRemoving(EditingRow, index, count);
+            if (editing < 0) CancelEdit();
+            else EditingRow = editing;
+            moved = true;
         }
 
-        RefreshCellSelectionVisuals();
+        return moved;
     }
 
-    private void FollowRowsIn(int index, int count)
+    // Places no longer say which rows: nothing is left on the wrong ones.
+    private bool ForgetPlaces()
     {
-        if (index < 0) return;
-        SelectedCells.InsertRows(index, count);
-        if (ActiveRow >= index) ActiveRow += count;
-        if (_anchorRow >= index) _anchorRow += count;
-    }
-
-    private void FollowRowsOut(int index, int count)
-    {
-        if (index < 0) return;
-        SelectedCells.RemoveRows(index, count);
-        ActiveRow = RowAfterRemoving(ActiveRow, index, count);
-        _anchorRow = RowAfterRemoving(_anchorRow, index, count);
+        CancelEdit();
+        SelectedCells.Clear();
+        ActiveRow = -1;
+        _anchorRow = -1;
+        return true;
     }
 
     // A row's place once count rows from index went: gone with them is -1.
     private static int RowAfterRemoving(int row, int index, int count) =>
         row < index ? row : row < index + count ? -1 : row - count;
+
+    // A selected cell run, the active cell and the anchor, by their records, across rows made again.
+    private readonly record struct HeldCells(object Node, int FirstColumn, int LastColumn);
+
+    private sealed record HeldSelection(List<HeldCells> Cells, object Active, int ActiveColumn, object Anchor, object Edited);
+
+    private HeldSelection HoldSelection()
+    {
+        var rows = Rows;
+        if (rows == null || rows.Count == 0) return null;
+
+        List<HeldCells> cells = [];
+        foreach (var range in SelectedCells.Ranges)
+        {
+            for (var row = range.FirstRow; row <= range.LastRow && row < rows.Count; row++)
+                cells.Add(new HeldCells(rows[row].Node, range.FirstColumn, range.LastColumn));
+        }
+
+        return new HeldSelection(cells, NodeAt(rows, ActiveRow), ActiveColumn, NodeAt(rows, _anchorRow),
+            IsEditing ? NodeAt(rows, EditingRow) : null);
+    }
+
+    private static object NodeAt(FlatRowCollection rows, int row) => row >= 0 && row < rows.Count ? rows[row].Node : null;
+
+    private void PutSelectionBack(HeldSelection held)
+    {
+        var rows = Rows;
+        if (held == null || rows == null)
+        {
+            ForgetPlaces();
+            return;
+        }
+
+        // Each record's first row: a record shown twice is selected where it stands first.
+        var places = new Dictionary<object, int>(ReferenceEqualityComparer.Instance);
+        for (var row = 0; row < rows.Count; row++)
+        {
+            if (rows[row].Node is { } node) places.TryAdd(node, row);
+        }
+
+        List<CellRange> ranges = [];
+        foreach (var cell in held.Cells.Where(cell => cell.Node != null && places.ContainsKey(cell.Node))
+                     .OrderBy(cell => cell.FirstColumn).ThenBy(cell => cell.LastColumn).ThenBy(cell => places[cell.Node]))
+        {
+            var row = places[cell.Node];
+            // Rows next to each other with the same columns stay one run: a copy and a paint walk runs, not rows.
+            if (ranges.Count > 0 && ranges[^1] is var last && last.LastRow == row - 1 &&
+                last.FirstColumn == cell.FirstColumn && last.LastColumn == cell.LastColumn)
+                ranges[^1] = new CellRange(last.FirstRow, last.FirstColumn, row, last.LastColumn);
+            else
+                ranges.Add(new CellRange(row, cell.FirstColumn, row, cell.LastColumn));
+        }
+
+        SelectedCells.SetRanges(ranges);
+        ActiveRow = held.Active != null && places.TryGetValue(held.Active, out var active) ? active : -1;
+        ActiveColumn = ActiveRow >= 0 ? held.ActiveColumn : -1;
+        _anchorRow = held.Anchor != null && places.TryGetValue(held.Anchor, out var anchor) ? anchor : -1;
+        // The record edited stays edited where it stands now; gone, its edit goes - never written into another.
+        if (IsEditing)
+        {
+            if (held.Edited != null && places.TryGetValue(held.Edited, out var edited)) EditingRow = edited;
+            else CancelEdit();
+        }
+
+        RefreshCellSelectionVisuals();
+    }
 
     // Rows keep their own copy of depth, band and expander state, so a splice above them changes what they should show.
     internal void RefreshRealizedRows()
@@ -476,6 +560,9 @@ public partial class TreeDataGrid : Selector
     // case that must never silently keep a stale total.
     private void RebuildFlattener(bool sameRows = false)
     {
+        // The rows are made again - sorted, a details panel opened, the source changed: what is selected is held by its
+        // records, found again in their new places.
+        var held = HoldSelection();
         Follow(nameof(_flattener), null);
 
         // The relation is worked out ONCE, here, and asked afterwards: finding a record's children by scanning the list
@@ -520,14 +607,16 @@ public partial class TreeDataGrid : Selector
         }
 
         var flattener = _flattener;
+        RebuildRowExceptions();
+        Items.SetSource(_flattener.Rows);
+        // AFTER the items: their containers are placed anew by the time the selection is drawn on them.
         flattener.Rows.CollectionChanged += OnFlatRowsChanged;
         Follow(nameof(_flattener), () =>
         {
             flattener.Rows.CollectionChanged -= OnFlatRowsChanged;
             flattener.Clear();
         });
-        RebuildRowExceptions();
-        Items.SetSource(_flattener.Rows);
+        PutSelectionBack(held);
         if (!sameRows) RefreshTotals();
 
         // The columns' Auto widths described the OLD data. Measuring them again against the rows on screen now is the

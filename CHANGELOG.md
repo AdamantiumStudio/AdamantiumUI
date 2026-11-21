@@ -704,8 +704,9 @@ All packages share one version.
 ### Fixed
 
 - `TreeDataGrid`: a cell selected in a branch that was shut landed on the row that moved up into its place; it goes
-  with its row now. Cells selected below a branch opened or shut, the active cell and the Shift anchor move with their
-  rows.
+  with its row now. Cells selected below a branch opened or shut, the active cell, the Shift anchor and an open edit
+  move with their rows; an edit whose row went is cancelled, never written into another record. Rows made again -
+  sorted, a details panel opened, the source changed - find the selection, the active cell and the edit on their records.
 - A ribbon put away - collapsed, or in a collapsed part of the window, as when an application shows tool bars in its
   place - leaves Alt to the window: it showed key tips over the hidden strip and took the letters typed after Alt.
 - Command sources ask their commands again after `AnimationManager.Reset` even when asked before the next frame: a

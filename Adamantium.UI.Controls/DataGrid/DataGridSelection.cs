@@ -69,6 +69,16 @@ public class DataGridSelection
         return false;
     }
 
+    /// <summary>Replaces everything with <paramref name="ranges"/> - the same records found again in rows made anew.
+    /// </summary>
+    public void SetRanges(IReadOnlyList<CellRange> ranges)
+    {
+        if (_ranges.Count == 0 && ranges.Count == 0) return;
+        _ranges.Clear();
+        _ranges.AddRange(ranges);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>Replaces everything with one rectangle - a plain click.</summary>
     public void Set(CellRange range)
     {
@@ -134,10 +144,11 @@ public class DataGridSelection
     }
 
     /// <summary>Rows came in at <paramref name="index"/> - a branch opened: the cells selected below move down with
-    /// their rows, and a rectangle the rows came into is parted round them, the new rows not selected.</summary>
-    public void InsertRows(int index, int count)
+    /// their rows, and a rectangle the rows came into is parted round them, the new rows not selected. Whether any moved.
+    /// </summary>
+    public bool InsertRows(int index, int count)
     {
-        if (count <= 0 || _ranges.Count == 0) return;
+        if (count <= 0 || AllAbove(index)) return false;
 
         var kept = new List<CellRange>(_ranges.Count + 1);
         var changed = false;
@@ -160,18 +171,14 @@ public class DataGridSelection
             kept.Add(new CellRange(index + count, range.FirstColumn, range.LastRow + count, range.LastColumn));
         }
 
-        if (!changed) return;
-
-        _ranges.Clear();
-        _ranges.AddRange(kept);
-        Changed?.Invoke(this, EventArgs.Empty);
+        return Replace(kept, changed);
     }
 
     /// <summary>Rows went from <paramref name="index"/> - a branch shut: the cells selected in them go with them, those
-    /// below move up with their rows.</summary>
-    public void RemoveRows(int index, int count)
+    /// below move up with their rows. Whether any moved or went.</summary>
+    public bool RemoveRows(int index, int count)
     {
-        if (count <= 0 || _ranges.Count == 0) return;
+        if (count <= 0 || AllAbove(index)) return false;
 
         var end = index + count;
         var kept = new List<CellRange>(_ranges.Count);
@@ -191,11 +198,28 @@ public class DataGridSelection
             if (first <= last) kept.Add(new CellRange(first, range.FirstColumn, last, range.LastColumn));
         }
 
-        if (!changed) return;
+        return Replace(kept, changed);
+    }
+
+    private bool Replace(List<CellRange> kept, bool changed)
+    {
+        if (!changed) return false;
 
         _ranges.Clear();
         _ranges.AddRange(kept);
         Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    // Nothing selected at or below index: rows coming or going there move nothing.
+    private bool AllAbove(int index)
+    {
+        foreach (var range in _ranges)
+        {
+            if (range.LastRow >= index) return false;
+        }
+
+        return true;
     }
 
     /// <summary>The smallest rectangle covering everything selected - what a copy walks.</summary>

@@ -386,6 +386,67 @@ public class DataGridTests
         });
     }
 
+    // A block of rows across a branch shut keeps what lies above and below it, as one block.
+    [Test]
+    public void ABlockAcrossABranch_KeepsTheRowsAroundIt_WhenTheBranchCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.Expand(root);
+        grid.SelectCell(0, 0);
+        grid.SelectCell(3, 0, extend: true);
+
+        grid.Collapse(root);
+
+        Assert.That(grid.SelectedCells.Ranges, Is.EqualTo(new[] { new CellRange(0, 0, 1, 0) }),
+            "Root and After, the rows between gone");
+    }
+
+    // Sorted, the rows are made again: what was selected stays on its record, not on the row now in its place.
+    [Test]
+    public void ACellSelected_StaysOnItsRecord_WhenTheTableIsSorted()
+    {
+        var name = new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100), SortMemberPath = "Name" };
+        var grid = Grid(name);
+        var rows = new List<Row> { new() { Name = "C" }, new() { Name = "A" }, new() { Name = "B" } };
+        grid.ItemsSource = rows;
+        grid.SelectCell(0, 0);
+
+        grid.SortBy(name);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((Row)grid.Rows[2].Node).Name, Is.EqualTo("C"));
+            Assert.That(grid.SelectedCells.ContainsRow(2), Is.True, "C, where it stands now");
+            Assert.That(grid.SelectedCells.ContainsRow(0), Is.False);
+            Assert.That(grid.ActiveRow, Is.EqualTo(2));
+        });
+    }
+
+    // An edit open on a row a branch opens above is written into its own record, not the one moved into its place.
+    [Test]
+    public void AnEdit_IsWrittenIntoItsRecord_AfterABranchOpensAboveIt()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        Relayout(grid, width: 400);
+        Assume.That(grid.BeginEdit(1, 0), Is.True);
+        grid.CellFor(1, 0).EditedValue = "kept";
+
+        grid.Expand(root);
+        Relayout(grid, width: 400);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.EditingRow, Is.EqualTo(3), "the edit moved with its row");
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(after.Name, Is.EqualTo("kept"));
+            Assert.That(root.Children.Select(child => child.Name), Is.EqualTo(new[] { "A", "B" }), "no child written into");
+        });
+    }
+
     // Children a debugger gives only when asked: the row says it has some, they are loaded as it opens.
     private sealed class LoadedRow
     {
