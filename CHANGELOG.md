@@ -18,6 +18,10 @@ All packages share one version.
 - `MenuHeader`: the name of a section of a menu, over its rows; not a command, so it takes no focus. Styled in Fluent,
   Graphite and macOS.
 - The sandbox's Toolbars page has a tray of sections that keeps its bars, and a table's contextual bar.
+- `DropDownButton.DropDownMenu`: a menu the button - or a `SplitButton`'s arrow - drops in place of its list: rows
+  with commands of their own, rules between them, a palette, as a tool bar's buttons have. It is the button's logical
+  child, so it is themed and takes the button's data; put away by a row, Escape or a press elsewhere, it closes the
+  button, and dropped from the keyboard it takes the keyboard.
 
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as

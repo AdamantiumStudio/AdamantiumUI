@@ -5,6 +5,7 @@ using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -175,6 +176,55 @@ public class DropDownButtonTests
         Press(button, Key.DownArrow, InputModifiers.LeftAlt);
         Settle();
         Assert.That(button.IsDropDownOpen, Is.True);
+    }
+
+    // A menu in place of the list: the button drops it, a row runs its own command and puts the menu away, and the button
+    // is closed with it; the menu inherits the button's data.
+    [Test]
+    public void AButtonsMenu_DropsInPlaceOfTheList_AndARowRunsItsOwnCommand()
+    {
+        var ran = new List<object>();
+        var row = new MenuItem { Header = "Bottom", Command = new AdamantiumCommand<object>(ran.Add), CommandParameter = "Bottom" };
+        var menu = new ContextMenu { Items = { row, new Separator() } };
+        var button = Shown(new DropDownButton { Content = "Borders", DropDownMenu = menu, DataContext = "data" });
+
+        Press(button, Key.F4);
+        Settle();
+        var opened = new[] { button.IsDropDownOpen, menu.IsOpen };
+        row.Invoke();
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened, Is.EqualTo(new[] { true, true }));
+            Assert.That(ran, Is.EqualTo(new object[] { "Bottom" }));
+            Assert.That(menu.IsOpen, Is.False, "a row run puts the menu away");
+            Assert.That(button.IsDropDownOpen, Is.False, "and the button is closed with it");
+            Assert.That(menu.DataContext, Is.EqualTo("data"));
+        });
+    }
+
+    // A split button's body runs its command; its arrow drops its menu, and the menu put away closes the button.
+    [Test]
+    public void ASplitButtonsArrow_DropsItsMenu_AndTheMenuPutAwayClosesIt()
+    {
+        var body = 0;
+        var menu = new ContextMenu { Items = { new MenuItem { Header = "Yellow" } } };
+        var button = Shown(new SplitButton { Content = "Highlight", Command = new AdamantiumCommand(() => body++), DropDownMenu = menu });
+
+        Press(button, Key.Enter);
+        Press(button, Key.DownArrow, InputModifiers.LeftAlt);
+        Settle();
+        var opened = menu.IsOpen;
+        menu.IsOpen = false;
+        Settle();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(body, Is.EqualTo(1), "Enter presses the body");
+            Assert.That(opened, Is.True);
+            Assert.That(button.IsDropDownOpen, Is.False);
+        });
     }
 
     [Test]
