@@ -33,6 +33,6 @@ public interface INativePlatformSettings
     uint KeyRepeatDelay { get; }
 
     /// <summary>How long between two repeats of a held key, in milliseconds (Win32 <c>SPI_GETKEYBOARDSPEED</c>, the
-    /// Wayland seat's repeat rate).</summary>
+    /// Wayland seat's repeat rate); 0 when the user turned repeating off.</summary>
     uint KeyRepeatInterval { get; }
 }

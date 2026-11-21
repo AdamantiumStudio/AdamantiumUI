@@ -89,10 +89,10 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
     // SPI_GETKEYBOARDDELAY: 0 to 3, a quarter of a second each, from 250 ms.
     public uint KeyRepeatDelay => ReadSystemParameter(SPI.GetKeyboardDelay) is { } step ? (uint)((step + 1) * 250) : 0;
 
-    // SPI_GETKEYBOARDSPEED: 0 to 31, from about 2.5 repeats a second to about 30.
+    // SPI_GETKEYBOARDSPEED: 0 to 31, from about 2.5 repeats a second to about 30; unread, thirty a second.
     public uint KeyRepeatInterval => ReadSystemParameter(SPI.GetKeyboardSpeed) is { } step
         ? (uint)Math.Round(1000 / (2.5 + step * 27.5 / 31))
-        : 0;
+        : 33;
 
     private static int? ReadSystemParameter(SPI parameter)
     {

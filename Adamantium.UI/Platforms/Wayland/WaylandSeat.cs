@@ -184,8 +184,10 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public uint KeyRepeatDelay => (uint)Math.Max(0, repeatDelay);
 
-    // The seat says repeats a second; none means keys do not repeat, and the neutral layer keeps its own pace.
-    public uint KeyRepeatInterval => repeatRate > 0 ? (uint)Math.Round(1000.0 / repeatRate) : 0;
+    // The seat says repeats a second; a rate of 0 is the user's "keys do not repeat".
+    public uint KeyRepeatInterval => repeatRate > 0 ? (uint)RepeatStep : 0;
+
+    private int RepeatStep => Math.Max(1, 1000 / repeatRate);
 
     #endregion
 
@@ -916,11 +918,11 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         }
 
         Press(repeatCode, KeyOf(repeatCode), (uint)Environment.TickCount64, repeated: true);
-        repeatDue += 1000 / repeatRate;
+        repeatDue += RepeatStep;
 
         if (repeatDue < Environment.TickCount64)
         {
-            repeatDue = Environment.TickCount64 + 1000 / repeatRate;
+            repeatDue = Environment.TickCount64 + RepeatStep;
         }
     }
 

@@ -28,13 +28,13 @@ public static class PlatformSettings
    /// reporting 0 (or none registered) falls back to it.</summary>
    public static UInt32 HoverTime => Platform?.HoverTime is { } time and > 0 ? time : 400;
 
-   /// <summary>How long a held key waits before it repeats, in milliseconds - what anything that repeats while held
-   /// waits. 500 until a platform says otherwise.</summary>
+   /// <summary>How long a held key waits before it repeats, in milliseconds. 500 until a platform says otherwise.
+   /// </summary>
    public static UInt32 KeyRepeatDelay => Platform?.KeyRepeatDelay is { } delay and > 0 ? delay : 500;
 
-   /// <summary>How long between two repeats of a held key, in milliseconds. 33 - thirty a second - until a platform says
-   /// otherwise.</summary>
-   public static UInt32 KeyRepeatInterval => Platform?.KeyRepeatInterval is { } interval and > 0 ? interval : 33;
+   /// <summary>How long between two repeats of a held key, in milliseconds; 0 when the user turned repeating off.
+   /// 33 - thirty a second - while no platform is registered.</summary>
+   public static UInt32 KeyRepeatInterval => Platform?.KeyRepeatInterval ?? 33;
 
    /// <summary>Whether a <paramref name="delta"/> measured in <paramref name="measuredIn"/>'s space exceeds the OS drag
    /// threshold per axis, after converting to physical pixels.</summary>

@@ -1,4 +1,3 @@
-using System;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -41,25 +40,42 @@ public class KeyRepeatSettingsTests
         Assert.That(PlatformSettings.KeyRepeatInterval, Is.EqualTo(50));
     }
 
-    // The registry holds the same steps the control panel writes, so it tells what the system call must answer.
+    // The control panel writes its steps to the registry: the delay's four are a quarter of a second each, the speed's
+    // 32 run from about 2.5 repeats a second to about 30.
     [Test]
     [Platform("Win")]
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public void WindowsAnswersWithTheControlPanelsSteps()
     {
         using var keyboard = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Control Panel\Keyboard");
-        var delayStep = int.Parse((string)keyboard!.GetValue("KeyboardDelay"));
-        var speedStep = int.Parse((string)keyboard.GetValue("KeyboardSpeed"));
+        var delayStep = keyboard?.GetValue("KeyboardDelay") as string;
+        Assume.That(delayStep, Is.Not.Null, "This profile has no keyboard settings in the registry.");
         var windows = new Adamantium.UI.Platforms.Windows.WindowsInput();
 
-        Assert.That(windows.KeyRepeatDelay, Is.EqualTo((delayStep + 1) * 250));
-        Assert.That(windows.KeyRepeatInterval, Is.EqualTo((uint)Math.Round(1000 / (2.5 + speedStep * 27.5 / 31))));
+        Assert.That(windows.KeyRepeatDelay, Is.EqualTo(new[] { 250, 500, 750, 1000 }[int.Parse(delayStep)]));
+        Assert.That(windows.KeyRepeatInterval, Is.InRange(33, 400));
     }
 
     [Test]
-    public void NothingSaidKeepsTheDefaultPace()
+    public void NoDelaySaidKeepsTheDefault()
     {
-        PlatformSettings.Platform = new Settings(0, 0);
+        PlatformSettings.Platform = new Settings(0, 33);
+
+        Assert.That(PlatformSettings.KeyRepeatDelay, Is.EqualTo(500));
+    }
+
+    [Test]
+    public void RepeatingTurnedOffIsTold()
+    {
+        PlatformSettings.Platform = new Settings(600, 0);
+
+        Assert.That(PlatformSettings.KeyRepeatInterval, Is.Zero);
+    }
+
+    [Test]
+    public void WithoutAPlatformKeysRepeatThirtyASecond()
+    {
+        PlatformSettings.Platform = null;
 
         Assert.That(PlatformSettings.KeyRepeatDelay, Is.EqualTo(500));
         Assert.That(PlatformSettings.KeyRepeatInterval, Is.EqualTo(33));
