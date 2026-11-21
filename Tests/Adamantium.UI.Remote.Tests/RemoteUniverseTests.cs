@@ -170,7 +170,7 @@ public class RemoteUniverseTests
             RoutedEvent = Keyboard.KeyDownEvent
         });
         Take(_host.Keys, "Alt down");
-        _panel.RaiseEvent(new RoutedEventArgs(FocusManager.LostFocusEvent, _panel));
+        _panel.RaiseEvent(new KeyboardFocusChangedEventArgs(_panel, null) { RoutedEvent = Keyboard.LostKeyboardFocusEvent });
 
         _panel.RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Right,
             InputModifiers.LeftAlt | InputModifiers.RightMouseButton, default)
@@ -181,6 +181,22 @@ public class RemoteUniverseTests
 
         var alt = Take(_host.Keys, "Alt held again for the press");
         Assert.That(alt.Key, Is.EqualTo(Keys.LeftAlt));
+    }
+
+    // Clicked into, in the window worked in: the host hears it has the keyboard. Told as the panel HOLDS it - GotFocus
+    // comes before that, and the host told then heard it had none, the game's keys going nowhere.
+    [Test]
+    public void ThePanelFocused_TellsTheHostItHasTheKeyboard()
+    {
+        _window.SetValue(WindowBase.IsActiveProperty, true);
+
+        _panel.Focus();
+
+        var told = false;
+        while (!told && _host.Focuses.TryTake(out var hasKeyboard, Patience))
+            told = hasKeyboard;
+
+        Assert.That(told, Is.True, "the host has the keyboard");
     }
 
     // The host's process went away: the panel lets go of its surface, and input to the panel goes nowhere.

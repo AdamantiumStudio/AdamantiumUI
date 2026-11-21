@@ -5,8 +5,9 @@ namespace Adamantium.UI.Core.Data;
 /// <summary>
 /// Terse self binding: <c>{Self Background}</c> binds a target property to ANOTHER property on the SAME element (the
 /// WPF <c>{Binding RelativeSource={RelativeSource Self}}</c>). The single positional arg is the source property path.
+/// A binding like any other: it goes wherever one does.
 /// </summary>
-public class Self : MarkupExtension
+public class Self : BindingBase
 {
     [DefaultProperty]
     public string Path { get; set; }
@@ -20,26 +21,15 @@ public class Self : MarkupExtension
 
     public object ConverterParameter { get; set; }
 
-    public object FallbackValue { get; set; }
-
-    public object TargetNullValue { get; set; }
-
-    public SelfBindingExpression Apply(IAdamantiumComponent target, string propertyName,
-        ValuePriority priority = ValuePriority.Binding)
+    public override object Clone() => CopiedInto(new Self
     {
-        var expression = CreateExpression(target, target.GetProperty(propertyName));
-        expression.Priority = priority;
-        BindingEngine.Register(expression);
-        return expression;
-    }
+        Path = Path,
+        Mode = Mode,
+        UpdateSourceTrigger = UpdateSourceTrigger,
+        Converter = Converter,
+        ConverterParameter = ConverterParameter,
+    });
 
-    internal SelfBindingExpression CreateExpression(IAdamantiumComponent target, AdamantiumProperty property)
-        => new(target, property, this);
-
-    public override object ProvideObject(MarkupContext context)
-    {
-        if (context?.TargetObject is IAdamantiumComponent target && !string.IsNullOrEmpty(context.TargetPropertyName))
-            Apply(target, context.TargetPropertyName);
-        return this;
-    }
+    public override BindingExpressionBase CreateExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty) =>
+        new SelfBindingExpression(target, targetProperty, this);
 }

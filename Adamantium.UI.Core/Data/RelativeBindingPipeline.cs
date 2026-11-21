@@ -13,6 +13,17 @@ internal static class RelativeBindingPipeline
     /// step, and every binding path has to agree on what "no value" is.</summary>
     internal static readonly object Unset = AdamantiumProperty.UnsetValue;
 
+    /// <summary>The plain binding an <c>{Ancestor}</c> or a <c>{Self}</c> follows its path with, once its source is found:
+    /// what it says of the value - fallbacks, format, timing - it says through that one.</summary>
+    internal static Binding Following(BindingBase relative, string path, BindingMode mode, UpdateSourceTrigger trigger,
+        IValueConverter converter, object converterParameter) => relative.CopiedInto(new Binding(path)
+    {
+        Mode = mode,
+        UpdateSourceTrigger = trigger,
+        Converter = converter,
+        ConverterParameter = converterParameter,
+    });
+
     /// <summary>Converter -> TargetNullValue/FallbackValue -> coerce. Returns <see cref="Unset"/> when nothing usable can
     /// be produced (the caller then leaves the target at its default rather than clobbering it).</summary>
     internal static object Produce(object raw, IValueConverter converter, object converterParameter, Type targetType,

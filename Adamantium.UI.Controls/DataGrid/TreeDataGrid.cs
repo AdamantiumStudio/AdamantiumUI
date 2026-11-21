@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Specialized;
 using System.Text;
+using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core;
@@ -28,6 +30,8 @@ public partial class TreeDataGrid : Selector
 
     public TreeDataGrid()
     {
+        FindCommand = new CanvasCommand(text => Find(text as string));
+        FindPreviousCommand = new CanvasCommand(_ => FindPrevious());
         Columns.CollectionChanged += OnColumnsChanged;
         GroupDescriptions.CollectionChanged += OnGroupDescriptionsChanged;
         SortDescriptions.CollectionChanged += OnSortDescriptionsChanged;
@@ -1496,7 +1500,40 @@ public partial class TreeDataGrid : Selector
     /// here, so a page binding it and never learning what was typed would be the binding lying about the control.</summary>
     public static readonly AdamantiumProperty SearchTextProperty = AdamantiumProperty.Register(nameof(SearchText),
         typeof(String), typeof(TreeDataGrid),
-        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault));
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSearchTextChanged));
+
+    // Emptied - a field's clear button - the search is called off and its marks go: there is nothing to walk.
+    private static void OnSearchTextChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is TreeDataGrid grid && string.IsNullOrEmpty(e.NewValue as string) && !string.IsNullOrEmpty(e.OldValue as string))
+            grid.Search();
+    }
+
+    /// <summary>Finds the text given as its parameter, as Enter in the search strip does: a new text is looked for, the
+    /// same one goes on to its next match. What a search field outside the table binds Enter to.</summary>
+    public ICommand FindCommand { get; }
+
+    /// <summary>Goes back to the match before the current one - Shift+Enter in a search field outside the table.</summary>
+    public ICommand FindPreviousCommand { get; }
+
+    // The text the last search ran for.
+    private string _searched;
+
+    /// <summary>Looks for <paramref name="text"/>, or, already looking for it, goes on to its next match.</summary>
+    public void Find(string text)
+    {
+        // Against what was searched, not what is typed: a field bound to SearchText has it before its Enter.
+        if (!string.IsNullOrEmpty(text) && string.Equals(_searched, text))
+        {
+            FindNext();
+            return;
+        }
+
+        var emptied = string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(SearchText);
+        SetCurrentValue(SearchTextProperty, text);
+        // Emptied, the change has called the search off already.
+        if (!emptied) Search();
+    }
 
     /// <summary>Whether the strip that searches the table is shown. TWO-WAY by default for the same reason: the strip
     /// closes ITSELF from its own button, and a one-way binding would leave the switch that opened it standing on.</summary>
@@ -1669,6 +1706,7 @@ public partial class TreeDataGrid : Selector
     public void Search()
     {
         var sought = SearchText;
+        _searched = sought;
         _search.Begin(sought);
 
         // A RUN of its own, so a search started while another is still walking simply takes over: the old one sees a
@@ -1684,7 +1722,7 @@ public partial class TreeDataGrid : Selector
         }
 
         var items = new List<object>();
-        CollectItems(_shapedRoots, items);
+        CollectSearched(items);
         _searchItems = items;
 
         // OFF THE INTERFACE'S THREAD when every column it has to read can be read there - see
@@ -1846,6 +1884,8 @@ public partial class TreeDataGrid : Selector
     /// <summary>Forgets the search and the paint that goes with it.</summary>
     public void ClearSearch()
     {
+        // Forgotten, the same text is searched again, not stepped through matches that are gone.
+        _searched = null;
         if (_search.Count == 0 && _search.Current == 0) return;
 
         _search.Clear();
@@ -2036,6 +2076,44 @@ public partial class TreeDataGrid : Selector
             }
 
             into.Add(node);
+        }
+    }
+
+    // What a search looks through, in the order it is shown: the records of every group - a match in a shut one opens
+    // it - and, unlike a total, the children of every branch that is open, as a reader sees them under it.
+    private void CollectSearched(List<object> into)
+    {
+        var open = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        if (Rows is { } rows)
+        {
+            foreach (var row in rows)
+            {
+                if (row.IsExpanded && row.Node is not DataGridGroup and not null) open.Add(row.Node);
+            }
+        }
+
+        // Depth first, as the rows stand: a node's children come right after it.
+        var pending = new Stack<IEnumerator>();
+        if (_shapedRoots != null) pending.Push(_shapedRoots.GetEnumerator());
+        while (pending.Count > 0)
+        {
+            var at = pending.Peek();
+            if (!at.MoveNext())
+            {
+                pending.Pop();
+                continue;
+            }
+
+            switch (at.Current)
+            {
+                case DataGridGroup group:
+                    pending.Push(group.Children.GetEnumerator());
+                    break;
+                case { } node:
+                    into.Add(node);
+                    if (open.Contains(node) && ShapedChildrenOf(node) is { } children) pending.Push(children.GetEnumerator());
+                    break;
+            }
         }
     }
 
