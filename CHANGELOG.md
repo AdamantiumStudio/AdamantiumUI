@@ -8,7 +8,8 @@ All packages share one version.
 ### Added
 
 - `BooleanToVisibilityConverter` (`Adamantium.UI.Controls.Converters`), as WPF has one: true shows, false collapses, and
-  back, so a switch and what it shows bind two-way; the parameter `Invert` turns it round.
+  back, so a switch and what it shows bind two-way. `InverseBooleanToVisibilityConverter` is its inverse, for what shows
+  while the switch is off. The sandbox's own copy is gone: its pages use these.
 - `ValueConverter` and `MultiValueConverter` (`Adamantium.UI.Core.Data`): a converter that is a markup extension, written
   `Converter={Name}` with no resource declared, its properties as arguments (`{Scale Factor=2}`). Markup makes one for
   each place it is written and keeps it for every build of that place, so a template built for a thousand rows makes
