@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- An application's own markup extension works on an element's property: markup makes it, sets its arguments and gives
+  the property what its `ProvideObject` gives, told the element and the property in its `MarkupContext` - as WPF's
+  `ProvideValue` is. On an attached property too, and in a template at the template's priority, as its plain values
+  are. Before, the extension itself was assigned, through the property's owner type, so it did not build.
 - `MultiDataTrigger`, as WPF has one: its setters and actions hold only while every one of its `Conditions` holds, each
   a `{Binding}` on the host's data and the value it is to resolve to - `Condition` takes a `Binding` beside its
   `Property`. What several of a view model's values decide together is written as a trigger, not a multi-value
