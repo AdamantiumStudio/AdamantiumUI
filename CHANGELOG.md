@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `FocusManager.FocusMoved`: raised once the focus has moved and the elements were told, wherever it went - an element
+  of any window, one on a popup or in a dialog, or none - with where it came from and how. An element's own focus
+  events reach only the tree it is in, so what follows the focus everywhere, as an on-screen keyboard, had no way to
+  hear a field on a popup. A move an element makes on again is told after it, once. `FocusManager.WindowOf` says
+  which window an element is in - a popup's and a dialog's content in the window that shows it - the rule the focus
+  is remembered and restored by.
 - `ToolBar.CommandWrapping`: where the commands that do not fit on a bar's line go - `NoWrap`, to its overflow menu, as
   before; `Wrap`, onto a new line of the bar, each command whole, so a section (`ToolBarGroup`) is never split, and the
   bar grows across. The bar is then as short as its longest command; a command set always to the menu still goes

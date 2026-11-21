@@ -33,6 +33,13 @@ public static class FocusManager
 
    public static IInputComponent Focused { get; private set; }
 
+   /// <summary>Raised once the focus has moved - the elements told, the keyboard's keys going to the new one - wherever
+   /// it went: an element of any window, one on a popup or in a dialog, or none. For what follows the focus everywhere,
+   /// as an on-screen keyboard; an element's own focus events reach only the tree it is in. While a window is left,
+   /// <see cref="IsLeavingWindow"/> says the focus comes back when it is active again. Whoever listens stops when it
+   /// goes.</summary>
+   public static event EventHandler<FocusMovedEventArgs> FocusMoved;
+
    public static IInputComponent Scope { get; private set; }
 
    // Weakly keyed: a scope dropped without leaving the tree is not kept by having once held the focus.
@@ -135,6 +142,7 @@ public static class FocusManager
       var previous = Focused;
       Focused = null;
       AnnounceFocusMove(previous, null, NavigationMethod.Unspecified, InputModifiers.None);
+      TellFocusMoved(previous, null, NavigationMethod.Unspecified, InputModifiers.None);
    }
 
    /// <summary>Moves the focus out of <paramref name="element"/>, which has just been hidden or disabled, onto the nearest
@@ -226,8 +234,11 @@ public static class FocusManager
          {
             Scope = scope;
             SetFocusedElement(component, scope, navigationMethod, modifiers);
+            TellFocusMoved(previous, component, navigationMethod, modifiers);
             return true;
          }
+
+         TellFocusMoved(previous, component, navigationMethod, modifiers);
       }
       else if (Focused != null)
       {
@@ -315,6 +326,15 @@ public static class FocusManager
       }
 
       CommandManager.InvalidateRequerySuggested();
+   }
+
+   // Last, once a move is over. Moved on again meanwhile by an element told of it, it is not told: the move that took
+   // the focus further was.
+   private static void TellFocusMoved(IInputComponent previous, IInputComponent current, NavigationMethod method,
+      InputModifiers modifiers)
+   {
+      if (FocusMoved is { } moved && ReferenceEquals(Focused, current))
+         moved(null, new FocusMovedEventArgs(previous, current, method, modifiers));
    }
 
    /// <summary>The modifiers held as the focus came, as <paramref name="gotFocus"/> - a <see cref="GotFocusEvent"/> -
@@ -423,9 +443,10 @@ public static class FocusManager
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();
 
-   // The window an element is in - through the popup that shows it, for a popup's content, whose visual tree ends at
-   // its overlay root: focus in a window's popup is that window's to remember, release and restore.
-   private static IUIComponent RootOf(IUIComponent node)
+   /// <summary>The window <paramref name="node"/> is in - through the popup that shows it, for a popup's or a dialog's
+   /// content, whose visual tree ends at its overlay root: focus in a window's popup is that window's to remember,
+   /// release and restore. The element itself when it is in no window.</summary>
+   public static IUIComponent WindowOf(IUIComponent node)
    {
       while (node != null && ParentOf(node) is { } parent) node = parent;
       return node;
@@ -433,7 +454,7 @@ public static class FocusManager
 
    private static void Remember(IInputComponent element)
    {
-      if (RootOf(element) is not { } root) return;
+      if (WindowOf(element) is not { } root) return;
       FocusByRoot.Remove(root);
       FocusByRoot.Add(root, element);
    }
@@ -451,7 +472,7 @@ public static class FocusManager
 
       // It has to still be IN this window: the remembered element may have been removed with a closed tab, or moved to
       // another window entirely by a tear-off.
-      if (!ReferenceEquals(RootOf(remembered), root))
+      if (!ReferenceEquals(WindowOf(remembered), root))
          return false;
 
       return Focus(remembered);
@@ -474,7 +495,7 @@ public static class FocusManager
    /// longer receives keys - which is what stopped the newly activated window from responding at all.</summary>
    public static void LeaveWindow(IUIComponent root)
    {
-      if (Focused == null || !ReferenceEquals(RootOf(Focused), root))
+      if (Focused == null || !ReferenceEquals(WindowOf(Focused), root))
          return;
 
       Remember(Focused);
