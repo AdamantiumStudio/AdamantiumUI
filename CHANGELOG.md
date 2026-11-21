@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ItemsControl.ScrollIndexIntoView`: a scroll to an item by its index, so of equal items the one asked is shown.
+  Asked before the list is laid out - its template not built, its popup not yet shown, its viewport not known - a
+  scroll, by index or by `ScrollIntoView`, waits for the list's next layout instead of being clamped back to the top,
+  as WPF's does; a later ask replaces it.
 - `PlatformSettings.KeyRepeatDelay` and `KeyRepeatInterval`: how long a held key waits before it repeats and how
   often it then repeats, in milliseconds, as the user set them in the OS - on Windows its keyboard settings, on
   Wayland the seat's repeat info; 500 and 33 elsewhere. An interval of 0 says the user turned repeating off. A
@@ -780,6 +784,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `DropDown`'s list made a row for every item each time it opened, not the dozen it shows: its scroll viewer did
+  not hand scrolling to the list's virtualizing panel, so the panel was measured unbounded. 300 items took about a
+  second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into
+  view - on opening, on the current value far down, and as the arrows walk past the rows shown; the pointer's
+  highlight leaves the list where it is. Of two equal items the highlighted one is lit, not the first like it.
 - In Graphite every flyout that asked for `FlyoutSurfaceFill` was see-through: a tool bar's overflow menu, a table's
   column chooser, a date and time field's drop-down, a canvas tool rail's choice list. The role is a material in Fluent
   and macOS; Graphite did not answer it and the surface got a clear brush, so what was in the flyout mixed with what

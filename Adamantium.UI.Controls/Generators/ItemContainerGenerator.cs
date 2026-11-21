@@ -191,6 +191,7 @@ public class ItemContainerGenerator
         if (!ReferenceEquals(container, item))
         {
             _owner.FollowKeyboard(container, index);
+            _owner.OnContainerPlaced(container, index);
         }
 
         return container;
@@ -345,6 +346,7 @@ public class ItemContainerGenerator
             if (!ReferenceEquals(container, item))
             {
                 _owner.FollowKeyboard(container, i);
+                _owner.OnContainerPlaced(container, i);
             }
         }
 

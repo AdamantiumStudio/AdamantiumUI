@@ -187,6 +187,8 @@ public class ItemsPresenter : InputUIComponent
     {
         if (_panel is IMeasurableComponent measurable)
             measurable.Arrange(new Rect(finalSize));
+        // Every items panel is laid out here, a popup's too: a scroll asked before the list had a viewport is made now.
+        _owner?.OnItemsArranged();
         return finalSize;
     }
 }
