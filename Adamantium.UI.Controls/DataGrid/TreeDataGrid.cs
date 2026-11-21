@@ -149,6 +149,32 @@ public partial class TreeDataGrid : Selector
         set => SetValue(ChildrenPathProperty, value);
     }
 
+    /// <summary>Member saying whether a record has children, e.g. <c>HasChildren</c>, for children read only as its
+    /// branch opens - loaded then, from a debugger or a service: the expander shows without asking for them. Empty means
+    /// the children are looked at.</summary>
+    public static readonly AdamantiumProperty HasChildrenPathProperty = AdamantiumProperty.Register(
+        nameof(HasChildrenPath), typeof(String), typeof(TreeDataGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnChildrenPathChanged));
+
+    public String HasChildrenPath
+    {
+        get => GetValue<String>(HasChildrenPathProperty);
+        set => SetValue(HasChildrenPathProperty, value);
+    }
+
+    /// <summary>Member holding whether a record's branch is open, e.g. <c>IsExpanded</c>: read as the rows are built, so
+    /// a branch open in the record comes back open; written as it opens or closes - when a record may load its children.
+    /// </summary>
+    public static readonly AdamantiumProperty IsExpandedPathProperty = AdamantiumProperty.Register(
+        nameof(IsExpandedPath), typeof(String), typeof(TreeDataGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnChildrenPathChanged));
+
+    public String IsExpandedPath
+    {
+        get => GetValue<String>(IsExpandedPathProperty);
+        set => SetValue(IsExpandedPathProperty, value);
+    }
+
     /// <summary>The member a record is known BY, when the tree is a flat list joined on keys rather than records
     /// holding their own children. Set with <see cref="ParentKeyPath"/>; either alone says nothing.
     /// <para>This is the shape data arrives in from a database or a service - rows with an id and a parent id - and it
@@ -286,16 +312,18 @@ public partial class TreeDataGrid : Selector
     internal void ToggleRow(TreeRow row)
     {
         if (row is not { HasChildren: true }) return;
-        _flattener.Toggle(row);
-        RememberGroup(row);
-        RefreshRealizedRows();
+        if (row.IsExpanded) CollapseRow(row);
+        else ExpandRow(row);
     }
 
     internal void ExpandRow(TreeRow row)
     {
         if (row is not { HasChildren: true } || row.IsExpanded) return;
+        // A record is told BEFORE its children are read: one loading them as it opens has them there, a sorted table's
+        // copy of them too.
+        if (row.Node is not DataGridGroup) _setExpanded(row.Node, true);
         _flattener.Expand(row);
-        RememberGroup(row);
+        RememberOpen(row);
         RefreshRealizedRows();
     }
 
@@ -303,13 +331,142 @@ public partial class TreeDataGrid : Selector
     {
         if (row is not { IsExpanded: true }) return;
         _flattener.Collapse(row);
-        RememberGroup(row);
+        RememberOpen(row);
         RefreshRealizedRows();
     }
 
     // Any change of the flat list - a branch opened or shut, a record added or removed in the source - MOVES the rows
-    // below it, and the details panels' exceptions are indexes into that list, so they are found again here.
-    private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e) => RebuildRowExceptions();
+    // below it, and the details panels' exceptions are indexes into that list, so they are found again here. So are the
+    // selection, the active cell and the anchor: they go with their rows, and with rows taken away they go too.
+    private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        RebuildRowExceptions();
+        var moved = e.Action switch
+        {
+            NotifyCollectionChangedAction.Add when e.NewItems != null => FollowRowsIn(e.NewStartingIndex, e.NewItems.Count),
+            NotifyCollectionChangedAction.Remove when e.OldItems != null => FollowRowsOut(e.OldStartingIndex, e.OldItems.Count),
+            NotifyCollectionChangedAction.Reset or NotifyCollectionChangedAction.Move => ForgetPlaces(),
+            _ => false
+        };
+
+        if (moved) RefreshCellSelectionVisuals();
+    }
+
+    // A record read again - it has children now, or none: its row shows the expander, or not.
+    private void OnRowReread(TreeRow row) => RefreshRealizedRows();
+
+    // Whether anything selected, active or edited moved.
+    private bool FollowRowsIn(int index, int count)
+    {
+        if (index < 0 || count <= 0) return false;
+
+        var moved = SelectedCells.InsertRows(index, count);
+        if (ActiveRow >= index) { ActiveRow += count; moved = true; }
+        if (_anchorRow >= index) _anchorRow += count;
+        if (EditingRow >= index) { EditingRow += count; moved = true; }
+        return moved;
+    }
+
+    private bool FollowRowsOut(int index, int count)
+    {
+        if (index < 0 || count <= 0) return false;
+
+        var moved = SelectedCells.RemoveRows(index, count);
+        var active = RowAfterRemoving(ActiveRow, index, count);
+        moved |= active != ActiveRow;
+        ActiveRow = active;
+        _anchorRow = RowAfterRemoving(_anchorRow, index, count);
+        // The record edited went with its rows: its edit goes too, never written into the row now in its place.
+        if (EditingRow >= index)
+        {
+            var editing = RowAfterRemoving(EditingRow, index, count);
+            if (editing < 0) CancelEdit();
+            else EditingRow = editing;
+            moved = true;
+        }
+
+        return moved;
+    }
+
+    // Places no longer say which rows: nothing is left on the wrong ones.
+    private bool ForgetPlaces()
+    {
+        CancelEdit();
+        SelectedCells.Clear();
+        ActiveRow = -1;
+        _anchorRow = -1;
+        return true;
+    }
+
+    // A row's place once count rows from index went: gone with them is -1.
+    private static int RowAfterRemoving(int row, int index, int count) =>
+        row < index ? row : row < index + count ? -1 : row - count;
+
+    // A selected cell run, the active cell and the anchor, by their records, across rows made again.
+    private readonly record struct HeldCells(object Node, int FirstColumn, int LastColumn);
+
+    private sealed record HeldSelection(List<HeldCells> Cells, object Active, int ActiveColumn, object Anchor, object Edited);
+
+    private HeldSelection HoldSelection()
+    {
+        var rows = Rows;
+        if (rows == null || rows.Count == 0) return null;
+
+        List<HeldCells> cells = [];
+        foreach (var range in SelectedCells.Ranges)
+        {
+            for (var row = range.FirstRow; row <= range.LastRow && row < rows.Count; row++)
+                cells.Add(new HeldCells(rows[row].Node, range.FirstColumn, range.LastColumn));
+        }
+
+        return new HeldSelection(cells, NodeAt(rows, ActiveRow), ActiveColumn, NodeAt(rows, _anchorRow),
+            IsEditing ? NodeAt(rows, EditingRow) : null);
+    }
+
+    private static object NodeAt(FlatRowCollection rows, int row) => row >= 0 && row < rows.Count ? rows[row].Node : null;
+
+    private void PutSelectionBack(HeldSelection held)
+    {
+        var rows = Rows;
+        if (held == null || rows == null)
+        {
+            ForgetPlaces();
+            return;
+        }
+
+        // Each record's first row: a record shown twice is selected where it stands first.
+        var places = new Dictionary<object, int>(ReferenceEqualityComparer.Instance);
+        for (var row = 0; row < rows.Count; row++)
+        {
+            if (rows[row].Node is { } node) places.TryAdd(node, row);
+        }
+
+        List<CellRange> ranges = [];
+        foreach (var cell in held.Cells.Where(cell => cell.Node != null && places.ContainsKey(cell.Node))
+                     .OrderBy(cell => cell.FirstColumn).ThenBy(cell => cell.LastColumn).ThenBy(cell => places[cell.Node]))
+        {
+            var row = places[cell.Node];
+            // Rows next to each other with the same columns stay one run: a copy and a paint walk runs, not rows.
+            if (ranges.Count > 0 && ranges[^1] is var last && last.LastRow == row - 1 &&
+                last.FirstColumn == cell.FirstColumn && last.LastColumn == cell.LastColumn)
+                ranges[^1] = new CellRange(last.FirstRow, last.FirstColumn, row, last.LastColumn);
+            else
+                ranges.Add(new CellRange(row, cell.FirstColumn, row, cell.LastColumn));
+        }
+
+        SelectedCells.SetRanges(ranges);
+        ActiveRow = held.Active != null && places.TryGetValue(held.Active, out var active) ? active : -1;
+        ActiveColumn = ActiveRow >= 0 ? held.ActiveColumn : -1;
+        _anchorRow = held.Anchor != null && places.TryGetValue(held.Anchor, out var anchor) ? anchor : -1;
+        // The record edited stays edited where it stands now; gone, its edit goes - never written into another.
+        if (IsEditing)
+        {
+            if (held.Edited != null && places.TryGetValue(held.Edited, out var edited)) EditingRow = edited;
+            else CancelEdit();
+        }
+
+        RefreshCellSelectionVisuals();
+    }
 
     // Rows keep their own copy of depth, band and expander state, so a splice above them changes what they should show.
     internal void RefreshRealizedRows()
@@ -406,6 +563,9 @@ public partial class TreeDataGrid : Selector
     // case that must never silently keep a stale total.
     private void RebuildFlattener(bool sameRows = false)
     {
+        // The rows are made again - sorted, a details panel opened, the source changed: what is selected is held by its
+        // records, found again in their new places.
+        var held = HoldSelection();
         Follow(nameof(_flattener), null);
 
         // The relation is worked out ONCE, here, and asked afterwards: finding a record's children by scanning the list
@@ -432,8 +592,17 @@ public partial class TreeDataGrid : Selector
             _rawChildren = ChildrenSelector
                            ?? (_relation != null ? _relation.ChildrenOf : TreeChildResolver.ForPath(ChildrenPath));
             // Groups start shut like branches, since grouping is for folding; one the user opened comes back open (by
-            // path).
-            _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
+            // path). A record comes back as its own member says, when IsExpandedPath names one.
+            var isExpanded = TreeChildResolver.ForBoolPath(IsExpandedPath);
+            _setExpanded = TreeChildResolver.SetterForBoolPath(IsExpandedPath);
+            var hasChildren = HasChildrenPath is { Length: > 0 } hasChildrenPath
+                ? TreeChildResolver.ForBoolPath(hasChildrenPath)
+                : null;
+            // A record whose member says anew whether it has children is read again: its expander comes or goes.
+            _flattener = new TreeFlattener(ShapedChildrenOf, node => IsGroupOpen(node) || isExpanded(node),
+                static _ => false, DetailsFor,
+                hasChildren: hasChildren == null ? null : node => node is DataGridGroup ? null : hasChildren(node),
+                hasChildrenMember: HasChildrenPath is { Length: > 0 } member && !member.Contains('.') ? member : null);
             _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : roots));
             _flattener.SetRoots(_shapedRoots);
         }
@@ -443,14 +612,18 @@ public partial class TreeDataGrid : Selector
         }
 
         var flattener = _flattener;
+        RebuildRowExceptions();
+        Items.SetSource(_flattener.Rows);
+        // AFTER the items: their containers are placed anew by the time the selection is drawn on them.
         flattener.Rows.CollectionChanged += OnFlatRowsChanged;
+        flattener.RowReread += OnRowReread;
         Follow(nameof(_flattener), () =>
         {
             flattener.Rows.CollectionChanged -= OnFlatRowsChanged;
+            flattener.RowReread -= OnRowReread;
             flattener.Clear();
         });
-        RebuildRowExceptions();
-        Items.SetSource(_flattener.Rows);
+        PutSelectionBack(held);
         if (!sameRows) RefreshTotals();
 
         // The columns' Auto widths described the OLD data. Measuring them again against the rows on screen now is the
@@ -459,6 +632,7 @@ public partial class TreeDataGrid : Selector
     }
 
     private Func<object, IEnumerable> _rawChildren = static _ => null;
+    private Action<object, bool> _setExpanded = static (_, _) => { };
 
     /// <summary>The keys the rows are sorted by, in PRIORITY order: the first decides, the next breaks its ties. The
     /// collection IS the mechanism - a page states its sort here, the strip shows it, and both are looking at the one
@@ -981,9 +1155,14 @@ public partial class TreeDataGrid : Selector
 
     private bool IsGroupOpen(object node) => node is DataGridGroup group && _openGroups.Contains(group.Path);
 
-    private void RememberGroup(TreeRow row)
+    // A group by its path; a record in its own member, when IsExpandedPath names one.
+    private void RememberOpen(TreeRow row)
     {
-        if (row?.Node is not DataGridGroup group) return;
+        if (row?.Node is not DataGridGroup group)
+        {
+            if (row != null) _setExpanded(row.Node, row.IsExpanded);
+            return;
+        }
 
         if (row.IsExpanded) _openGroups.Add(group.Path);
         else _openGroups.Remove(group.Path);

@@ -339,6 +339,222 @@ public class DataGridTests
         Assert.That(grid.Rows.Count, Is.EqualTo(1), "and out again");
     }
 
+    // The selection is of rows by their place: a branch shut takes its rows away, and a cell selected in them goes with
+    // them - it must not land on the row that moved up into that place.
+    [Test]
+    public void ACellSelectedInABranch_GoesWhenTheBranchCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) },
+            new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.Expand(root);
+        grid.SelectCell(2, 1);
+
+        grid.Collapse(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.IsEmpty, Is.True, "the cell went with its row");
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.False, "not moved onto the row below the branch");
+            Assert.That(grid.ActiveRow, Is.EqualTo(-1));
+        });
+    }
+
+    // Rows opened above a selected cell push it down: it stays on its record.
+    [Test]
+    public void ACellSelectedBelowABranch_StaysOnItsRow_AsTheBranchOpensAndCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.SelectCell(1, 0);
+
+        grid.Expand(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.ContainsRow(3), Is.True, "moved down with its row");
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.False);
+            Assert.That(grid.ActiveRow, Is.EqualTo(3));
+        });
+
+        grid.Collapse(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.SelectedCells.ContainsRow(1), Is.True, "and back up");
+            Assert.That(grid.ActiveRow, Is.EqualTo(1));
+        });
+    }
+
+    // A block of rows across a branch shut keeps what lies above and below it, as one block.
+    [Test]
+    public void ABlockAcrossABranch_KeepsTheRowsAroundIt_WhenTheBranchCloses()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        grid.Expand(root);
+        grid.SelectCell(0, 0);
+        grid.SelectCell(3, 0, extend: true);
+
+        grid.Collapse(root);
+
+        Assert.That(grid.SelectedCells.Ranges, Is.EqualTo(new[] { new CellRange(0, 0, 1, 0) }),
+            "Root and After, the rows between gone");
+    }
+
+    // Sorted, the rows are made again: what was selected stays on its record, not on the row now in its place.
+    [Test]
+    public void ACellSelected_StaysOnItsRecord_WhenTheTableIsSorted()
+    {
+        var name = new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100), SortMemberPath = "Name" };
+        var grid = Grid(name);
+        var rows = new List<Row> { new() { Name = "C" }, new() { Name = "A" }, new() { Name = "B" } };
+        grid.ItemsSource = rows;
+        grid.SelectCell(0, 0);
+
+        grid.SortBy(name);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((Row)grid.Rows[2].Node).Name, Is.EqualTo("C"));
+            Assert.That(grid.SelectedCells.ContainsRow(2), Is.True, "C, where it stands now");
+            Assert.That(grid.SelectedCells.ContainsRow(0), Is.False);
+            Assert.That(grid.ActiveRow, Is.EqualTo(2));
+        });
+    }
+
+    // An edit open on a row a branch opens above is written into its own record, not the one moved into its place.
+    [Test]
+    public void AnEdit_IsWrittenIntoItsRecord_AfterABranchOpensAboveIt()
+    {
+        var (grid, root) = Tree(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        var after = new Row { Name = "After", Note = "n" };
+        grid.ItemsSource = new List<Row> { root, after };
+        Relayout(grid, width: 400);
+        Assume.That(grid.BeginEdit(1, 0), Is.True);
+        grid.CellFor(1, 0).EditedValue = "kept";
+
+        grid.Expand(root);
+        Relayout(grid, width: 400);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.EditingRow, Is.EqualTo(3), "the edit moved with its row");
+            Assert.That(grid.CommitEdit(), Is.True);
+            Assert.That(after.Name, Is.EqualTo("kept"));
+            Assert.That(root.Children.Select(child => child.Name), Is.EqualTo(new[] { "A", "B" }), "no child written into");
+        });
+    }
+
+    // A value null at one stop and an object at the next: its member says so, and the row takes the expander.
+    private sealed class FlippingRow : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _hasChildren;
+
+        public string Name { get; init; }
+        public ObservableCollection<FlippingRow> Children { get; } = new();
+
+        public bool HasChildren
+        {
+            get => _hasChildren;
+            set
+            {
+                _hasChildren = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(HasChildren)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    [Test]
+    public void ARowWhoseMemberSaysItHasChildrenNow_TakesTheExpander()
+    {
+        var row = new FlippingRow { Name = "orbit" };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ChildrenPath = "Children";
+        grid.HasChildrenPath = "HasChildren";
+        grid.ItemsSource = new List<FlippingRow> { row };
+        Assume.That(grid.Rows[0].HasChildren, Is.False);
+
+        row.HasChildren = true;
+        Assert.That(grid.Rows[0].HasChildren, Is.True, "the expander comes");
+
+        row.HasChildren = false;
+        Assert.That(grid.Rows[0].HasChildren, Is.False, "and goes");
+    }
+
+    // Children a debugger gives only when asked: the row says it has some, they are loaded as it opens.
+    private sealed class LoadedRow
+    {
+        private bool _isExpanded;
+
+        public string Name { get; init; }
+        public bool HasChildren { get; init; }
+        public int Reads { get; private set; }
+        public ObservableCollection<LoadedRow> Loaded { get; } = new();
+
+        public ObservableCollection<LoadedRow> Children
+        {
+            get
+            {
+                Reads++;
+                return Loaded;
+            }
+        }
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                _isExpanded = value;
+                if (value && Loaded.Count == 0)
+                {
+                    Loaded.Add(new LoadedRow { Name = Name + "-1" });
+                    Loaded.Add(new LoadedRow { Name = Name + "-2" });
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void ARowSaidToHaveChildren_OpensAndTakesThemAsTheyAreLoaded()
+    {
+        var root = new LoadedRow { Name = "Root", HasChildren = true };
+        var leaf = new LoadedRow { Name = "Leaf" };
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ChildrenPath = "Children";
+        grid.HasChildrenPath = "HasChildren";
+        grid.IsExpandedPath = "IsExpanded";
+        grid.ItemsSource = new List<LoadedRow> { root, leaf };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Rows[0].HasChildren, Is.True, "the expander shows");
+            Assert.That(grid.Rows[1].HasChildren, Is.False);
+            Assert.That(root.Reads, Is.Zero, "with its children not asked for");
+        });
+
+        grid.Expand(root);
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.IsExpanded, Is.True, "the record is told it opened");
+            Assert.That(grid.Rows.Select(row => ((LoadedRow)row.Node).Name), Is.EqualTo(new[] { "Root", "Root-1", "Root-2", "Leaf" }),
+                "and what it loaded then is shown under it");
+        });
+
+        grid.Collapse(root);
+        Assert.That(root.IsExpanded, Is.False, "told it closed too");
+        Assert.That(grid.Rows.Count, Is.EqualTo(2));
+
+        // Built again over the same records, the one open comes back open.
+        root.IsExpanded = true;
+        grid.ItemsSource = new List<LoadedRow> { root, leaf };
+        Assert.That(grid.Rows.Count, Is.EqualTo(4));
+    }
+
     // Addressed by ITEM, because the row being opened usually has no container - that is the case that has to work.
     [Test]
     public void ExpandingIsAddressedByItem_NotByContainer()

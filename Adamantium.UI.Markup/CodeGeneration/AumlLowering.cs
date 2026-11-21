@@ -572,15 +572,27 @@ public class AumlLowering
                             }
                             break;
                         }
+                        // Any other extension - an application's own - gives the property what its ProvideObject gives,
+                        // told the element and the property it is written on, as WPF's ProvideValue is.
                         default:
-                            var nestedName = ProcessNestedValue(extension, diagnostics, isResource);
+                            var extensionTarget = isRoot ? VariableValue.This : Variable(CurrentParent);
+                            var provided = ProvidedFor(extension, extensionTarget, propRef.Name, resolvedType, diagnostics,
+                                isResource);
+                            // An attached property goes through its owner's setter, in a template too: the owner may do
+                            // more than keep the value - ResourceContext.SetSource registers the dictionary it links.
+                            // A property of the element, inside a template, stands at the template's priority.
                             if (propRef.IsAttachedProperty)
                             {
-                                _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(elementName), nestedName));
+                                _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", extensionTarget, provided));
+                            }
+                            else if (CurrentTemplate != null && typeInfo.ImplementsInterface("IAdamantiumComponent")
+                                     && HasAdamantiumProperty(typeInfo, propRef.Name))
+                            {
+                                _writer.Add(Invoke(extensionTarget, "SetValue", Unescaped(propRef.Name), provided, Priority("Template")));
                             }
                             else
                             {
-                                _writer.Add(new AssignStep(OwnerOf(propRef), propRef.Name, nestedName));
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, provided));
                             }
                             break;
                     }
@@ -1232,8 +1244,29 @@ public class AumlLowering
         converter.Arguments.All(argument => argument.Value is AumlAstTextNode or AumlAstTypeReferenceValueNode
             || argument.Value is AumlAstMarkupExtensionNode nested && IsConverter(TypeOf(nested)) && IsConstant(nested));
 
-    private static CastValue Provided(IResolvedType type, BuildValue extension) =>
-        new(Type(type), new CallValue(extension, "ProvideObject", NullValue.Instance));
+    // What the extension's ProvideObject gives, seen as the type: told nothing, or the place it is written on.
+    private static CastValue Provided(IResolvedType type, BuildValue extension, BuildValue context = null) =>
+        new(Type(type), new CallValue(extension, "ProvideObject", context ?? NullValue.Instance));
+
+    // What an extension written on an element's property gives it: a converter as any converter is, kept for its place;
+    // any other made at each build and asked by its ProvideObject, told the element and the property, the answer seen as
+    // the property's type.
+    private BuildValue ProvidedFor(AumlAstMarkupExtensionNode extension, BuildValue target, string property,
+        IResolvedType propertyType, IDiagnosticSink diagnostics, bool isResource)
+    {
+        var type = TypeOf(extension);
+        if (IsConverter(type))
+        {
+            return ProcessNestedValue(extension, diagnostics, isResource);
+        }
+
+        var made = EmitExtension(extension, type, diagnostics, isResource);
+        var context = GenerateNextElementName("context");
+        _writer.Add(new DeclareStep(context, new NewValue(Type(MarkupContextFqn))));
+        _writer.Add(new AssignStep(Variable(context), "TargetObject", target));
+        _writer.Add(new AssignStep(Variable(context), "TargetPropertyName", Unescaped(property)));
+        return Provided(propertyType, made, Variable(context));
+    }
 
     // The extension made and its arguments set.
     private BuildValue EmitExtension(AumlAstMarkupExtensionNode extension, IResolvedType type, IDiagnosticSink diagnostics,
@@ -1309,6 +1342,7 @@ public class AumlLowering
     private const string UIComponentFqn = "global::Adamantium.UI.Core.IUIComponent";
     private const string BindingFqn = "global::Adamantium.UI.Core.Data.Binding";
     private const string MultiBindingFqn = "global::Adamantium.UI.Core.Data.MultiBinding";
+    private const string MarkupContextFqn = "global::Adamantium.UI.Core.MarkupExtensions.MarkupContext";
     private const string ValueConverterBase = "Adamantium.UI.Core.Data.ValueConverter";
     private const string MultiValueConverterBase = "Adamantium.UI.Core.Data.MultiValueConverter";
     private const string PropertyPathFqn = "global::Adamantium.UI.Core.PropertyPath";
