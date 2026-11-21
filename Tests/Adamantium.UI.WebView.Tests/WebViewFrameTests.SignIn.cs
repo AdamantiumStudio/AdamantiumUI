@@ -217,4 +217,82 @@ public partial class WebViewFrameTests
             Assert.That(asked?.IsAnswered, Is.True, "refused as the page went");
         });
     }
+
+    // What WebView's sign-in dialog stands on: a page gone on from while it still loads - a start page out on the network,
+    // the address typed over it - ends AFTER the page gone to asks to sign in, the new one not yet in. That end is not
+    // the asking page's (IsOfThePageShown), and takes nothing of its question (WebView.SignInsLoaded); answered, the page
+    // that asked is the one shown.
+    [Test]
+    public void APageStillLoading_EndsAfterTheNextOneAsksToSignIn_WhoseQuestionIsNotOfIt()
+    {
+        using var site = LocalSite.SigningIn(Inside, Anna, "Lab");
+        // The page is in at once; its script comes in pieces for six seconds, and the page is loading until it has.
+        using var loading = new LocalSite("<title>loading</title><body><script src=\"/download/slow.js\"></script></body>",
+            512 * 1024, 200);
+        string[] endedBeforeAsked = null, endedAfter = null;
+        WebViewSignInRequest asked = null;
+        bool? ofShownAtTheEnd = null, goingOnAtTheEnd = null, ofShownOnceIn = null, goingOnOnceIn = null;
+        int? askedBySite = null, askedByAnother = null, begun = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, "data:text/html,<title>start</title>", (browser, view) =>
+        {
+            view.AnswerSignIn = request =>
+            {
+                endedBeforeAsked = view.Completed.ToArray();
+                asked = request;
+                // While the site is gone to: its own origin asks of that navigation, another of the page shown.
+                begun = browser.NavigationsBegun;
+                askedBySite = browser.NavigationAsking(site.Origin);
+                askedByAnother = browser.NavigationAsking("http://127.0.0.1:1");
+                return true;
+            };
+            browser.Navigate(loading.Origin + "/");
+            Pump(() => view.Title == "loading", TimeSpan.FromSeconds(10));
+            browser.Navigate(site.Origin + "/");
+            Pump(() => view.Completed.Any(address => address.StartsWith(loading.Origin)), TimeSpan.FromSeconds(15));
+            endedAfter = view.Completed.ToArray();
+            ofShownAtTheEnd = asked == null ? null : browser.IsOfThePageShown(asked);
+            goingOnAtTheEnd = browser.IsGoingOn;
+
+            asked?.Answer(Anna);
+            Pump(() => view.Title == "inside", TimeSpan.FromSeconds(10));
+            ofShownOnceIn = asked == null ? null : browser.IsOfThePageShown(asked);
+            goingOnOnceIn = browser.IsGoingOn;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(endedBeforeAsked, Is.Not.Null, "the site asked");
+            Assert.That(endedBeforeAsked, Has.None.StartsWith(loading.Origin), "the page gone on from had not ended yet");
+            Assert.That(endedAfter, Has.Some.StartsWith(loading.Origin), "...and ended after the site asked");
+            Assert.That(ofShownAtTheEnd, Is.False, "the question is not the ended page's");
+            Assert.That(goingOnAtTheEnd, Is.True, "the page shown is one being left");
+            Assert.That(ofShownOnceIn, Is.True, "once in, the page that asked is the one shown");
+            Assert.That(goingOnOnceIn, Is.False);
+            Assert.That(askedBySite, Is.EqualTo(begun), "the site's own origin asks of the navigation to it");
+            Assert.That(askedByAnother, Is.LessThan(begun), "another origin - a frame of the page shown - asks of that page");
+        });
+    }
+
+    // A navigation that comes to no page - here a file, taken as a download - leaves nothing under way once the page has
+    // stopped loading: the page shown is the one there is, and its end takes what it asked.
+    [Test]
+    public void ANavigationToADownload_LeavesThePageShownAsItWas()
+    {
+        using var site = new LocalSite("<title>files</title>", fileBytes: 10_000);
+        bool goingOnWhileGoing = false, goingOnAfter = true;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+        {
+            Pump(() => view.Title == "files", TimeSpan.FromSeconds(10));
+            browser.Navigate(site.Origin + "/download/report.bin");
+            goingOnWhileGoing = browser.IsGoingOn;
+            Pump(() => view.Downloads.Count > 0 && !browser.IsGoingOn, TimeSpan.FromSeconds(10));
+            goingOnAfter = browser.IsGoingOn;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(goingOnWhileGoing, Is.True, "under way once begun");
+            Assert.That(goingOnAfter, Is.False, "the file taken, nothing is under way");
+        });
+    }
 }

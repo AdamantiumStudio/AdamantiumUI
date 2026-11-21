@@ -28,15 +28,7 @@ public class WebSignInScenarioTests
     public async Task ASiteAskingToSignIn_IsAnsweredInTheDialogOverThePage()
     {
         using var site = new SigningInSite("anna", "secret");
-        await using var session = await AutomationSession.LaunchAsync(
-            Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "Adamantium.UI.Sandbox.exe" : "Adamantium.UI.Sandbox"),
-            new LaunchOptions
-            {
-                FreshData = true,
-                // A real window: the mouse below comes as Windows' own messages.
-                VirtualDisplay = false,
-                Environment = { ["ADAM_UI_FONT"] = "Content/SandboxContent/Fonts/RobotoFlex-Variable.ttf" }
-            });
+        await using var session = await LaunchAsync();
 
         await session.Find(By.Id("GalleryTabs")).Find(By.Id("Web")).SelectAsync();
         await session.Find(By.Id("WebPage")).WaitForAsync();
@@ -59,10 +51,9 @@ public class WebSignInScenarioTests
             var accept = (await session.Find(By.Id("WebSignInAccept")).WaitForAsync()).Bounds;
             var besideX = page[0] + 30;
             var middleY = card[1] + card[3] / 2;
-            var app = session.Process.Id;
-            await RealMouse.MoveAsync(app, besideX, page[1] + 30, besideX, middleY);
-            await RealMouse.MoveAsync(app, besideX, middleY, card[0] + card[2] / 2, middleY);
-            await RealMouse.MoveAsync(app, card[0] + card[2] / 2, middleY, accept[0] + accept[2] / 2, accept[1] + accept[3] / 2);
+            await RealMouse.MoveAsync(session, besideX, page[1] + 30, besideX, middleY);
+            await RealMouse.MoveAsync(session, besideX, middleY, card[0] + card[2] / 2, middleY);
+            await RealMouse.MoveAsync(session, card[0] + card[2] / 2, middleY, accept[0] + accept[2] / 2, accept[1] + accept[3] / 2);
             await Task.Delay(700);
             await session.WaitForIdleAsync();
             await session.Find(By.Id("WebSignIn")).ExpectAsync(Shown);
@@ -92,5 +83,57 @@ public class WebSignInScenarioTests
         await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Hidden], Asked);
         await session.WaitForIdleAsync();
         Assert.That(site.Admitted, Is.GreaterThan(0), "let in with the right password");
+    }
+
+    // An address typed over a page still loading: the site asks, and the page gone on from ending its load a moment later
+    // takes nothing of the question - the dialog stays until it is answered.
+    [Test]
+    public async Task ASiteAskingToSignIn_OverAPageStillLoading_StaysAsked()
+    {
+        using var site = new SigningInSite("anna", "secret");
+        await using var session = await LaunchAsync();
+
+        await session.Find(By.Id("GalleryTabs")).Find(By.Id("Web")).SelectAsync();
+        await session.Find(By.Id("WebPage")).WaitForAsync();
+        await session.Find(By.Id("WebAddress")).SetValueAsync(site.LoadingPage);
+        await session.Find(By.Id("WebAddress")).PressKeysAsync("Enter");
+        // In - its document read, its script asked for - and loading that script for some three seconds.
+        await Until(() => site.IsLoadingPageIn, CefStart, "the loading page is in");
+
+        await session.Find(By.Id("WebAddress")).SetValueAsync(site.Origin + "/");
+        await session.Find(By.Id("WebAddress")).PressKeysAsync("Enter");
+        await session.Find(By.Id("WebSignIn")).WaitUntilAsync([Shown], Asked);
+        Assert.That(site.IsLoadingPageSent, Is.False, "asked while the page gone on from still loads");
+        // The page gone on from ends its load: its script sent whole, and a moment for Chromium to say so.
+        await Until(() => site.IsLoadingPageSent, Asked, "the loading page's script is sent");
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        await session.WaitForIdleAsync();
+
+        await session.Find(By.Id("WebSignIn")).ExpectAsync(Shown);
+    }
+
+    // On a desktop of its own, off the user's screen, as the generated scenarios run; the mouse still comes as Windows'
+    // own messages, posted to the window there.
+    private static Task<AutomationSession> LaunchAsync() => AutomationSession.LaunchAsync(
+        Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "Adamantium.UI.Sandbox.exe" : "Adamantium.UI.Sandbox"),
+        new LaunchOptions
+        {
+            FreshData = true,
+            VirtualDisplay = true,
+            Environment = { ["ADAM_UI_FONT"] = "Content/SandboxContent/Fonts/RobotoFlex-Variable.ttf" }
+        });
+
+    private static async Task Until(Func<bool> done, TimeSpan timeout, string what)
+    {
+        var until = DateTime.UtcNow + timeout;
+        while (!done())
+        {
+            if (DateTime.UtcNow > until)
+            {
+                Assert.Fail($"Not within {timeout.TotalSeconds} s: {what}.");
+            }
+
+            await Task.Delay(50);
+        }
     }
 }

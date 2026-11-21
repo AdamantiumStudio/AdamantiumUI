@@ -78,8 +78,22 @@ internal sealed class SigningInSite : IDisposable
                     }
                 }
 
+                var text = Encoding.ASCII.GetString(request, 0, read);
+                var path = text.Split("\r\n", 2)[0].Split(' ') is { Length: > 1 } parts ? parts[1] : "/";
+                if (path == LoadingPath)
+                {
+                    await SendLoadingPage(stream);
+                    return;
+                }
+
+                if (path == SlowScriptPath)
+                {
+                    await SendSlowScript(stream);
+                    return;
+                }
+
                 var signedIn = false;
-                foreach (var line in Encoding.ASCII.GetString(request, 0, read).Split("\r\n"))
+                foreach (var line in text.Split("\r\n"))
                 {
                     if (line.StartsWith("Authorization:", StringComparison.OrdinalIgnoreCase) &&
                         line["Authorization:".Length..].Trim() == expected)
@@ -109,5 +123,52 @@ internal sealed class SigningInSite : IDisposable
                 // The browser went, or the site stopped.
             }
         }
+    }
+
+    private const string LoadingPath = "/loading";
+    private const string SlowScriptPath = "/slow.js";
+
+    private int scriptsAsked;
+    private int scriptsSent;
+
+    /// <summary>A page asking nothing that is in at once and loading for a few seconds after: its script comes in pieces.
+    /// </summary>
+    public string LoadingPage => Origin + LoadingPath;
+
+    /// <summary>Whether the loading page's script was asked for: the page is in, its document read.</summary>
+    public bool IsLoadingPageIn => Volatile.Read(ref scriptsAsked) > 0;
+
+    /// <summary>Whether the loading page's script was sent whole: the page's load is ending.</summary>
+    public bool IsLoadingPageSent => Volatile.Read(ref scriptsSent) > 0;
+
+    private async Task SendLoadingPage(NetworkStream stream)
+    {
+        var page = $"<title>loading</title><body><script src=\"{SlowScriptPath}\"></script></body>";
+        await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n" +
+                                                        $"Content-Length: {page.Length}\r\nConnection: close\r\n\r\n{page}"),
+            stop.Token);
+    }
+
+    // Thirty-one pieces a fifth of a second apart: the page goes on loading for six seconds, room for a slow machine to
+    // ask the next page's question meanwhile.
+    private async Task SendSlowScript(NetworkStream stream)
+    {
+        Interlocked.Increment(ref scriptsAsked);
+        const int pieces = 31;
+        var piece = Encoding.ASCII.GetBytes(new string(' ', 1023) + "\n");
+        await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/javascript\r\n" +
+                                                        $"Content-Length: {pieces * piece.Length}\r\nConnection: close\r\n\r\n"),
+            stop.Token);
+        for (var i = 0; i < pieces; i++)
+        {
+            if (i > 0)
+            {
+                await Task.Delay(200, stop.Token);
+            }
+
+            await stream.WriteAsync(piece, stop.Token);
+        }
+
+        Interlocked.Increment(ref scriptsSent);
     }
 }
