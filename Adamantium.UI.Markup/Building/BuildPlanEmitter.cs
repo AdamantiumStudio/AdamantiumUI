@@ -34,8 +34,29 @@ public static class BuildPlanEmitter
             CastValue cast => $"({cast.Type.QualifiedName}){Print(cast.Inner)}",
             TypeOfValue typeOf => $"typeof({typeOf.Type.QualifiedName})",
             NameOfValue nameOf => $"nameof({Print(nameOf.Member)})",
+            SharedValue shared => $"{shared.Step.Name}()",
             _ => throw new NotSupportedException($"A build value the emitter does not know: {value.GetType().Name}")
         };
+    }
+
+    /// <summary>Writes the plan's shared values as members of the generated class: each a static field, filled by its
+    /// maker the first time it is read - once, whichever thread reads it first.</summary>
+    public static void EmitMembers(BuildPlan plan, TextGenerator text)
+    {
+        foreach (var shared in plan.SharedValues)
+        {
+            var type = shared.Type.QualifiedName;
+            text.NewLine();
+            text.WriteLine($"private static {type} _{shared.Name};");
+            text.NewLine();
+            text.WriteLine($"private static {type} {shared.Name}() =>");
+            text.WriteLine($"    global::System.Threading.LazyInitializer.EnsureInitialized(ref _{shared.Name}, Make_{shared.Name});");
+            text.NewLine();
+            text.WriteLine($"private static {type} Make_{shared.Name}()");
+            text.WriteOpenBraceAndIndent();
+            Emit(shared, text);
+            text.UnindentAndWriteCloseBrace();
+        }
     }
 
     private static void Emit(BuildStep step, TextGenerator text)

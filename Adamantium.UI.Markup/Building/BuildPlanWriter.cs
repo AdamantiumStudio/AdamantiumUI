@@ -25,6 +25,12 @@ internal sealed class BuildPlanWriter
         _scopes.Push(scope);
     }
 
+    // Writes into a scope kept elsewhere - a shared value, which the plan holds outside its body.
+    public void OpenAside(BuildScope scope)
+    {
+        _scopes.Push(scope);
+    }
+
     public void Close()
     {
         _scopes.Pop();

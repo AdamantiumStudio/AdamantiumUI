@@ -51,7 +51,7 @@
         <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,120,16,0" Width="280" Padding="10"
                 Background="#CC202020"
                 IsHitTestVisible="False"
-                Visibility="{Binding DiagnosticsOpen, Converter={conv:BoolToVisibilityConverter}}">
+                Visibility="{Binding DiagnosticsOpen, Converter={BooleanToVisibilityConverter}}">
             <TextBlock FontSize="13" Foreground="LightGreen" TextWrapping="WrapBySymbols" Text="diagnostics…">
                 <TextBlock.Behaviors>
                     <behaviors:DiagnosticsOverlayBehavior/>
@@ -125,7 +125,7 @@
                                            Margin="8,0,0,0"
                                            VerticalAlignment="Center"
                                            Foreground="{ResourceReference SystemFillColorCaution}"
-                                           Visibility="{Binding IsUnsupported, Converter={conv:BoolToVisibilityConverter}}"
+                                           Visibility="{Binding IsUnsupported, Converter={BooleanToVisibilityConverter}}"
                                            ToolTipService.ToolTip="{Localize MainStrings.NotSupportedOnThisGpu}"
                                            ToolTipService.ShowOnDisabled="True"/>
                                 </StackPanel>

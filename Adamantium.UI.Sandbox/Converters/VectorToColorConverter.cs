@@ -8,14 +8,14 @@ namespace Adamantium.UI.Sandbox.Converters;
 
 /// <summary>Shows a color kept as a <see cref="Vector3F"/> - a light's, 0 to 1 per channel - in a color picker, and
 /// hands the picked <see cref="Color"/> back the same way.</summary>
-public class VectorToColorConverter : IValueConverter
+public class VectorToColorConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         return value is Vector3F vector ? new Color(vector) : AdamantiumProperty.UnsetValue;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         return value is Color color ? color.ToVector3() : null;
     }

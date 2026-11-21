@@ -221,9 +221,11 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteLine($@"public {className}() : base(""{themeName}"")");
         textGenerator.WriteOpenBraceAndIndent();
         
-        BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        var plan = AumlLowering.Lower(container, diagnostics);
+        BuildPlanEmitter.Emit(plan, textGenerator);
 
         textGenerator.UnindentAndWriteCloseBrace();
+        BuildPlanEmitter.EmitMembers(plan, textGenerator);
         textGenerator.UnindentAndWriteCloseBrace();
 
         return textGenerator;
@@ -266,10 +268,12 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         textGenerator.WriteLine($"public {className}()");
         textGenerator.WriteOpenBraceAndIndent();
 
-        BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        var plan = AumlLowering.Lower(container, diagnostics);
+        BuildPlanEmitter.Emit(plan, textGenerator);
         WriteTrack(textGenerator, container);
 
         textGenerator.UnindentAndWriteCloseBrace();
+        BuildPlanEmitter.EmitMembers(plan, textGenerator);
         textGenerator.UnindentAndWriteCloseBrace();
 
         return textGenerator;
@@ -321,9 +325,11 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         }
 
         textGenerator.WriteOpenBraceAndIndent();
-        BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        var plan = AumlLowering.Lower(container, diagnostics);
+        BuildPlanEmitter.Emit(plan, textGenerator);
         WriteTrack(textGenerator, container);
         textGenerator.UnindentAndWriteCloseBrace();
+        BuildPlanEmitter.EmitMembers(plan, textGenerator);
         textGenerator.UnindentAndWriteCloseBrace();
 
         return textGenerator;
@@ -429,13 +435,15 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
         textGenerator.WriteOpenBraceAndIndent();
 
-        BuildPlanEmitter.Emit(AumlLowering.Lower(container, diagnostics), textGenerator);
+        var plan = AumlLowering.Lower(container, diagnostics);
+        BuildPlanEmitter.Emit(plan, textGenerator);
         if (entityType != EntityType.ApplicationBlueprint)
         {
             WriteTrack(textGenerator, container);
         }
 
         textGenerator.UnindentAndWriteCloseBrace();
+        BuildPlanEmitter.EmitMembers(plan, textGenerator);
         textGenerator.UnindentAndWriteCloseBrace();
 
         return textGenerator;

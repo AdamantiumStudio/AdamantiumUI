@@ -971,8 +971,8 @@ public class BindingExpression : BindingExpressionBase
 
    // Converted-value cache weakly keyed by source object: one instance per item across rebinds, re-converted when the
    // raw input or the converter changes. Value-type sources convert directly. ONE entry per slot, the converter kept in
-   // it rather than in the key: markup that makes a converter per element (Converter={conv:X}) handed every realized
-   // element a new key, and each source kept every brush ever converted for it - thousands a visit.
+   // it rather than in the key: a converter made per element handed every realized element a new key, and each source
+   // kept every brush ever converted for it - thousands a visit.
    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object,
       Dictionary<(Type, string, object, CultureInfo), (IValueConverter Converter, object Raw, object Converted)>> _convertCache = new();
 

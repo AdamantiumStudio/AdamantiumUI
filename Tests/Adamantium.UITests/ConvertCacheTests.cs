@@ -35,7 +35,7 @@ public class ConvertCacheTests
         return border;
     }
 
-    // Converter={conv:ToBrush} makes a converter per element. Each was a key of its own, so every element ever realized
+    // A converter made per element was a key of its own each time, so every element ever realized
     // for an item left its brush with the item - thousands a visit to a page of swatches.
     [Test]
     public void AConverterMadePerElement_DoesNotPileUpConvertedValues()

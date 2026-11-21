@@ -152,7 +152,7 @@
                                    Value="{Binding AuraDetail, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                 </StackPanel>
                 <CheckBox Content="{Localize BrushesStrings.Palette}" IsChecked="{Binding AuraPalette, Mode=TwoWay}" MarginBottom="6"/>
-                <StackPanel Orientation="Vertical" Visibility="{Binding AuraPalette, Converter={conv:BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Vertical" Visibility="{Binding AuraPalette, Converter={BooleanToVisibilityConverter}}">
                     <TextBlock x:Name="FourColorsLabel" Text="{Localize BrushesStrings.FourColors}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=FourColorsLabel}" Orientation="Horizontal">
                         <ColorPickerButton AutomationProperties.Name="1" Width="48" Height="32" SelectedColor="{Binding AuraColor1, Mode=TwoWay}" MarginRight="8"/>

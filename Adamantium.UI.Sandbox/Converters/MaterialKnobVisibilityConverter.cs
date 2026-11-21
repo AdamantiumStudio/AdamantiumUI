@@ -9,9 +9,9 @@ namespace Adamantium.UI.Sandbox.Converters;
 /// <summary>Shows a material's knob only where it does something - a control that moves and changes nothing is worse
 /// than one that is not there. Keyed by the KNOB rather than by the material, unlike its siblings here: which material
 /// reads which number is a fact about the shaders, and it belongs in one place.</summary>
-public class MaterialKnobVisibilityConverter : IValueConverter
+public class MaterialKnobVisibilityConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var glass = value is MaterialType.LiquidGlass;
         var velvet = value is MaterialType.Velvet;
@@ -40,5 +40,5 @@ public class MaterialKnobVisibilityConverter : IValueConverter
         return visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
 }

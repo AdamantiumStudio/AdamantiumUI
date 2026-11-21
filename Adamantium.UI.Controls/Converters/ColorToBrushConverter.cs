@@ -9,11 +9,11 @@ namespace Adamantium.UI.Controls.Converters;
 
 /// <summary>A color into a new brush per binding, and back, so no shared brush gets recolored; a null color leaves the
 /// target to the theme.</summary>
-public class ColorToBrushConverter : IValueConverter
+public class ColorToBrushConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is Color color ? new SolidColorBrush(color) : AdamantiumProperty.UnsetValue;
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is SolidColorBrush brush ? brush.Color : null;
 }

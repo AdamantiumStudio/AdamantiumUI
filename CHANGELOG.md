@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `BooleanToVisibilityConverter` (`Adamantium.UI.Controls.Converters`), as WPF has one: true shows, false collapses, and
+  back, so a switch and what it shows bind two-way. `InverseBooleanToVisibilityConverter` is its inverse, for what shows
+  while the switch is off. The sandbox's own copy is gone: its pages use these.
+- `ValueConverter` and `MultiValueConverter` (`Adamantium.UI.Core.Data`): a converter that is a markup extension, written
+  `Converter={Name}` with no resource declared, its properties as arguments (`{Scale Factor=2}`). Markup makes one for
+  each place it is written and keeps it for every build of that place, so a template built for a thousand rows makes
+  none for them; given anything but constants - text, a type, a converter given only such - it is made at each build,
+  a static member read then. A converter keeps no state between calls. The designer's loader keeps them the same way.
+
 - `ToolBarTray` and `ToolBar`: an application's tool bars in rows, each a batch of commands - any controls, drawn as the
   theme draws them - shown and hidden as a whole. A bar stands by its `Band` and `BandIndex`, which bind two-way so an
   application keeps its layout. Its grip moves it to another place of its row, another row, a new row above the first
@@ -506,6 +515,10 @@ All packages share one version.
   later keeps the floor without the ink being recorded again. An arrow's heads grow with its shaft.
 
 ### Changed
+
+- A type written in braces must be a markup extension: `{Name}` of any other type was made with `new` at every build;
+  the build now reports it. The library's converters and the sandbox's derive
+  from `ValueConverter` or `MultiValueConverter`.
 
 - A `NodeGraph` bound to an application's nodes follows them without walking the whole plane for each: a node put in
   draws only its own wires, a wire made or cut or a socket added only its own node's lines, and the host's own changes

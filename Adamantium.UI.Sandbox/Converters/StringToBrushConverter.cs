@@ -10,11 +10,11 @@ namespace Adamantium.UI.Sandbox.Converters;
 /// string can target a Brush property such as <c>Border.Background</c>. A plain binding does no string-&gt;Brush type
 /// conversion, so without this the bound tile stays unpainted. Uses the same <see cref="TypeParser"/> the AUML parser
 /// uses for literal brush values, so bound and literal colors resolve identically.</summary>
-public sealed class StringToBrushConverter : IValueConverter
+public sealed class StringToBrushConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         => value is string s && !string.IsNullOrWhiteSpace(s) ? TypeParser.Parse<Brush>(s) : null;
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => (value as SolidColorBrush)?.Color.ToString();
 }

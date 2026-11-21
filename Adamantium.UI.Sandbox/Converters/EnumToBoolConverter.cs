@@ -7,16 +7,16 @@ namespace Adamantium.UI.Sandbox.Converters;
 
 /// <summary>Checks the toggle whose ConverterParameter names the bound value - an enum member, a string, a number - and
 /// writes it back when checked; lets a row of buttons drive one choice. Unchecking writes nothing.</summary>
-public class EnumToBoolConverter : IValueConverter
+public class EnumToBoolConverter : ValueConverter
 {
     /// <inheritdoc/>
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
         value != null
         && parameter is string wanted
         && string.Equals(value.ToString(), wanted, StringComparison.OrdinalIgnoreCase);
 
     /// <inheritdoc/>
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is not true || parameter is not string wanted) return AdamantiumProperty.UnsetValue;
 

@@ -8,10 +8,10 @@ namespace Adamantium.UI.Sandbox.Converters;
 
 /// <summary>Shows the element whose ConverterParameter names the bound enum value and collapses the rest; works for any
 /// enum.</summary>
-public class EnumVisibilityConverter : IValueConverter
+public class EnumVisibilityConverter : ValueConverter
 {
     /// <inheritdoc/>
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var wanted = parameter as string;
         var visible = value != null
@@ -21,5 +21,5 @@ public class EnumVisibilityConverter : IValueConverter
     }
 
     /// <inheritdoc/>
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
 }
