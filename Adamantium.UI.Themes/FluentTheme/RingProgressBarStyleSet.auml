@@ -29,9 +29,7 @@
                                 Fill="{ThemeResource AccentFillColorDefault}"
                                 RingThickness="{TemplateBinding RingThickness}"
                                 EllipseType="Sector"
-                                StartAngle="0"
-                                SweepAngle="0"
-                                RenderTransformOrigin="0.5,0.5"/>
+                                SweepAngle="0"/>
                         <TextBlock x:Name="PART_ValueText"
                                 Text="{TemplateBinding ValueText}"
                                 Visibility="Collapsed"

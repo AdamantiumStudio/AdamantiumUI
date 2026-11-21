@@ -1,4 +1,3 @@
-using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Core.Media;
@@ -7,7 +6,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// The ring's native sweep is clockwise (y down), so CounterClockwise is the direction that gets the vertical flip.
+// The ring's arc is placed by its own angles: it starts at StartPosition and sweeps Direction's way round, a negative
+// sweep counterclockwise - no transform turning or mirroring it.
 [TestFixture]
 public class RingProgressBarDirectionTests
 {
@@ -21,45 +21,62 @@ public class RingProgressBarDirectionTests
         return result;
     });
 
-    private static Ellipse Ring(SweepDirection direction, RingStartPosition start = RingStartPosition.Right)
+    private static RingProgressBar Ring(SweepDirection direction, RingStartPosition start, double value = 25)
     {
-        var ring = new RingProgressBar { Direction = direction, StartPosition = start, Value = 63 };
+        var ring = new RingProgressBar { Direction = direction, StartPosition = start, Value = value };
         ring.Template = RingTemplate();
-        return _indicator;
+        return ring;
     }
 
-    [Test]
-    public void Clockwise_IsTheNativeWinding_AndIsNotMirrored()
+    [TestCase(RingStartPosition.Top, SweepDirection.Clockwise, 270, 90)]
+    [TestCase(RingStartPosition.Right, SweepDirection.Clockwise, 0, 90)]
+    [TestCase(RingStartPosition.Bottom, SweepDirection.Clockwise, 90, 90)]
+    [TestCase(RingStartPosition.Left, SweepDirection.Clockwise, 180, 90)]
+    [TestCase(RingStartPosition.Top, SweepDirection.CounterClockwise, 270, -90)]
+    [TestCase(RingStartPosition.Right, SweepDirection.CounterClockwise, 0, -90)]
+    [TestCase(RingStartPosition.Bottom, SweepDirection.CounterClockwise, 90, -90)]
+    [TestCase(RingStartPosition.Left, SweepDirection.CounterClockwise, 180, -90)]
+    public void TheArc_StartsAtItsPosition_AndSweepsItsWay(RingStartPosition start, SweepDirection direction,
+        double startAngle, double sweepAngle)
     {
-        var arc = Ring(SweepDirection.Clockwise);
+        Ring(direction, start);
 
-        Assert.That(arc.RenderTransform, Is.Not.Null, "the arc is placed by a transform");
-        Assert.That(arc.RenderTransform.ScaleY, Is.EqualTo(1.0).Within(0.001),
-            "0..90 already sweeps downward from 3 o'clock - mirroring it would draw the other direction");
-    }
-
-    [Test]
-    public void CounterClockwise_IsTheMirroredOne()
-    {
-        var arc = Ring(SweepDirection.CounterClockwise);
-
-        Assert.That(arc.RenderTransform.ScaleY, Is.EqualTo(-1.0).Within(0.001),
-            "the arc cannot sweep backwards, so the opposite direction is a vertical flip");
-    }
-
-    // The flip and the rotation are independent: the start position must not change which direction is mirrored, and the
-    // mirror must not move the start (3 o'clock sits ON the flip axis, which is why this composition works at all).
-    [Test]
-    public void TheStartPositionDoesNotChangeWhichDirectionIsMirrored()
-    {
         Assert.Multiple(() =>
         {
-            Assert.That(Ring(SweepDirection.Clockwise, RingStartPosition.Top).RenderTransform.ScaleY,
-                Is.EqualTo(1.0).Within(0.001));
-            Assert.That(Ring(SweepDirection.CounterClockwise, RingStartPosition.Top).RenderTransform.ScaleY,
-                Is.EqualTo(-1.0).Within(0.001));
-            Assert.That(Ring(SweepDirection.Clockwise, RingStartPosition.Top).RenderTransform.RotationAngle,
-                Is.EqualTo(270.0).Within(0.001), "and the start rotation is the same whichever way it winds");
+            Assert.That(_indicator.StartAngle, Is.EqualTo(startAngle));
+            Assert.That(_indicator.SweepAngle, Is.EqualTo(sweepAngle));
+            Assert.That(_indicator.RenderTransform, Is.Null, "nothing turns or mirrors it");
+        });
+    }
+
+    // Full is the whole ring either way; empty is nothing, 0 and not -0.
+    [TestCase(SweepDirection.Clockwise, 100, 360)]
+    [TestCase(SweepDirection.CounterClockwise, 100, -360)]
+    [TestCase(SweepDirection.CounterClockwise, 0, 0)]
+    public void FullAndEmpty(SweepDirection direction, double value, double sweepAngle)
+    {
+        Ring(direction, RingStartPosition.Top, value);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_indicator.SweepAngle, Is.EqualTo(sweepAngle));
+            Assert.That(double.IsNegative(_indicator.SweepAngle), Is.EqualTo(sweepAngle < 0), "its sign");
+        });
+    }
+
+    // Changed after the template is applied, the arc follows at once.
+    [Test]
+    public void ChangingThePositionOrTheWay_MovesTheArc()
+    {
+        var ring = Ring(SweepDirection.Clockwise, RingStartPosition.Right);
+
+        ring.StartPosition = RingStartPosition.Top;
+        ring.Direction = SweepDirection.CounterClockwise;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_indicator.StartAngle, Is.EqualTo(270));
+            Assert.That(_indicator.SweepAngle, Is.EqualTo(-90));
         });
     }
 }

@@ -14,7 +14,6 @@ namespace Adamantium.UI.Controls;
 public class RingProgressBar : RangeBase
 {
     private Ellipse _indicator;      // PART_Indicator - the accent arc swept to Percentage
-    private Transform _startRotate;  // rotates the arc so its 0% end lands at StartPosition
 
     public static readonly AdamantiumProperty RingThicknessProperty = AdamantiumProperty.Register(nameof(RingThickness),
         typeof(double), typeof(RingProgressBar), new PropertyMetadata(5.0, PropertyMetadataOptions.AffectsRender));
@@ -80,14 +79,6 @@ public class RingProgressBar : RangeBase
     {
         base.OnApplyTemplate();
         _indicator = GetTemplateChild("PART_Indicator") as Ellipse;
-        if (_indicator != null)
-        {
-            // The arc sweeps from angle 0 (at 3 o'clock) clockwise, and the transform places it: a rotation puts the 0%
-            // end at StartPosition, and a vertical flip (ScaleY = -1) reverses the winding for CounterClockwise.
-            _startRotate = new Transform();
-            _indicator.RenderTransform = _startRotate;
-        }
-        ApplyArcTransform();
         UpdateIndicator();
     }
 
@@ -98,27 +89,12 @@ public class RingProgressBar : RangeBase
 
     private static void OnStartPositionChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
-        if (d is RingProgressBar r) r.ApplyArcTransform();
+        if (d is RingProgressBar r) r.UpdateIndicator();
     }
 
     private static void OnDirectionChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
-        if (d is RingProgressBar r) r.ApplyArcTransform();
-    }
-
-    // Rotate the arc's 0% end (natively 3 o'clock) to StartPosition; flip vertically for CounterClockwise, since the
-    // native winding is clockwise with y down.
-    private void ApplyArcTransform()
-    {
-        if (_startRotate == null) return;
-        _startRotate.RotationAngle = StartPosition switch
-        {
-            RingStartPosition.Right => 0.0,
-            RingStartPosition.Bottom => 90.0,
-            RingStartPosition.Left => 180.0,
-            _ => 270.0,   // Top
-        };
-        _startRotate.ScaleY = Direction == SweepDirection.CounterClockwise ? -1.0 : 1.0;
+        if (d is RingProgressBar r) r.UpdateIndicator();
     }
 
     // Round to a square: the side is whichever of Width/Height the consumer set (both -> the smaller; neither -> the MinWidth
@@ -140,17 +116,24 @@ public class RingProgressBar : RangeBase
         return square;
     }
 
-    // Sweep the arc to Percentage and refresh the center label. The arc is always [start 0, sweep fraction*360];
-    // StartPosition (rotation) and Direction (flip) are handled by the transform. Size-independent, so - unlike a linear
-    // fill - this needs no arrange.
+    // Sweep the arc to Percentage from StartPosition, Direction its way round, and refresh the center label.
+    // Size-independent, so - unlike a linear fill - this needs no arrange.
     private void UpdateIndicator()
     {
         var fraction = Math.Clamp(Percentage, 0.0, 1.0);
         ValueText = $"{Math.Round(fraction * 100)}%";
 
         if (_indicator == null) return;
-        _indicator.StartAngle = 0;
-        _indicator.SweepAngle = fraction * 360.0;
+        _indicator.StartAngle = StartPosition switch
+        {
+            RingStartPosition.Right => 0.0,
+            RingStartPosition.Bottom => 90.0,
+            RingStartPosition.Left => 180.0,
+            _ => 270.0,   // Top
+        };
+        var way = Direction == SweepDirection.CounterClockwise ? -1.0 : 1.0;
+        // Nothing swept is 0 either way, not -0.
+        _indicator.SweepAngle = fraction == 0 ? 0 : way * fraction * 360.0;
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ProgressBarAutomationPeer(this);
