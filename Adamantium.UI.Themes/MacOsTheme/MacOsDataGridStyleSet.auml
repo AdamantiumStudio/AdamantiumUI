@@ -641,6 +641,11 @@
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
                                     Value="{ObservableResource SystemFillColorSuccess}"/>
                         </PropertyTrigger>
+                        <!-- A value another than it was - a debugger's values from one stop to the next. -->
+                        <PropertyTrigger Property="State" Value="Changed">
+                            <Setter TargetName="PART_ContentPresenter" Property="Foreground"
+                                    Value="{ThemeResource AccentFillColorDefault}"/>
+                        </PropertyTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
