@@ -1,4 +1,5 @@
 ﻿using Adamantium.UI.Markup.AST;
+using System.Globalization;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.Building;
 using Adamantium.UI.Markup.Localization;
@@ -1782,6 +1783,20 @@ public class AumlLowering
                 if (value.GetTextValue()?.Trim() is { Length: > 0 } immediate)
                 {
                     _writer.Add(new AssignStep(binding, "IsImmediate", new LiteralValue(immediate.ToLowerInvariant())));
+                }
+
+                break;
+            // A wait before writing back: a MultiBinding writes nothing back, so it has none.
+            case "Delay" when !isMulti:
+                var delay = value.GetTextValue()?.Trim();
+                if (int.TryParse(delay, NumberStyles.None, CultureInfo.InvariantCulture, out var milliseconds))
+                {
+                    _writer.Add(new AssignStep(binding, "Delay",
+                        new LiteralValue(milliseconds.ToString(CultureInfo.InvariantCulture))));
+                }
+                else
+                {
+                    diagnostics.ReportError(Metadata.ClassName, MarkupMessages.DelayNotMilliseconds(kind, delay), value);
                 }
 
                 break;

@@ -72,6 +72,7 @@
     <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: тип '{type}' не найден."/>
     <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: тип Stop '{type}' не найден."/>
     <Phrase Key="ConverterInvalid" Text="{binding}: Converter должен быть ресурсом или расширением разметки конвертера."/>
+    <Phrase Key="DelayNotMilliseconds" Text="{binding}: Delay - целое число миллисекунд, а не '{delay}'."/>
     <Phrase Key="AncestorUnknownArgument" Text="Ancestor: неизвестный аргумент '{argument}'."/>
     <Phrase Key="SelfUnknownArgument" Text="Self: неизвестный аргумент '{argument}'."/>
     <Phrase Key="UnknownBindingProperty" Text="Неизвестное свойство привязки '{name}'"/>
