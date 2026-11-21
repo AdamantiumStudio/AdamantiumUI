@@ -31,7 +31,7 @@ public partial class TreeDataGrid : Selector
     public TreeDataGrid()
     {
         FindCommand = new CanvasCommand(text => Find(text as string));
-        FindPreviousCommand = new CanvasCommand(_ => FindPrevious());
+        FindPreviousCommand = new CanvasCommand(text => FindPrevious(text as string));
         Columns.CollectionChanged += OnColumnsChanged;
         GroupDescriptions.CollectionChanged += OnGroupDescriptionsChanged;
         SortDescriptions.CollectionChanged += OnSortDescriptionsChanged;
@@ -1513,7 +1513,8 @@ public partial class TreeDataGrid : Selector
     /// same one goes on to its next match. What a search field outside the table binds Enter to.</summary>
     public ICommand FindCommand { get; }
 
-    /// <summary>Goes back to the match before the current one - Shift+Enter in a search field outside the table.</summary>
+    /// <summary>Goes back to the match before the current one - Shift+Enter in a search field outside the table. Given a
+    /// text not searched yet, it searches it first, as <see cref="FindCommand"/> does.</summary>
     public ICommand FindPreviousCommand { get; }
 
     // The text the last search ran for.
@@ -1533,6 +1534,14 @@ public partial class TreeDataGrid : Selector
         SetCurrentValue(SearchTextProperty, text);
         // Emptied, the change has called the search off already.
         if (!emptied) Search();
+    }
+
+    /// <summary>Goes back to the match before the current one, or, given a text not searched yet, looks for it - an
+    /// empty one calling the search off, as <see cref="Find"/> does. No text at all only steps back.</summary>
+    public void FindPrevious(string text)
+    {
+        if (text == null || string.Equals(_searched, text)) FindPrevious();
+        else Find(text);
     }
 
     /// <summary>Whether the strip that searches the table is shown. TWO-WAY by default for the same reason: the strip

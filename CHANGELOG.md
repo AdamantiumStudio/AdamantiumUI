@@ -34,7 +34,9 @@ All packages share one version.
 - `TreeDataGrid.FindCommand` and `FindPreviousCommand`, and `Find(text)`: a search field outside the table binds its
   Enter to them - a new text is searched, the same one goes on to its next match, Shift+Enter back - with the table's
   own marks and steps, no strip of its own. A field bound to `SearchText` searches on its Enter all the same, and
-  emptied - its clear button - takes the marks away. The strip's Enter goes the same way.
+  emptied - its clear button - takes the marks away. The strip's Enter goes the same way. `FindPreviousCommand` takes
+  the text too: a "previous" button pressed on a text not searched yet searches it, as "next" does, rather than stepping
+  through the old text's matches.
 - `TreeDataGrid.HasChildrenPath` and `IsExpandedPath`: a record says it has children without giving them, and is told
   as its branch opens or closes, so children a debugger or a service gives only when asked are loaded then and shown as
   they come; a record open in its member comes back open when the rows are built again, and one whose member says anew
