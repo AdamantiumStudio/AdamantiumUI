@@ -8,9 +8,9 @@ namespace Adamantium.UI.Sandbox.Converters;
 
 /// <summary>Shows a noise-panel control group only for noise types that use it. Keys: "Scale", "Seed" (all but
 /// CombustibleVoronoi), "Fbm" (FBM types), "FirePalette" (CombustibleVoronoi only).</summary>
-public class NoiseParamVisibilityConverter : IValueConverter
+public class NoiseParamVisibilityConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var type = value is NoiseType t ? t : NoiseType.Simplex;
         var visible = (parameter as string) switch
@@ -24,5 +24,5 @@ public class NoiseParamVisibilityConverter : IValueConverter
         return visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => null;
 }

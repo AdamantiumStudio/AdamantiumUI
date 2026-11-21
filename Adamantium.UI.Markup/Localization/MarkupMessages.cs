@@ -31,6 +31,7 @@ public static class MarkupMessages
 
     public static string TypeNotInAnyAssembly(string type) => Say(nameof(TypeNotInAnyAssembly), ("type", type));
     public static string TypeNotFoundCheckNamespace(string type) => Say(nameof(TypeNotFoundCheckNamespace), ("type", type));
+    public static string NotAMarkupExtension(string type) => Say(nameof(NotAMarkupExtension), ("type", type));
 
     public static string PropertyNotFoundIn(string property, string type) =>
         Say(nameof(PropertyNotFoundIn), ("property", property), ("type", type));

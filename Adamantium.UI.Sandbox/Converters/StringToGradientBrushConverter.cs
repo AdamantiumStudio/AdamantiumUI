@@ -11,9 +11,9 @@ namespace Adamantium.UI.Sandbox.Converters;
 /// gradient batch. To exercise BOTH kinds at once across the grid, the gradient TYPE is chosen deterministically from the
 /// color (so a given palette color is always the same kind, but the palette mixes linear and radial). The stops go
 /// light -> base -> dark, so every tile reads as a shaded, dimensional swatch instead of a flat fill.</summary>
-public sealed class StringToGradientBrushConverter : IValueConverter
+public sealed class StringToGradientBrushConverter : ValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is not string s || string.IsNullOrWhiteSpace(s)) return null;
         var brush = TypeParser.Parse<Brush>(s);
@@ -48,7 +48,7 @@ public sealed class StringToGradientBrushConverter : IValueConverter
         };
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotSupportedException();
 
     private static Color Lerp(Color a, Color b, float t)

@@ -207,6 +207,12 @@ public class DefaultAumlTransformer : IAumlTransformer
             }
             
             var type = resolvedAssembly.GetTypeByFullName(markupExtension.TypeReference.GetFullTypeName());
+            if (type != null && !markupExtension.TypeReference.IsMarkupExtension)
+            {
+                diagnostics.ReportError(document.FileName,
+                    MarkupMessages.NotAMarkupExtension(markupExtension.TypeReference.GetFullTypeName()), markupExtension);
+                return;
+            }
 
             var positional = 0;
             foreach (var argument in markupExtension.Arguments)
