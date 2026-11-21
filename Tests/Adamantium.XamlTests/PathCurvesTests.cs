@@ -63,6 +63,24 @@ public class PathCurvesTests
         Assert.That(curves.Figures.Single().IsClosed, Is.True);
     }
 
+    // Where a dash or a trim begins and goes: a whole ellipse's curves begin at its start and go its way round. From twelve
+    // forwards they head right, backwards left.
+    [TestCase(270, 360, 1)]
+    [TestCase(270, -360, -1)]
+    [TestCase(-90, -720, -1)]
+    public void AWholeEllipsesCurves_BeginAtItsStart_AndGoItsWayRound(double start, double sweep, int heading)
+    {
+        var ellipse = new EllipseGeometry(new Rect(20, 20, 60, 40), start, sweep);
+        var first = ellipse.CurvesForDrawing.Curves[0];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.At(0).X, Is.EqualTo(50).Within(1e-9), "at twelve");
+            Assert.That(first.At(0).Y, Is.EqualTo(20).Within(1e-9));
+            Assert.That(Math.Sign(first.At(0.5).X - 50), Is.EqualTo(heading), "and heading its way");
+        });
+    }
+
     [Test]
     public void AnArcEndsWhereItSaysAndRunsAsItsPointsDo()
     {

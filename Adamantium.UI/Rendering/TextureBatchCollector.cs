@@ -249,7 +249,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         if (!Enabled) return false;
         if (p.Brush is not TileBrush) return false;
         if (!DrawsNoOutline(p.Pen)) return false;
-        return p.StartAngle <= 0.0 && p.SweepAngle >= 360.0;
+        return p.IsWhole;
     }
 
     public bool CanBatchEllipse(EllipsePayload p) => WantsBatchEllipse(p);

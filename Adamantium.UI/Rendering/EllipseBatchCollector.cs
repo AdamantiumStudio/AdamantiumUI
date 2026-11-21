@@ -47,18 +47,23 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         return IsCutBatchable(p);
     }
 
-    // Cuts batch unless the sweep is negative (the tessellator mirrors it) or a dashed/trimmed pen would follow the
-    // ellipse instead of the cut outline.
+    // Cuts batch unless a dashed/trimmed pen would follow the ellipse instead of the cut outline. A sweep either way round
+    // is the same cut (BakeCut takes it clockwise); only a dash or a trim knows the way round, and those are not batched.
     internal static bool IsCutBatchable(EllipsePayload p)
     {
-        if (p.SweepAngle >= 360.0) return true;   // not cut at all - see BakeCut, the start angle is irrelevant here
-        if (p.SweepAngle <= 0.0) return false;
+        if (p.IsWhole) return IsWholeBatchable(p);   // not cut at all - see BakeCut
+        if (p.Span.IsEmpty) return false;
 
         var pen = p.Pen;
         if (pen == null) return true;
         var dashed = pen.Dashes is { Count: > 0 };
         return !dashed && pen.TrimStart <= 0.0 && pen.TrimEnd >= 1.0;
     }
+
+    // A whole ellipse batches with no start: a dash or a trim along it begins at three o'clock and goes clockwise, so a
+    // pen with them batches only an ellipse begun there and swept that way - the outline the tessellator strokes then.
+    internal static bool IsWholeBatchable(EllipsePayload p) =>
+        p.IsWhole && (!RegularPolygonCollector.NeedsArcLength(p.Pen) || (p.StartAngle == 0 && p.SweepAngle > 0));
 
     public bool CanBatch(EllipsePayload p) => WantsBatch(p);
 
@@ -125,10 +130,12 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         // is not a property of the shape. Baking a cut anyway put both bounding rays of the wedge on the SAME ray, and
         // anti-aliasing that non-existent edge left a one-pixel seam running out from the center. The tessellator draws
         // this case closed (its `isClosed` asks only about the sweep), so cutting here also split the two paths.
-        if (p.SweepAngle >= 360.0) return new Vector4F(0, 0, 0, ring);
+        if (p.IsWhole) return new Vector4F(0, 0, 0, ring);
 
-        var start = (float)double.DegreesToRadians(p.StartAngle);
-        var end = start + (float)double.DegreesToRadians(p.SweepAngle);
+        // The cut covers the same part of the ellipse whichever way it was swept.
+        var span = p.Span.Clockwise;
+        var start = (float)double.DegreesToRadians(span.Start);
+        var end = start + (float)double.DegreesToRadians(span.Sweep);
         // A BAND's ends are RADIAL, whichever closing was asked for. A chord across a band is not a shape anybody means by
         // a ring gauge or a donut slice, and it is also the closing the tessellated fallback cannot reproduce: there the
         // ring is the outer shape minus the inner one, and only the radial ends of the two line up exactly.

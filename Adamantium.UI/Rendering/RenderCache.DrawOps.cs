@@ -207,7 +207,7 @@ public partial class RenderCache
                 corners = rect.RectPayload.CornerRadius;
                 kind = HaloShape.RoundedRect;
                 return true;
-            case EllipseRenderUnit ell when ell.EllipsePayload.StartAngle <= 0.0 && ell.EllipsePayload.SweepAngle >= 360.0:
+            case EllipseRenderUnit ell when ell.EllipsePayload.IsWhole:
                 shape = ell.EllipsePayload.DestinationRect;
                 kind = HaloShape.Ellipse;
                 return true;

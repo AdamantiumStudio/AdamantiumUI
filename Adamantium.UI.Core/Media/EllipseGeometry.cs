@@ -103,16 +103,22 @@ public sealed class EllipseGeometry : Geometry
       EllipseType = ellipseType;
          
       var translation = Matrix4x4.CreateTranslation<double>(Center.X, Center.Y, 0);
-         
+      // Its angles taken round the turn, as every other way of drawing an ellipse takes them.
+      var span = Span;
+
       Mesh = Shapes.Ellipse.GenerateGeometry(
-         geometryType, 
+         geometryType,
          EllipseType,
-         new Vector2<double>(rect.Width, rect.Height), 
-         StartAngle, 
-         SweepAngle,
+         new Vector2<double>(rect.Width, rect.Height),
+         span.Start,
+         span.Sweep,
          tessellation: TesselationFactor,
          transform: translation);
    }
+
+   /// <summary>The part of the ellipse it is (<see cref="ArcSpan"/>): <see cref="StartAngle"/> taken round the turn,
+   /// <see cref="SweepAngle"/> held to a turn either way.</summary>
+   public ArcSpan Span => new(StartAngle, SweepAngle);
 
    public override Rect Bounds => bounds;
 
@@ -135,25 +141,28 @@ public sealed class EllipseGeometry : Geometry
       CreateEllipse(Bounds, geometryType, StartAngle, SweepAngle, EllipseType);
    }
 
-   // A whole ellipse as eight cubics; a part of one is given as its points.
+   // A whole ellipse as eight cubics, from its start and its way round - where a dash or a trim begins and goes; a part
+   // of one is given as its points.
    private protected override bool AppendCurves(Curves.PathCurveBuilder builder)
    {
-      if (SweepAngle < 360 || RadiusX <= 0 || RadiusY <= 0)
+      var span = Span;
+      if (!span.IsWhole || RadiusX <= 0 || RadiusY <= 0)
       {
          return false;
       }
 
       const int pieces = 8;
-      var step = 2 * Math.PI / pieces;
+      var step = Math.Sign(span.Sweep) * 2 * Math.PI / pieces;
       var reach = 4.0 / 3.0 * Math.Tan(step / 4);
       var center = Center;
+      var start = double.DegreesToRadians(span.Start);
       Vector2<double> At(double angle) => center + new Vector2<double>(Math.Cos(angle) * RadiusX, Math.Sin(angle) * RadiusY);
       Vector2<double> Tangent(double angle) => new(-Math.Sin(angle) * RadiusX, Math.Cos(angle) * RadiusY);
 
-      builder.BeginFigure(At(0), true);
+      builder.BeginFigure(At(start), true);
       for (var i = 0; i < pieces; i++)
       {
-         var from = i * step;
+         var from = start + i * step;
          var to = from + step;
          builder.CubicTo(At(from) + Tangent(from) * reach, At(to) - Tangent(to) * reach, At(to));
       }

@@ -105,7 +105,7 @@ public sealed class PdfContentSession : IDrawingSession
             var half = ringThickness / 2;
             var middle = new Rect(destinationRect.X + half, destinationRect.Y + half, destinationRect.Width - ringThickness,
                 destinationRect.Height - ringThickness);
-            var whole = sweepAngle >= 360;
+            var whole = new ArcSpan(startAngle, sweepAngle).IsWhole;
             Figures(null, new Pen(brush, ringThickness),
                 new EllipseGeometry(middle, startAngle, sweepAngle, whole ? ellipseType : EllipseType.EdgeToEdge),
                 Matrix4x4F.Identity);

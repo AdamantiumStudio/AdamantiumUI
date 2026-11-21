@@ -148,21 +148,120 @@ public class EllipseCutRenderTests
         });
     }
 
-    // NEGATIVE: what the batch cannot express, it must decline - not approximate. A negative sweep is mirrored by the
-    // tessellator in a way the instance does not describe, and dashes are placed by arc length along the ELLIPSE, which is
-    // not the outline a cut shape has.
+    // NEGATIVE: what the batch cannot express, it must decline - not approximate. Dashes are placed by arc length along the
+    // ELLIPSE, which is not the outline a cut shape has, and they follow the way round. A sweep backwards is the same cut
+    // gone round clockwise, and the batch takes it.
     [Test]
-    public void WhatTheInstanceCannotDescribe_IsRefused()
+    public void WhatTheInstanceCannotDescribe_IsRefused_ABackwardsSweepIsNot()
     {
         var backwards = new EllipsePayload(Brushes.White, new Rect(0, 0, Dim, Dim), 0, -90, EllipseType.Sector, null);
         var dashed = new EllipsePayload(Brushes.White, new Rect(0, 0, Dim, Dim), 0, 90, EllipseType.Sector,
             new Pen(Brushes.Red, 2, dashStrokeArray: [4.0, 2.0]));
+        var dashedBackwards = new EllipsePayload(Brushes.White, new Rect(0, 0, Dim, Dim), 0, -90, EllipseType.Sector,
+            new Pen(Brushes.Red, 2, dashStrokeArray: [4.0, 2.0]));
 
         Assert.Multiple(() =>
         {
-            Assert.That(EllipseBatchCollector.WantsBatch(backwards), Is.False, "a negative sweep goes to the tessellator");
+            Assert.That(EllipseBatchCollector.WantsBatch(backwards), Is.True, "a backwards sweep is the same cut");
             Assert.That(EllipseBatchCollector.WantsBatch(dashed), Is.False, "a dashed cut shape goes to the tessellator");
+            Assert.That(EllipseBatchCollector.WantsBatch(dashedBackwards), Is.False, "and its dashes know the way round");
         });
+    }
+
+    // A sweep backwards covers what the same sweep forwards from its end covers - in the batch and in the tessellator.
+    // From three o'clock back by a quarter is the quarter up to twelve.
+    [Test]
+    public void ABackwardsSweep_CoversWhatItsMirrorDoes_InBothPaths()
+    {
+        var backwards = Quadrants(Render(0, -90, EllipseType.Sector));
+        var tessellated = Quadrants(Render(0, -90, EllipseType.Sector, batched: false));
+        var forwards = Quadrants(Render(270, 90, EllipseType.Sector));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(backwards, Is.EqualTo((false, false, false, true)), "the quarter up to twelve");
+            Assert.That(tessellated, Is.EqualTo(backwards));
+            Assert.That(forwards, Is.EqualTo(backwards));
+        });
+    }
+
+    // Any start is taken round the turn: -90 starts at twelve, as 270 does, and 450 at six, as 90 does - in both paths.
+    [TestCase(-90, 270)]
+    [TestCase(450, 90)]
+    [TestCase(-450, 270)]
+    public void AStartOutsideTheTurn_IsTakenRoundIt(double start, double sameAs)
+    {
+        var outside = Quadrants(Render(start, 90, EllipseType.Sector));
+        var tessellated = Quadrants(Render(start, 90, EllipseType.Sector, batched: false));
+        var inside = Quadrants(Render(sameAs, 90, EllipseType.Sector));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outside, Is.EqualTo(inside));
+            Assert.That(tessellated, Is.EqualTo(inside));
+        });
+    }
+
+    // A turn and more is the whole ellipse, whichever way round and in both paths - the tessellator once took 720 for
+    // nothing at all, and 400 for a sliver of forty.
+    [TestCase(720)]
+    [TestCase(400)]
+    [TestCase(-400)]
+    public void ASweepOfATurnOrMore_IsTheWholeEllipse(double sweep)
+    {
+        var whole = (true, true, true, true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector)), Is.EqualTo(whole), "batched");
+            Assert.That(Quadrants(Render(30, sweep, EllipseType.Sector, batched: false)), Is.EqualTo(whole), "tessellated");
+        });
+    }
+
+    // A whole ellipse's stroke begins at its start and goes its way round - where a trim cuts it. A quarter of it from
+    // twelve clockwise is the top right; from six counterclockwise, the bottom right. In both paths.
+    [TestCase(0, 360, "right down")]
+    [TestCase(270, 360, "right up")]
+    [TestCase(90, -360, "right down")]
+    [TestCase(180, -360, "left down")]
+    public void AWholeEllipsesStroke_BeginsAtItsStart_AndGoesItsWayRound(double start, double sweep, string quarter)
+    {
+        var pen = new Pen(Brushes.White, 4, trimEnd: 0.25);
+        // The rim 8 in from the frame's edge, probed on the pen's middle.
+        const int rim = Half - 8;
+        var at = (int)Math.Round(rim * 0.7071);
+        foreach (var batched in new[] { true, false })
+        {
+            var px = Render(start, sweep, EllipseType.Sector, batched: batched, pen: pen, fill: Brushes.Transparent,
+                rect: new Rect(8, 8, Dim - 16, Dim - 16));
+            var lit = new Dictionary<string, bool>
+            {
+                ["right down"] = IsLit(px, Half + at, Half + at),
+                ["left down"] = IsLit(px, Half - at, Half + at),
+                ["left up"] = IsLit(px, Half - at, Half - at),
+                ["right up"] = IsLit(px, Half + at, Half - at),
+            };
+            foreach (var corner in lit)
+            {
+                Assert.That(corner.Value, Is.EqualTo(corner.Key == quarter), $"{corner.Key} ({(batched ? "batched" : "tessellated")})");
+            }
+        }
+    }
+
+    // A ring swept backwards is a donut slice too, hollow - in the tessellator it was the solid sector, no hole at all.
+    [Test]
+    public void ARingSweptBackwards_IsADonutSlice_InBothPaths()
+    {
+        foreach (var batched in new[] { true, false })
+        {
+            var px = Render(90, -90, EllipseType.Sector, batched: batched, ringThickness: 8);
+            Assert.Multiple(() =>
+            {
+                Assert.That(IsLit(px, Half + 20, Half + 20), Is.True, $"the slice fills its quarter of the band ({batched})");
+                Assert.That(IsLit(px, Half + 4, Half + 4), Is.False, $"and the hole stays ({batched})");
+                Assert.That(IsLit(px, Half - 20, Half - 20), Is.False, $"the other quarters out ({batched})");
+            });
+        }
     }
 
     // Batch and fallback must cut the same shape. The angles are chosen so no probe sits ON a boundary ray: the probes are
