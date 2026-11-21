@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ItemsControl.ScrollIndexIntoView`: a scroll to an item by its index, so of equal items the one asked is shown.
+  Asked before the list is laid out - its template not built, its popup not yet shown, its viewport not known - a
+  scroll, by index or by `ScrollIntoView`, waits for the list's next layout instead of being clamped back to the top,
+  as WPF's does; a later ask replaces it.
 - `BindingBase.Delay`, in milliseconds, as WPF's: a binding that writes back waits that long after the target's last
   change before it writes the source - a search typed letter by letter, the list filtered once the typing stops - each
   change starting the wait again. What waits is written at once when the target loses the keyboard, when the binding is
@@ -791,6 +795,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `DropDown`'s list made a row for every item each time it opened, not the dozen it shows: its scroll viewer did
+  not hand scrolling to the list's virtualizing panel, so the panel was measured unbounded. 300 items took about a
+  second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into
+  view - on opening, on the current value far down, and as the arrows walk past the rows shown; the pointer's
+  highlight leaves the list where it is. Of two equal items the highlighted one is lit, not the first like it.
 - A site asking to sign in over a page still loading - an address typed, or the page reloaded, while the page before
   was finishing - was asked and at once not: the page gone on from ended its load a moment later, and `WebView` took
   that end for the asking page's and refused its question. The browser counts its main frame's navigations, and a
