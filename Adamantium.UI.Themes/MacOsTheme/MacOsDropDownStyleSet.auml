@@ -101,7 +101,9 @@
                                             CornerRadius="6"
                                             Padding="4"
                                             MinWidth="{Binding ActualWidth}">
-                                        <ScrollViewer MaxHeight="{Binding MaxDropDownHeight}"
+                                        <!-- CanContentScroll: the list makes the rows it shows, not one for each item. -->
+                                        <ScrollViewer CanContentScroll="True"
+                                                      MaxHeight="{Binding MaxDropDownHeight}"
                                                       HorizontalScrollBarVisibility="Disabled"
                                                       VerticalScrollBarVisibility="Auto">
                                             <ItemsPresenter x:Name="PART_ItemsPresenter"/>

@@ -772,6 +772,10 @@ All packages share one version.
 
 ### Fixed
 
+- A `DropDown`'s list made a row for every item each time it opened, not the dozen it shows: its scroll viewer did
+  not hand scrolling to the list's virtualizing panel, so the panel was measured unbounded. 300 items took about a
+  second to open. It now makes the rows it shows, in Fluent, Graphite and macOS, and brings the highlighted row into
+  view - on opening, on the current value far down, and as the arrows walk past the rows shown.
 - A `ToolBar` heard nothing of a command on it shown, hidden or grown later: its panel was measured within the room
   the bar had given it, so its length looked unchanged and the bar did not share its commands between itself and its
   menu again. The bar's panel is now `ToolBarPanel`, which tells its bar when the length of its commands changes.

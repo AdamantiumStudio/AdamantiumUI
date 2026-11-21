@@ -182,18 +182,70 @@ public class DropDown : Selector
     private bool IsSelectable(int index) =>
         ItemContainerGenerator.Inspect(index, container => container is not DropDownItem { IsEnabled: false });
 
-    private void Highlight(int index)
+    // The pointer's highlight follows the pointer and leaves the list where it is; the keyboard's, the value's on opening
+    // and a typed prefix's bring their row into view.
+    private void Highlight(int index, bool show = true)
     {
         if (_highlightedIndex == index) return;
         SetHighlight(_highlightedIndex, false);
         _highlightedIndex = index;
         SetHighlight(_highlightedIndex, true);
+        if (show && IsDropDownOpen) ShowHighlighted();
     }
 
+    // The highlighted row brought into the list's view: the list makes only the rows it shows, so a row far down is made
+    // where it stands. Until the list is laid out there is nowhere to scroll to, so the popup's next pass tries again.
+    private void ShowHighlighted()
+    {
+        if (_popup == null) return;
+        _popup.LayerPass -= OnShowHighlightedPass;
+        if (!TryShowHighlighted()) _popup.LayerPass += OnShowHighlightedPass;
+    }
+
+    private void OnShowHighlightedPass(object sender, EventArgs e)
+    {
+        if (!IsDropDownOpen || TryShowHighlighted()) ((Popup)sender).LayerPass -= OnShowHighlightedPass;
+    }
+
+    // By index, so of two equal items the one highlighted is shown. Not before the list is laid out: an offset set while
+    // it has no viewport is clamped back to the top. A panel that cannot say where a row stands shows the row made.
+    private bool TryShowHighlighted()
+    {
+        var index = _highlightedIndex;
+        if (index < 0 || index >= Items.Count) return true;
+        var panel = ItemsHostPanel;
+        var viewer = panel?.GetVisualAncestors().OfType<ScrollViewer>().FirstOrDefault();
+        if (viewer == null || viewer.RenderSize.Height <= 0
+            || panel is Panels.VirtualizingPanel { IsVirtualizing: true, Viewport.Height: <= 0 })
+        {
+            return false;
+        }
+
+        if (panel is Panels.VirtualizingPanel { IsVirtualizing: true } list && list.TryGetItemRect(index, out var rect))
+        {
+            viewer.BringIntoView(rect);
+        }
+        else if (ItemContainerGenerator.ContainerFromIndex(index) is UIComponent row)
+        {
+            row.BringIntoView();
+        }
+
+        return true;
+    }
+
+    // A row written in markup is its own item: it holds its highlight made or not.
     private void SetHighlight(int index, bool highlighted)
     {
-        if (index >= 0 && ItemContainerGenerator.ContainerFromIndex(index) is DropDownItem row)
-            row.IsHighlighted = highlighted;
+        if (index < 0) return;
+        var row = ItemContainerGenerator.ContainerFromIndex(index) as DropDownItem
+                  ?? (index < Items.Count ? Items[index] as DropDownItem : null);
+        if (row != null) row.IsHighlighted = highlighted;
+    }
+
+    // A row made for an item as the list scrolls, after the highlight was set, takes it by its index.
+    internal override void OnContainerPlaced(IUIComponent container, int index)
+    {
+        if (container is DropDownItem row) row.IsHighlighted = index == _highlightedIndex;
     }
 
     // Enter takes the highlighted row - which is the ONLY moment the value changes, so everything bound to it hears
@@ -389,6 +441,8 @@ public class DropDown : Selector
             _popup.ContentBuilt -= OnPopupContentBuilt;
             _popup.ContentBuilt += OnPopupContentBuilt;
             _popup.IsOpen = IsDropDownOpen;
+            // A new template under an open list - a theme switched - shows the highlighted row in the new one too.
+            if (IsDropDownOpen) ShowHighlighted();
         }
 
         DetachText();
@@ -411,6 +465,7 @@ public class DropDown : Selector
         {
             _popup.Closed -= OnPopupClosed;
             _popup.ContentBuilt -= OnPopupContentBuilt;
+            _popup.LayerPass -= OnShowHighlightedPass;
         }
         _popup = null;
         DetachText();
@@ -614,7 +669,7 @@ public class DropDown : Selector
         if (!container.IsEnabled) return;
 
         var index = ItemContainerGenerator.IndexFromContainer(container);
-        if (index >= 0) Highlight(index);
+        if (index >= 0) Highlight(index, show: false);
     }
 
     // A row was clicked: select its item and dismiss. A row given in markup is its own item: chosen while the list was
@@ -769,8 +824,15 @@ public class DropDown : Selector
         // The list always opens on the current value and closes with no highlight left behind - one place for it,
         // whether it was opened by the keyboard, by a click on the header, or set from code.
         // Opened over something typed, on the first row that starts so.
-        if (open) dd.Highlight(dd._edited ? dd.IndexOf(dd._text.Text, prefix: true) : dd.SelectedIndex);
-        else dd.Highlight(-1);
+        if (open)
+        {
+            dd.Highlight(dd._edited ? dd.IndexOf(dd._text.Text, prefix: true) : dd.SelectedIndex);
+        }
+        else
+        {
+            dd.Highlight(-1);
+            if (dd._popup != null) dd._popup.LayerPass -= dd.OnShowHighlightedPass;
+        }
         AutomationEvents.RaiseExpandCollapse(dd, open);
     }
 
@@ -800,9 +862,6 @@ public class DropDown : Selector
             row.ContentTemplateSelector = ItemTemplateSelector;
             row.Content = FormatForDisplay(item);   // friendly enum name when no ItemTemplate; raw item otherwise
             ApplyContainerSelection(row, item);
-            // Rows are made when the popup opens, i.e. AFTER the highlight was set - so a container asks for its own
-            // state on arrival rather than the highlight reaching for containers that do not exist yet.
-            row.IsHighlighted = Items.IndexOf(item) == _highlightedIndex;
         }
     }
 

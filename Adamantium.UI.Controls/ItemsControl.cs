@@ -597,6 +597,12 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         return this;
     }
 
+    /// <summary>A container made or rebound for an item now stands at <paramref name="index"/>: a virtualizing list makes
+    /// rows as it scrolls, so state kept by index (a highlight) reaches the row here.</summary>
+    internal virtual void OnContainerPlaced(IUIComponent container, int index)
+    {
+    }
+
     internal void FollowKeyboard(IUIComponent container, int index)
     {
         if (index != KeyboardIndex)
