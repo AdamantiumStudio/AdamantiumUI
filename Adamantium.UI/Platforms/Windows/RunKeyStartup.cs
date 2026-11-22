@@ -47,7 +47,6 @@ internal sealed class RunKeyStartup : ISystemStartup
         }
     }
 
-    // A path names the same program in any case.
     private bool IsListed()
     {
         using var run = Registry.CurrentUser.OpenSubKey(_runKey);

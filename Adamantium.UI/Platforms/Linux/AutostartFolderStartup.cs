@@ -53,7 +53,6 @@ internal sealed class AutostartFolderStartup : ISystemStartup
         }
     }
 
-    // Our entry, not turned off by the desktop.
     private bool IsListed()
     {
         if (!File.Exists(_entryPath))
