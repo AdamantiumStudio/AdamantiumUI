@@ -4,6 +4,7 @@ using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
@@ -542,6 +543,32 @@ public class ItemsControlGroupingTests
             Assert.That((upper.Index, NameOf(upper)), Is.EqualTo((0, "Physics")));
             Assert.That((lower.Index, NameOf(lower), lower.GroupEnd), Is.EqualTo((2, "Physics", 2)));
             Assert.That((nextHeader.Index, NameOf(nextHeader)), Is.EqualTo((2, "Joints")));
+        });
+    }
+
+    // The arrows walk the tiles across the groups, past the headers: from a group's last tile on to the next group's
+    // first, and down a column.
+    [Test]
+    public void TheArrows_WalkTheTilesAcrossTheGroups()
+    {
+        var list = List(Grouped(Parts(new Group("Physics", 7), new Group("Joints", 5)), nameof(Part.Kind)),
+            new WrapPanel { ItemWidth = Tile, ItemHeight = Tile }, canCollapse: true);
+        list.ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Button { Width = 52, Height = 52 } });
+        var root = new Border { Width = 300, Height = 1000, Child = list };
+        for (var pass = 0; pass < 5; pass++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        }
+
+        Button TileAt(int index) => (Button)list.ItemContainerGenerator.ContainerFromIndex(index).VisualChildren.First();
+        FocusManager.Focus(TileAt(6));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(KeyboardNavigation.Move(FocusNavigationDirection.Right), Is.True);
+            Assert.That(FocusManager.Focused, Is.SameAs(TileAt(7)), "past the joints' header");
+            Assert.That(KeyboardNavigation.Move(FocusNavigationDirection.Up), Is.True);
+            Assert.That(FocusManager.Focused, Is.SameAs(TileAt(5)), "up the column, into the physics");
         });
     }
 
