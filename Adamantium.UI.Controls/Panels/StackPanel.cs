@@ -1,6 +1,7 @@
 using System;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Generators;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 
@@ -109,6 +110,12 @@ public class StackPanel : VirtualizingPanel
       if (!IsItemsHost || _itemExtent <= 0 || index < 0) return false;
 
       var vertical = Orientation == Orientation.Vertical;
+      if (ShowsGroups)
+      {
+         rect = GroupedItemRect(index, vertical ? RenderSize.Width : RenderSize.Height);
+         return true;
+      }
+
       var along = StartOf(index);
       var extent = ExtentAt(index);
       rect = vertical
@@ -268,6 +275,7 @@ public class StackPanel : VirtualizingPanel
       if (count == 0)
       {
          foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, -1)) ParkContainer(c);
+         SetHeaderWindow(0, -1);
          return new Size<double>();
       }
 
@@ -276,6 +284,16 @@ public class StackPanel : VirtualizingPanel
       var childConstraint = vertical
          ? new Size<double>(crossAvailable, double.PositiveInfinity)
          : new Size<double>(double.PositiveInfinity, crossAvailable);
+
+      if (ShowsGroups)
+      {
+         return IsVirtualizing
+            ? MeasureGroupedWindow(vertical, count, mainViewport, childConstraint, offset)
+            : MeasureGroupedAll(vertical, count, childConstraint);
+      }
+
+      // No groups (any more): headers a grouped pass made are put away.
+      SetHeaderWindow(0, -1);
 
       // Non-virtualized host (a small mixed-height menu): realize + measure EVERY item at its OWN extent and stack them by
       // cumulative offset, so a short row (a separator) takes only its own height instead of a uniform cell.
@@ -374,6 +392,12 @@ public class StackPanel : VirtualizingPanel
       var vertical = Orientation == Orientation.Vertical;
       var cross = vertical ? finalSize.Width : finalSize.Height;
 
+      if (ShowsGroups)
+      {
+         ArrangeGrouped(vertical, cross);
+         return;
+      }
+
       // Non-virtualized host: arrange each item at its cumulative start (from measure) with its OWN main extent.
       if (!IsVirtualizing)
       {
@@ -427,18 +451,262 @@ public class StackPanel : VirtualizingPanel
       ReconcileDropPlaceholder(SlotRect);
    }
 
+   // ---- Groups: each a header line, then its items --------------------------------------------------------------
+
+   private readonly GroupLines _groupLines = new();
+   private readonly List<double> _headerStarts = [];   // non-virtualized: cumulative start per header place
+
+   // Virtualized: items at the uniform extent as without groups - rows of another height (ItemExtentExceptions) with
+   // theirs - a header's extent by its level, and the window the items and headers whose lines it crosses.
+   private Size<double> MeasureGroupedWindow(bool vertical, int count, double mainViewport, Size<double> childConstraint,
+      Vector2<double> offset)
+   {
+      var probeIndex = Math.Clamp(_lastFirst, 0, count - 1);
+      while (ExtraAt(probeIndex) != 0 && probeIndex + 1 < count) probeIndex++;
+      var probe = (IMeasurableComponent)RealizeInWindow(probeIndex);
+      probe.Measure(childConstraint);
+      var probeExtent = vertical ? probe.DesiredSize.Height : probe.DesiredSize.Width;
+      if (probeExtent > 0 && ExtraAt(probeIndex) == 0) _itemExtent = probeExtent;
+
+      ProbeHeaderExtents(childConstraint, vertical);
+      var gap = Math.Max(0, Spacing);
+      var gapPlace = DropGapPlace(out var gapSlot);
+      _groupLines.Build(Owner.GroupHeaderPlaces, count, 1, HeaderExtents, gap, Pitch, ItemExtentExceptions, gapPlace,
+         gapSlot);
+
+      double effectiveViewport;
+      if (double.IsInfinity(mainViewport))
+      {
+         OnNoViewport();
+         effectiveViewport = UnboundedWindow(vertical, _lastViewport, DefaultViewport);
+      }
+      else
+      {
+         effectiveViewport = mainViewport;
+         _lastViewport = mainViewport;
+      }
+
+      var mainOffset = vertical ? offset.Y : offset.X;
+      var lead = Buffer * Pitch;
+      var window = _groupLines.Window(mainOffset - lead, mainOffset + effectiveViewport + lead);
+      _lastFirst = window.FirstItem;
+
+      // A folded group's rows are inside the window's span, not in what it shows: none of them is made.
+      var folded = _groupLines.FoldedItems;
+      foreach (var c in Owner.ItemContainerGenerator.SetWindow(window.FirstItem, window.LastItem, folded)) ParkContainer(c);
+      double crossMax = 0;
+      for (var i = window.FirstItem; i <= window.LastItem; i++)
+      {
+         if (Owner.ItemContainerGenerator.ContainerFromIndex(i) == null && IsFolded(folded, i)) continue;
+         var container = (IMeasurableComponent)RealizeInWindow(i);
+         container.Measure(childConstraint);
+         crossMax = Math.Max(crossMax, vertical ? container.DesiredSize.Width : container.DesiredSize.Height);
+      }
+
+      ShowHeadersInWindow(window, childConstraint, vertical);
+      for (var place = window.FirstPlace; place <= window.LastPlace; place++)
+      {
+         var shown = Owner.GroupHeaderGenerator.HeaderAt(place);
+         crossMax = Math.Max(crossMax, vertical ? shown.DesiredSize.Width : shown.DesiredSize.Height);
+      }
+
+      var mainExtent = Math.Max(0, _groupLines.Extent - gap);
+      return vertical ? new Size<double>(crossMax, mainExtent) : new Size<double>(mainExtent, crossMax);
+   }
+
+   private static bool IsFolded(IReadOnlyList<ItemRange> folded, int index)
+   {
+      foreach (var range in folded)
+      {
+         if (range.Contains(index)) return true;
+      }
+
+      return false;
+   }
+
+   // Not virtualized: every item and every header at its own extent, stacked in order - a group's headers before its
+   // first item; a folded group's items are put away, and stand where its header does.
+   private Size<double> MeasureGroupedAll(bool vertical, int count, Size<double> childConstraint)
+   {
+      var places = Owner.GroupHeaderPlaces;
+      foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, count - 1)) ParkContainer(c);
+      SetHeaderWindow(0, places.Count - 1);
+      _itemStarts.Clear();
+      _headerStarts.Clear();
+
+      var gap = Math.Max(0, Spacing);
+      double running = 0, crossMax = 0;
+      var stacked = 0;
+      var place = 0;
+      var shown = true;
+      var headerStart = 0.0;
+      for (var i = 0; i < count; i++)
+      {
+         for (; place < places.Count && places[place].BeforeItem == i; place++)
+         {
+            var header = RealizeHeaderInWindow(place);
+            header.Measure(childConstraint);
+            if (stacked++ > 0) running += gap;
+            headerStart = running;
+            _headerStarts.Add(running);
+            running += vertical ? header.DesiredSize.Height : header.DesiredSize.Width;
+            crossMax = Math.Max(crossMax, vertical ? header.DesiredSize.Width : header.DesiredSize.Height);
+            shown = places[place].IsExpanded;
+         }
+
+         if (!shown)
+         {
+            // Put away once, not shown and hidden again every pass.
+            if (Owner.ItemContainerGenerator.ContainerFromIndex(i) is { Visibility: Visibility.Visible } folded)
+               ParkContainer(folded);
+            _itemStarts.Add(headerStart);
+            continue;
+         }
+
+         var container = (IMeasurableComponent)RealizeInWindow(i);
+         container.Measure(childConstraint);
+         if (stacked++ > 0) running += gap;
+         _itemStarts.Add(running);
+         running += vertical ? container.DesiredSize.Height : container.DesiredSize.Width;
+         crossMax = Math.Max(crossMax, vertical ? container.DesiredSize.Width : container.DesiredSize.Height);
+      }
+
+      return vertical ? new Size<double>(crossMax, running) : new Size<double>(running, crossMax);
+   }
+
+   private Rect GroupedItemRect(int index, double cross)
+   {
+      var vertical = Orientation == Orientation.Vertical;
+      double along, extent;
+      if (IsVirtualizing)
+      {
+         along = _groupLines.ItemStart(index, out _);
+         extent = _groupLines.ItemExtent(index) - Math.Max(0, Spacing);
+      }
+      else if (index < _itemStarts.Count && Owner.ItemContainerGenerator.ContainerFromIndex(index) is IMeasurableComponent item)
+      {
+         along = _itemStarts[index];
+         extent = vertical ? item.DesiredSize.Height : item.DesiredSize.Width;
+      }
+      else
+      {
+         along = 0;
+         extent = 0;
+      }
+
+      return vertical ? new Rect(0, along, cross, extent) : new Rect(along, 0, extent, cross);
+   }
+
+   private void ArrangeGrouped(bool vertical, double cross)
+   {
+      Rect Line(double start, double extent) => vertical ? new Rect(0, start, cross, extent) : new Rect(start, 0, extent, cross);
+
+      foreach (var index in Owner.ItemContainerGenerator.RealizedIndices)
+      {
+         if (Owner.ItemContainerGenerator.ContainerFromIndex(index) is not IMeasurableComponent container) continue;
+         if (container.Visibility != Visibility.Visible) continue;   // a folded group's, put away
+         container.Arrange(GroupedItemRect(index, cross));
+      }
+
+      foreach (var place in Owner.GroupHeaderGenerator.RealizedPlaces)
+      {
+         var header = Owner.GroupHeaderGenerator.HeaderAt(place);
+         if (IsVirtualizing)
+         {
+            header.Arrange(Line(_groupLines.HeaderStart(place), _groupLines.HeaderExtent(place) - Math.Max(0, Spacing)));
+         }
+         else if (place < _headerStarts.Count)
+         {
+            header.Arrange(Line(_headerStarts[place], vertical ? header.DesiredSize.Height : header.DesiredSize.Width));
+         }
+      }
+
+      if (IsVirtualizing)
+      {
+         AnimateLayoutMoves(index => GroupedItemRect(index, cross));
+         ShowDropPlaceholder(_groupLines.TryGetGapStart(out var gapStart, out _)
+            ? Line(gapStart, Pitch - Math.Max(0, Spacing))
+            : null);
+      }
+   }
+
    // A uniform stack derives every slot from an index, exactly as the grid does, so the hole is one multiplication.
    public override bool SupportsDropGap => IsVirtualizing;
 
    /// <summary>Which slot a drop lands in, from the STACK's own arithmetic rather than from where the containers
-   /// currently sit - the gap moves those, and an index read off them would chase itself. See VirtualizingPanel.</summary>
-   public override bool TryGetDropSlot(Vector2<double> point, out int index)
+   /// currently sit - the gap moves those, and an index read off them would chase itself. See VirtualizingPanel.
+   /// Grouped, from the lines as they stand: nothing before the gap moves for it. A stack that does not virtualize opens
+   /// no gap, but still says which group a drop lands in, from where it stacked each row.</summary>
+   public override bool TryGetDropSlot(Vector2<double> point, out DropSlot slot)
    {
-      index = -1;
-      if (!IsItemsHost || !IsVirtualizing || _itemExtent <= 1) return false;
+      slot = DropSlot.None;
+      if (!IsItemsHost) return false;
 
-      var main = Math.Max(0, Orientation == Orientation.Vertical ? point.Y : point.X);
-      index = Math.Clamp(SlotAt(main), 0, Owner.Items?.Count ?? 0);
+      var main = Orientation == Orientation.Vertical ? point.Y : point.X;
+      if (!IsVirtualizing)
+      {
+         return ShowsGroups && TryGetStackedDropSlot(main, out slot);
+      }
+
+      if (_itemExtent <= 1) return false;
+
+      if (ShowsGroups)
+      {
+         if (!_groupLines.TryGetDropSlot(main, 0, out var inGroup)) return false;
+         slot = DropSlotOf(inGroup);
+         return true;
+      }
+
+      slot = new DropSlot(Math.Clamp(SlotAt(Math.Max(0, main)), 0, Owner.Items?.Count ?? 0));
+      return true;
+   }
+
+   // Not virtualized, rows of their own heights: the group whose header starts last at or before the point; on its
+   // header, the start of an open group - of its first inner group, for an outer one - or the end of a folded one; among
+   // its rows, before the first whose middle is past the point.
+   private bool TryGetStackedDropSlot(double along, out DropSlot slot)
+   {
+      slot = DropSlot.None;
+      var places = Owner.GroupHeaderPlaces;
+      var count = Owner.Items.Count;
+      if (places.Count == 0 || _headerStarts.Count != places.Count || _itemStarts.Count != count) return false;
+
+      var vertical = Orientation == Orientation.Vertical;
+      var place = 0;
+      while (place + 1 < places.Count && _headerStarts[place + 1] <= along) place++;
+
+      int GroupEnd(int at) => at + 1 < places.Count ? places[at + 1].BeforeItem : count;
+      var header = Owner.GroupHeaderGenerator.HeaderAt(place);
+      var headerEnd = _headerStarts[place] + (header == null ? 0 : vertical ? header.DesiredSize.Height : header.DesiredSize.Width);
+      int slotInGroup;
+      if (along < headerEnd)
+      {
+         while (places[place].IsExpanded && GroupEnd(place) == places[place].BeforeItem && place + 1 < places.Count &&
+                places[place + 1].BeforeItem == places[place].BeforeItem)
+         {
+            place++;
+         }
+
+         slotInGroup = places[place].IsExpanded ? 0 : GroupEnd(place) - places[place].BeforeItem;
+      }
+      else
+      {
+         var first = places[place].BeforeItem;
+         slotInGroup = GroupEnd(place) - first;
+         for (var index = first; index < GroupEnd(place); index++)
+         {
+            if (Owner.ItemContainerGenerator.ContainerFromIndex(index) is not IMeasurableComponent row) continue;
+            var extent = vertical ? row.DesiredSize.Height : row.DesiredSize.Width;
+            if (along < _itemStarts[index] + extent / 2)
+            {
+               slotInGroup = index - first;
+               break;
+            }
+         }
+      }
+
+      var start = places[place].BeforeItem;
+      slot = DropSlotOf(new GroupDropSlot(place, start, GroupEnd(place) - start, slotInGroup));
       return true;
    }
 }

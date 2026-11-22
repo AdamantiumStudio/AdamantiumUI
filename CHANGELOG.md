@@ -7,6 +7,27 @@ All packages share one version.
 
 ### Added
 
+- Groups in an `ItemsControl`, as in WPF: a `GroupStyle` in `ItemsControl.GroupStyle` (one per level, its
+  `HeaderTemplate` given the `CollectionViewGroup`) shows the groups of a grouped `CollectionView` source. The items stay
+  one list - their indices, the selection and the keyboard count no header - and each group's header (`GroupHeader`,
+  made by `ItemsControl.GroupHeaderGenerator` at the places of `ItemsControl.GroupHeaderPlaces`) is a row of the panel
+  before the group's items: a line across a `WrapPanel`, a row of a `StackPanel`, virtualized or not. Only the headers
+  of the lines in view are made, as only those items are; the arrows pass a header by. Each level's headers are as tall
+  as their own template, and a grouped `StackPanel` keeps its rows of another height (`ItemExtentExceptions`).
+  `GroupStyle.CanCollapse` lets a click on a header fold its group to the header and open it again
+  (`GroupHeader.IsExpanded`, kept by the group's name across changes of the items; automation's ExpandCollapse); a
+  folded group's items are not made, even with the window across them. The themes draw the header and its arrow.
+  Automation reads the list as it shows: each header before its group's items, a folded group by its header alone.
+  `RibbonGallery` groups its items through this view instead of an order of its own.
+- Drag and drop in a list showing groups. A drop slot is now a `DropSlot` - the index, and the group it lands in with
+  that group's items (`GroupStart`, `GroupEnd`) - since one group's end and the next one's start are the same index:
+  `IDropGapPanel.TryGetDropSlot` and `ShowDropGap` take it, `VirtualizingPanel.DropGapGroup` holds the gap's group, and
+  `DragDropEventArgs.DropGroup` tells the target, with `InsertBefore` an item of that group or null for its end (putting
+  the item in another group is the target's to do). The gap opens as a cell of its group in a `WrapPanel` or a
+  virtualizing `StackPanel` - the items after it in the group move along, a full last line makes the group a line
+  longer - and the caret, where it is the cue, stays within the group; a stack that does not virtualize tells the group
+  too. On a header a drop goes to the start of an open group, to the end of a folded one, framed on its header; a drag
+  resting on a folded header opens it (`GroupHeader` is `ISpringLoadable`).
 - `ISystemStartup`, from the application's container: `IsOn` puts the application in the user's startup list or takes
   it out - the Run key on Windows, the XDG autostart folder on Linux - and reads off when the system's own settings
   turned it off (Task Manager's mark, `Hidden`, `X-GNOME-Autostart-enabled=false`) or the entry starts another program.
@@ -15,7 +36,10 @@ All packages share one version.
   `GroupDescription` of one's own), `Groups` of `CollectionViewGroup` (`Name`, `Items`, `ItemCount`, `IsBottomLevel`),
   more levels nested inside. Groups come in the order of their first item after the filter and the ordering, a group
   left empty goes; after each change of what is shown they are a new list, told once by `PropertyChanged` and made when
-  next read. The view's collections are the framework's `TrackingCollection`: `GroupDescriptions`,
+  next read. Grouped, the view's own items go group by group, the ordering kept inside each, so a list shows a header
+  and then the group's items; an item joining or leaving its group is one Add or Remove there, and a Reset only when it
+  changes the groups' order (or with more than one level).
+  The view's collections are the framework's `TrackingCollection`: `GroupDescriptions`,
   `LiveFilteringProperties`, `LiveSortingProperties`, and `SortDescriptionCollection` derives from it, no longer from
   `ObservableCollection`.
 - `TreeView.HasChildrenPath`: as `TreeDataGrid`'s, the member saying whether a node has children, for children loaded
@@ -645,6 +669,9 @@ All packages share one version.
 
 ### Changed
 
+- Breaking: `IDropGapPanel.TryGetDropSlot` gives a `DropSlot` instead of an index, `ShowDropGap` takes one
+  (`DropSlot.None` closes the gap), and so does `VirtualizingPanel.TryGetDropSlot`; `TiledPanel` keeps its index-based
+  methods.
 - Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
   code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
   `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,
@@ -898,6 +925,8 @@ All packages share one version.
 
 ### Fixed
 
+- A `ContentControl` without a template of its own showed data content as large text, passing its `ContentTemplate`
+  (and `ContentTemplateSelector`) by: such content is now shown through the template.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a

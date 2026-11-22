@@ -186,6 +186,7 @@ public static partial class DragDrop
             Effects = effects,
             InsertIndex = _insertIndex,
             InsertBefore = _insertBefore,
+            DropGroup = _insertGroup,
             DropTarget = _dropTarget,
             Placement = _placement,
             OriginalSource = _hit,

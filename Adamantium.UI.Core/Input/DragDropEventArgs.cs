@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Input;
@@ -45,6 +46,12 @@ public class DragDropEventArgs : RoutedEventArgs
     /// append. Robust to a same-list reorder: this reference keeps its place after the source removes the dragged items,
     /// so <c>target.IndexOf(InsertBefore)</c> gives the right position where a stale numeric index would not.</summary>
     public object InsertBefore { get; set; }
+
+    /// <summary>The group of a list showing groups the payload lands in, or null. The end of one group and the start of
+    /// the next are the same <see cref="InsertIndex"/>, so this is what says which; <see cref="InsertBefore"/> is then
+    /// an item of this group, or null for its end. Putting an item in another group - setting what it is grouped by -
+    /// is the target's to do.</summary>
+    public CollectionViewGroup DropGroup { get; set; }
 
     /// <summary>Hierarchical drops (a TreeView): the item the drop is relative to - a sibling anchor for
     /// <see cref="DropPlacement.Before"/>/<see cref="DropPlacement.After"/>, or the parent for <see cref="DropPlacement.Into"/>.

@@ -228,7 +228,14 @@ public class ContentControl : Control, IContentControl
       {
          // Parked for a template that never came: shown here, it is waited for no more.
          ParkedVisuals.Release(this, content);
-         _currentVisualChild = content as IUIComponent ?? new TextBlock { FontSize = 28, Text = content.ToString() };
+         // Data with a template to show it is shown through it, as a template's presenter would.
+         _currentVisualChild = content as IUIComponent
+            ?? (ContentTemplate != null || ContentTemplateSelector != null
+               ? new ContentPresenter
+               {
+                  Content = content, ContentTemplate = ContentTemplate, ContentTemplateSelector = ContentTemplateSelector
+               }
+               : new TextBlock { FontSize = 28, Text = content.ToString() });
          AddVisualChild(_currentVisualChild);
          if (_currentVisualChild.LogicalParent == null) AddLogicalChild(_currentVisualChild);
          else if (!ReferenceEquals(_currentVisualChild.LogicalParent, this))

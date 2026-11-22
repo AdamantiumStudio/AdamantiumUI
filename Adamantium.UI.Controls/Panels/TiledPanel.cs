@@ -210,6 +210,16 @@ public class TiledPanel : Panel, IDropGapPanel
         InvalidateMeasure();
     }
 
+    // Tiles show no groups: a slot is its index.
+    bool IDropGapPanel.TryGetDropSlot(Vector2<double> point, IList lifted, out DropSlot slot)
+    {
+        var found = TryGetDropSlot(point, lifted, out var index);
+        slot = found ? new DropSlot(index) : DropSlot.None;
+        return found;
+    }
+
+    void IDropGapPanel.ShowDropGap(DropSlot slot, IList lifted) => ShowDropGap(slot.Index, lifted);
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);

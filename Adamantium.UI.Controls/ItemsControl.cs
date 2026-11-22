@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Adamantium.Core.Collections;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Generators;
 using Adamantium.UI.Controls.Panels;
@@ -63,6 +64,118 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         Items = new ItemCollection();
         Items.CollectionChanged += OnItemsCollectionChanged;
         ItemContainerGenerator = new ItemContainerGenerator(this);
+        GroupHeaderGenerator = new GroupHeaderGenerator(this);
+        GroupStyle = [];
+        GroupStyle.CollectionChanged += OnGroupStyleChanged;
+    }
+
+    private IReadOnlyList<GroupHeaderPlace> _groupHeaderPlaces = [];
+    private readonly List<string> _placePaths = [];
+    private readonly HashSet<string> _collapsedGroups = new(StringComparer.Ordinal);
+    private bool _groupsStale = true;
+
+    // A group's path: the names of the groups it is in and its own, outermost first - what keeps a group folded when the
+    // groups are made again after a change of the items.
+    private const char PathSeparator = '\u001F';
+
+    /// <summary>How the groups of a grouped <see cref="ItemsSource"/> (a <see cref="Core.Collections.CollectionView"/> with
+    /// group descriptions) are shown: one per level, the first the outermost. Empty shows no groups - the items alone.
+    /// </summary>
+    public TrackingCollection<GroupStyle> GroupStyle { get; }
+
+    /// <summary>Where the headers of the source's groups stand among the items, in order; empty when nothing groups them
+    /// or <see cref="GroupStyle"/> is empty. The panel lays a header out as a row of its own before its item.</summary>
+    public IReadOnlyList<GroupHeaderPlace> GroupHeaderPlaces
+    {
+        get
+        {
+            if (_groupsStale)
+            {
+                _groupsStale = false;
+                _groupHeaderPlaces = PlacesOfHeaders();
+                GroupHeaderGenerator.Refresh();
+            }
+
+            return _groupHeaderPlaces;
+        }
+    }
+
+    /// <summary>Folds the group at <paramref name="place"/> to its header, or opens it: kept by the group's path of
+    /// names, so it holds across changes of the items. What a <see cref="GroupHeader"/>'s <c>IsExpanded</c> tells.</summary>
+    internal void SetGroupExpanded(int place, bool expanded)
+    {
+        if (place < 0 || place >= _placePaths.Count)
+        {
+            return;
+        }
+
+        var changed = expanded ? _collapsedGroups.Remove(_placePaths[place]) : _collapsedGroups.Add(_placePaths[place]);
+        if (!changed)
+        {
+            return;
+        }
+
+        _groupsStale = true;
+        ItemsHostPanel?.InvalidateMeasure();
+    }
+
+    /// <summary>Makes the headers of the groups, apart from the items' containers.</summary>
+    public GroupHeaderGenerator GroupHeaderGenerator { get; }
+
+    /// <summary>The style of the groups at <paramref name="level"/>: its own, or the last one for a level past them; null
+    /// when there is none.</summary>
+    internal GroupStyle GroupStyleOf(int level) =>
+        GroupStyle.Count == 0 ? null : GroupStyle[Math.Min(level, GroupStyle.Count - 1)];
+
+    private IReadOnlyList<GroupHeaderPlace> PlacesOfHeaders()
+    {
+        _placePaths.Clear();
+        if (GroupStyle.Count == 0 || ItemsSource is not Core.Collections.CollectionView { IsGrouped: true } view)
+        {
+            return [];
+        }
+
+        var places = new List<GroupHeaderPlace>();
+        var nextItem = 0;
+        AddPlacesOf(view.Groups, 0, string.Empty, places, ref nextItem);
+
+        // The items are changed through to the list on its own loop: a view changed on another thread can be ahead of
+        // them for a moment. Its groups then wait for the change to arrive rather than describe items the list has not.
+        if (nextItem != Items.Count)
+        {
+            _placePaths.Clear();
+            return [];
+        }
+
+        return places;
+    }
+
+    // An inner level's groups are the items of the group above it; a folded group's inner groups take no place.
+    private void AddPlacesOf(IReadOnlyList<object> groups, int level, string outerPath, List<GroupHeaderPlace> places,
+        ref int nextItem)
+    {
+        foreach (var entry in groups)
+        {
+            var group = (Core.Collections.CollectionViewGroup)entry;
+            var path = level == 0 ? group.Name?.ToString() ?? string.Empty : outerPath + PathSeparator + group.Name;
+            var expanded = !_collapsedGroups.Contains(path);
+            places.Add(new GroupHeaderPlace(group, level, nextItem, expanded));
+            _placePaths.Add(path);
+            if (group.IsBottomLevel || !expanded)
+            {
+                nextItem += group.ItemCount;
+                continue;
+            }
+
+            AddPlacesOf(group.Items, level + 1, path, places, ref nextItem);
+        }
+    }
+
+    // The headers were made through the old styles: drop them, and the items' containers with them, and make them again.
+    private void OnGroupStyleChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        _groupsStale = true;
+        _presenter?.RegenerateContainers();
     }
 
     /// <summary>The effective item list — markup-authored items, or a view over <see cref="ItemsSource"/>.</summary>
@@ -367,6 +480,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
         MoveKeyboardWith(e);
         if (_pendingScroll >= 0) _pendingScroll = Followed(_pendingScroll, e);   // still the item asked for
+        _groupsStale = true;
         _presenter?.OnItemsChanged(e);
         LetGoOfRemovedItems(e);
         LetGoOfParkedItems(e);

@@ -223,10 +223,33 @@ public class ItemContainerGenerator
         }
     }
 
+    private static bool IsSkipped(IReadOnlyList<ItemRange> skipped, int index)
+    {
+        if (skipped == null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < skipped.Count && skipped[i].First <= index; i++)
+        {
+            if (skipped[i].Contains(index))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Reconciles the realized set to exactly [<paramref name="first"/>, <paramref name="last"/>], rebinding
     /// containers that left the window in place. Idempotent; returns the surplus containers when the window shrank.</summary>
     public IReadOnlyList<IUIComponent> SetWindow(int first, int last, double budgetMs = double.MaxValue, int minBinds = 0,
-        Action<IUIComponent> onBound = null)
+        Action<IUIComponent> onBound = null) => SetWindow(first, last, null, budgetMs, minBinds, onBound);
+
+    /// <summary>As <see cref="SetWindow(int, int, double, int, Action{IUIComponent})"/>, leaving out the items of
+    /// <paramref name="skipped"/> - folded groups' - as if they were outside the window; ascending, null for none.</summary>
+    internal IReadOnlyList<IUIComponent> SetWindow(int first, int last, IReadOnlyList<ItemRange> skipped,
+        double budgetMs = double.MaxValue, int minBinds = 0, Action<IUIComponent> onBound = null)
     {
         var budgetStart = System.Diagnostics.Stopwatch.GetTimestamp();
         Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*setwindow*");
@@ -238,7 +261,7 @@ public class ItemContainerGenerator
         donors.Clear();
         _outKeysBuf.Clear();
         foreach (var (idx, realized) in _byIndex)
-            if ((idx < first || idx > last) && !ReferenceEquals(realized, _held)) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
+            if ((idx < first || idx > last || IsSkipped(skipped, idx)) && !ReferenceEquals(realized, _held)) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
         foreach (var idx in _outKeysBuf)
         {
             Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*unmapped*");
@@ -292,6 +315,7 @@ public class ItemContainerGenerator
         foreach (var i in _bindOrderBuf)
         {
             if (_byIndex.ContainsKey(i)) continue;   // stayed in the window - keep its container + binding
+            if (IsSkipped(skipped, i)) continue;     // a folded group's: in the window's span, not in what it shows
             var item = _owner.Items[i];
             IUIComponent container;
             if (!_owner.TryTake(item))
