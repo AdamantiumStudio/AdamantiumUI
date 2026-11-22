@@ -14,4 +14,12 @@ public class ToolBarAutomationPeer : UIComponentAutomationPeer
 
     // A tool bar is called by its header.
     protected override string NameCore() => (Owner as ToolBar)?.Header as string;
+
+    // A contextual bar's context, as its label says it - the label itself is no element of its own - unless the
+    // application gives its own help text.
+    public override string HelpText =>
+        AutomationProperties.GetHelpText(Owner) is { Length: > 0 } own
+            ? own
+            : Owner is ToolBar { HasContextualHeader: true, ContextualHeader: var header } ? header?.ToString() ?? string.Empty
+            : string.Empty;
 }

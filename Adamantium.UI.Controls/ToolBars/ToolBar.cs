@@ -11,6 +11,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -57,7 +58,29 @@ public class ToolBar : ItemsControl
     /// <summary>Whether the bar is shown by what the user is on - a table, a picture - rather than by the user, as a
     /// ribbon's contextual tab is: its tray's menu lists it apart, and does not switch it.</summary>
     public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.Register(nameof(IsContextual),
-        typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+        typeof(bool), typeof(ToolBar), new PropertyMetadata(false, OnContextualHeaderChanged));
+
+    /// <summary>The name of a contextual bar's context - a picture's tools, a table's - shown at the bar's start on a
+    /// label in its <see cref="Accent"/>, as the ribbon names a contextual group over its tabs, so the bar says what it is
+    /// and which context it goes with; automation reads it as the bar's help text. None, no label. A bar down the side
+    /// shows only its color for now.</summary>
+    public static readonly AdamantiumProperty ContextualHeaderProperty = AdamantiumProperty.Register(
+        nameof(ContextualHeader), typeof(object), typeof(ToolBar),
+        new PropertyMetadata(null, OnContextualHeaderChanged));
+
+    /// <summary>How <see cref="ContextualHeader"/> is drawn.</summary>
+    public static readonly AdamantiumProperty ContextualHeaderTemplateProperty = AdamantiumProperty.Register(
+        nameof(ContextualHeaderTemplate), typeof(DataTemplate), typeof(ToolBar), new PropertyMetadata(null));
+
+    /// <summary>Whether a contextual bar shows its <see cref="ContextualHeader"/>; off, only its color tells it apart.</summary>
+    public static readonly AdamantiumProperty ShowsContextualHeaderProperty = AdamantiumProperty.Register(
+        nameof(ShowsContextualHeader), typeof(bool), typeof(ToolBar),
+        new PropertyMetadata(true, OnContextualHeaderChanged));
+
+    private static readonly AdamantiumPropertyKey HasContextualHeaderPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasContextualHeader), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasContextualHeaderProperty = HasContextualHeaderPropertyKey.Property;
 
     /// <summary>The color of a contextual bar's context, washed behind the bar - the same as the ribbon's contextual
     /// group of that context (<see cref="RibbonContextualGroup.Accent"/>), so the two read as one. The theme's accent
@@ -174,6 +197,38 @@ public class ToolBar : ItemsControl
     {
         get => GetValue<Brush>(AccentProperty);
         set => SetValue(AccentProperty, value);
+    }
+
+    public object ContextualHeader
+    {
+        get => GetValue(ContextualHeaderProperty);
+        set => SetValue(ContextualHeaderProperty, value);
+    }
+
+    public DataTemplate ContextualHeaderTemplate
+    {
+        get => GetValue<DataTemplate>(ContextualHeaderTemplateProperty);
+        set => SetValue(ContextualHeaderTemplateProperty, value);
+    }
+
+    public bool ShowsContextualHeader
+    {
+        get => GetValue<bool>(ShowsContextualHeaderProperty);
+        set => SetValue(ShowsContextualHeaderProperty, value);
+    }
+
+    /// <summary>Whether the bar's context label stands at its start: a contextual bar with a
+    /// <see cref="ContextualHeader"/> it shows.</summary>
+    public bool HasContextualHeader
+    {
+        get => GetValue<bool>(HasContextualHeaderProperty);
+        private set => SetValue(HasContextualHeaderPropertyKey, value);
+    }
+
+    private static void OnContextualHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var bar = (ToolBar)a;
+        bar.HasContextualHeader = bar.IsContextual && bar.ShowsContextualHeader && bar.ContextualHeader != null;
     }
 
     /// <summary>Where the commands that do not fit on the bar's line go: <see cref="Controls.CommandWrapping.NoWrap"/>,
