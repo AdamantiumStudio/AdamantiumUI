@@ -601,6 +601,8 @@ All packages share one version.
 
 ### Changed
 
+- A tool bar's first command stands 3 px clear of its grip, in every theme - under it on a bar down the side - so the grip
+  no longer reads as the command's edge. The room is the grip style's margin.
 - An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it
   is hit. `ArcSpan` (new) is the one statement of them: parametric degrees, as an HTML canvas measures them, so a
   sector's share of the area is its share of the turn; any start taken round the turn (`-90` starts at twelve); the

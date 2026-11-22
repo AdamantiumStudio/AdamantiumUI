@@ -137,6 +137,37 @@ public class ToolBarTrayTests
         });
     }
 
+    // The first command stands clear of the grip, after it along the bar, so the grip does not read as the command's edge;
+    // under it down the side.
+    [TestCaseSource(nameof(StyleSets))]
+    public void TheFirstCommand_StandsClearOfTheGrip_AlongTheBar(System.Type styleSet)
+    {
+        Use(styleSet);
+        var across = Bar("Across", 0, 0);
+        var root = Shown(Tray(across), 800);
+        // The grip takes its theme's style, as a window's theme gives it.
+        Style(Grip(across));
+        Show(root);
+        var gripEnd = At(Grip(across), root).X + Grip(across).RenderSize.Width;
+        var acrossGap = At((IUIComponent)across.Items[0], root).X - gripEnd;
+
+        var down = Bar("Down", 0, 0);
+        var tray = Tray(down);
+        tray.Orientation = Orientation.Vertical;
+        var side = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { tray } } };
+        Show(side);
+        Style(Grip(down));
+        Show(side);
+        var gripFoot = At(Grip(down), side).Y + Grip(down).RenderSize.Height;
+        var downGap = At((IUIComponent)down.Items[0], side).Y - gripFoot;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(acrossGap, Is.EqualTo(3).Within(0.5), "along a bar across");
+            Assert.That(downGap, Is.EqualTo(3).Within(0.5), "down a bar down the side");
+        });
+    }
+
     [TestCaseSource(nameof(StyleSets))]
     public void DownTheSide_TheBarsOfARow_StandOneUnderAnother_AndRunDown(System.Type styleSet)
     {

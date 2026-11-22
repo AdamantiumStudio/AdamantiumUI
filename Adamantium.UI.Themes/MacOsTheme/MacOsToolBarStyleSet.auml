@@ -42,6 +42,8 @@
          the primary ink under the pointer, as a row's drag handle does. -->
     <Style Selector="Thumb.ToolBarGrip">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <!-- Room between the grip and the first command; under it on a bar down the side. -->
+        <Setter Property="Margin" Value="0,0,3,0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
@@ -133,6 +135,7 @@
             <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
             <Setter TargetName="PART_Grip" Property="Width" Value="NaN"/>
             <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
+            <Setter TargetName="PART_Grip" Property="Margin" Value="0,0,0,3"/>
             <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
             <Setter TargetName="PART_OverflowButton" Property="Width" Value="NaN"/>
             <Setter TargetName="PART_OverflowButton" Property="Height" Value="{TemplateBinding OverflowButtonLength}"/>
