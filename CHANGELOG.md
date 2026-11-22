@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `TreeView.HasChildrenPath`: as `TreeDataGrid`'s, the member saying whether a node has children, for children loaded
+  only as its branch opens - a debugger's value: the expander shows with none read yet.
+- A scenario's `<Hover Character="30:13"/>` (`AutomationElement.HoverTextAsync`, `AutomationCommand.HoverText`): the
+  pointer brought over a character of an element's text - scrolled into view first - as a hand rests it on a word, for
+  what a code editor shows there.
 - A copy of an application started past `UIApplication.MaxInstances` hands its command line and the right to come to
   the front to a running copy before it ends: `IUIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
   raised on the loop thread) - a file to open, say, with the folder it was started in; not handled, the main window comes to the front. Under it
