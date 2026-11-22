@@ -289,6 +289,51 @@ public class PropertyGridTests
         });
     }
 
+    // Items whose own type carries the attribute the grid is told of get a section each; a type below one marked, not
+    // marked itself, does not, and a marked item a written section claims is shown there alone.
+    [Test]
+    public void ItemsOfATypeMarkedToBuildSectionsFor_GetSectionsOfTheirOwn_OnlyTheirOwnTypeCounts()
+    {
+        var marked = new Marked { Name = "marked" };
+        var below = new MarkedBelow { Name = "below" };
+        var claimed = new MarkedAndWritten();
+        var source = new ObservableCollection<object> { new Folding(), marked, below, claimed };
+        var grid = new PropertyGrid
+        {
+            Template = Chrome(),
+            SectionsSource = source,
+            AutoGenerateSectionsForMarked = typeof(OfferedAttribute)
+        };
+        grid.Sections.Add(new PropertySection { DataType = typeof(Folding), Header = "Folding" });
+        grid.Sections.Add(new PropertySection { DataType = typeof(MarkedAndWritten), Header = "Written" });
+        Settle(grid);
+
+        var shown = grid.Displayed.ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown.Select(section => section.Header?.ToString()).Take(2), Is.EqualTo(new[] { "Folding", "Written" }));
+            Assert.That(shown.Skip(2).Select(section => section.Target), Is.EqualTo(new object[] { marked }));
+        });
+    }
+
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    private sealed class OfferedAttribute : Attribute;
+
+    [Offered]
+    private class Marked
+    {
+        public string Name { get; set; }
+    }
+
+    private sealed class MarkedBelow : Marked;
+
+    [Offered]
+    private sealed class MarkedAndWritten
+    {
+        public string Name { get; set; }
+    }
+
     // The sections the grid builds itself take the style it is given for them - set before or after they are built -
     // and the sections written in markup do not.
     [Test]

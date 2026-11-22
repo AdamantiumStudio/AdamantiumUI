@@ -153,8 +153,15 @@ public class PropertyGrid : Control
         nameof(AutoGenerateSectionsFor), typeof(Type), typeof(PropertyGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
 
-    /// <summary>A style given to every section the grid builds itself - from <see cref="AutoGenerateSections"/> or
-    /// <see cref="AutoGenerateSectionsFor"/> - as an items control gives its containers theirs: no markup writes those
+    /// <summary>As <see cref="AutoGenerateSectionsFor"/>, for the items whose own type is marked with this attribute -
+    /// the components an application's library marks as its users' to add, say, of no one base type.</summary>
+    public static readonly AdamantiumProperty AutoGenerateSectionsForMarkedProperty = AdamantiumProperty.Register(
+        nameof(AutoGenerateSectionsForMarked), typeof(Type), typeof(PropertyGrid),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSelectedObjectChanged));
+
+    /// <summary>A style given to every section the grid builds itself - from <see cref="AutoGenerateSections"/>,
+    /// <see cref="AutoGenerateSectionsFor"/> or <see cref="AutoGenerateSectionsForMarked"/> - as an items control gives
+    /// its containers theirs: no markup writes those
     /// sections, so this is where their accent or menu is said.</summary>
     public static readonly AdamantiumProperty GeneratedSectionStyleProperty = AdamantiumProperty.Register(
         nameof(GeneratedSectionStyle), typeof(Style), typeof(PropertyGrid),
@@ -254,6 +261,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<Type>(AutoGenerateSectionsForProperty);
         set => SetValue(AutoGenerateSectionsForProperty, value);
+    }
+
+    public Type AutoGenerateSectionsForMarked
+    {
+        get => GetValue<Type>(AutoGenerateSectionsForMarkedProperty);
+        set => SetValue(AutoGenerateSectionsForMarkedProperty, value);
     }
 
     public Style GeneratedSectionStyle
@@ -907,8 +920,8 @@ public class PropertyGrid : Control
                 many.Add(templated);
                 seen.Add(item);
             }
-            else if (item != null && !_claimed.Contains(item) &&
-                     (!typed || AutoGenerateSections || AutoGenerateSectionsFor?.IsInstanceOfType(item) == true))
+            else if (item != null && !_claimed.Contains(item) && (!typed || AutoGenerateSections ||
+                         AutoGenerateSectionsFor?.IsInstanceOfType(item) == true || IsMarkedToGenerate(item)))
             {
                 many.Add(SectionFor(item));
                 seen.Add(item);
@@ -944,6 +957,9 @@ public class PropertyGrid : Control
         for (var i = 0; i < count; i++) _sourceItems.Add(copy[i]);
         SourceGate.Return(copy);
     }
+
+    private bool IsMarkedToGenerate(object item) =>
+        AutoGenerateSectionsForMarked is { } marker && item.GetType().IsDefined(marker, false);
 
     private List<object> Unclaimed(Type type)
     {
