@@ -67,6 +67,8 @@ yourself for a change in rendering. Close the sandbox first: while it runs, the 
 - Branch from `main` and target `main`, one change per pull request.
 - The `build` check must pass: it builds both solutions with `-warnaserror` and runs the tests that need no GPU.
 - A fix comes with a test that fails without it, wherever the defect can be reproduced in one.
+- A change a user of the packages would notice adds its changelog entry as a file of its own in
+  [`changelog.d`](changelog.d/README.md), not into `CHANGELOG.md`: changes made side by side never conflict over it.
 - A change to the Rider plugin raises its `version` in `editors/rider-auml/build.gradle.kts`.
 - The commit message says what the change does and why.
 
