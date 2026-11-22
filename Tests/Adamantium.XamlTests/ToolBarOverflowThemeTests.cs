@@ -51,7 +51,10 @@ public class ToolBarOverflowThemeTests
     public void AContextualBarWithNoColorOfItsOwn_IsWashedInTheThemesAccent(string name)
     {
         var theme = Use(name);
-        var bar = new ToolBar { Header = "Table", IsContextual = true, Items = { new Button { Content = "Insert row" } } };
+        var bar = new ToolBar
+        {
+            Header = "Table", IsContextual = true, ContextualHeader = "Table Tools", Items = { new Button { Content = "Insert row" } }
+        };
         var window = new Window { Width = 300, Height = 200, Content = new ToolBarTray { Items = { bar } } };
         window.ApplyCurrentTheme();
         WindowExtension.UpdateTree(window);
@@ -64,6 +67,10 @@ public class ToolBarOverflowThemeTests
             Assert.That((wash.Background as SolidColorBrush)?.Color,
                 Is.EqualTo(((SolidColorBrush)theme.AccentFillColorDefault).Color));
             Assert.That(wash.Opacity, Is.GreaterThan(0).And.LessThan(1), "faint, the theme's share");
+            Assert.That(((Border)bar.GetTemplateChild("ContextualHeaderPlate")).CornerRadius.TopLeft, Is.GreaterThan(0),
+                "its name's plate rounded as the commands are");
+            Assert.That(((Border)bar.GetTemplateChild("ContextualHeaderPlate")).CornerRadius,
+                Is.EqualTo(_app.ResourceManager.FindResource("CornerRadiusDefault")));
         });
     }
 
