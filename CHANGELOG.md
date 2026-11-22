@@ -833,6 +833,12 @@ All packages share one version.
 
 ### Fixed
 
+- A PDF page of long straight paths - a geologic map, a topographic one - took seconds to be written into its drawing
+  and gigabytes to do it: each straight piece was a segment object of its own. A run of straight pieces is now one
+  polyline segment, the same points. The geologic map of Alaska (USGS SIM 3340, sheet 1), opened and its page written,
+  takes 4.2 s and 2.3 GB, not 24.4 s and 7.9 GB; a US Topo sheet 1.6 s and 0.8 GB, not 2.9 s and 1.2 GB. `PdfTimings`
+  (explicit, Release) measures a folder of one's own: opening, the first page, a page of scrolling - each on the
+  document opened anew - and what each allocates.
 - `Window.Hide` on a window with no window of the system behind it - one drawn headless - threw; it does nothing, as
   everything else that talks to such a window's worker.
 - An ellipse swept past a turn was two shapes: the batch drew it whole, the tessellator - an `EllipseGeometry`, the
