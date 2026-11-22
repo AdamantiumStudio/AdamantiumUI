@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Markup;
 using Adamantium.UI.Markup.AST;

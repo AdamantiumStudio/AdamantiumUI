@@ -8,7 +8,7 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Collections;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.ModuleLoading;
 using Adamantium.UI.Sandbox.Modules;

@@ -796,7 +796,7 @@ public class DefaultAumlTransformer : IAumlTransformer
         }
 
         static bool IsLanguageTable(IResolvedType type) =>
-            type != null && type.InheritsFrom("Adamantium.UI.Core.Localization.LocalizedStrings");
+            type != null && type.InheritsFrom("Adamantium.Localization.LocalizedStrings");
 
         // {x:Static prefix:Type.Member}: the type is named the way x:Type names one, the member is the last segment. The
         // member is checked HERE - a name that does not exist is a build error, not a silently empty property.

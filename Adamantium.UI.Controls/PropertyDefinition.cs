@@ -10,7 +10,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.RoutedEvents;

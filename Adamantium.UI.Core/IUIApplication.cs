@@ -61,12 +61,12 @@ public interface IUIApplication
         remove { }
     }
 
-    /// <summary>The language the application shows, by name - <see cref="Localization.Languages.Current"/>. Setting it
-    /// switches every string while the application runs.</summary>
+    /// <summary>The language the application shows, by name - <see cref="Adamantium.Localization.Languages.Current"/>.
+    /// Setting it switches every string while the application runs.</summary>
     string Language
     {
-        get => Localization.Languages.Current;
-        set => Localization.Languages.Current = value;
+        get => Adamantium.Localization.Languages.Current;
+        set => Adamantium.Localization.Languages.Current = value;
     }
 
     /// <summary>Canceled when the splash window is closed before the application has shown a window of its own: the

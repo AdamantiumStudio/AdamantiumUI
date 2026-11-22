@@ -1,4 +1,4 @@
-using Adamantium.UI.Generators;
+using Adamantium.Localization.Generators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 

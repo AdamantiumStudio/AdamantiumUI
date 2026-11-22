@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.Localization;
 using Adamantium.MVVM;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Sandbox.Modules;

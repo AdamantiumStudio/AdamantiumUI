@@ -2,7 +2,7 @@ using System.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Sandbox.Localization;
 

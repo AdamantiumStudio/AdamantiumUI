@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Core.Localization;
@@ -28,7 +29,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
     public override void EstablishConnection()
     {
         CloseConnection();
-        Languages.Follow(this);
+        LanguageFollowers.Follow(this);
 
         // Each argument publishes its value as it connects; the string is written once, when all of them have one.
         _connecting = true;
@@ -114,7 +115,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
     public override void CloseConnection()
     {
-        Languages.Unfollow(this);
+        LanguageFollowers.Unfollow(this);
         if (_waitingOn != null)
         {
             _waitingOn.TemplatedParentChanged -= OnStamped;
@@ -181,10 +182,10 @@ public sealed class LocalizeExpression : BindingExpressionBase
                 return Localize.TargetNullValue;
             }
 
-            return table != null && table.TryText(key, Argument, FormatCulture, out var word) ? word : key;
+            return table != null && table.TryText(key, Arguments(), FormatCulture, out var word) ? word : key;
         }
 
-        if (!table.TryText(Localize.Key, Argument, FormatCulture, out var text))
+        if (!table.TryText(Localize.Key, Arguments(), FormatCulture, out var text))
         {
             Fail($"{table.GetType().Name} has no string '{Localize.Key}'");
             return Localize.FallbackValue;
@@ -198,6 +199,18 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
         Status = BindingStatus.Active;
         return text ?? Localize.TargetNullValue;
+    }
+
+    private PhraseArgument[] Arguments()
+    {
+        var arguments = new PhraseArgument[Localize.Arguments.Count];
+        var index = 0;
+        foreach (var name in Localize.Arguments.Keys)
+        {
+            arguments[index++] = new PhraseArgument(name, Argument(name));
+        }
+
+        return arguments;
     }
 
     private object Argument(string name)

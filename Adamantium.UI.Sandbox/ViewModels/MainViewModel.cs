@@ -6,7 +6,7 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Diagnostics;
 using Adamantium.UI.Sandbox.Localization;
 using Adamantium.Win32;

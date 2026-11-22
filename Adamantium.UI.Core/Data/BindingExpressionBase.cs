@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;

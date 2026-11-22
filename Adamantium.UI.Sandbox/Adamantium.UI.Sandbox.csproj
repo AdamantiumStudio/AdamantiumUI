@@ -72,6 +72,8 @@
 		<AdamantiumEngineReference Include="Adamantium.Fonts" />
 		<!-- What the source generators above load: Core.Shared, analyzer-only - the assembly itself comes through Core. -->
 		<AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
+		<!-- The string tables from .alang files, and the parser the markup generator reads them with. -->
+		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" />
 	</ItemGroup>
 
 	<ItemGroup>

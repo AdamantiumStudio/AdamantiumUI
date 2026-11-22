@@ -27,7 +27,7 @@ public class LanguageFileToolingTests
     private const string Probe = """
         namespace Probe;
 
-        public sealed class Strings : Adamantium.UI.Core.Localization.LocalizedStrings, Adamantium.UI.Core.Localization.ILanguageTable
+        public sealed class Strings : Adamantium.Localization.LocalizedStrings, Adamantium.Localization.ILanguageTable
         {
             public static Strings Current { get; } = new();
 
@@ -37,16 +37,16 @@ public class LanguageFileToolingTests
             /// <summary>Page {page} of {count}</summary>
             public static string PageOf(object page, object count) => Current.Localized(nameof(PageOf), page, count);
 
-            System.Collections.Generic.IReadOnlyList<string> Adamantium.UI.Core.Localization.ILanguageTable.Languages { get; } = ["en"];
+            System.Collections.Generic.IReadOnlyList<string> Adamantium.Localization.ILanguageTable.Languages { get; } = ["en"];
 
-            System.Collections.Generic.IReadOnlyList<string> Adamantium.UI.Core.Localization.ILanguageTable.Keys { get; } = [nameof(Close), nameof(PageOf)];
+            System.Collections.Generic.IReadOnlyList<string> Adamantium.Localization.ILanguageTable.Keys { get; } = [nameof(Close), nameof(PageOf)];
 
-            System.Collections.Generic.IReadOnlyList<string> Adamantium.UI.Core.Localization.ILanguageTable.PlaceholdersOf(string key) =>
+            System.Collections.Generic.IReadOnlyList<string> Adamantium.Localization.ILanguageTable.PlaceholdersOf(string key) =>
                 key == nameof(PageOf) ? ["page", "count"] : [];
 
-            string Adamantium.UI.Core.Localization.ILanguageTable.ChooserOf(string key) => null;
+            string Adamantium.Localization.ILanguageTable.ChooserOf(string key) => null;
 
-            string Adamantium.UI.Core.Localization.ILanguageTable.Find(string key, string language, object choice) => key switch
+            string Adamantium.Localization.ILanguageTable.Find(string key, string language, object choice) => key switch
             {
                 nameof(Close) => "Close",
                 nameof(PageOf) => "Page {0} of {1}",

@@ -1,4 +1,5 @@
 using System;
+using Adamantium.Localization;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;

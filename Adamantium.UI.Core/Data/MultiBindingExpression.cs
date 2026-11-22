@@ -28,7 +28,7 @@ public class MultiBindingExpression : BindingExpressionBase
       CloseConnection();
       if (!IsProducer)
       {
-         Languages.Follow(this);
+         LanguageFollowers.Follow(this);
       }
 
       // Establish children with combine suspended: each child publishes its initial value as it connects, but we
@@ -105,7 +105,7 @@ public class MultiBindingExpression : BindingExpressionBase
 
    public override void CloseConnection()
    {
-      Languages.Unfollow(this);
+      LanguageFollowers.Unfollow(this);
       foreach (var child in _children)
       {
          child.ValueChanged -= OnChildValueChanged;

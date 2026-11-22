@@ -212,7 +212,9 @@ The `Adamantium.Navigation` package:
 
 - **Language files:** an application's strings live in `.alang` files, one per table and language - `Strings.en.alang`,
   `Strings.ru.alang`. The build turns each table into a class with a property per phrase and a method per phrase with
-  placeholders, and checks every translation against the base language.
+  placeholders, and checks every translation against the base language. The tables, `Languages` and the generator are
+  the engine's `Adamantium.Localization`, so code with no UI - a game, the engine's own components - reads the same
+  files in the same language.
 - **In markup:** `{Localize Strings.Close}`, or `{Localize Strings.PageOf, page={Binding Page}, count=3}` with
   placeholders filled by bindings. A key or a placeholder the table lacks fails the build.
 - **Plurals and selections:** a phrase that changes with a number, by each language's own plural rules, or with a

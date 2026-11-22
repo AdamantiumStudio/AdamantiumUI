@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Adamantium.UI.Generators.Localization;
+using Adamantium.Localization.Generators;
 
 namespace Adamantium.UI.LanguageServer;
 

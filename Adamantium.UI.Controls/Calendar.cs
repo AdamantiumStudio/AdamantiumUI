@@ -12,7 +12,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.Resources;

@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Adamantium.Localization;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -771,7 +771,7 @@ public class CanvasNode : ContentControl
     {
         var key = input ? "InputName" : "OutputName";
         return phrases is ILanguageTable table && table.Keys.Contains(key)
-            ? Languages.Say(phrases, key, ("number", number))
+            ? Languages.Say(phrases, key, new PhraseArgument("number", number))
             : number.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 

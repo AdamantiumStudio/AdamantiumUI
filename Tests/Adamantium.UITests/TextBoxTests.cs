@@ -124,7 +124,7 @@ public class TextBoxTests
     [Test]
     public void CharacterCasing_GoesByTheApplicationsLanguageWhenTheBoxHasNone()
     {
-        Adamantium.UI.Core.Localization.Languages.Current = "tr";
+        Adamantium.Localization.Languages.Current = "tr";
         try
         {
             var box = new TextBox { CharacterCasing = CharacterCasing.Upper };
@@ -135,7 +135,7 @@ public class TextBoxTests
         }
         finally
         {
-            Adamantium.UI.Core.Localization.Languages.Current = null;
+            Adamantium.Localization.Languages.Current = null;
         }
     }
 

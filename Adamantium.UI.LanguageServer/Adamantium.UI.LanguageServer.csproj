@@ -21,6 +21,12 @@
 		<AdamantiumEngineReference Include="Adamantium.Mathematics" />
 	</ItemGroup>
 
+	<!-- Language files read as the build reads them: the engine's parser, its plural rules and messages. -->
+	<ItemGroup>
+		<AdamantiumEngineReference Include="Adamantium.Localization" />
+		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<EmbeddedResource Include="Localization\*.alang" LogicalName="Localization/%(Filename)%(Extension)" WithCulture="false" />
 	</ItemGroup>
