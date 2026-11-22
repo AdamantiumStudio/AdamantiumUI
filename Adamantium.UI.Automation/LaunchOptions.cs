@@ -39,9 +39,10 @@ public sealed class LaunchOptions
     /// <summary>Whether the application runs where nobody sees it rather than on the desktop, so it never shows where
     /// someone works and takes no focus from them: on Linux a virtual monitor of its own (Mutter), on Windows a desktop
     /// of its own (<see cref="HiddenDesktop"/>), whose foreground is its own too - a desktop refused fails the launch.
-    /// Elsewhere, or with no Mutter, it shows on the desktop. Input through the system's own pointer (<c>--os</c>) does
-    /// not reach it.</summary>
-    public bool VirtualDisplay { get; set; }
+    /// Elsewhere, or with no Mutter, it shows on the desktop. True by default, so no run forgets it; false only where the
+    /// desktop is needed - input through the system's own pointer (<c>--os</c>, a real mouse) does not reach a hidden
+    /// one.</summary>
+    public bool VirtualDisplay { get; set; } = true;
 
     /// <summary>The monitor its windows open on, named by the end of its id (<c>DISPLAY2</c> on Windows), so it keeps off
     /// the one someone works on; by default this process's <see cref="AutomationProtocol.ScreenVariable"/>, else the
