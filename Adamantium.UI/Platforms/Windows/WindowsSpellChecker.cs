@@ -159,7 +159,8 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         }
     }
 
-    private static string Primary(string language)
+    /// <summary>The first subtag of a BCP 47 tag, lower case: the language, without its region or script.</summary>
+    internal static string Primary(string language)
     {
         var tag = language?.Trim() ?? string.Empty;
         var dash = tag.IndexOf('-');
