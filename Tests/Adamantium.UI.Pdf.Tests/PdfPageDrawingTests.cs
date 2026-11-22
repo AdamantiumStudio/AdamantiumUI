@@ -119,6 +119,46 @@ public class PdfPageDrawingTests
         Assert.That(colors[1].R, Is.LessThan(64), "black ink is dark");
     }
 
+    // A map's border is thousands of straight pieces: a run of them is one polyline, its points in order, and a curve
+    // between two runs stays a curve.
+    [Test]
+    public void ARunOfStraightPieces_IsOnePolyline_InOrder()
+    {
+        var (_, session) = Draw(new TestPdf(), "0 0 m 10 0 l 10 10 l 20 10 l 30 0 40 0 50 10 c 60 10 l S 0 50 m 5 50 l S");
+        var paths = session.All<DrawnGeometry>().Select(d => (StreamGeometry)d.Geometry).ToArray();
+        var segments = paths[0].Figures.Single().Segments.ToArray();
+        var lone = paths[1].Figures.Single().Segments.Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(segments.Select(segment => segment.GetType()),
+                Is.EqualTo(new[] { typeof(PolylineSegment), typeof(CubicBezierSegment), typeof(LineSegment) }));
+            Assert.That(((PolylineSegment)segments[0]).Points,
+                Is.EqualTo(new[] { new Vector2<double>(10, 0), new Vector2<double>(10, 10), new Vector2<double>(20, 10) }));
+            Assert.That(((CubicBezierSegment)segments[1]).Point, Is.EqualTo(new Vector2<double>(50, 10)));
+            Assert.That(((LineSegment)segments[2]).Point, Is.EqualTo(new Vector2<double>(60, 10)));
+            Assert.That(lone, Is.InstanceOf<LineSegment>(), "a lone piece is a line");
+            Assert.That(paths[0].Bounds, Is.EqualTo(new Rect(0, 0, 60, 10)), "bounded by all its points");
+        });
+    }
+
+    // A filled run that ends where it is closed keeps its last point, and the figure is closed.
+    [Test]
+    public void AClosedRun_KeepsItsLastPoint_AndIsClosed()
+    {
+        var (_, session) = Draw(new TestPdf(), "0 0 m 10 0 l 10 10 l 0 10 l h 20 20 m 30 20 l 30 30 l h f");
+        var figures = ((StreamGeometry)session.All<DrawnGeometry>().Single().Geometry).Figures;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(figures.Select(figure => figure.IsClosed), Is.EqualTo(new[] { true, true }));
+            Assert.That(((PolylineSegment)figures[0].Segments.Single()).Points,
+                Is.EqualTo(new[] { new Vector2<double>(10, 0), new Vector2<double>(10, 10), new Vector2<double>(0, 10) }));
+            Assert.That(((PolylineSegment)figures[1].Segments.Single()).Points,
+                Is.EqualTo(new[] { new Vector2<double>(30, 20), new Vector2<double>(30, 30) }));
+        });
+    }
+
     [Test]
     public void EvenOddFillsByItsRule()
     {
