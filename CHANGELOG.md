@@ -833,6 +833,14 @@ All packages share one version.
 
 ### Fixed
 
+- A PDF page of many filled paths held the window when it was first drawn - the geologic map of Alaska for 15 s: the
+  tiles a curve fill is drawn from (`CurveTileTree`) were made on the loop thread, path after path.
+  `Geometry.PrepareForDrawing` makes them and the outline on the calling thread - what recording the draw makes -
+  and `PdfPageDrawing.PrepareForDrawing` does so for a page's paths, clips and soft masks on all the cores, stopping
+  when cancelled. The tree is made with every tile's list in one buffer, a thread's buffers kept from tree to tree:
+  for that map's 3.8 million pieces, made on one thread, 0.6 GB, not 4 GB, the trees the same to the bit - the collections had stopped
+  the whole process for 4.4 s; nothing is held once the page is prepared. The page, prepared on 24 cores, is ready
+  1.3 s after it is written, not 5.6 s; `PdfTimings` measures it.
 - A PDF page of long straight paths - a geologic map, a topographic one - took seconds to be written into its drawing
   and gigabytes to do it: each straight piece was a segment object of its own. A run of straight pieces is now one
   polyline segment, the same points. The geologic map of Alaska (USGS SIM 3340, sheet 1), opened and its page written,
