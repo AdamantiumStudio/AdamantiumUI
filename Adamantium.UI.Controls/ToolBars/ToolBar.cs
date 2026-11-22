@@ -82,6 +82,16 @@ public class ToolBar : ItemsControl
 
     public static readonly AdamantiumProperty HasContextualHeaderProperty = HasContextualHeaderPropertyKey.Property;
 
+    private static readonly AdamantiumPropertyKey HasContextInOverflowPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasContextInOverflow), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasContextInOverflowProperty = HasContextInOverflowPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey OverflowContextAccentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(OverflowContextAccent), typeof(Brush), typeof(ToolBar), new PropertyMetadata(default(Brush)));
+
+    public static readonly AdamantiumProperty OverflowContextAccentProperty = OverflowContextAccentPropertyKey.Property;
+
     /// <summary>The color of a contextual bar's context, washed behind the bar - the same as the ribbon's contextual
     /// group of that context (<see cref="RibbonContextualGroup.Accent"/>), so the two read as one. The theme's accent
     /// unless set.</summary>
@@ -225,6 +235,21 @@ public class ToolBar : ItemsControl
         private set => SetValue(HasContextualHeaderPropertyKey, value);
     }
 
+    /// <summary>Whether a section a shown context comes from (<see cref="ToolBarGroup.IsInContext"/>) is in the overflow
+    /// menu, so the chevron is marked in its color (<see cref="OverflowContextAccent"/>).</summary>
+    public bool HasContextInOverflow
+    {
+        get => GetValue<bool>(HasContextInOverflowProperty);
+        private set => SetValue(HasContextInOverflowPropertyKey, value);
+    }
+
+    /// <summary>The color of the context whose section is in the overflow menu - the first, when several are.</summary>
+    public Brush OverflowContextAccent
+    {
+        get => GetValue<Brush>(OverflowContextAccentProperty);
+        private set => SetValue(OverflowContextAccentPropertyKey, value);
+    }
+
     private static void OnContextualHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var bar = (ToolBar)a;
@@ -322,6 +347,11 @@ public class ToolBar : ItemsControl
     private void Realize()
     {
         TakeCommandsOut();
+        foreach (var gone in _commands.OfType<ToolBarGroup>())
+        {
+            gone.Bar = null;
+        }
+
         ItemContainerGenerator.Clear();
         _commands.Clear();
         _overflowing.Clear();
@@ -337,6 +367,7 @@ public class ToolBar : ItemsControl
                 if (command is ToolBarGroup group)
                 {
                     group.Orientation = Orientation;
+                    group.Bar = this;
                 }
 
                 _commands.Add(command);
@@ -346,6 +377,7 @@ public class ToolBar : ItemsControl
         }
 
         MarkSeparators();
+        MarkContextInOverflow();
         InvalidateMeasure();
     }
 
@@ -629,6 +661,7 @@ public class ToolBar : ItemsControl
             }
 
             MarkSeparators();
+            MarkContextInOverflow();
         }
 
         HasOverflowItems = overflowing.Contains(true);
@@ -638,6 +671,25 @@ public class ToolBar : ItemsControl
         }
 
         return changed;
+    }
+
+    // Whether a section a shown context comes from is in the overflow menu, and in which context's color: the chevron
+    // then says it is there, as the section would on the bar.
+    internal void MarkContextInOverflow()
+    {
+        var found = false;
+        Brush accent = null;
+        for (var i = 0; i < _commands.Count && !found; i++)
+        {
+            if (_overflowing[i] && _commands[i] is ToolBarGroup { IsInContext: true, Visibility: not Visibility.Collapsed } group)
+            {
+                found = true;
+                accent = group.Accent;
+            }
+        }
+
+        HasContextInOverflow = found;
+        OverflowContextAccent = accent;
     }
 
     private bool Any(ToolBarOverflowMode mode) => _commands.Any(command => GetOverflowMode(command) == mode);
