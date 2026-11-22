@@ -660,7 +660,10 @@ All packages share one version.
 - A driven application starts where nobody sees it unless told otherwise: `LaunchOptions.VirtualDisplay` is true by
   default, and `adam-auto start` hides it unless given `--visible` (`--virtual` is still taken). A run that needs the
   desktop - input through the system's own pointer (`--os`, a real mouse) - says so with `VirtualDisplay = false` or
-  `--visible`; no other launch can forget it and show over someone's work.
+  `--visible`; no other launch can forget it and show over someone's work. A generated scenario run only by name
+  (`Explicit`) with a step through the system's pointer (`ThroughSystem="true"`) starts its application on the desktop
+  by itself, so that input reaches it; every other scenario, one with such steps in the ordinary run too, still starts
+  where nobody sees it.
 - Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
   code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
   `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,
