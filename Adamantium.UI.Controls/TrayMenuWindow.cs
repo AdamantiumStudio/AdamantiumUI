@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
@@ -7,16 +8,20 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls;
 
 /// <summary>Where the menu of a <see cref="TrayIcon"/> opens: a menu shows only in a window, so this one, clear and
-/// borderless, covers the work area of the monitor the menu was asked on, and the menu opens in it as in any window -
-/// placed, flipped at the edges, closed by a press beside it or Escape. It closes as well when another window becomes
-/// the active one: a press on the task bar or another application's window never reaches it. One window for one opening:
-/// closed with its menu, so the application never counts a hidden window and no surface over a monitor stays behind.
-/// </summary>
+/// borderless, is the menu's size and stands at the point it was asked at - turned up or left where the work area ends
+/// there. It closes with the menu, picked or put away with Escape, and when another window becomes the active one: a
+/// press on the task bar or another application's window never reaches it. One window for one opening, so the
+/// application never counts a hidden window.</summary>
 public sealed class TrayMenuWindow : Window
 {
     private readonly Canvas _room = new() { Background = Brushes.Transparent };
     private ContextMenu _menu;
-    private Vector2<double> _menuPoint;
+    private Popup _menuPopup;
+    private Size<double> _menuSize;
+    private Size<double> _fittedSize;
+    private PixelPoint _point;
+    private Rect _area;
+    private double _scale;
     private bool _wasActive;
     private bool _dismissed;
 
@@ -24,6 +29,9 @@ public sealed class TrayMenuWindow : Window
     {
         ShowWindowBorder = false;
         ResizeMode = WindowResizeMode.NoResize;
+        // As small as the menu: a window states no least size of its own, and the system gives it one.
+        MinWidth = 1;
+        MinHeight = 1;
         Topmost = true;
         // Kept out of the task bar; activated below, so a press elsewhere takes the activation away.
         ActivateOnShow = false;
@@ -42,19 +50,20 @@ public sealed class TrayMenuWindow : Window
             return;
         }
 
-        var area = screen.WorkArea;
-        var scale = screen.Scale > 0 ? screen.Scale : 1;
-        // Sized before it is shown: a window sized after is never laid out.
-        Left = area.X;
-        Top = area.Y;
-        ClientWidth = area.Width / scale;
-        ClientHeight = area.Height / scale;
+        _point = point;
+        _area = screen.WorkArea;
+        _scale = screen.Scale > 0 ? screen.Scale : 1;
+        // Sized before it is shown, a window sized after is never laid out: a point of a window until the menu is
+        // measured.
+        Left = point.X;
+        Top = point.Y;
+        ClientWidth = 1;
+        ClientHeight = 1;
         Show();
         Activate();
 
         _menu = menu;
         _menu.PropertyChanged += OnMenuPropertyChanged;
-        _menuPoint = new Vector2<double>((point.X - area.X) / scale, (point.Y - area.Y) / scale);
         if (_room.RootVisual != null)
         {
             OpenMenu();
@@ -75,6 +84,12 @@ public sealed class TrayMenuWindow : Window
 
         _dismissed = true;
         _room.AttachedToVisualTreeEvent -= OnRoomAttached;
+        if (_menuPopup != null)
+        {
+            _menuPopup.LayerPass -= OnMenuLaidOut;
+            _menuPopup = null;
+        }
+
         if (_menu is { } menu)
         {
             _menu = null;
@@ -112,11 +127,64 @@ public sealed class TrayMenuWindow : Window
 
     private void OpenMenu()
     {
-        if (!_dismissed && _menu is { } menu)
+        if (_dismissed || _menu is not { } menu)
         {
-            menu.ApplyCurrentTheme();
-            menu.Open(_room, _menuPoint);
+            return;
         }
+
+        menu.ApplyCurrentTheme();
+        menu.Open(_room, new Vector2<double>(0, 0));
+        _menuPopup = menu.Popup;
+        if (_menuPopup != null)
+        {
+            _menuPopup.LayerPass += OnMenuLaidOut;
+        }
+    }
+
+    // Measured in a window too small for it, the menu takes a scroll bar: its size is followed while it is open, and
+    // taken once it holds over two passes.
+    private void OnMenuLaidOut(object sender, EventArgs e)
+    {
+        if (_menuPopup?.ChildValue is not MeasurableUIComponent card)
+        {
+            return;
+        }
+
+        var size = card.DesiredSize;
+        var steady = size == _menuSize;
+        _menuSize = size;
+        if (!steady || !(size.Width > 0) || !(size.Height > 0) || size == _fittedSize)
+        {
+            return;
+        }
+
+        _fittedSize = size;
+        if (UIAppContext.Current is { } application)
+        {
+            application.ExecuteOnUIThreadAsync(() => FitToMenu(size));
+        }
+        else
+        {
+            FitToMenu(size);
+        }
+    }
+
+    private void FitToMenu(Size<double> size)
+    {
+        if (_dismissed)
+        {
+            return;
+        }
+
+        var width = size.Width * _scale;
+        var height = size.Height * _scale;
+        var x = _point.X + width <= _area.Right ? _point.X : _point.X - width;
+        var y = _point.Y + height <= _area.Bottom ? _point.Y : _point.Y - height;
+        Position = new PixelPoint(
+            Math.Clamp(x, _area.X, Math.Max(_area.X, _area.Right - width)),
+            Math.Clamp(y, _area.Y, Math.Max(_area.Y, _area.Bottom - height)));
+        ClientWidth = size.Width;
+        ClientHeight = size.Height;
     }
 
     private void OnMenuPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
