@@ -165,6 +165,25 @@ public class ApplicationBlueprintTests
     }
 
     [Test]
+    public void ATrayIconsMenu_IsTheIconsOwn()
+    {
+        var blueprintWithMenu = $"<ApplicationBlueprint {Namespaces}><ApplicationBlueprint.TrayIcons>" +
+                                "<TrayIcon ToolTip=\"Keyboard\"><TrayIcon.ContextMenu><ContextMenu>" +
+                                "<MenuItem Header=\"Show\"/><MenuItem Header=\"Exit\"/>" +
+                                "</ContextMenu></TrayIcon.ContextMenu></TrayIcon>" +
+                                "</ApplicationBlueprint.TrayIcons></ApplicationBlueprint>";
+        var project = AumlCodegenHarness.Project(Files(("AppBlueprint.auml", blueprintWithMenu)), sources: [Application]);
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        var blueprint = (IApplicationBlueprint)Activator.CreateInstance(project.Load().GetType("Test.App.AppBlueprint")!);
+
+        var menu = blueprint!.TrayIcons.Single().ContextMenu;
+        Assert.That(menu, Is.Not.Null);
+        Assert.That(menu.Items.Cast<Adamantium.UI.Controls.Primitives.MenuItem>().Select(item => item.Header),
+            Is.EqualTo(new[] { "Show", "Exit" }));
+    }
+
+    [Test]
     public void ABlueprintThatSaysNothing_SetsNothing()
     {
         var assembly = AumlCodegenHarness.Project(Files(("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces}/>")),

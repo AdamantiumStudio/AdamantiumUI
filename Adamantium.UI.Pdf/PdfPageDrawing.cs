@@ -25,25 +25,30 @@ public sealed class PdfPageDrawing : Drawing
     private readonly IReadOnlyList<PdfDrawStep> _steps;
     private readonly IReadOnlyList<PdfPressableSteps> _pressable;
     private readonly PdfPressableSteps _pressed;
-    private readonly LineLevels _lineLevels;
+    private readonly Prepared _prepared;
     private readonly int _level;
+    private readonly Rect _view;
 
     private PdfPageDrawing(IReadOnlyList<PdfDrawStep> steps, Rect bounds, IReadOnlyList<string> problems,
-        IReadOnlyList<PdfPressableSteps> pressable, PdfPressableSteps pressed, LineLevels lineLevels, int level)
+        IReadOnlyList<PdfPressableSteps> pressable, PdfPressableSteps pressed, Prepared prepared, int level, Rect view)
     {
         _steps = steps;
         Bounds = bounds;
         Problems = problems;
         _pressable = pressable;
         _pressed = pressed;
-        _lineLevels = lineLevels;
+        _prepared = prepared;
         _level = level;
+        _view = view;
     }
 
-    // The long lines' levels (PdfStrokeDetail), worked out by PrepareForDrawing; shared by every view of the page.
-    private sealed class LineLevels
+    // What PrepareForDrawing works out, shared by every view of the page: the long lines' levels (PdfStrokeDetail) and
+    // where each draw stands, for drawing only what meets a view.
+    private sealed class Prepared
     {
         public Dictionary<PdfDrawStep, PdfStrokeDetail> ByStep;
+
+        public PdfStepPlaces Places;
     }
 
     public override Rect Bounds { get; }
@@ -76,9 +81,9 @@ public sealed class PdfPageDrawing : Drawing
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(page);
         var interpreter = new PdfPageInterpreter(document, options ?? PdfPageDrawingOptions.Default, cancellation);
-        var steps = interpreter.Draw(page);
-        return new PdfPageDrawing(steps, new Rect(0, 0, page.Width, page.Height), interpreter.Problems,
-            interpreter.Pressable, null, new LineLevels(), 0);
+        var bounds = new Rect(0, 0, page.Width, page.Height);
+        var steps = PdfPathJoin.Join(interpreter.Draw(page), interpreter.Pressable, out var pressable);
+        return new PdfPageDrawing(steps, bounds, interpreter.Problems, pressable, null, new Prepared(), 0, Rect.Empty);
     }
 
     /// <summary>Makes on the calling thread, on all the processor's cores, what drawing the page's paths takes - their
@@ -90,6 +95,11 @@ public sealed class PdfPageDrawing : Drawing
     {
         PrepareGeometries(cancellation);
         WorkOutLineLevels(cancellation);
+        if (!cancellation.IsCancellationRequested)
+        {
+            // After the paths are prepared: that works out their bounds.
+            _prepared.Places = PdfStepPlaces.Of(_steps);
+        }
     }
 
     private void PrepareGeometries(CancellationToken cancellation)
@@ -141,7 +151,7 @@ public sealed class PdfPageDrawing : Drawing
             }
         }
 
-        _lineLevels.ByStep = byStep;
+        _prepared.ByStep = byStep;
     }
 
     // One worker to a core takes the next item while there is one, on buffers of its own from item to item - let go
@@ -221,7 +231,7 @@ public sealed class PdfPageDrawing : Drawing
         var pressable = annotation == null ? null : PressableOf(annotation);
         return ReferenceEquals(pressable, _pressed)
             ? this
-            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable, _lineLevels, _level);
+            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable, _prepared, _level, _view);
     }
 
     /// <summary>The page with its long lines drawn by as few of their points as a page shown at no more than
@@ -232,20 +242,28 @@ public sealed class PdfPageDrawing : Drawing
         var level = PdfStrokeDetail.LevelFor(finestPixelsPerPoint);
         return level == _level
             ? this
-            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, _pressed, _lineLevels, level);
+            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, _pressed, _prepared, level, _view);
     }
+
+    /// <summary>The page drawn only where it meets <paramref name="view"/>, in the page's units - what is wholly outside
+    /// left out - once <see cref="PrepareForDrawing"/> has worked out where each draw stands; all of it before, and for
+    /// an empty view.</summary>
+    public PdfPageDrawing Seen(Rect view) => view == _view
+        ? this
+        : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, _pressed, _prepared, _level, view);
 
     public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
+        var places = _view.IsEmpty ? null : _prepared.Places;
         if (_pressed == null)
         {
-            Draw(session, transform, _steps, 0, _steps.Count);
+            Draw(session, transform, _steps, 0, _steps.Count, places);
             return;
         }
 
-        Draw(session, transform, _steps, 0, _pressed.Start);
-        Draw(session, transform, _pressed.Down, 0, _pressed.Down.Count);
-        Draw(session, transform, _steps, _pressed.End, _steps.Count);
+        Draw(session, transform, _steps, 0, _pressed.Start, places);
+        Draw(session, transform, _pressed.Down, 0, _pressed.Down.Count, null);
+        Draw(session, transform, _steps, _pressed.End, _steps.Count, places);
     }
 
     private PdfPressableSteps PressableOf(PdfAnnotation annotation)
@@ -261,11 +279,30 @@ public sealed class PdfPageDrawing : Drawing
         return null;
     }
 
-    private void Draw(IDrawingSession session, Matrix4x4F transform, IReadOnlyList<PdfDrawStep> steps, int from, int to)
+    // A draw that does not meet the view is left out; a group that does not, with all it holds - when it ends within
+    // these draws; one running past them is begun, what it holds left out draw by draw. An end of a group is never left
+    // out alone: its beginning was drawn.
+    private void Draw(IDrawingSession session, Matrix4x4F transform, IReadOnlyList<PdfDrawStep> steps, int from, int to,
+        PdfStepPlaces places)
     {
-        var lines = _level > 0 ? _lineLevels.ByStep : null;
+        var lines = _level > 0 ? _prepared.ByStep : null;
         for (var index = from; index < to; index++)
         {
+            if (places != null && steps[index] is not PdfPopGroupStep && !places.Meets(index, _view))
+            {
+                var end = places.EndOf(index);
+                if (end < 0)
+                {
+                    continue;
+                }
+
+                if (end < to)
+                {
+                    index = end;
+                    continue;
+                }
+            }
+
             var step = steps[index];
             if (lines != null && lines.TryGetValue(step, out var detail))
             {

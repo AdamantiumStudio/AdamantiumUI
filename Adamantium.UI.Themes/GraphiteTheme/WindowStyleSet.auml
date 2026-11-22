@@ -138,4 +138,16 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A tray icon's menu opens in a clear window over the work area: nothing of a window is drawn, only the menu. -->
+    <Style Selector="TrayMenuWindow">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TrayMenuWindow">
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </StyleSet>

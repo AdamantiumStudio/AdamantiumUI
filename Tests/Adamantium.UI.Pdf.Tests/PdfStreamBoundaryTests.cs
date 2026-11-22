@@ -30,8 +30,8 @@ public class PdfStreamBoundaryTests
         var (page, session) = Draw(WithType3(), $"BT /T 1 Tf 0 50 Td ({text}) Tj ET");
         var glyphs = session.All<DrawnGeometry>().ToArray();
         Assert.That(glyphs, Has.Length.EqualTo(50));
-        Assert.That(At(glyphs[0].Transform, 0, 0).Item1, Is.EqualTo(0).Within(1e-4));
-        Assert.That(At(glyphs[49].Transform, 0, 0).Item1, Is.EqualTo(490).Within(1e-3));
+        Assert.That(At(glyphs[0], 0, 0).Item1, Is.EqualTo(0).Within(1e-4));
+        Assert.That(At(glyphs[49], 0, 0).Item1, Is.EqualTo(490).Within(1e-3));
         Assert.That(page.Problems, Is.Empty);
     }
 
@@ -41,7 +41,7 @@ public class PdfStreamBoundaryTests
         var pdf = WithType3("100 0 d0 BT 500 500 Td ET 0 0 100 100 re f");
         var (_, session) = Draw(pdf, "BT /T 1 Tf 10 50 Td (a) Tj (a) Tj ET");
         var glyphs = session.All<DrawnGeometry>().ToArray();
-        Assert.That(At(glyphs[1].Transform, 0, 0).Item1, Is.EqualTo(20).Within(1e-4));
+        Assert.That(At(glyphs[1], 0, 0).Item1, Is.EqualTo(20).Within(1e-4));
     }
 
     [Test]

@@ -1,7 +1,8 @@
 # Changelog
 
 Notable changes to the Adamantium UI packages, in the form of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-All packages share one version.
+All packages share one version. Entries for changes not yet released wait in [`changelog.d`](changelog.d/README.md),
+and are put here at a release.
 
 ## Unreleased
 
@@ -660,7 +661,10 @@ All packages share one version.
 - A driven application starts where nobody sees it unless told otherwise: `LaunchOptions.VirtualDisplay` is true by
   default, and `adam-auto start` hides it unless given `--visible` (`--virtual` is still taken). A run that needs the
   desktop - input through the system's own pointer (`--os`, a real mouse) - says so with `VirtualDisplay = false` or
-  `--visible`; no other launch can forget it and show over someone's work.
+  `--visible`; no other launch can forget it and show over someone's work. A generated scenario run only by name
+  (`Explicit`) with a step through the system's pointer (`ThroughSystem="true"`) starts its application on the desktop
+  by itself, so that input reaches it; every other scenario, one with such steps in the ordinary run too, still starts
+  where nobody sees it.
 - Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
   code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
   `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,
@@ -915,9 +919,25 @@ All packages share one version.
 ### Fixed
 
 - The render thread read the clock for every fill of every frame - a page of maps asks for thousands - to stamp when a
-  shared mesh was last used, and that was the most it spent on a frame panned or zoomed. `InstancedFillCollector`
-  reads it once a device frame - at a walk, a trim, or the first fill of a patch frame - and stamps every fill of the
-  frame with it; meshes still go as they did, by the frame they were last drawn in.
+  shared mesh was last used. `InstancedFillCollector` reads it once a device frame - at a walk, a trim, or the first
+  fill of a patch frame - and stamps every fill of the frame with it; meshes still go as they did, by the frame they
+  were last drawn in.
+- A PDF page was drawn whole every frame, however little of it a view showed, and drawn by as many draws as it has
+  paths, each walked by the renderer every frame: the geologic map of Alaska, panned at 400%, took 27 - 30 ms of the GPU
+  a frame. `PdfPageDrawing.Seen` draws only what meets a view - each draw's box, and a group's, worked out once where
+  the page is prepared (`PrepareForDrawing`); and the paths a page draws one after another with the same opaque paint,
+  in one part of the page, are joined into one draw (a fill by the nonzero rule whose figures all turn one way, a
+  stroke without dashes) - that map's 20,449 paths are 8,137 draws. A path placed by a translation of its own, as a
+  map's exporter places each, is placed by the corner of a 256-point square of the page instead, its points moved by
+  the rest, so the paths of one part share their matrix. Panning that map at 400% takes 1.8 - 4.9 ms of the GPU a
+  frame; at 200% over land the renderer's thread spends about a third less on a frame. Joined long lines come under
+  their levels of detail too, and are drawn as thin as they are.
+- A tray icon's menu opened on a right click showed nothing in an application: a menu stated in the blueprint, made
+  before the theme, had no template, and it was opened before its window's template had put it in a window. It is
+  styled with the current theme at each opening and opened once in the window. `TrayMenuWindow` is the menu's size at
+  the point it was asked at, turned up or left where the work area ends - not a clear window over the whole work area -
+  and draws nothing but the menu in every theme (it showed a window's title bar across the top of the screen); it is
+  public for that, its members internal.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a

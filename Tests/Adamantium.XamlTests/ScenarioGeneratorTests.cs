@@ -161,6 +161,50 @@ public class ScenarioGeneratorTests
         });
     }
 
+    // A step through the system's own pointer reaches only the desktop someone sees: a scenario run by name with one
+    // starts the application there; every other one where nobody sees it - one with such a step in the ordinary run
+    // too, so no ordinary run shows over someone's work.
+    [Test]
+    public void AScenarioByNameThroughTheSystemsPointer_StartsOnTheDesktop_AnyOtherWhereNobodySeesIt()
+    {
+        const string bySystem = "  <Invoke Target=\"id=Open\" />\n  <Touch Target=\"id=Save\" Gesture=\"Tap\" ThroughSystem=\"true\" />";
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Plain.ascenario"] = $"{Header}>\n  <Touch Target=\"id=Save\" Gesture=\"Tap\" />\n</Scenario>",
+            ["Scenarios/BySystem.ascenario"] = $"{Header} Explicit=\"Real input.\">\n{bySystem}\n</Scenario>",
+            ["Scenarios/BySystemWithTheRest.ascenario"] = $"{Header}>\n{bySystem}\n</Scenario>"
+        });
+        string Launch(string test) =>
+            project.Source[project.Source.IndexOf($"Task {test}()", System.StringComparison.Ordinal)..]
+                .Split("LaunchOptions", 2)[1].Split(';', 2)[0];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors, Is.Empty, AumlCodegenHarness.Errors(project.Errors));
+            Assert.That(Launch("Plain"), Does.Contain("VirtualDisplay = true"));
+            Assert.That(Launch("BySystem"), Does.Contain("VirtualDisplay = false"));
+            Assert.That(Launch("BySystemWithTheRest"), Does.Contain("VirtualDisplay = true"));
+        });
+    }
+
+    // A ThroughSystem that is no yes or no is the scenario's error, in its file; the others still become tests.
+    [Test]
+    public void AThroughSystemThatIsNoYesOrNo_IsAnError_AndTheOtherScenariosStillBecomeTests()
+    {
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Plain.ascenario"] = $"{Header}>\n  <Invoke Target=\"id=Save\" />\n</Scenario>",
+            ["Scenarios/Wrong.ascenario"] = $"{Header}>\n  <Touch Target=\"id=Save\" Gesture=\"Tap\" ThroughSystem=\"maybe\" />\n</Scenario>"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors.Where(e => e.Id == "AUS002").Select(e => System.IO.Path.GetFileName(e.Location.GetMappedLineSpan().Path)),
+                Is.EqualTo(new[] { "Wrong.ascenario" }));
+            Assert.That(project.Source, Does.Contain("public async global::System.Threading.Tasks.Task Plain()"));
+        });
+    }
+
     [Test]
     public void AScenarioForSomeSystems_RunsOnlyOnThem_OnAVirtualMonitor()
     {
