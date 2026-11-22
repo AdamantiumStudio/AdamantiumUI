@@ -18,6 +18,14 @@ public static class RuntimeStats
     /// too.</summary>
     public static double LastWindowGpuMs;
 
+    /// <summary>Window frames timed on the GPU so far, every window's, and their GPU time in all, in milliseconds - read
+    /// as deltas, the two together under <see cref="WindowGpuLock"/>.</summary>
+    public static long WindowGpuFrames;
+
+    public static double WindowGpuMsTotal;
+
+    public static readonly Lock WindowGpuLock = new();
+
     // Per-frame render-pipeline phase timings (ms), snapshots of the most recent frame. They make the
     // otherwise-invisible per-frame render cost measurable, so the
     // retained rewrite can be aimed at the phase that actually dominates (today the per-frame cache REBUILD, not layout).

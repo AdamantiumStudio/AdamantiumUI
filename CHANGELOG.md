@@ -602,6 +602,10 @@ All packages share one version.
 - `adam-auto device-memory`: what device memory the application's graphics resources hold, by kind and the largest
   groups - buffers named by what they hold - written to `logs/device-memory.txt` as well.
 
+- `adam-auto stats` (`AutomationSession.StatsAsync`): how the frames go - their GPU time on average since the last
+  reading, every window's, and the last frame's, frames a second, the last layout pass, record and apply - so what a
+  frame costs the GPU can be read from a script. `RuntimeStats.WindowGpuFrames` and `WindowGpuMsTotal` count it.
+
 - `IDrawingSession.DrawRectangle`, `DrawEllipse` and `DrawRegularPolygon` take a `Placement`: a box, oval or polygon
   moves and scales with its placement's matrix without being recorded again, fill and outline in one instance of the
   same batches as one drawn without. The outline scales with the placement and is never thinner on screen than its

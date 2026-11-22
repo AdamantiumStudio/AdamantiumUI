@@ -268,6 +268,9 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>What device memory the application's graphics resources hold; see <see cref="AutomationCommand.DeviceMemory"/>.</summary>
     public async Task<string> DeviceMemoryAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.DeviceMemory })).Text;
 
+    /// <summary>How the frames go; see <see cref="AutomationCommand.Stats"/>.</summary>
+    public async Task<string> StatsAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.Stats })).Text;
+
     /// <summary>Moves the application onto <paramref name="theme"/> and <paramref name="variant"/>, either null to keep it,
     /// once the swap has settled. Returns the theme and variant in use on the first line, then a line per theme with its
     /// variants.</summary>
