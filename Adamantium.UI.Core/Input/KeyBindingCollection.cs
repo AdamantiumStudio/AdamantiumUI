@@ -22,16 +22,30 @@ public sealed class KeyBindingCollection : TrackingCollection<KeyBinding>
         }
     }
 
-    protected override void OnInsert(int index, KeyBinding item)
+    protected override void CheckItems(ReadOnlySpan<KeyBinding> range)
     {
-        item.AttachTo(owner);
-        base.OnInsert(index, item);
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
     }
 
-    protected override void OnRemoveItem(int index, KeyBinding item)
+    protected override void OnInsert(int index, ReadOnlySpan<KeyBinding> range)
     {
-        item.DetachFrom(owner);
-        base.OnRemoveItem(index, item);
+        foreach (var item in range)
+        {
+            item.AttachTo(owner);
+        }
+
+        base.OnInsert(index, range);
+    }
+
+    protected override void OnRemove(int index, ReadOnlySpan<KeyBinding> range)
+    {
+        foreach (var item in range)
+        {
+            item.DetachFrom(owner);
+        }
+
+        base.OnRemove(index, range);
     }
 
     protected override void OnSet(int index, KeyBinding oldItem, KeyBinding newItem)

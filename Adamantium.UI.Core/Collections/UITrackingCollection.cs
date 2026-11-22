@@ -13,11 +13,20 @@ public class UITrackingCollection<T> : TrackingCollection<T> where T : Adamantiu
         newItem.ComponentUpdated += OnComponentUpdated;
     }
 
-    protected override void OnInsert(int index, T item)
+    protected override void CheckItems(System.ReadOnlySpan<T> range)
     {
-        base.OnInsert(index, item);
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
+    }
 
-        item.ComponentUpdated += OnComponentUpdated;
+    protected override void OnInsert(int index, System.ReadOnlySpan<T> range)
+    {
+        base.OnInsert(index, range);
+
+        foreach (var item in range)
+        {
+            item.ComponentUpdated += OnComponentUpdated;
+        }
     }
 
     // Unsubscribe while they are still HERE - after the clear there is nothing left to unsubscribe from.
@@ -30,10 +39,14 @@ public class UITrackingCollection<T> : TrackingCollection<T> where T : Adamantiu
         }
     }
 
-    protected override void OnRemoveItem(int index, T item)
+    protected override void OnRemove(int index, System.ReadOnlySpan<T> range)
     {
-        base.OnRemoveItem(index, item);
-        item.ComponentUpdated -= OnComponentUpdated;
+        base.OnRemove(index, range);
+
+        foreach (var item in range)
+        {
+            item.ComponentUpdated -= OnComponentUpdated;
+        }
     }
     
     private void OnComponentUpdated(object sender, ComponentUpdatedEventArgs e)
