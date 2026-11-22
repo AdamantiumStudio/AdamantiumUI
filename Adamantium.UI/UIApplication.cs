@@ -25,7 +25,7 @@ using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Rendering;

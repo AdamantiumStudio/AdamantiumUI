@@ -70,7 +70,7 @@ internal static class TreeChildResolver
                 var wanted = Nullable.GetUnderlyingType(accessor.ValueType) ?? accessor.ValueType;
                 var converted = value == null || wanted.IsInstanceOfType(value)
                     ? value
-                    : Convert.ChangeType(value, wanted, Core.Localization.Languages.Culture);
+                    : Convert.ChangeType(value, wanted, Adamantium.Localization.Languages.Culture);
                 accessor.SetValue(target, converted);
                 return true;
             }

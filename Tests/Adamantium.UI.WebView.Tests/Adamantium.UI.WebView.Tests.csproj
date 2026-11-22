@@ -35,6 +35,8 @@
     <ItemGroup>
         <AdamantiumEngineReference Include="Adamantium.Core.Shared" GeneratePathProperty="true" />
         <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
+        <!-- The string tables from .alang files, and the parser the markup generator reads them with. -->
+        <AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">

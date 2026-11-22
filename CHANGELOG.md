@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ISystemStartup`, from the application's container: `IsOn` puts the application in the user's startup list or takes
+  it out - the Run key on Windows, the XDG autostart folder on Linux - and reads off when the system's own settings
+  turned it off (Task Manager's mark, `Hidden`, `X-GNOME-Autostart-enabled=false`) or the entry starts another program.
+  The system starts it with `ISystemStartup.Argument`, which `StartedTheApplication` tells of. Not on macOS yet.
 - `CollectionView` groups what it shows: `GroupDescriptions` (`PropertyGroupDescription` by a property, or a
   `GroupDescription` of one's own), `Groups` of `CollectionViewGroup` (`Name`, `Items`, `ItemCount`, `IsBottomLevel`),
   more levels nested inside. Groups come in the order of their first item after the filter and the ordering, a group
@@ -84,6 +88,9 @@ All packages share one version.
 - `ToolBar.IsContextual`: a bar shown by what the user is on - a table, a picture - as a ribbon's contextual tab. The
   tray's menu lists such bars apart, under `ToolBarTray.ContextualBarsHeader`, checked while shown and not switched;
   the user's bars then stand under `ToolBarTray.BarsHeader`. Each theme gives both its own words.
+- `ToolBar.Accent`: a contextual bar is washed in its context's color in every theme, behind the whole bar at the
+  theme's `ToolBarContextualWashOpacity`, so it reads apart from the bars always there. The same color as the ribbon's
+  contextual group of that context (`RibbonContextualGroup.Accent`) ties the two together; unset, the theme's accent.
 - `ToolBarTray.SharesBars`: false keeps a tray's bars to it - none goes to another tray, and none comes from one - for
   a control whose bars are its own parts.
 - `MenuHeader`: the name of a section of a menu, over its rows; not a command, so it takes no focus. Styled in Fluent,
@@ -638,6 +645,16 @@ All packages share one version.
 
 ### Changed
 
+- Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
+  code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
+  `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,
+  `PluralForm`, `PhraseCases` and `MessageCatalog` from `Adamantium.UI.Markup.Localization`, to `Adamantium.Localization`;
+  the language file parser and the table generator to `Adamantium.Localization.Generators`. `{Localize}` and
+  `LocalizeExpression` stay. A placeholder's value is a `PhraseArgument` - `Languages.Say`, `InfiniteCanvas.Say`,
+  `MarkupMessages`, `ServerMessages` - in place of a tuple. The messages of language files are the engine's
+  `LanguageMessages`, no longer `MarkupMessages`; `PathExtension.ToNamespace` is `Adamantium.Core.Shared`'s. Bindings
+  still follow the language weakly, by one subscription to `Languages.Changed`. A project that hands the markup
+  generator its analyzers itself names `Adamantium.Localization.Generators` as a generator too.
 - What `UIApplication` offers stands where it belongs, so the class and its interfaces agree:
   - on `IUIApplication`, for the application's own code: `UnhandledException`, `Language`, `StartupCancellation`,
     `IsStarting`, `HoldSplash`, `RefreshRate`, `MinimumRefreshRate`, `MaximumRefreshRate`, `UnlimitedRefreshRate`;

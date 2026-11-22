@@ -1,5 +1,5 @@
 using System;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 
 namespace Adamantium.UI.Controls.DataGrid;
 

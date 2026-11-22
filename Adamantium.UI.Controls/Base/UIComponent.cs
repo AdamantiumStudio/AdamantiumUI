@@ -7,7 +7,7 @@ using Adamantium.UI.Core.Graphics;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
@@ -870,7 +870,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     /// <summary>The language of the text in this element and its descendants, as a BCP 47 tag ("sr", "zh-Hant"): it picks
     /// the font's local letter forms. Unset, text is in the application's language
-    /// (<see cref="Adamantium.UI.Core.Localization.Languages.Current"/>).</summary>
+    /// (<see cref="Adamantium.Localization.Languages.Current"/>).</summary>
     public string Language
     {
         get => GetValue<string>(LanguageProperty);

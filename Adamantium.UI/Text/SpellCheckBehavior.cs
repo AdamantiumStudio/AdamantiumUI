@@ -9,7 +9,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Behaviors;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Text;
 using Adamantium.UI.Themes.Localization;

@@ -507,7 +507,7 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// <summary>The value as this column reads it - what a search looks in, what the filter lists and compares, what a
     /// group is named by and what a copy carries. The value's own text by default; a column that draws its value in a
     /// form of its own reads it in that form, or a search would find text nobody can see.</summary>
-    protected internal string TextOf(object value) => TextOf(value, Core.Localization.Languages.Culture);
+    protected internal string TextOf(object value) => TextOf(value, Adamantium.Localization.Languages.Culture);
 
     /// <summary>...in <paramref name="culture"/>: a table keys what stays the same across languages by the invariant
     /// one, and translates what the user ticked when the language changes. A search calls it off the interface's
@@ -526,7 +526,7 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// <paramref name="current"/>, the value it replaces, when there is one. The text itself by default, for the write
     /// to convert; <see cref="AdamantiumProperty.UnsetValue"/> for text the column refuses to read.</summary>
     protected internal object ValueOfText(string text, object current) =>
-        ValueOfText(text, current, Core.Localization.Languages.Culture);
+        ValueOfText(text, current, Adamantium.Localization.Languages.Culture);
 
     /// <summary>What the character typed to open an edit stands for when the edit is committed before the editor took it
     /// - read as text by default. A column whose editor takes no text, or reads typing its own way, keeps
@@ -909,7 +909,7 @@ public class DataGridDateTimeColumn : DataGridColumn
         column._shape = was with { Format = column.Format, Custom = column.CustomFormat };
         column._display = null;
         column._editors.Clear();
-        var culture = Core.Localization.Languages.Culture;
+        var culture = Adamantium.Localization.Languages.Culture;
         var now = column._shape;
         column.Owner?.Rekey(column, value => value is null or string { Length: 0 } ? string.Empty : was.Text(value, culture),
             text => was.Read(text, null, culture),
@@ -1049,7 +1049,7 @@ public class DataGridDurationColumn : DataGridColumn
         column._parts = (int)column.Parts;
         column._display = null;
         column._defaultEditor = null;
-        var culture = Core.Localization.Languages.Culture;
+        var culture = Adamantium.Localization.Languages.Culture;
         column.Owner?.Rekey(column,
             value => value is TimeSpan length ? DateTimeValues.DurationLine(length, was, word, culture) : column.TextOf(value, culture),
             text => !string.IsNullOrWhiteSpace(text) && DateTimeValues.TryParseDuration(text, was, culture, null, out var length)

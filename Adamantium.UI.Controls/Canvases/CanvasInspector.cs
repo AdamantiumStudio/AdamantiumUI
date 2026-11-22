@@ -345,7 +345,7 @@ public class CanvasInspector : Control, ICanvasPart
             {
                 var out_ = String.Equals(which as string, "Out", StringComparison.OrdinalIgnoreCase);
                 var sockets = out_ ? node.Outputs : node.Inputs;
-                var made = node.NewSocket(canvas.Say(out_ ? "OutputName" : "InputName", ("number", sockets.Count + 1)));
+                var made = node.NewSocket(canvas.Say(out_ ? "OutputName" : "InputName", new Adamantium.Localization.PhraseArgument("number", sockets.Count + 1)));
 
                 if (made != null) sockets.Add(made);
             }

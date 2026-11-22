@@ -564,7 +564,7 @@ public class NumericUpDown : RangeLimitsBase
 
     // --- Text <-> value ---------------------------------------------------------------------------------------------
 
-    private CultureInfo EffectiveCulture => Culture ?? Core.Localization.Languages.Culture;
+    private CultureInfo EffectiveCulture => Culture ?? Adamantium.Localization.Languages.Culture;
 
     /// <summary>The value as it is shown. A format holding a placeholder is a composite one ("{0:N2} kg"); anything
     /// else is a plain numeric format ("N2") - the same two shapes MahApps accepts.</summary>

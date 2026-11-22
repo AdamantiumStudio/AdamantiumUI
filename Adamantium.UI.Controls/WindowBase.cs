@@ -10,7 +10,7 @@ using Adamantium.UI.Core.Controls;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Resources;

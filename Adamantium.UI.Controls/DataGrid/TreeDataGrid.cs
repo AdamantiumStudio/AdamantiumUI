@@ -864,16 +864,16 @@ public partial class TreeDataGrid : Selector
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        Core.Localization.Languages.Changed -= OnLanguagesChanged;
-        Core.Localization.Languages.Changed += OnLanguagesChanged;
-        if (_readIn != null && !Equals(_readIn, Core.Localization.Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
-        _readIn = Core.Localization.Languages.Culture;
+        Adamantium.Localization.Languages.Changed -= OnLanguagesChanged;
+        Adamantium.Localization.Languages.Changed += OnLanguagesChanged;
+        if (_readIn != null && !Equals(_readIn, Adamantium.Localization.Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
+        _readIn = Adamantium.Localization.Languages.Culture;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        Core.Localization.Languages.Changed -= OnLanguagesChanged;
+        Adamantium.Localization.Languages.Changed -= OnLanguagesChanged;
     }
 
     internal void RenameDayWord(DataGridColumn column, string was, string now)
@@ -982,8 +982,8 @@ public partial class TreeDataGrid : Selector
 
     private void OnLanguagesChanged(object sender, EventArgs e)
     {
-        var was = _readIn ?? Core.Localization.Languages.Culture;
-        var now = Core.Localization.Languages.Culture;
+        var was = _readIn ?? Adamantium.Localization.Languages.Culture;
+        var now = Adamantium.Localization.Languages.Culture;
         _readIn = now;
         if (Equals(was, now)) return;
 

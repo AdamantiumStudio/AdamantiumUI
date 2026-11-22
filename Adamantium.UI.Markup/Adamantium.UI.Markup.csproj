@@ -18,6 +18,7 @@
 
     <ItemGroup>
       <AdamantiumEngineReference Include="Adamantium.Core.Shared" />
+      <AdamantiumEngineReference Include="Adamantium.Localization" />
     </ItemGroup>
 
 </Project>

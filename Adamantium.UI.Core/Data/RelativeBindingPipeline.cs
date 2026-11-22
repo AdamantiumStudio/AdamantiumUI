@@ -37,7 +37,7 @@ internal static class RelativeBindingPipeline
         else
         {
             value = converter != null
-                ? converter.Convert(raw, targetType, converterParameter, Localization.Languages.Culture)
+                ? converter.Convert(raw, targetType, converterParameter, Adamantium.Localization.Languages.Culture)
                 : raw;
         }
 
