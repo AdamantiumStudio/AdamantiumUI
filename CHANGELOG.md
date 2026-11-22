@@ -881,6 +881,11 @@ All packages share one version.
 
 ### Fixed
 
+- A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
+  moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
+  one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a
+  null before any of it is in; `TriggerCollection` stamps its setters once a range, not once a trigger; behaviors, key
+  bindings and the components a `UITrackingCollection` follows are attached a range at a time.
 - Writing a PDF page of long paths into its drawing did work twice and grew lists anew: each path's bounds were
   worked out as it was written - its every figure cut into contours - though they are worked out again where it is
   processed; each subpath's lists grew from nothing; each run of straight pieces was copied once more than taken. A
