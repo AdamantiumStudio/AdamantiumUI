@@ -183,7 +183,7 @@ internal static class DesktopEntry
         return Escape(quoted.Append(ArgumentQuote).ToString()).Replace(FieldCode, EscapedFieldCode);
     }
 
-    private static string Escape(string value)
+    internal static string Escape(string value)
     {
         foreach (var (character, escaped) in ValueEscapes)
         {
@@ -244,7 +244,9 @@ internal static class DesktopEntry
         return written;
     }
 
-    private static Dictionary<string, string> Values(string path)
+    /// <summary>The keys of the [Desktop Entry] group in the file at <paramref name="path"/>; none when it cannot be read.
+    /// </summary>
+    internal static Dictionary<string, string> Values(string path)
     {
         var values = new Dictionary<string, string>();
         try
@@ -284,7 +286,7 @@ internal static class DesktopEntry
         return true;
     }
 
-    private static void WriteIfChanged(string path, byte[] content)
+    internal static void WriteIfChanged(string path, byte[] content)
     {
         if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(content))
         {
@@ -346,16 +348,18 @@ internal static class DesktopEntry
             : dirs.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private static string NameOf(Assembly assembly) =>
+    internal static string NameOf(Assembly assembly) =>
         assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product is { Length: > 0 } product
             ? product
             : assembly.GetName().Name;
 
-    private static string ExecOf(Assembly assembly)
+    /// <summary>The Exec value starting <paramref name="assembly"/>, under the dotnet host if it runs so, with
+    /// <paramref name="arguments"/>.</summary>
+    internal static string ExecOf(Assembly assembly, params string[] arguments)
     {
         var process = Environment.ProcessPath ?? assembly.Location;
         return string.Equals(Path.GetFileNameWithoutExtension(process), DotnetHost, StringComparison.Ordinal)
-            ? Exec(process, assembly.Location)
-            : Exec(process);
+            ? Exec(process, [assembly.Location, .. arguments])
+            : Exec(process, arguments);
     }
 }
