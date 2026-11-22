@@ -254,6 +254,8 @@
     <sys:Double x:Key="ToolBarGripLength">8</sys:Double>
     <sys:Double x:Key="ToolBarOverflowButtonLength">16</sys:Double>
     <sys:Double x:Key="ToolBarSpacing">2</sys:Double>
+    <!-- A contextual bar's wash: the share of the selection's accent shown behind it. -->
+    <sys:Double x:Key="ToolBarContextualWashOpacity">0.6</sys:Double>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- The tab strip's own furniture. The close and pin buttons are SQUARE and sized to this theme's row rather than

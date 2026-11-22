@@ -79,49 +79,54 @@
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{ResourceReference CornerRadiusDefault}"
-                            Padding="{TemplateBinding Padding}">
-                        <DockPanel>
-                            <!-- The grip moves the bar; drawn by Thumb.ToolBarGrip below. -->
-                            <Thumb x:Name="PART_Grip"
-                                   Classes="ToolBarGrip"
-                                   DockPanel.Dock="Left"
-                                   Width="{ResourceReference ToolBarGripLength}"
-                                   Cursor="SizeAll"
-                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
-                            <ToggleButton x:Name="PART_OverflowButton"
-                                          DockPanel.Dock="Right"
-                                          Width="{TemplateBinding OverflowButtonLength}"
-                                          MinWidth="0"
-                                          Padding="0"
-                                          Visibility="Collapsed"
-                                          IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
-                                          ToolTip="{Localize ToolBarStrings.MoreCommands}"
-                                          AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
-                                <Path Data="M0,0 L4,4 L8,0"
-                                      Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </ToggleButton>
-                            <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
-                                        Orientation="{TemplateBinding Orientation}"
-                                        VerticalAlignment="Center"/>
-                            <!-- What does not fit: the same commands, on a card under the chevron. -->
-                            <Popup x:Name="PART_OverflowPopup"
-                                   Placement="Bottom"
-                                   PlacementAlignment="End"
-                                   KeepOpen="False"
-                                   IgnoreTargetPress="True"
-                                   IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
-                                <Border Background="{ResourceReference FlyoutSurfaceFill}"
-                                        BorderBrush="{ResourceReference ControlStrokeColorDefault}"
-                                        BorderThickness="1"
-                                        CornerRadius="{ResourceReference CornerRadiusDefault}"
-                                        Padding="4">
-                                    <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
-                                                Orientation="{TemplateBinding Orientation}"/>
-                                </Border>
-                            </Popup>
-                        </DockPanel>
+                            CornerRadius="{ResourceReference CornerRadiusDefault}">
+                        <Grid>
+                            <!-- A contextual bar's wash: the accent, faint, behind the whole bar. -->
+                            <Border x:Name="ContextualWash" Background="{ThemeResource AccentFillColorSelection}"
+                                    CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                    Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
+                            <DockPanel Margin="{TemplateBinding Padding}">
+                                <!-- The grip moves the bar; drawn by Thumb.ToolBarGrip below. -->
+                                <Thumb x:Name="PART_Grip"
+                                       Classes="ToolBarGrip"
+                                       DockPanel.Dock="Left"
+                                       Width="{ResourceReference ToolBarGripLength}"
+                                       Cursor="SizeAll"
+                                       AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
+                                <ToggleButton x:Name="PART_OverflowButton"
+                                              DockPanel.Dock="Right"
+                                              Width="{TemplateBinding OverflowButtonLength}"
+                                              MinWidth="0"
+                                              Padding="0"
+                                              Visibility="Collapsed"
+                                              IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
+                                              ToolTip="{Localize ToolBarStrings.MoreCommands}"
+                                              AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
+                                    <Path Data="M0,0 L4,4 L8,0"
+                                          Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
+                                            Orientation="{TemplateBinding Orientation}"
+                                            VerticalAlignment="Center"/>
+                                <!-- What does not fit: the same commands, on a card under the chevron. -->
+                                <Popup x:Name="PART_OverflowPopup"
+                                       Placement="Bottom"
+                                       PlacementAlignment="End"
+                                       KeepOpen="False"
+                                       IgnoreTargetPress="True"
+                                       IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
+                                    <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="1"
+                                            CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                            Padding="4">
+                                        <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
+                                                    Orientation="{TemplateBinding Orientation}"/>
+                                    </Border>
+                                </Popup>
+                            </DockPanel>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -151,6 +156,10 @@
         <!-- Lifted while it is moved, so the rows under it still read. -->
         <PropertyTrigger Property="IsMoving" Value="true">
             <Setter Property="Opacity" Value="0.85"/>
+        </PropertyTrigger>
+        <!-- Shown where the caret is: washed in the accent, so it reads apart from the bars always there. -->
+        <PropertyTrigger Property="IsContextual" Value="true">
+            <Setter TargetName="ContextualWash" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
 

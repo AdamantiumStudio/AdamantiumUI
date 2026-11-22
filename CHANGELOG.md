@@ -84,6 +84,8 @@ All packages share one version.
 - `ToolBar.IsContextual`: a bar shown by what the user is on - a table, a picture - as a ribbon's contextual tab. The
   tray's menu lists such bars apart, under `ToolBarTray.ContextualBarsHeader`, checked while shown and not switched;
   the user's bars then stand under `ToolBarTray.BarsHeader`. Each theme gives both its own words.
+- A contextual bar is washed in the accent in every theme, so it reads apart from the bars always there: the
+  selection's accent (`AccentFillColorSelection`) behind the whole bar, at the theme's `ToolBarContextualWashOpacity`.
 - `ToolBarTray.SharesBars`: false keeps a tray's bars to it - none goes to another tray, and none comes from one - for
   a control whose bars are its own parts.
 - `MenuHeader`: the name of a section of a menu, over its rows; not a command, so it takes no focus. Styled in Fluent,
