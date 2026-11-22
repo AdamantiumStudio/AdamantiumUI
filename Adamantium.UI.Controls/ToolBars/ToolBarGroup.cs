@@ -2,6 +2,8 @@ using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
@@ -33,6 +35,35 @@ public class ToolBarGroup : ItemsControl
         nameof(BeginsLine), typeof(bool), typeof(ToolBarGroup), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty BeginsLineProperty = BeginsLinePropertyKey.Property;
+
+    /// <summary>Whether the section is where a shown context comes from - the picture put in from here, now selected,
+    /// its contextual bar shown - so it is framed and washed in the context's <see cref="Accent"/>, and read as kin of
+    /// that bar. In the overflow menu, its bar's chevron is marked so (<see cref="ToolBar.HasContextInOverflow"/>).</summary>
+    public static readonly AdamantiumProperty IsInContextProperty = AdamantiumProperty.Register(nameof(IsInContext),
+        typeof(bool), typeof(ToolBarGroup), new PropertyMetadata(false, OnContextChanged));
+
+    /// <summary>The color of the context the section is in: its contextual bar's <see cref="ToolBar.Accent"/>. The
+    /// theme's accent unless set.</summary>
+    public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
+        typeof(Brush), typeof(ToolBarGroup), new PropertyMetadata(default(Brush), OnContextChanged));
+
+    public bool IsInContext
+    {
+        get => GetValue<bool>(IsInContextProperty);
+        set => SetValue(IsInContextProperty, value);
+    }
+
+    public Brush Accent
+    {
+        get => GetValue<Brush>(AccentProperty);
+        set => SetValue(AccentProperty, value);
+    }
+
+    /// <summary>The bar the section is a command of, set by it, so it hears when the section's context changes.</summary>
+    internal ToolBar Bar { get; set; }
+
+    private static void OnContextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+        ((ToolBarGroup)a).Bar?.MarkContextInOverflow();
 
     /// <summary>The section's name, to automation.</summary>
     public object Header

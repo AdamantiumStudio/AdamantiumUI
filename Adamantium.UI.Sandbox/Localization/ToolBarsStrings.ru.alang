@@ -30,6 +30,8 @@
     <Phrase Key="Align" Text="Выравнивание"/>
     <Phrase Key="Table" Text="Таблица"/>
     <Phrase Key="TableTools" Text="Работа с таблицами"/>
+    <Phrase Key="Tables" Text="Таблицы"/>
+    <Phrase Key="InsertTable" Text="Вставить таблицу"/>
     <Phrase Key="InsertRow" Text="Вставить строку"/>
     <Phrase Key="DeleteRow" Text="Удалить строку"/>
     <Phrase Key="Nothing" Text="пока ничего"/>

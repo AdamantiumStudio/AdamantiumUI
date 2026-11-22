@@ -101,10 +101,20 @@
                                               Visibility="Collapsed"
                                               IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
                                               ToolTip="{Localize ToolBarStrings.MoreCommands}"
+                                              HorizontalContentAlignment="Stretch"
+                                              VerticalContentAlignment="Stretch"
                                               AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
-                                    <Path Data="M0,0 L3,3 L6,0"
-                                          Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Grid>
+                                        <!-- A section a shown context comes from is in the menu: framed in its color,
+                                             in the content, so the button's own states draw under it. -->
+                                        <Border x:Name="OverflowContextFrame"
+                                                BorderBrush="{TemplateBinding OverflowContextAccent}"
+                                                BorderThickness="{ResourceReference ToolBarContextFrameThickness}"
+                                                Visibility="Collapsed"/>
+                                        <Path Data="M0,0 L3,3 L6,0"
+                                              Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
                                 </ToggleButton>
                                 <!-- A contextual bar's context, named as the ribbon names it: the same label. -->
                                 <RibbonContextualLabel x:Name="ContextualHeaderLabel"
@@ -165,6 +175,10 @@
         <PropertyTrigger Property="IsContextual" Value="true">
             <Setter TargetName="ContextualWash" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- A section a shown context comes from is in the menu: the chevron framed in that context's color. -->
+        <PropertyTrigger Property="HasContextInOverflow" Value="true">
+            <Setter TargetName="OverflowContextFrame" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
         <!-- Named along a bar; down the side only its color says it, until bars there get a form of their own. -->
         <MultiTrigger>
             <MultiTrigger.Conditions>
@@ -177,6 +191,7 @@
 
     <!-- A section of a bar: a rule before it where a command stands before it, then its commands along the bar. -->
     <Style Selector="ToolBarGroup">
+        <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -191,7 +206,16 @@
                 <ControlTemplate TargetType="ToolBarGroup">
                     <StackPanel Orientation="{TemplateBinding Orientation}">
                         <Separator x:Name="PART_Separator" Orientation="Vertical" Visibility="Collapsed"/>
-                        <ItemsPresenter x:Name="PART_ItemsPresenter" VerticalAlignment="Center"/>
+                        <!-- Where a shown context comes from: washed and framed in its color, just past the commands,
+                             so turning it on moves nothing. -->
+                        <Grid VerticalAlignment="Center">
+                            <Border x:Name="ContextWash" Margin="-2" Background="{TemplateBinding Accent}"
+                                    Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
+                            <ItemsPresenter x:Name="PART_ItemsPresenter"/>
+                            <Border x:Name="ContextFrame" Margin="-2" BorderBrush="{TemplateBinding Accent}"
+                                    BorderThickness="{ResourceReference ToolBarContextFrameThickness}"
+                                    IsHitTestVisible="False" Visibility="Collapsed"/>
+                        </Grid>
                     </StackPanel>
                 </ControlTemplate>
             </Setter.Value>
@@ -208,6 +232,10 @@
         </PropertyTrigger>
         <PropertyTrigger Property="Orientation" Value="Vertical">
             <Setter TargetName="PART_Separator" Property="Orientation" Value="Horizontal"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsInContext" Value="true">
+            <Setter TargetName="ContextWash" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="ContextFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
 

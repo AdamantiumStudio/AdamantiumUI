@@ -77,6 +77,11 @@
                     <Button x:Name="SectionCenterCommand" Content="{Localize ToolBarsStrings.Center}" Command="{Binding PressCommand}" CommandParameter="Center"/>
                     <Button x:Name="SectionRightCommand" Content="{Localize ToolBarsStrings.Right}" Command="{Binding PressCommand}" CommandParameter="Right"/>
                 </ToolBarGroup>
+                <!-- Where the table's context comes from: framed and washed in its color while the table bar shows. -->
+                <ToolBarGroup x:Name="TablesGroup" Header="{Localize ToolBarsStrings.Tables}" Accent="#3C8C5A"
+                              IsInContext="{Binding InTable}">
+                    <Button x:Name="SectionInsertTableCommand" Content="{Localize ToolBarsStrings.InsertTable}" Command="{Binding PressCommand}" CommandParameter="InsertTable"/>
+                </ToolBarGroup>
             </ToolBar>
             <ToolBar x:Name="TableBar" Header="{Localize ToolBarsStrings.Table}" IsContextual="True" Accent="#3C8C5A" Band="1"
                      ContextualHeader="{Localize ToolBarsStrings.TableTools}"
