@@ -187,5 +187,10 @@ public enum AutomationCommand
 
     /// <summary>Counts the device memory the application's graphics resources hold - by kind and the largest groups -
     /// and writes it to <c>logs/device-memory.txt</c> beside the application as well.</summary>
-    DeviceMemory
+    DeviceMemory,
+
+    /// <summary>How the frames go: their GPU time on average since the application was last asked, by anyone - every
+    /// window's frames - and the last frame's, with frames a second when any came; the last layout pass, record and
+    /// apply.</summary>
+    Stats
 }

@@ -348,6 +348,16 @@ public class WindowRenderService : UiRenderService
     {
         var t0 = Stopwatch.GetTimestamp();
         RuntimeStats.LastWindowGpuMs = GraphicsDevice.LastGpuFrameMs;
+        // One frame's time is read back each frame, that of the frame its slot held before.
+        if (GraphicsDevice.LastGpuFrameMs > 0)
+        {
+            lock (RuntimeStats.WindowGpuLock)
+            {
+                RuntimeStats.WindowGpuFrames++;
+                RuntimeStats.WindowGpuMsTotal += GraphicsDevice.LastGpuFrameMs;
+            }
+        }
+
         GraphicsDevice.EndDraw();
         // A failed acquire leaves nothing to copy into and nothing to present.
         var drawn = GraphicsDevice.CurrentRenderTarget.ResolveTexture;
