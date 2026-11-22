@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `Displays.LargestScreen`: the monitor of the most pixels. A `RemoteUniverse` tells the host its size as it launches,
+  so frames that come through memory of the process keep one ring whatever size the view is resized to.
 - `TrayIcon` and `UIApplication.TrayIcons`: an icon of the application's in the desktop's notification area - the
   application's own icon, a `ToolTip`, a `Command` (and `Clicked`) on a click or from the keyboard, a `ContextMenu`
   opened at the pointer on a right click - shown from the application's start, or from when it is added, while
