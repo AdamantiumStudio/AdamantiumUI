@@ -67,6 +67,7 @@
          tray, so a bar reads as one thing to move. -->
     <Style Selector="ToolBar">
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
+        <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="2"/>
@@ -81,8 +82,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{ResourceReference CornerRadiusDefault}">
                         <Grid>
-                            <!-- A contextual bar's wash: the accent, faint, behind the whole bar. -->
-                            <Border x:Name="ContextualWash" Background="{ThemeResource AccentFillColorSelection}"
+                            <!-- A contextual bar's wash: its context's accent, faint, behind the whole bar. -->
+                            <Border x:Name="ContextualWash" Background="{TemplateBinding Accent}"
                                     CornerRadius="{ResourceReference CornerRadiusDefault}"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">

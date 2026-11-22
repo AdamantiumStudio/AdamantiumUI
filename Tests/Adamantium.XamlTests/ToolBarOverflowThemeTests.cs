@@ -25,7 +25,7 @@ public class ToolBarOverflowThemeTests
         UIAppContext.Initialize(_app, null);
     }
 
-    private void Use(string name)
+    private Theme Use(string name)
     {
         Theme theme = name switch
         {
@@ -41,6 +41,30 @@ public class ToolBarOverflowThemeTests
         ((FakeContext)_app.UIContext).ThemeEngine = themes;
         themes.AddTheme(theme.Name, theme);
         themes.SetTheme(theme);
+        return theme;
+    }
+
+    // A contextual bar given no color of its own is washed in the theme's accent, faintly, behind the whole bar.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void AContextualBarWithNoColorOfItsOwn_IsWashedInTheThemesAccent(string name)
+    {
+        var theme = Use(name);
+        var bar = new ToolBar { Header = "Table", IsContextual = true, Items = { new Button { Content = "Insert row" } } };
+        var window = new Window { Width = 300, Height = 200, Content = new ToolBarTray { Items = { bar } } };
+        window.ApplyCurrentTheme();
+        WindowExtension.UpdateTree(window);
+
+        var wash = (Border)bar.GetTemplateChild("ContextualWash");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wash.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That((wash.Background as SolidColorBrush)?.Color,
+                Is.EqualTo(((SolidColorBrush)theme.AccentFillColorDefault).Color));
+            Assert.That(wash.Opacity, Is.GreaterThan(0).And.LessThan(1), "faint, the theme's share");
+        });
     }
 
     [TestCase("Fluent")]

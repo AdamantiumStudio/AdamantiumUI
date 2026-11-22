@@ -66,6 +66,7 @@
     <!-- A bar: a soft rounded group with no edge, as the Mac groups a toolbar's buttons. -->
     <Style Selector="ToolBar">
         <Setter Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
+        <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="Padding" Value="3"/>
         <Setter Property="Margin" Value="0,0,8,4"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
@@ -78,8 +79,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="8">
                         <Grid>
-                            <!-- A contextual bar's wash: the accent, faint, behind the whole bar. -->
-                            <Border x:Name="ContextualWash" Background="{ThemeResource AccentFillColorSelection}"
+                            <!-- A contextual bar's wash: its context's accent, faint, behind the whole bar. -->
+                            <Border x:Name="ContextualWash" Background="{TemplateBinding Accent}"
                                     CornerRadius="8"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">

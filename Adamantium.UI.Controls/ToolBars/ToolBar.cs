@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -57,6 +58,12 @@ public class ToolBar : ItemsControl
     /// ribbon's contextual tab is: its tray's menu lists it apart, and does not switch it.</summary>
     public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.Register(nameof(IsContextual),
         typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+
+    /// <summary>The color of a contextual bar's context, washed behind the bar - the same as the ribbon's contextual
+    /// group of that context (<see cref="RibbonContextualGroup.Accent"/>), so the two read as one. The theme's accent
+    /// unless set.</summary>
+    public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
+        typeof(Brush), typeof(ToolBar), new PropertyMetadata(default(Brush)));
 
     /// <summary>How long the overflow button is along the bar - a theme metric, reserved whenever commands overflow.</summary>
     public static readonly AdamantiumProperty OverflowButtonLengthProperty = AdamantiumProperty.Register(
@@ -161,6 +168,12 @@ public class ToolBar : ItemsControl
     {
         get => GetValue<bool>(IsContextualProperty);
         set => SetValue(IsContextualProperty, value);
+    }
+
+    public Brush Accent
+    {
+        get => GetValue<Brush>(AccentProperty);
+        set => SetValue(AccentProperty, value);
     }
 
     /// <summary>Where the commands that do not fit on the bar's line go: <see cref="Controls.CommandWrapping.NoWrap"/>,

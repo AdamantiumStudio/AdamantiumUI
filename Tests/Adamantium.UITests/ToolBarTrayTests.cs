@@ -15,6 +15,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
@@ -827,8 +828,8 @@ public class ToolBarTrayTests
         Assert.That(new[] { narrow.RenderSize.Width, wide.RenderSize.Width }, Is.EqualTo(new[] { 30.0, 70.0 }));
     }
 
-    // A bar made contextual is washed in the accent behind the whole of it, its commands over the wash; an ordinary bar
-    // is not, and a bar no longer contextual loses it.
+    // A bar made contextual is washed in its context's color behind the whole of it, its commands over the wash; an
+    // ordinary bar is not, and a bar no longer contextual loses it.
     [TestCaseSource(nameof(StyleSets))]
     public void AContextualBar_IsWashedBehindTheWholeBar_AnOrdinaryOneIsNot(System.Type styleSet)
     {
@@ -838,7 +839,9 @@ public class ToolBarTrayTests
         var root = Shown(Tray(home, table), 1000);
         var wash = (UIComponent)table.GetTemplateChild("ContextualWash");
         var before = wash.Visibility;
+        var green = new SolidColorBrush(Colors.SeaGreen);
         table.IsContextual = true;
+        table.Accent = green;
         Show(root);
         var plain = ((UIComponent)home.GetTemplateChild("ContextualWash")).Visibility;
         var grid = (Grid)wash.VisualParent;
@@ -853,6 +856,7 @@ public class ToolBarTrayTests
         {
             Assert.That(before, Is.EqualTo(Visibility.Collapsed), "not contextual yet");
             Assert.That(washed, Is.EqualTo(Visibility.Visible));
+            Assert.That(((Border)wash).Background, Is.SameAs(green), "in its context's color");
             Assert.That(size.Width, Is.EqualTo(border.RenderSize.Width - border.BorderThickness.Left
                 - border.BorderThickness.Right).Within(0.5), "the whole bar across");
             Assert.That(size.Height, Is.EqualTo(border.RenderSize.Height - border.BorderThickness.Top

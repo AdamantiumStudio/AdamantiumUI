@@ -68,6 +68,7 @@
     <!-- A bar: no card of its own - the bars are told apart by a hairline after each, as the editor's panes are. -->
     <Style Selector="ToolBar">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="0,0,1,0"/>
         <Setter Property="Padding" Value="1,1,3,1"/>
@@ -81,8 +82,8 @@
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}">
                         <Grid>
-                            <!-- A contextual bar's wash: the accent, faint, behind the whole bar. -->
-                            <Border x:Name="ContextualWash" Background="{ThemeResource AccentFillColorSelection}"
+                            <!-- A contextual bar's wash: its context's accent, faint, behind the whole bar. -->
+                            <Border x:Name="ContextualWash" Background="{TemplateBinding Accent}"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">
                                 <!-- The grip: drawn by Thumb.ToolBarGrip below. -->
