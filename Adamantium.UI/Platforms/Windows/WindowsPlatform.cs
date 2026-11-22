@@ -130,6 +130,7 @@ public class WindowsPlatform : IApplicationPlatform
     public IntPtr WindowFromScreenPoint(Adamantium.UI.Core.PixelPoint point) =>
         Win32Interop.WindowFromPoint(new Adamantium.Mathematics.NativePoint((int)point.X, (int)point.Y));
 
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public static void Initialize(IContainerRegistry resolver)
     {
         resolver.RegisterSingleton<IApplicationPlatform, WindowsPlatform>();
