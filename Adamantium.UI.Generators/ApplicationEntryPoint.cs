@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.AST;
@@ -17,7 +18,7 @@ public static class ApplicationEntryPoint
 
     /// <summary>Checks the project's blueprints and, when they make one application, writes its entry point.</summary>
     public static void Emit(SourceProductionContext context, Compilation compilation,
-        IReadOnlyList<(string File, string ClassName, string SplashWindow, string StartupWindow)> blueprints,
+        IReadOnlyList<(string File, string ClassName, EarlyBlueprintValues Early)> blueprints,
         AumlSourceGenerator codeGenerator, string rootNamespace)
     {
         if (blueprints.Count == 0)
@@ -52,22 +53,38 @@ public static class ApplicationEntryPoint
             return;
         }
 
-        codeGenerator.GenerateApplicationEntry(new RoslynOutputSink(context), blueprint.ClassName, blueprint.SplashWindow,
-            blueprint.StartupWindow, applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
+        codeGenerator.GenerateApplicationEntry(new RoslynOutputSink(context), blueprint.ClassName, blueprint.Early,
+            applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
     }
 
-    /// <summary>The splash window a blueprint names, as generated code writes it, or null when it names none.</summary>
-    public static string SplashWindowOf(AumlMetadataContainer blueprint) => WindowOf(blueprint, "SplashWindow");
+    /// <summary>What the start reads of a blueprint before making it: its splash and startup windows, its limit on
+    /// copies, whether the graphics device debugs, how windows present.</summary>
+    public static EarlyBlueprintValues EarlyValuesOf(AumlMetadataContainer blueprint) => new()
+    {
+        SplashWindow = WindowOf(blueprint, "SplashWindow"),
+        StartupWindow = WindowOf(blueprint, "StartupWindow"),
+        MaxInstances = int.TryParse(PropertyOf(blueprint, "MaxInstances")?.GetTextValue(), NumberStyles.Integer,
+            CultureInfo.InvariantCulture, out var count) ? count : 0,
+        EnableGraphicsDebug = bool.TryParse(PropertyOf(blueprint, "EnableGraphicsDebug")?.GetTextValue(), out var debug) && debug,
+        PresentPolicy = PresentPolicyOf(blueprint),
+    };
 
-    /// <summary>The startup window a blueprint names, as generated code writes it, or null when it names none.</summary>
-    public static string StartupWindowOf(AumlMetadataContainer blueprint) => WindowOf(blueprint, "StartupWindow");
+    // Only a plain name of a value goes into generated code; the blueprint's own markup is checked for being one.
+    private static string PresentPolicyOf(AumlMetadataContainer blueprint)
+    {
+        var text = PropertyOf(blueprint, "PresentPolicy")?.GetTextValue()?.Trim();
+        return !string.IsNullOrEmpty(text) && text.All(char.IsLetter) ? text : null;
+    }
 
     private static string WindowOf(AumlMetadataContainer blueprint, string name)
     {
-        var property = (blueprint.RootNode as AumlAstObjectNode)?.Children.OfType<AumlAstPropertyNode>()
-            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { IsAttachedProperty: false } reference && reference.Name == name);
+        var property = PropertyOf(blueprint, name);
         return property == null ? null : blueprint.TypeResolver.Resolve(property.GetFullTypeValue())?.QualifiedName;
     }
+
+    private static AumlAstPropertyNode PropertyOf(AumlMetadataContainer blueprint, string name) =>
+        (blueprint.RootNode as AumlAstObjectNode)?.Children.OfType<AumlAstPropertyNode>()
+            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { IsAttachedProperty: false } reference && reference.Name == name);
 
     private static bool IsApplication(INamedTypeSymbol type)
     {

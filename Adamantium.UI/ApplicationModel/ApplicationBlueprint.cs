@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.Core.Collections;
+using Adamantium.Graphics.Core.Presentation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -33,6 +36,15 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
 
     public static readonly AdamantiumProperty DefaultScreenProperty = AdamantiumProperty.Register(nameof(DefaultScreen),
         typeof(string), typeof(ApplicationBlueprint), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty MaxInstancesProperty = AdamantiumProperty.Register(nameof(MaxInstances),
+        typeof(int), typeof(ApplicationBlueprint), new PropertyMetadata(0));
+
+    public static readonly AdamantiumProperty EnableGraphicsDebugProperty = AdamantiumProperty.Register(
+        nameof(EnableGraphicsDebug), typeof(bool), typeof(ApplicationBlueprint), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty PresentPolicyProperty = AdamantiumProperty.Register(nameof(PresentPolicy),
+        typeof(PresentPolicy), typeof(ApplicationBlueprint), new PropertyMetadata(PresentPolicy.Adaptive));
 
     /// <summary>The window the application opens first.</summary>
     [TypeOf(typeof(Window))]
@@ -94,6 +106,34 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
         get => GetValue<string>(DefaultScreenProperty);
         set => SetValue(DefaultScreenProperty, value);
     }
+
+    /// <summary>How many copies of the application the user may have running at once; 0 (unset) has no limit. A copy
+    /// started past it hands its command line to a running one and ends.</summary>
+    public int MaxInstances
+    {
+        get => GetValue<int>(MaxInstancesProperty);
+        set => SetValue(MaxInstancesProperty, value);
+    }
+
+    /// <summary>Whether the graphics device is made with its debug layer, which reports the misuse of it; off by default.
+    /// </summary>
+    public bool EnableGraphicsDebug
+    {
+        get => GetValue<bool>(EnableGraphicsDebugProperty);
+        set => SetValue(EnableGraphicsDebugProperty, value);
+    }
+
+    /// <summary>The presentation policy of every window that sets none of its own; Adaptive by default.</summary>
+    public PresentPolicy PresentPolicy
+    {
+        get => GetValue<PresentPolicy>(PresentPolicyProperty);
+        set => SetValue(PresentPolicyProperty, value);
+    }
+
+    /// <summary>The application's icons in the desktop's notification area, shown from its start.</summary>
+    public TrackingCollection<TrayIcon> TrayIcons { get; } = new();
+
+    IReadOnlyList<TrayIcon> IApplicationBlueprint.TrayIcons => TrayIcons;
 
     /// <summary>Resources every part of the application finds by key, and the dictionaries they link.</summary>
     public ResourceDictionary Resources { get; set; }

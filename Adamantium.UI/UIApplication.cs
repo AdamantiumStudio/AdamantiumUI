@@ -48,7 +48,8 @@ using UnhandledExceptionEventHandler = Adamantium.UI.Core.RoutedEvents.Unhandled
 
 namespace Adamantium.UI;
 
-public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplication, IUIApplication, IWindowPlatformService
+public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplication, IUIApplication, IWindowPlatformService,
+    Diagnostics.IApplicationDiagnostics
 {
     private readonly object applicationLocker = new object();
     
@@ -135,6 +136,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly CancellationTokenSource _startupCancellation = new();
     private volatile bool _startupDone;
     private int _splashHolds;
+    private ApplicationBlueprintAttribute _blueprintAttribute;
     private bool _loopStarted;
     private InstanceSlot _instanceSlot;
     private string _activationToken = TakeLaunchToken();
@@ -239,17 +241,27 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             ui.GraphicsDeviceService.DeviceUpdateNeeded = true;
         }
     }
-    
+
+    /// <summary>Whether the graphics device runs with its debug layer, which reports the misuse of it; switching it
+    /// remakes the device. The blueprint states it; a value set in code before <see cref="Run()"/> wins.</summary>
     public bool EnableGraphicsDebug
     {
         get => GetValue<bool>(EnableGraphicsDebugProperty);
         set => SetValue(EnableGraphicsDebugProperty, value);
     }
 
+    public static readonly AdamantiumProperty PresentPolicyProperty = AdamantiumProperty.Register(nameof(PresentPolicy),
+        typeof(Graphics.Core.Presentation.PresentPolicy), typeof(UIApplication),
+        new PropertyMetadata(Graphics.Core.Presentation.PresentPolicy.Adaptive));
+
     /// <summary>The presentation policy of every window that does not set its own <see cref="IWindow.PresentPolicy"/>.
-    /// Set it at startup: swapchains that already exist are not rebuilt.</summary>
-    public Graphics.Core.Presentation.PresentPolicy PresentPolicy { get; set; } =
-        Graphics.Core.Presentation.PresentPolicy.Adaptive;
+    /// Set it at startup: swapchains that already exist are not rebuilt. The blueprint states it; a value set in code
+    /// before <see cref="Run()"/> wins.</summary>
+    public Graphics.Core.Presentation.PresentPolicy PresentPolicy
+    {
+        get => GetValue<Graphics.Core.Presentation.PresentPolicy>(PresentPolicyProperty);
+        set => SetValue(PresentPolicyProperty, value);
+    }
 
     public static readonly AdamantiumProperty DefaultScreenProperty = AdamantiumProperty.Register(nameof(DefaultScreen),
         typeof(string), typeof(UIApplication), new PropertyMetadata(null));
@@ -274,8 +286,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         set => SetValue(UpdateRateProperty, value);
     }
 
-    /// <summary>The pace the loop keeps now, in hertz.</summary>
-    public double LoopRate { get; private set; } = IUIApplication.DefaultUpdateRate;
+    private double _loopRate = IUIApplication.DefaultUpdateRate;
+
+    double Diagnostics.IApplicationDiagnostics.LoopRate => _loopRate;
 
     public static readonly AdamantiumProperty RefreshRateProperty = AdamantiumProperty.Register(nameof(RefreshRate),
         typeof(uint), typeof(UIApplication), new PropertyMetadata(0u, RefreshRatesChanged));
@@ -343,15 +356,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         set => SetValue(MaximumRefreshRateProperty, value);
     }
 
-    /// <summary>The frame verifier: off by default, switched on at run time to hunt a rendering bug.</summary>
-    public Rendering.Verification.FrameVerification FrameVerification { get; } = new();
+    private readonly Rendering.Verification.FrameVerification _frameVerification = new();
 
-    /// <summary>Starts <paramref name="tool"/> on this application, on the calling thread; it stays attached until
-    /// detached or until the application shuts down. Attaching a tool twice attaches it once; once the application has
-    /// begun to shut down, attaching throws <see cref="InvalidOperationException"/>. A tool whose
-    /// <see cref="Diagnostics.IDebugTool.Attach"/> throws is detached and the exception goes on; a tool asked to detach,
-    /// or caught by the shutdown, while it attaches is detached as soon as Attach returns.</summary>
-    public void AttachDebugTool(Diagnostics.IDebugTool tool)
+    Rendering.Verification.FrameVerification Diagnostics.IApplicationDiagnostics.FrameVerification => _frameVerification;
+
+    void Diagnostics.IApplicationDiagnostics.AttachDebugTool(Diagnostics.IDebugTool tool)
     {
         ArgumentNullException.ThrowIfNull(tool);
 
@@ -404,9 +413,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
-    /// <summary>Stops <paramref name="tool"/> on the calling thread, if it is attached; a tool still attaching is
-    /// stopped when its Attach returns.</summary>
-    public void DetachDebugTool(Diagnostics.IDebugTool tool)
+    void Diagnostics.IApplicationDiagnostics.DetachDebugTool(Diagnostics.IDebugTool tool)
     {
         ArgumentNullException.ThrowIfNull(tool);
 
@@ -692,9 +699,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     /// <summary>How many copies of the application the user may have running at once; 0 (the default) has no limit. A
-    /// copy started past the limit ends in <see cref="Run()"/> before it shows anything. Copies are counted by the
-    /// application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives its
-    /// place up.</summary>
+    /// copy started past the limit hands its command line and the right to come to the front to a running one
+    /// (<see cref="AnotherCopyStarted"/>) and ends in <see cref="Run()"/> before it shows anything. Copies are counted
+    /// by the application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives
+    /// its place up. The blueprint states it; a value set in code before <see cref="Run()"/> wins.</summary>
     public int MaxInstances
     {
         get => GetValue<int>(MaxInstancesProperty);
@@ -936,6 +944,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         _ = Task.Run(() => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FX.UIBasicEffect).TypeHandle));
         Threading.Dispatcher.Initialize(UIContext);
         Dispatcher = Threading.Dispatcher.CurrentDispatcher;
+        // From the attribute, before the device and the splash window are made: the blueprint is made after them.
+        TakeFromBlueprint(EnableGraphicsDebugProperty, BlueprintAttribute is { EnableGraphicsDebug: true } ? true : null);
+        TakeFromBlueprint(PresentPolicyProperty, BlueprintAttribute is { PresentPolicy: not Graphics.Core.Presentation.PresentPolicy.Inherit } early
+            ? early.PresentPolicy
+            : null);
         GraphicsDeviceService.IsInDebugMode = EnableGraphicsDebug;
         var devices = Task.Run(() =>
         {
@@ -1016,7 +1029,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void ReadBlueprint()
     {
-        var blueprintType = GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.BlueprintType;
+        var blueprintType = BlueprintAttribute?.BlueprintType;
         if (blueprintType == null)
         {
             return;
@@ -1029,6 +1042,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         TakeFromBlueprint(StartupLanguageProperty, blueprint.StartupLanguage);
         TakeFromBlueprint(ShutDownModeProperty, blueprint.ShutDownMode);
         TakeFromBlueprint(DefaultScreenProperty, blueprint.DefaultScreen);
+        // Before the platform is up: placed with the icons the code added.
+        foreach (var icon in blueprint.TrayIcons ?? [])
+        {
+            TrayIcons.Add(icon);
+        }
 
         OnLoop(() =>
         {
@@ -1076,6 +1094,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         done.Task.GetAwaiter().GetResult();
         StartupCancellation.ThrowIfCancellationRequested();
     }
+
+    // The build names the blueprint, and what the start reads of it early, on an attribute of the application's assembly.
+    private ApplicationBlueprintAttribute BlueprintAttribute =>
+        _blueprintAttribute ??= GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>();
 
     private void TakeFromBlueprint(AdamantiumProperty property, object value)
     {
@@ -1140,6 +1162,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         containerRegistry.RegisterInstance<IAdamantiumApplication>(this);
         containerRegistry.RegisterInstance<IUIApplication>(this);
+        containerRegistry.RegisterInstance<Diagnostics.IApplicationDiagnostics>(this);
         containerRegistry.RegisterInstance<EntityWorld>(EntityWorld);
         containerRegistry.RegisterSingleton<IThemeManager>(ThemeManager);
     }
@@ -1297,21 +1320,55 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private bool TakeInstanceSlot()
     {
+        // From the attribute, not the blueprint: a copy past the limit ends before anything is made.
+        if (BlueprintAttribute is { MaxInstances: not 0 } blueprint)
+        {
+            TakeFromBlueprint(MaxInstancesProperty, blueprint.MaxInstances);
+        }
+
         if (MaxInstances <= 0 || _instanceSlot != null)
         {
             return true;
         }
 
         var folder = Path.GetFullPath(ApplicationData.Folder);
-        _instanceSlot = InstanceSlot.TryTake("copies of " + (OperatingSystem.IsLinux() ? folder : folder.ToUpperInvariant()),
-            MaxInstances);
+        var name = "copies of " + (OperatingSystem.IsLinux() ? folder : folder.ToUpperInvariant());
+        _instanceSlot = InstanceSlot.TryTake(name, MaxInstances);
         if (_instanceSlot != null)
         {
+            _instanceSlot.Asked += OnAnotherCopyAsked;
+            _instanceSlot.StartListening();
             return true;
         }
 
-        Log.Logger.Information("{Count} copies of the application already run; this one ends", MaxInstances);
+        // Run has no thread of the application's yet to wait on: the ask is only pipes.
+        var handed = InstanceSlot.AskHolderAsync(name, MaxInstances, Environment.GetCommandLineArgs()[1..],
+            Environment.CurrentDirectory,
+            OperatingSystem.IsWindows() ? Win32WindowWorker.GiveUpForeground() : TakeActivationToken())
+            .GetAwaiter().GetResult();
+        Log.Logger.Information(handed
+            ? "{Count} copies of the application already run; one took this one's command line, and this one ends"
+            : "{Count} copies of the application already run, none answered; this one ends", MaxInstances);
         return false;
+    }
+
+    // Asked on a thread of the pool: answered on the loop thread, once it runs.
+    private void OnAnotherCopyAsked(object sender, InstanceAskedEventArgs e)
+    {
+        var started = new AnotherCopyStartedEventArgs(e.Arguments, e.WorkingDirectory);
+        LoopSignal.Post(() =>
+        {
+            if (e.ActivationToken != null)
+            {
+                AcceptActivationToken(e.ActivationToken);
+            }
+
+            AnotherCopyStarted?.Invoke(this, started);
+            if (!started.Handled && MainWindow is { } window)
+            {
+                _ = ExecuteOnUIThreadAsync(window.Activate);
+            }
+        });
     }
 
     private void StartLoop()
@@ -1378,14 +1435,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return shown.LivePlacement();
         }
 
-        var startup = StartupType ?? GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.StartupWindow;
+        var startup = StartupType ?? BlueprintAttribute?.StartupWindow;
         var placementName = MainWindow is WindowBase main ? main.PlacementName() : startup?.FullName;
         return GetPlacementStore().Load(placementName ?? GetFirstWindowPlacementKey());
     }
 
     private Type SplashWindowType()
     {
-        var type = SplashType ?? GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.SplashWindow;
+        var type = SplashType ?? BlueprintAttribute?.SplashWindow;
         return Configuration.Platform is Platform.Linux or Platform.Windows ? type : null;
     }
 
@@ -1640,14 +1697,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     /// <summary>A window's swapchain lags the size of its surface, so the window is being resized right now. Set by the
     /// render thread's every pass over the windows.</summary>
-    public static bool SwapchainTrailing { get; set; }
+    internal static bool SwapchainTrailing { get; set; }
 
     private void WaitForWork()
     {
-        LoopRate = ResolveLoopRate();
+        _loopRate = ResolveLoopRate();
         var waitStart = Stopwatch.GetTimestamp();
 
-        var period = (long)Math.Round(Stopwatch.Frequency / LoopRate);
+        var period = (long)Math.Round(Stopwatch.Frequency / _loopRate);
         var due = _loopFrameDue + period;
         if (!SwapchainTrailing)
         {
@@ -1711,14 +1768,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         NoteIdle();
     }
 
-    /// <summary>What kept the application from going idle the last time it was waited for; null once it was idle.</summary>
-    public string IdleBlocker { get; private set; }
+    private string _idleBlocker;
 
-    /// <summary>Completes once the application is idle: the loop has nothing left to do - no posted work, nothing to lay
-    /// out or draw, no animation that finishes on its own, no picture still being read from its file - and the frame
-    /// showing that state has been drawn. Endless
-    /// animations (a caret, a spinner) do not count, nor does work running off the loop until it posts its result.</summary>
-    public Task WaitForIdleAsync()
+    string Diagnostics.IApplicationDiagnostics.IdleBlocker => _idleBlocker;
+
+    Task Diagnostics.IApplicationDiagnostics.WaitForIdleAsync()
     {
         var idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_idleWaiters)
@@ -1740,8 +1794,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 return;
             }
 
-            IdleBlocker = FindIdleBlocker();
-            if (IdleBlocker != null)
+            _idleBlocker = FindIdleBlocker();
+            if (_idleBlocker != null)
             {
                 _idleFrame = -1;
                 return;
@@ -1752,7 +1806,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 _idleFrame = Volatile.Read(ref _publishedFrame);
             }
 
-            IdleBlocker = _drawFailing
+            _idleBlocker = _drawFailing
                 ? "frames that fail to draw - see the error journal"
                 : "the frame on its way to the screen";
         }
@@ -1839,7 +1893,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             released = [.. _idleWaiters];
             _idleWaiters.Clear();
             _idleFrame = -1;
-            IdleBlocker = null;
+            _idleBlocker = null;
         }
 
         foreach (var waiter in released)
@@ -2431,13 +2485,26 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     public event EventHandler<EventArgs> Started;
+
+    /// <summary>A copy started past <see cref="MaxInstances"/> handed this one its command line - a file to open, say -
+    /// and the right to come to the front; raised on the loop thread. Not handled, the main window comes to the front.
+    /// </summary>
+    public event EventHandler<AnotherCopyStartedEventArgs> AnotherCopyStarted;
+
     public event EventHandler<EventArgs> ShuttingDown;
     public event EventHandler<EventArgs> UIThreadExiting;
     public event EventHandler<EventArgs> Stopped;
     public event EventHandler Paused;
     public event EventHandler Resumed;
     public event EventHandler<EventArgs> ContentUnloading;
-    public event EventHandler CycleFinished;
+    // A field-like event: subscribing from any thread is safe.
+    private event EventHandler CycleFinished;
+
+    event EventHandler Diagnostics.IApplicationDiagnostics.CycleFinished
+    {
+        add => CycleFinished += value;
+        remove => CycleFinished -= value;
+    }
     public event UnhandledExceptionEventHandler UnhandledException;
 
     /// <summary>Never raised: a UI application loads content per window, not in one phase.</summary>

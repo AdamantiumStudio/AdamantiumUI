@@ -41,6 +41,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private bool _ticking;
     private DispatcherTimer _refresh;
     private Adamantium.UI.UIApplication _application;
+    private Adamantium.UI.Diagnostics.IApplicationDiagnostics _diagnostics;
     private long _lastSample;
     private bool _idleShown;
     private int _quietRefreshes;
@@ -105,9 +106,9 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         }
     }
 
-    private static string VerificationLine()
+    private string VerificationLine()
     {
-        var verification = Adamantium.UI.UIApplication.Current?.FrameVerification;
+        var verification = _diagnostics?.FrameVerification;
         return verification is { IsEnabled: true }
             ? $"\nverified {verification.VerifiedFrames}   DIFFER {verification.MismatchedFrames}   skipped {verification.SkippedFrames}"
             : string.Empty;
@@ -159,6 +160,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         }
 
         _application = Adamantium.UI.UIApplication.Current;
+        _diagnostics = _application?.UIContext.Resolve<Adamantium.UI.Diagnostics.IApplicationDiagnostics>();
         if (_application == null)
         {
             return;
@@ -171,7 +173,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         _quietRefreshes = 0;
         ResetWindow();
         TakeBaselines();
-        _application.CycleFinished += OnCycleFinished;
+        _diagnostics.CycleFinished += OnCycleFinished;
         _refresh ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(RefreshSeconds) };
         _refresh.Tick += OnRefresh;
         _refresh.Start();
@@ -187,7 +189,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         _ticking = false;
         _fenceWait?.Dispose();
         _fenceWait = null;
-        _application.CycleFinished -= OnCycleFinished;
+        _diagnostics.CycleFinished -= OnCycleFinished;
         _refresh.Tick -= OnRefresh;
         _refresh.Stop();
     }
@@ -430,7 +432,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             // Everything the loop actually DID this second, at its worst. Compared against the pacing budget below.
             var work = _windowMaxRecord + _windowMaxApply + _windowMaxLayoutMs + _windowMaxWait
                        + _windowMaxPresent + _secMaxProcs;
-            var pace = Adamantium.UI.UIApplication.Current?.LoopRate ?? 0;
+            var pace = _diagnostics?.LoopRate ?? 0;
             var budget = pace > 0 ? 1000.0 / pace : 0;
 
             var build = $"record max {_windowMaxRecord:F2} ms   apply max {_windowMaxApply:F2} ms\n" +

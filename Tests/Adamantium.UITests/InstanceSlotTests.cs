@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.UI;
 using NUnit.Framework;
 
@@ -78,5 +79,65 @@ public class InstanceSlotTests
         using var other = InstanceSlot.TryTake(_folder + "-other", 1);
 
         Assert.That(other, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task ACopyWithNoPlace_HandsItsCommandLineToTheHolder()
+    {
+        using var holder = InstanceSlot.TryTake(_folder, 1);
+        var asked = new TaskCompletionSource<InstanceAskedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+        holder.Asked += (_, e) => asked.TrySetResult(e);
+        holder.StartListening();
+
+        var handed = await InstanceSlot.AskHolderAsync(_folder, 1, ["open", "a file с пробелом.txt"], @"C:\Where\It Ran",
+            "token-1");
+        var got = await asked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handed, Is.True);
+            Assert.That(got.Arguments, Is.EqualTo(new[] { "open", "a file с пробелом.txt" }));
+            Assert.That(got.WorkingDirectory, Is.EqualTo(@"C:\Where\It Ran"));
+            Assert.That(got.ActivationToken, Is.EqualTo("token-1"));
+        });
+    }
+
+    [Test]
+    public async Task OfTwoPlaces_TheHolderListeningIsAsked()
+    {
+        using var first = InstanceSlot.TryTake(_folder, 2);
+        using var second = InstanceSlot.TryTake(_folder, 2);
+        var asked = new TaskCompletionSource<InstanceAskedEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+        second.Asked += (_, e) => asked.TrySetResult(e);
+        second.StartListening();
+
+        var handed = await InstanceSlot.AskHolderAsync(_folder, 2, [], null, null);
+        var got = await asked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handed, Is.True);
+            Assert.That(got.Arguments, Is.Empty);
+            Assert.That(got.WorkingDirectory, Is.Null);
+            Assert.That(got.ActivationToken, Is.Null, "No token handed, none told.");
+        });
+    }
+
+    [Test]
+    public async Task APlaceGivenUp_IsAskedNoMore()
+    {
+        var holder = InstanceSlot.TryTake(_folder, 1);
+        var asks = 0;
+        holder.Asked += (_, _) => Interlocked.Increment(ref asks);
+        holder.StartListening();
+        holder.Dispose();
+
+        var handed = await InstanceSlot.AskHolderAsync(_folder, 1, ["x"], null, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handed, Is.False);
+            Assert.That(asks, Is.Zero);
+        });
     }
 }

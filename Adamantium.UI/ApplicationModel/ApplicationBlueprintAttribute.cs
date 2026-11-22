@@ -1,4 +1,5 @@
 using System;
+using Adamantium.Graphics.Core.Presentation;
 
 namespace Adamantium.UI.ApplicationModel;
 
@@ -20,4 +21,16 @@ public sealed class ApplicationBlueprintAttribute : Attribute
 
     /// <summary>The blueprint's startup window, read as early: the splash window appears where it will.</summary>
     public Type StartupWindow { get; set; }
+
+    /// <summary>The blueprint's limit on copies running at once, read before anything starts: a copy past it ends at once.
+    /// 0 has none.</summary>
+    public int MaxInstances { get; set; }
+
+    /// <summary>Whether the blueprint makes the graphics device with its debug layer, read as early: the device is made
+    /// before the blueprint.</summary>
+    public bool EnableGraphicsDebug { get; set; }
+
+    /// <summary>The blueprint's presentation policy, read as early: the splash window presents before the blueprint is
+    /// made. Inherit when it states none.</summary>
+    public PresentPolicy PresentPolicy { get; set; }
 }

@@ -103,9 +103,7 @@ public static class ScenarioTranslator
             "Unselect" => $"{Target(step)}.RemoveFromSelectionAsync()",
             "Click" => $"{Target(step)}.ClickAsync()",
             "RightClick" => $"{Target(step)}.RightClickAsync()",
-            "Hover" => step.Attribute("At") == null
-                ? $"{Target(step)}.HoverAsync()"
-                : $"{Target(step)}.HoverAsync({Pair(step, "At")})",
+            "Hover" => Hover(step),
             "Expand" => $"{Target(step)}.ExpandAsync()",
             "Collapse" => $"{Target(step)}.CollapseAsync()",
             "ContextMenu" => $"{Target(step)}.ShowContextMenuAsync()",
@@ -146,6 +144,20 @@ public static class ScenarioTranslator
         return Flag(step, "AllowErrors")
             ? $"{line}session.AllowErrors = true;\n{line}await {call};\n{line}session.AllowErrors = false;"
             : $"{line}await {call};";
+    }
+
+    // Over the middle, a point of it, or a character of its text.
+    private static string Hover(XElement step)
+    {
+        if (step.Attribute("Character") is { } character)
+        {
+            var (line, column) = TextPosition(character.Value);
+            return $"{Target(step)}.HoverTextAsync({line}, {column})";
+        }
+
+        return step.Attribute("At") == null
+            ? $"{Target(step)}.HoverAsync()"
+            : $"{Target(step)}.HoverAsync({Pair(step, "At")})";
     }
 
     private static string Caret(XElement step)

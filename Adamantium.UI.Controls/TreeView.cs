@@ -45,6 +45,12 @@ public class TreeView : ItemsControl
     public static readonly AdamantiumProperty ParentPathProperty = AdamantiumProperty.Register(nameof(ParentPath),
         typeof(string), typeof(TreeView), new PropertyMetadata(null));
 
+    /// <summary>The member saying whether a node has children, e.g. <c>HasChildren</c>, for children read only as its
+    /// branch opens - loaded then, from a debugger or a service: the expander shows without asking for them. Empty means
+    /// the children are looked at.</summary>
+    public static readonly AdamantiumProperty HasChildrenPathProperty = AdamantiumProperty.Register(nameof(HasChildrenPath),
+        typeof(string), typeof(TreeView), new PropertyMetadata(null, OnHasChildrenPathChanged));
+
     /// <summary>Single (one node - the default), Multiple (each click toggles), or Extended (Ctrl/Shift like a list box).</summary>
     public static readonly AdamantiumProperty SelectionModeProperty = AdamantiumProperty.Register(nameof(SelectionMode),
         typeof(TreeViewSelectionMode), typeof(TreeView), new PropertyMetadata(TreeViewSelectionMode.Single));
@@ -260,6 +266,20 @@ public class TreeView : ItemsControl
 
     public string ParentPath { get => GetValue<string>(ParentPathProperty); set => SetValue(ParentPathProperty, value); }
 
+    public string HasChildrenPath
+    {
+        get => GetValue<string>(HasChildrenPathProperty);
+        set => SetValue(HasChildrenPathProperty, value);
+    }
+
+    private static void OnHasChildrenPathChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is TreeView { _flattener: not null } tree)
+        {
+            tree.RebuildFlattener();
+        }
+    }
+
     /// <summary>How many nodes may be selected and how clicks combine (Single, Multiple, Extended).</summary>
     public TreeViewSelectionMode SelectionMode { get => GetValue<TreeViewSelectionMode>(SelectionModeProperty); set => SetValue(SelectionModeProperty, value); }
 
@@ -294,10 +314,14 @@ public class TreeView : ItemsControl
         // Without a member to read it from, a row built again - its branch closed and opened - knows itself by SelectedItem.
         // The node's own member the path starts at: a node giving another collection there is read again.
         var childrenMember = childPath?.Split('.')[0];
+        // A node whose member says anew whether it has children is read again: its expander comes or goes.
+        var hasChildren = HasChildrenPath is { Length: > 0 } hasChildrenPath ? TreeChildResolver.ForBoolPath(hasChildrenPath) : null;
         _flattener = new TreeFlattener(TreeChildResolver.ForPath(childPath),
             TreeChildResolver.ForBoolPath(expandPath),
             selectPath != null ? TreeChildResolver.ForBoolPath(selectPath) : _isChosen ??= IsChosen,
-            childrenMember: childrenMember);
+            childrenMember: childrenMember,
+            hasChildren: hasChildren == null ? null : node => hasChildren(node),
+            hasChildrenMember: HasChildrenPath is { Length: > 0 } member && !member.Contains('.') ? member : null);
         _setNodeExpanded = TreeChildResolver.SetterForBoolPath(expandPath);
         _setNodeSelected = TreeChildResolver.SetterForBoolPath(selectPath);
         _flattener.SetRoots(_roots);

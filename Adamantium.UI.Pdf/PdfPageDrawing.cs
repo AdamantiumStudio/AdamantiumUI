@@ -25,15 +25,25 @@ public sealed class PdfPageDrawing : Drawing
     private readonly IReadOnlyList<PdfDrawStep> _steps;
     private readonly IReadOnlyList<PdfPressableSteps> _pressable;
     private readonly PdfPressableSteps _pressed;
+    private readonly LineLevels _lineLevels;
+    private readonly int _level;
 
     private PdfPageDrawing(IReadOnlyList<PdfDrawStep> steps, Rect bounds, IReadOnlyList<string> problems,
-        IReadOnlyList<PdfPressableSteps> pressable, PdfPressableSteps pressed)
+        IReadOnlyList<PdfPressableSteps> pressable, PdfPressableSteps pressed, LineLevels lineLevels, int level)
     {
         _steps = steps;
         Bounds = bounds;
         Problems = problems;
         _pressable = pressable;
         _pressed = pressed;
+        _lineLevels = lineLevels;
+        _level = level;
+    }
+
+    // The long lines' levels (PdfStrokeDetail), worked out by PrepareForDrawing; shared by every view of the page.
+    private sealed class LineLevels
+    {
+        public Dictionary<PdfDrawStep, PdfStrokeDetail> ByStep;
     }
 
     public override Rect Bounds { get; }
@@ -68,14 +78,21 @@ public sealed class PdfPageDrawing : Drawing
         var interpreter = new PdfPageInterpreter(document, options ?? PdfPageDrawingOptions.Default, cancellation);
         var steps = interpreter.Draw(page);
         return new PdfPageDrawing(steps, new Rect(0, 0, page.Width, page.Height), interpreter.Problems,
-            interpreter.Pressable, null);
+            interpreter.Pressable, null, new LineLevels(), 0);
     }
 
     /// <summary>Makes on the calling thread, on all the processor's cores, what drawing the page's paths takes - their
     /// outlines and their fills' tiles - which its first draw would make on the loop thread, the window standing still
-    /// for as long. Stops when <paramref name="cancellation"/> is cancelled; what is not made then, or fails to be made,
-    /// is made when drawn. Only running out of memory is let through.</summary>
+    /// for as long, and how much each point of its long lines matters, for <see cref="AtDetail"/>. Stops when
+    /// <paramref name="cancellation"/> is cancelled; what is not made then, or fails to be made, is made when drawn, or
+    /// drawn as given. Only running out of memory is let through.</summary>
     public void PrepareForDrawing(CancellationToken cancellation = default)
+    {
+        PrepareGeometries(cancellation);
+        WorkOutLineLevels(cancellation);
+    }
+
+    private void PrepareGeometries(CancellationToken cancellation)
     {
         // A path drawn twice is prepared once - by one thread - with a fill if either draw has one.
         var paths = new Dictionary<Geometry, Brush>(ReferenceEqualityComparer.Instance);
@@ -97,27 +114,57 @@ public sealed class PdfPageDrawing : Drawing
             }
         }
 
-        // One worker to a core takes the next path while there is one, its tiles made on buffers of its own from path
-        // to path - let go with the page's preparation.
         var work = new List<KeyValuePair<Geometry, Brush>>(paths);
+        OnEveryCore(work.Count, (next, buffers) => work[next].Key.PrepareForDrawing(work[next].Value, buffers),
+            cancellation);
+    }
+
+    private void WorkOutLineLevels(CancellationToken cancellation)
+    {
+        var lines = new List<PdfGeometryStep>();
+        foreach (var step in _steps)
+        {
+            if (step is PdfGeometryStep { Fill: null, Stroke: not null, Geometry: not null } line)
+            {
+                lines.Add(line);
+            }
+        }
+
+        var details = new PdfStrokeDetail[lines.Count];
+        OnEveryCore(lines.Count, (next, _) => details[next] = PdfStrokeDetail.Of(lines[next]), cancellation);
+        var byStep = new Dictionary<PdfDrawStep, PdfStrokeDetail>(ReferenceEqualityComparer.Instance);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (details[i] != null)
+            {
+                byStep[lines[i]] = details[i];
+            }
+        }
+
+        _lineLevels.ByStep = byStep;
+    }
+
+    // One worker to a core takes the next item while there is one, on buffers of its own from item to item - let go
+    // with the work. An item that fails is left to its draw, which fails, or not, as it did before it was prepared.
+    private static void OnEveryCore(int count, Action<int, CurveTileBuffers> work, CancellationToken cancellation)
+    {
         var taken = -1;
         try
         {
-            Parallel.For(0, Math.Min(Environment.ProcessorCount, work.Count),
+            Parallel.For(0, Math.Min(Environment.ProcessorCount, count),
                 new ParallelOptions { CancellationToken = cancellation }, _ =>
                 {
                     var buffers = new CurveTileBuffers();
                     for (var next = Interlocked.Increment(ref taken);
-                         next < work.Count && !cancellation.IsCancellationRequested;
+                         next < count && !cancellation.IsCancellationRequested;
                          next = Interlocked.Increment(ref taken))
                     {
                         try
                         {
-                            work[next].Key.PrepareForDrawing(work[next].Value, buffers);
+                            work(next, buffers);
                         }
                         catch (Exception exception) when (exception is not OutOfMemoryException)
                         {
-                            // Left to its draw, which fails, or not, as it did before it was prepared.
                         }
                     }
                 });
@@ -174,7 +221,18 @@ public sealed class PdfPageDrawing : Drawing
         var pressable = annotation == null ? null : PressableOf(annotation);
         return ReferenceEquals(pressable, _pressed)
             ? this
-            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable);
+            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable, _lineLevels, _level);
+    }
+
+    /// <summary>The page with its long lines drawn by as few of their points as a page shown at no more than
+    /// <paramref name="finestPixelsPerPoint"/> device pixels to its point takes - those left out within a quarter of a
+    /// pixel of the line - once <see cref="PrepareForDrawing"/> has made their copies; as given before.</summary>
+    public PdfPageDrawing AtDetail(double finestPixelsPerPoint)
+    {
+        var level = PdfStrokeDetail.LevelFor(finestPixelsPerPoint);
+        return level == _level
+            ? this
+            : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, _pressed, _lineLevels, level);
     }
 
     public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
@@ -203,12 +261,18 @@ public sealed class PdfPageDrawing : Drawing
         return null;
     }
 
-    private static void Draw(IDrawingSession session, Matrix4x4F transform, IReadOnlyList<PdfDrawStep> steps, int from,
-        int to)
+    private void Draw(IDrawingSession session, Matrix4x4F transform, IReadOnlyList<PdfDrawStep> steps, int from, int to)
     {
+        var lines = _level > 0 ? _lineLevels.ByStep : null;
         for (var index = from; index < to; index++)
         {
-            steps[index].Draw(session, transform);
+            var step = steps[index];
+            if (lines != null && lines.TryGetValue(step, out var detail))
+            {
+                step = detail.StepAt(_level);
+            }
+
+            step.Draw(session, transform);
         }
     }
 }

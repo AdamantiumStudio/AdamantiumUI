@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Adamantium.Core.Shared;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.Building;
@@ -64,19 +65,26 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
-    /// <summary>Names the blueprint to the assembly, with its splash and startup windows when it names them, and writes the
-    /// entry point that runs the application. A blueprint whose markup failed (<paramref name="blueprintFullName"/> null)
-    /// is not named; the entry point is written all the same.</summary>
-    public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string splashWindowQualifiedName,
-        string startupWindowQualifiedName, string applicationQualifiedName, string rootNamespace)
+    /// <summary>Names the blueprint to the assembly, with what the start reads of it early (<paramref name="early"/>),
+    /// and writes the entry point that runs the application. A blueprint whose markup failed
+    /// (<paramref name="blueprintFullName"/> null) is not named; the entry point is written all the same.</summary>
+    public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, EarlyBlueprintValues early,
+        string applicationQualifiedName, string rootNamespace)
     {
         var textGenerator = new TextGenerator();
         textGenerator.WriteLine(_sourceGeneratorNotice);
         if (blueprintFullName != null)
         {
-            var splash = splashWindowQualifiedName == null ? string.Empty : $", SplashWindow = typeof({splashWindowQualifiedName})";
-            var startup = startupWindowQualifiedName == null ? string.Empty : $", StartupWindow = typeof({startupWindowQualifiedName})";
-            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}){splash}{startup})]");
+            var named = new StringBuilder();
+            if (early.SplashWindow != null) named.Append($", SplashWindow = typeof({early.SplashWindow})");
+            if (early.StartupWindow != null) named.Append($", StartupWindow = typeof({early.StartupWindow})");
+            if (early.MaxInstances != 0)
+                named.Append($", MaxInstances = {early.MaxInstances.ToString(CultureInfo.InvariantCulture)}");
+            if (early.EnableGraphicsDebug) named.Append(", EnableGraphicsDebug = true");
+            if (early.PresentPolicy != null)
+                named.Append($", PresentPolicy = global::Adamantium.Graphics.Core.Presentation.PresentPolicy.{early.PresentPolicy}");
+            textGenerator.WriteLine(
+                $"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}){named})]");
             textGenerator.NewLine();
         }
 

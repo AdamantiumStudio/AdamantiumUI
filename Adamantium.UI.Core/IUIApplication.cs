@@ -45,6 +45,71 @@ public interface IUIApplication
         remove { }
     }
 
+    /// <summary>A copy started past the copies the application lets run handed this one its command line - a file to
+    /// open, say - and the right to come to the front; raised on the loop thread. Not handled, the main window comes to
+    /// the front.</summary>
+    event EventHandler<AnotherCopyStartedEventArgs> AnotherCopyStarted
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>Raised for an exception the application caught on its loop or its UI thread and went on past.</summary>
+    event RoutedEvents.UnhandledExceptionEventHandler UnhandledException
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>The language the application shows, by name - <see cref="Localization.Languages.Current"/>. Setting it
+    /// switches every string while the application runs.</summary>
+    string Language
+    {
+        get => Localization.Languages.Current;
+        set => Localization.Languages.Current = value;
+    }
+
+    /// <summary>Canceled when the splash window is closed before the application has shown a window of its own: the
+    /// start is abandoned, and a long one can stop early by it.</summary>
+    CancellationToken StartupCancellation => CancellationToken.None;
+
+    /// <summary>Whether the application is still starting under its splash window: until a window of its own has drawn
+    /// and the splash window has closed.</summary>
+    bool IsStarting => false;
+
+    /// <summary>Keeps the splash window up past the first window drawn - while the start goes on with work of its own
+    /// after it - until what is returned is disposed. Null when there is no splash window to keep.</summary>
+    IDisposable HoldSplash() => null;
+
+    /// <summary>The windows' <see cref="IWindow.RefreshRate"/> where they set none; 0 by default.</summary>
+    uint RefreshRate
+    {
+        get => 0;
+        set { }
+    }
+
+    /// <summary>The windows' <see cref="IWindow.MinimumRefreshRate"/> where they set none; 0 by default.</summary>
+    uint MinimumRefreshRate
+    {
+        get => 0;
+        set { }
+    }
+
+    /// <summary>The windows' <see cref="IWindow.MaximumRefreshRate"/> where they set none; null, the default, is their
+    /// monitor's rate.</summary>
+    uint? MaximumRefreshRate
+    {
+        get => null;
+        set { }
+    }
+
+    /// <summary>The windows' <see cref="IWindow.UnlimitedRefreshRate"/> where they set none; false by default.</summary>
+    bool UnlimitedRefreshRate
+    {
+        get => false;
+        set { }
+    }
+
     void AddWindow(IWindow window);
     
     void RemoveWindow(IWindow window);

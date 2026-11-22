@@ -14,7 +14,17 @@ All packages share one version.
   next read. The view's collections are the framework's `TrackingCollection`: `GroupDescriptions`,
   `LiveFilteringProperties`, `LiveSortingProperties`, and `SortDescriptionCollection` derives from it, no longer from
   `ObservableCollection`.
-
+- `TreeView.HasChildrenPath`: as `TreeDataGrid`'s, the member saying whether a node has children, for children loaded
+  only as its branch opens - a debugger's value: the expander shows with none read yet.
+- A scenario's `<Hover Character="30:13"/>` (`AutomationElement.HoverTextAsync`, `AutomationCommand.HoverText`): the
+  pointer brought over a character of an element's text - scrolled into view first - as a hand rests it on a word, for
+  what a code editor shows there.
+- A copy of an application started past `UIApplication.MaxInstances` hands its command line and the right to come to
+  the front to a running copy before it ends: `IUIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
+  raised on the loop thread) - a file to open, say, with the folder it was started in; not handled, the main window comes to the front. Under it
+  `InstanceSlot.StartListening`, `Asked` (`InstanceAskedEventArgs`) and `AskHolderAsync`: a process with no place asks
+  one holding a place over a pipe of the user's own. The limit is stated in the blueprint too
+  (`ApplicationBlueprint.MaxInstances`), read before anything starts.
 - `Displays.LargestScreen`: the monitor of the most pixels. A `RemoteUniverse` tells the host its size as it launches,
   so frames that come through memory of the process keep one ring whatever size the view is resized to.
 - `PropertyGrid.AutoGenerateSectionsForMarked`: as `AutoGenerateSectionsFor`, for the items whose own type carries the
@@ -628,6 +638,15 @@ All packages share one version.
 
 ### Changed
 
+- What `UIApplication` offers stands where it belongs, so the class and its interfaces agree:
+  - on `IUIApplication`, for the application's own code: `UnhandledException`, `Language`, `StartupCancellation`,
+    `IsStarting`, `HoldSplash`, `RefreshRate`, `MinimumRefreshRate`, `MaximumRefreshRate`, `UnlimitedRefreshRate`;
+  - in the blueprint, for how it starts: `ApplicationBlueprint.EnableGraphicsDebug` (read before the graphics device is
+    made, as `MaxInstances` before anything), `PresentPolicy` and `TrayIcons`; a value set in code before `Run` wins,
+    and `UIApplication.PresentPolicy` is an `AdamantiumProperty` now for it;
+  - for automation and debugging, `IApplicationDiagnostics`, resolved from the application's container: `LoopRate`,
+    `FrameVerification`, `CycleFinished`, `IdleBlocker`, `WaitForIdleAsync`, `AttachDebugTool`, `DetachDebugTool` -
+    no longer members of `UIApplication` itself. `UIApplication.SwapchainTrailing` is internal.
 - A tool bar's first command stands 3 px clear of its grip, in every theme - under it on a bar down the side - so the grip
   no longer reads as the command's edge. The room is the grip style's margin.
 - An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it
@@ -862,6 +881,14 @@ All packages share one version.
 
 ### Fixed
 
+- A PDF page of long lines was slow to pan and zoom: the GPU drew every point of every line each frame, on screen or
+  not, closer than a pixel or not - the geologic map of Alaska's 1.14 million, 37 - 58 ms a frame. A long line of
+  straight pieces now has levels, as a map's lines have at its zoom levels: `PrepareForDrawing` works out once how
+  much each of its points matters, and `PdfPageDrawing.AtDetail` draws the line simplified so that every point left
+  out stays within a quarter of a pixel, a level's copy made the first time it is drawn - 20 - 100 ms for that map's
+  lines, once a level. A line that bends, or is dashed, is drawn as given, and a measurement still snaps to the line
+  as given. Panning that map at 100% takes 9 ms a frame, at 300% 21 - 31 ms, not 70; its long thin lines also come
+  out as thin as they are, not thickened by thousands of pieces overlapping their edges.
 - A PDF page of many filled paths held the window when it was first drawn - the geologic map of Alaska for 15 s: the
   tiles a curve fill is drawn from (`CurveTileTree`) were made on the loop thread, path after path.
   `Geometry.PrepareForDrawing` makes them and the outline on the calling thread - what recording the draw makes -

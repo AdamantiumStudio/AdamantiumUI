@@ -691,7 +691,12 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
     }
 
     public System.Threading.Tasks.Task<string> CreateActivationTokenAsync() =>
-        System.Threading.Tasks.Task.FromResult(Win32Interop.AllowSetForegroundWindow(Win32Interop.AsfwAny) ? string.Empty : null);
+        System.Threading.Tasks.Task.FromResult(GiveUpForeground());
+
+    /// <summary>Lets any process come to the front, if this one may: Windows hands the right over so, with no token -
+    /// empty when given, null when this process had none to give. Needs no window.</summary>
+    internal static string GiveUpForeground() =>
+        Win32Interop.AllowSetForegroundWindow(Win32Interop.AsfwAny) ? string.Empty : null;
 
     // Z-order only, NO activation: SWP_NOACTIVATE is precisely what keeps the mouse capture alive, so a drag can raise
     // the window it is heading for instead of being canceled by the OS revoking capture on a foreground change.
