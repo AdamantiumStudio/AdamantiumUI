@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Pdf.Annotations;
 using Adamantium.Pdf.Document;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Curves;
 using Adamantium.UI.Core.Media.Drawings;
 using Adamantium.UI.Pdf.Interpretation;
 using Adamantium.UI.Pdf.Steps;
@@ -66,6 +69,98 @@ public sealed class PdfPageDrawing : Drawing
         var steps = interpreter.Draw(page);
         return new PdfPageDrawing(steps, new Rect(0, 0, page.Width, page.Height), interpreter.Problems,
             interpreter.Pressable, null);
+    }
+
+    /// <summary>Makes on the calling thread, on all the processor's cores, what drawing the page's paths takes - their
+    /// outlines and their fills' tiles - which its first draw would make on the loop thread, the window standing still
+    /// for as long. Stops when <paramref name="cancellation"/> is cancelled; what is not made then, or fails to be made,
+    /// is made when drawn. Only running out of memory is let through.</summary>
+    public void PrepareForDrawing(CancellationToken cancellation = default)
+    {
+        // A path drawn twice is prepared once - by one thread - with a fill if either draw has one.
+        var paths = new Dictionary<Geometry, Brush>(ReferenceEqualityComparer.Instance);
+        var lists = new Stack<IReadOnlyList<PdfDrawStep>>();
+        lists.Push(_steps);
+        foreach (var pressable in _pressable)
+        {
+            lists.Push(pressable.Down);
+        }
+
+        // A soft mask several groups share is gone through once.
+        var seen = new HashSet<IReadOnlyList<PdfDrawStep>>(ReferenceEqualityComparer.Instance);
+        while (lists.Count > 0)
+        {
+            var steps = lists.Pop();
+            if (seen.Add(steps))
+            {
+                CollectGeometries(steps, paths, lists);
+            }
+        }
+
+        // One worker to a core takes the next path while there is one, its tiles made on buffers of its own from path
+        // to path - let go with the page's preparation.
+        var work = new List<KeyValuePair<Geometry, Brush>>(paths);
+        var taken = -1;
+        try
+        {
+            Parallel.For(0, Math.Min(Environment.ProcessorCount, work.Count),
+                new ParallelOptions { CancellationToken = cancellation }, _ =>
+                {
+                    var buffers = new CurveTileBuffers();
+                    for (var next = Interlocked.Increment(ref taken);
+                         next < work.Count && !cancellation.IsCancellationRequested;
+                         next = Interlocked.Increment(ref taken))
+                    {
+                        try
+                        {
+                            work[next].Key.PrepareForDrawing(work[next].Value, buffers);
+                        }
+                        catch (Exception exception) when (exception is not OutOfMemoryException)
+                        {
+                            // Left to its draw, which fails, or not, as it did before it was prepared.
+                        }
+                    }
+                });
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (AggregateException failed)
+        {
+            // Out of memory - all a worker lets out - as one thread would throw it.
+            ExceptionDispatchInfo.Capture(failed.InnerExceptions[0]).Throw();
+        }
+    }
+
+    // A group's clip is filled to cut it, and its soft mask's steps are drawn too.
+    private static void CollectGeometries(IReadOnlyList<PdfDrawStep> steps, Dictionary<Geometry, Brush> into,
+        Stack<IReadOnlyList<PdfDrawStep>> masks)
+    {
+        foreach (var step in steps)
+        {
+            switch (step)
+            {
+                case PdfGeometryStep { Geometry: { } geometry } drawn:
+                    if (!into.TryGetValue(geometry, out var fill) || fill == null)
+                    {
+                        into[geometry] = drawn.Fill;
+                    }
+
+                    break;
+                case PdfPushGroupStep group:
+                    if (group.Clip != null)
+                    {
+                        into[group.Clip] = Brushes.Black;
+                    }
+
+                    if (group.Mask is PdfContentDrawing mask)
+                    {
+                        masks.Push(mask.Steps);
+                    }
+
+                    break;
+            }
+        }
     }
 
     /// <summary>Whether <paramref name="annotation"/> was drawn with a down appearance to show while it is pressed.

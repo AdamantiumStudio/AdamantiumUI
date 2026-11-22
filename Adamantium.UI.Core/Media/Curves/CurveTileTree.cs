@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Media.Curves;
@@ -20,7 +21,7 @@ internal sealed class CurveTileTree
     private const int EntriesPerPiece = 64;
     private const int DeepestLevel = 20;
     private const double Clearance = 1e-6;
-    private const int WordsPerPiece = 6;
+    internal const int WordsPerPiece = 6;
 
     private static readonly double[] Offsets = [0.5, 0.37, 0.63, 0.29, 0.71, 0.43, 0.57, 0.33, 0.67];
 
@@ -58,53 +59,67 @@ internal sealed class CurveTileTree
     /// <summary>The tree of <paramref name="pieces"/>, each running one way in x and in y, inside the box from
     /// <paramref name="corner"/> of <paramref name="size"/>. A tile is cut while it lists more than a few pieces, or
     /// two or more while it is large, and the lists stay within a budget per piece; it is cut breadth first, so the
-    /// budget goes to the coarse tiles every zoom reads.</summary>
-    public static CurveTileTree Of(QuadraticCurve[] pieces, Vector2<double> corner, Vector2<double> size)
+    /// budget goes to the coarse tiles every zoom reads. Made on <paramref name="buffers"/> - new ones when none are
+    /// given.</summary>
+    public static CurveTileTree Of(QuadraticCurve[] pieces, Vector2<double> corner, Vector2<double> size,
+        CurveTileBuffers buffers = null)
     {
-        var coordinates = CoordinatesOf(pieces, corner);
-        var allPieces = new List<int>(pieces.Length);
+        // Every tile's list in one buffer, in the order the tiles are made - as they are handed out: a page of maps
+        // makes millions of tiles, and lists of their own each had the collector stop the process for seconds.
+        buffers ??= new CurveTileBuffers();
+        buffers.Clear();
+        var coordinates = buffers.CoordinatesOf(pieces, corner);
+        var quarterLists = buffers.QuarterLists(pieces.Length);
+        var entries = buffers.Entries;
         for (var piece = 0; piece < pieces.Length; piece++)
         {
-            allPieces.Add(piece);
+            entries.Add(piece);
         }
 
         var rootSide = Math.Max(Math.Max(size.X, size.Y), 1e-30);
-        var lefts = new List<double> { 0 };
-        var tops = new List<double> { 0 };
-        var levels = new List<int> { 0 };
-        var lists = new List<List<int>> { allPieces };
-        var pointsX = new List<double>();
-        var pointsY = new List<double>();
-        var windings = new List<int>();
-        var firstChildren = new List<int> { 0 };
+        var lefts = buffers.Lefts;
+        var tops = buffers.Tops;
+        var levels = buffers.Levels;
+        var listStarts = buffers.ListStarts;
+        var points = buffers.Points;
+        var windings = buffers.Windings;
+        var firstChildren = buffers.FirstChildren;
+        lefts.Add(0);
+        tops.Add(0);
+        levels.Add(0);
+        listStarts.Add(0);
+        firstChildren.Add(0);
 
         var clearance = Clearance * rootSide;
+        var allPieces = CollectionsMarshal.AsSpan(entries);
         var rootPoint = PointOf(coordinates, allPieces, 0, 0, rootSide, double.NaN, clearance);
-        pointsX.Add(rootPoint.X);
-        pointsY.Add(rootPoint.Y);
+        points.Add((float)rootPoint.X);
+        points.Add((float)rootPoint.Y);
         windings.Add(WindingAlongX(coordinates, allPieces, rootPoint.X, rootPoint.Y));
 
         var budget = (long)EntriesPerPiece * Math.Max(1, pieces.Length);
-        long spent = allPieces.Count;
-        var quarterLists = new List<int>[4];
+        long spent = pieces.Length;
+        Span<int> quarterCounts = stackalloc int[4];
         var largeSide = rootSide / LargeTileDivisions;
-        for (var tile = 0; tile < lists.Count; tile++)
+        for (var tile = 0; tile < levels.Count; tile++)
         {
-            var list = lists[tile];
+            var listStart = listStarts[tile];
+            var listCount = (tile + 1 < listStarts.Count ? listStarts[tile + 1] : entries.Count) - listStart;
             var tileSide = rootSide / (1L << levels[tile]);
-            var crowded = list.Count > MostPieces || (list.Count > 1 && tileSide > largeSide);
+            var crowded = listCount > MostPieces || (listCount > 1 && tileSide > largeSide);
             if (!crowded || levels[tile] >= DeepestLevel)
             {
                 continue;
             }
 
             var half = tileSide * 0.5;
+            var list = CollectionsMarshal.AsSpan(entries).Slice(listStart, listCount);
             long cost = 0;
-            for (var quarter = 0; quarter < 4; quarter++)
+            for (var quarter = 0; quarter < 4 && spent + cost <= budget; quarter++)
             {
-                quarterLists[quarter] = Near(coordinates, list, lefts[tile] + (quarter & 1) * half,
-                    tops[tile] + (quarter >> 1) * half, half);
-                cost += quarterLists[quarter].Count;
+                quarterCounts[quarter] = Near(coordinates, list, lefts[tile] + (quarter & 1) * half,
+                    tops[tile] + (quarter >> 1) * half, half, quarterLists.AsSpan(quarter * pieces.Length));
+                cost += quarterCounts[quarter];
             }
 
             if (spent + cost > budget)
@@ -113,66 +128,44 @@ internal sealed class CurveTileTree
             }
 
             spent += cost;
-            firstChildren[tile] = lists.Count;
+            // Room for the children's lists first, so adding them does not move the parent's list read from below.
+            entries.EnsureCapacity(entries.Count + (int)cost);
+            list = CollectionsMarshal.AsSpan(entries).Slice(listStart, listCount);
+            var parentX = (double)points[tile * 2];
+            var parentY = (double)points[tile * 2 + 1];
+            firstChildren[tile] = levels.Count;
             for (var quarter = 0; quarter < 4; quarter++)
             {
                 var left = lefts[tile] + (quarter & 1) * half;
                 var top = tops[tile] + (quarter >> 1) * half;
-                var point = PointOf(coordinates, list, left, top, half, pointsY[tile], clearance);
+                var point = PointOf(coordinates, list, left, top, half, parentY, clearance);
                 lefts.Add(left);
                 tops.Add(top);
                 levels.Add(levels[tile] + 1);
-                lists.Add(quarterLists[quarter]);
-                pointsX.Add(point.X);
-                pointsY.Add(point.Y);
-                windings.Add(windings[tile] + Across(coordinates, list, pointsX[tile], pointsY[tile], point.X, point.Y));
+                listStarts.Add(entries.Count);
+                entries.AddRange(quarterLists.AsSpan(quarter * pieces.Length, quarterCounts[quarter]));
+                points.Add((float)point.X);
+                points.Add((float)point.Y);
+                windings.Add(windings[tile] + Across(coordinates, list, parentX, parentY, point.X, point.Y));
                 firstChildren.Add(0);
             }
         }
 
-        var tileCount = lists.Count;
-        var points = new float[tileCount * 2];
-        var listStarts = new int[tileCount + 1];
-        var entries = new int[spent];
-        var written = 0;
-        for (var tile = 0; tile < tileCount; tile++)
-        {
-            points[tile * 2] = (float)pointsX[tile];
-            points[tile * 2 + 1] = (float)pointsY[tile];
-            listStarts[tile] = written;
-            lists[tile].CopyTo(entries, written);
-            written += lists[tile].Count;
-        }
-
-        listStarts[tileCount] = written;
-        return new CurveTileTree(rootSide, points, windings.ToArray(), firstChildren.ToArray(), listStarts, entries);
+        listStarts.Add(entries.Count);
+        return new CurveTileTree(rootSide, points.ToArray(), windings.ToArray(), firstChildren.ToArray(),
+            listStarts.ToArray(), entries.ToArray());
     }
 
-    private static double[] CoordinatesOf(QuadraticCurve[] pieces, Vector2<double> corner)
-    {
-        var coordinates = new double[pieces.Length * WordsPerPiece];
-        for (var piece = 0; piece < pieces.Length; piece++)
-        {
-            var at = piece * WordsPerPiece;
-            coordinates[at] = (float)(pieces[piece].Start.X - corner.X);
-            coordinates[at + 1] = (float)(pieces[piece].Start.Y - corner.Y);
-            coordinates[at + 2] = (float)(pieces[piece].Control.X - corner.X);
-            coordinates[at + 3] = (float)(pieces[piece].Control.Y - corner.Y);
-            coordinates[at + 4] = (float)(pieces[piece].End.X - corner.X);
-            coordinates[at + 5] = (float)(pieces[piece].End.Y - corner.Y);
-        }
-
-        return coordinates;
-    }
-
-    private static List<int> Near(double[] coordinates, List<int> list, double left, double top, double side)
+    // Writes into near the pieces of list within half the side of the tile; how many.
+    private static int Near(double[] coordinates, ReadOnlySpan<int> list, double left, double top, double side,
+        Span<int> near)
     {
         var margin = side * 0.5;
         var boxLeft = left - margin;
         var boxRight = left + side + margin;
         var boxTop = top - margin;
         var boxBottom = top + side + margin;
-        var near = new List<int>();
+        var count = 0;
         foreach (var piece in list)
         {
             var at = piece * WordsPerPiece;
@@ -187,7 +180,7 @@ internal sealed class CurveTileTree
 
             if (lowY >= boxTop && highY <= boxBottom)
             {
-                near.Add(piece);
+                near[count++] = piece;
                 continue;
             }
 
@@ -195,14 +188,14 @@ internal sealed class CurveTileTree
             var xAtBottom = XAt(coordinates, at, Math.Clamp(boxBottom, lowY, highY));
             if (Math.Max(xAtTop, xAtBottom) >= boxLeft && Math.Min(xAtTop, xAtBottom) <= boxRight)
             {
-                near.Add(piece);
+                near[count++] = piece;
             }
         }
 
-        return near;
+        return count;
     }
 
-    private static Vector2<double> PointOf(double[] coordinates, List<int> list, double left, double top, double side,
+    private static Vector2<double> PointOf(double[] coordinates, ReadOnlySpan<int> list, double left, double top, double side,
         double parentY, double clearance)
     {
         var best = new Vector2<double>((float)(left + side * 0.5), (float)(top + side * 0.5));
@@ -230,7 +223,7 @@ internal sealed class CurveTileTree
         return best;
     }
 
-    private static double Gap(double[] coordinates, List<int> list, double x, double y, double parentY, double tileLeft,
+    private static double Gap(double[] coordinates, ReadOnlySpan<int> list, double x, double y, double parentY, double tileLeft,
         double tileRight)
     {
         var fromParent = !double.IsNaN(parentY);
@@ -276,7 +269,7 @@ internal sealed class CurveTileTree
         return gap;
     }
 
-    private static int WindingAlongX(double[] coordinates, List<int> list, double x, double y)
+    private static int WindingAlongX(double[] coordinates, ReadOnlySpan<int> list, double x, double y)
     {
         var winding = 0;
         foreach (var piece in list)
@@ -292,7 +285,7 @@ internal sealed class CurveTileTree
         return winding;
     }
 
-    private static int Across(double[] coordinates, List<int> list, double fromX, double fromY, double toX, double toY)
+    private static int Across(double[] coordinates, ReadOnlySpan<int> list, double fromX, double fromY, double toX, double toY)
     {
         var change = 0;
         foreach (var piece in list)
