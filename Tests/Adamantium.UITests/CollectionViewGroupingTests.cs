@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
 using System.Linq;
+using Adamantium.Core.Collections;
 using Adamantium.UI.Core.Collections;
 using NUnit.Framework;
 
@@ -57,7 +57,7 @@ public class CollectionViewGroupingTests
     [Test]
     public void AnItemAddedOrTakenFromTheSource_ChangesTheGroups_TellingOnce()
     {
-        var source = new ObservableCollection<Part> { Box, Body };
+        var source = new TrackingCollection<Part> { Box, Body };
         var view = new CollectionView(source);
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Part.Kind)));
         var told = 0;

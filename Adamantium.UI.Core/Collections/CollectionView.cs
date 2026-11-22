@@ -1,11 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Adamantium.Core.Collections;
 
 namespace Adamantium.UI.Core.Collections;
 
@@ -121,7 +121,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     public bool IsSorted => _customSort != null || SortDescriptions.Count > 0;
 
     /// <summary>The levels the shown items are grouped by, the first the outermost; empty groups nothing.</summary>
-    public ObservableCollection<GroupDescription> GroupDescriptions { get; }
+    public TrackingCollection<GroupDescription> GroupDescriptions { get; }
 
     /// <summary>The shown items in groups, by the first of <see cref="GroupDescriptions"/>, each in the order its first
     /// item comes in the view - sorting by the grouped property first orders the groups too; empty while nothing groups
@@ -171,11 +171,11 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     /// <summary>Which property changes the FILTER cares about. Empty means every change re-evaluates the predicate,
     /// which on a long list is the expensive answer - name them.</summary>
-    public ObservableCollection<string> LiveFilteringProperties { get; }
+    public TrackingCollection<string> LiveFilteringProperties { get; }
 
     /// <summary>Properties whose change re-places an item; empty means those in <see cref="SortDescriptions"/>, or every
     /// change with a <see cref="CustomSort"/>.</summary>
-    public ObservableCollection<string> LiveSortingProperties { get; }
+    public TrackingCollection<string> LiveSortingProperties { get; }
 
     /// <summary>How many items a page holds; 0 - the default - shows the whole shaped set and pages nothing.
     /// <para>Changing it keeps the FIRST ITEM of the current page in view rather than dropping to the beginning: the
