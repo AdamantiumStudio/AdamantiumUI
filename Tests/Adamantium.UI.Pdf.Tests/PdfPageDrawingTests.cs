@@ -128,6 +128,7 @@ public class PdfPageDrawingTests
         var paths = session.All<DrawnGeometry>().Select(d => (StreamGeometry)d.Geometry).ToArray();
         var segments = paths[0].Figures.Single().Segments.ToArray();
         var lone = paths[1].Figures.Single().Segments.Single();
+        paths[0].RecalculateBounds();
 
         Assert.Multiple(() =>
         {

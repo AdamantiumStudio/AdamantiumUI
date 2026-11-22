@@ -11,6 +11,11 @@ namespace Adamantium.UI.Pdf.Interpretation;
 internal sealed class PdfPathBuilder
 {
     private readonly List<PdfSubpath> _subpaths = [];
+
+    // Subpaths of paths painted already, begun again for the next: a page of maps draws thousands of long paths, and
+    // lists grown anew for each took a tenth of writing it.
+    private readonly Stack<PdfSubpath> _spare = new();
+    private const int MostSpare = 64;
     private PdfSubpath _open;
     private Vector2<double> _current;
     private Rect? _rectangle;
@@ -37,7 +42,7 @@ internal sealed class PdfPathBuilder
     public void MoveTo(double x, double y)
     {
         _current = new Vector2<double>(x, y);
-        _open = new PdfSubpath(_current);
+        _open = NewSubpath(_current);
         _subpaths.Add(_open);
         HasCurrentPoint = true;
         _rectangle = null;
@@ -107,6 +112,15 @@ internal sealed class PdfPathBuilder
 
     public void Clear()
     {
+        // As many as a path of many subpaths - a hatch - needs are not kept: those past the few are let go.
+        foreach (var subpath in _subpaths)
+        {
+            if (_spare.Count < MostSpare)
+            {
+                _spare.Push(subpath);
+            }
+        }
+
         _subpaths.Clear();
         _open = null;
         HasCurrentPoint = false;
@@ -158,7 +172,7 @@ internal sealed class PdfPathBuilder
                 }
                 else
                 {
-                    figure.PolylineLineTo(points.GetRange(i, end - i));
+                    figure.PolylineLineTo(new PdfListRange<Vector2<double>>(points, i, end - i));
                 }
 
                 i = end - 1;
@@ -170,7 +184,8 @@ internal sealed class PdfPathBuilder
             }
         }
 
-        geometry.RecalculateBounds();
+        // Its bounds are worked out where it is processed, ahead of its first draw: working them out here too - its
+        // every figure cut into contours - took a sixth of writing a page of maps.
         return geometry;
     }
 
@@ -182,7 +197,10 @@ internal sealed class PdfPathBuilder
             return;
         }
 
-        _open = new PdfSubpath(_current);
+        _open = NewSubpath(_current);
         _subpaths.Add(_open);
     }
+
+    private PdfSubpath NewSubpath(Vector2<double> start) =>
+        (_spare.TryPop(out var spare) ? spare : new PdfSubpath()).Begin(start);
 }
