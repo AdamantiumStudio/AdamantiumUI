@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `PropertyGrid.AutoGenerateSectionsForMarked`: as `AutoGenerateSectionsFor`, for the items whose own type carries the
+  attribute given - the components a library marks as its users' to add, of no one base type. A type below a marked one
+  counts only if marked itself.
 - `TrayIcon` and `UIApplication.TrayIcons`: an icon of the application's in the desktop's notification area - the
   application's own icon, a `ToolTip`, a `Command` (and `Clicked`) on a click or from the keyboard, a `ContextMenu`
   opened at the pointer on a right click - shown from the application's start, or from when it is added, while
