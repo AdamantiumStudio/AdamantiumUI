@@ -23,10 +23,13 @@ public static class Program
         of its own.
 
           start --exe <path> [--tab <Id>] [--theme <Name>]   start an instance with the agent and wait for its window;
-                                                              beside the sandbox, the sandbox when no --exe is named
-          start ... --virtual                                 where nobody sees it instead of on the desktop - a virtual
-                                                              monitor of its own on Linux, a desktop of its own on
-                                                              Windows: it shows nowhere and takes no one's focus
+                                                              beside the sandbox, the sandbox when no --exe is named;
+                                                              where nobody sees it - a desktop of its own on Windows,
+                                                              a virtual monitor of its own on Linux (Mutter): it
+                                                              shows nowhere and takes no one's focus; on macOS, or
+                                                              with no Mutter, on the desktop
+          start ... --visible                                 on the desktop instead, for someone to watch, or for
+                                                              input through the system's own pointer (--os)
           start ... --screen <id>                             its windows on the monitor whose id ends with <id>, as
                                                               DISPLAY2 on Windows; ADAM_AUTOMATION_SCREEN does it for all
           start ... --args <text>                             the application's own command line
@@ -56,7 +59,8 @@ public static class Program
           pinch <selector> <scale> [--rotate <deg>] [--pan <dx,dy>]   two fingers drawn apart or together on it
           touch | touches | pinch | pen ... --os              the same through the system's own pointer input: it
                                                               presses whatever is on top of the desktop there, so
-                                                              only while nobody uses the computer
+                                                              only while nobody uses the computer, and only on an
+                                                              instance started --visible
           drop <selector> <target> [--before|--after]         carry it onto another element and let it go there
           scroll <selector>                                   bring a list's item into view, making its element
           scroll <selector> [--vertical <%>] [--horizontal <%>]   scroll a list or a scroll viewer to percents
@@ -180,12 +184,18 @@ public static class Program
             return Fail($"An instance already answers on pipe '{pipe}'. Close it first: adam-auto stop", 1);
         }
 
+        if (arguments.Flag("visible") && arguments.Flag("virtual"))
+        {
+            return Fail("--visible and --virtual ask for opposite things; give one.", 2);
+        }
+
         var options = new LaunchOptions
         {
             PipeName = pipe,
             StartTimeout = StartTimeout,
             CloseOnDispose = false,
-            VirtualDisplay = arguments.Flag("virtual"),
+            // Hidden unless asked to show; --virtual, the old way to ask for it, is still taken.
+            VirtualDisplay = !arguments.Flag("visible"),
             Screen = arguments.Option("screen"),
             Arguments = arguments.Option("args")
         };
