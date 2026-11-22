@@ -14,7 +14,9 @@ All packages share one version.
   theme, opened in a clear window over the monitor's work area and closed by a press beside it, Escape, or another
   window becoming the active one. `NotificationArea` (`INotificationAreaPlatform`, `INotificationAreaIcon`) is the
   platform's side: on Windows `Shell_NotifyIconW` (AdamantiumEngine #359), the icons put back when the task bar
-  starts again. Not on Linux yet. The sandbox has one.
+  starts again, in an elevated application too (`ChangeWindowMessageFilterEx`, AdamantiumEngine #361). An icon added
+  from another thread than the UI one shows once its window is made there - before, the first one failed. Not on Linux
+  yet. The sandbox has one.
 - `INativeKeyboard.SendKey`, `SendText`, `SendsToOtherApplications` and `ForegroundWindowTitle`: keys and text put
   into the system's input for the window the system gives keys to - another application's - and that window's title,
   for an on-screen keyboard typing outside the application; false back when nothing got in. On Windows by `SendInput`
