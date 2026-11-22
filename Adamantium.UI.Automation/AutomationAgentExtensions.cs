@@ -26,7 +26,7 @@ public static class AutomationAgentExtensions
         ErrorJournal.Install();
         if (Environment.GetEnvironmentVariable(AutomationProtocol.VerifyFramesVariable) == "1")
         {
-            application.FrameVerification.IsEnabled = true;
+            application.UIContext.Resolve<Diagnostics.IApplicationDiagnostics>().FrameVerification.IsEnabled = true;
         }
 
         if (Environment.GetEnvironmentVariable(AutomationProtocol.ScreenVariable) is { Length: > 0 } screen)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Adamantium.Core;
+using Adamantium.Graphics.Core.Presentation;
 using Adamantium.UI.ApplicationModel;
 using Adamantium.UI.Core.Resources;
 using NUnit.Framework;
@@ -26,9 +27,10 @@ public class ApplicationBlueprintTests
     private const string Blueprint =
         "<ApplicationBlueprint " + Namespaces +
         " StartupWindow=\"MainWindow\" StartupTheme=\"Graphite\" StartupThemeVariant=\"Light\" StartupLanguage=\"en\"" +
-        " ShutDownMode=\"OnLastWindowClosed\" DefaultScreen=\"DISPLAY2\">" +
+        " ShutDownMode=\"OnLastWindowClosed\" DefaultScreen=\"DISPLAY2\" PresentPolicy=\"VSync\">" +
         "<ApplicationBlueprint.Resources><ResourceLink Source=\"Icons\"/></ApplicationBlueprint.Resources>" +
         "<ApplicationBlueprint.StyleIncludes><StyleInclude Source=\"Buttons\"/></ApplicationBlueprint.StyleIncludes>" +
+        "<ApplicationBlueprint.TrayIcons><TrayIcon ToolTip=\"Keyboard\"/></ApplicationBlueprint.TrayIcons>" +
         "</ApplicationBlueprint>";
 
     private static Dictionary<string, string> Files(params (string Name, string Markup)[] extra)
@@ -110,6 +112,29 @@ public class ApplicationBlueprintTests
         Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()
             .GetCustomAttribute<ApplicationBlueprintAttribute>()?.MaxInstances, Is.Zero);
 
+    // Read before the graphics device is made, which is before the blueprint.
+    [Test]
+    public void TheGraphicsDebugLayer_IsNamedToTheAssemblyWithTheBlueprint()
+    {
+        var project = AumlCodegenHarness.Project(Files(
+            ("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} StartupWindow=\"MainWindow\" EnableGraphicsDebug=\"True\"/>")),
+            sources: [Application]);
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        var assembly = project.Load();
+        var blueprint = (ApplicationBlueprint)Activator.CreateInstance(assembly.GetType("Test.App.AppBlueprint"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.EnableGraphicsDebug, Is.True);
+            Assert.That(blueprint.EnableGraphicsDebug, Is.True, "and the blueprint holds it too");
+        });
+    }
+
+    [Test]
+    public void ABlueprintThatAsksNoGraphicsDebugLayer_NamesNone() =>
+        Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()
+            .GetCustomAttribute<ApplicationBlueprintAttribute>()?.EnableGraphicsDebug, Is.False);
+
     [Test]
     public void ASplashWindowThatIsNoSplashWindow_FailsTheBuild() =>
         Assert.That(Errors(Files(("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} SplashWindow=\"MainWindow\"/>")), [Application]),
@@ -132,6 +157,10 @@ public class ApplicationBlueprintTests
             Assert.That(blueprint.DefaultScreen, Is.EqualTo("DISPLAY2"));
             Assert.That(blueprint.Resources.Includes.Single().Source, Is.EqualTo(assembly.GetType("Test.App.Icons")));
             Assert.That(blueprint.StyleIncludes.Single().Source, Is.EqualTo(assembly.GetType("Test.App.Buttons")));
+            Assert.That(((ApplicationBlueprint)blueprint).PresentPolicy, Is.EqualTo(PresentPolicy.VSync));
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.PresentPolicy, Is.EqualTo(PresentPolicy.VSync),
+                "named to the assembly too: the splash window presents before the blueprint is made");
+            Assert.That(blueprint.TrayIcons.Single().ToolTip, Is.EqualTo("Keyboard"));
         });
     }
 
@@ -151,6 +180,8 @@ public class ApplicationBlueprintTests
             Assert.That(blueprint.StartupThemeVariant, Is.Null);
             Assert.That(blueprint.StartupLanguage, Is.Null);
             Assert.That(blueprint.DefaultScreen, Is.Null);
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.PresentPolicy, Is.EqualTo(PresentPolicy.Inherit));
+            Assert.That(blueprint.TrayIcons, Is.Empty);
         });
     }
 

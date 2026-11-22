@@ -7,6 +7,7 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Diagnostics;
 using Adamantium.UI.Sandbox.Localization;
 using Adamantium.Win32;
 
@@ -20,16 +21,18 @@ public partial class MainViewModel
     private readonly IDialogService _dialogs;
     private readonly IUIApplication _application;
     private readonly IGraphicsDeviceService _graphics;
+    private readonly IApplicationDiagnostics _diagnostics;
     private bool _followsThemes;
 
     public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs,
-        IUIApplication application, IGraphicsDeviceService graphics)
+        IUIApplication application, IGraphicsDeviceService graphics, IApplicationDiagnostics diagnostics)
     {
         _navigation = navigation;
         _settings = settings;
         _dialogs = dialogs;
         _application = application;
         _graphics = graphics;
+        _diagnostics = diagnostics;
         _updateRate = application.UpdateRate;
     }
 
@@ -89,11 +92,11 @@ public partial class MainViewModel
     /// and every part that differs is logged under the application's <c>verify</c> folder.</summary>
     public bool VerifyFrames
     {
-        get => UIApplication.Current?.FrameVerification.IsEnabled ?? false;
+        get => _diagnostics.FrameVerification.IsEnabled;
         set
         {
-            var verification = UIApplication.Current?.FrameVerification;
-            if (verification == null || verification.IsEnabled == value)
+            var verification = _diagnostics.FrameVerification;
+            if (verification.IsEnabled == value)
             {
                 return;
             }

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using Adamantium.Core.Collections;
 
 namespace Adamantium.UI.Core.Collections;
 
@@ -29,4 +29,4 @@ public readonly struct SortDescription(string propertyName, SortDirection direct
 
 /// <summary>The ordering levels of a <see cref="CollectionView"/>, in priority order. Observable: the view re-sorts when
 /// this changes.</summary>
-public sealed class SortDescriptionCollection : ObservableCollection<SortDescription>;
+public sealed class SortDescriptionCollection : TrackingCollection<SortDescription>;

@@ -51,6 +51,10 @@ public enum AutomationCommand
     /// <summary>The pointer moved over the middle of the target, by input simulated inside the application.</summary>
     Hover,
 
+    /// <summary>The pointer moved over a character of the target's text, by input simulated inside the application:
+    /// <see cref="AutomationRequest.Value"/> <c>line:column</c>, both from 1, scrolled into view first.</summary>
+    HoverText,
+
     /// <summary>A left-button drag across the target, by input simulated inside the application: from and to are
     /// points in the target's own units, <see cref="AutomationRequest.Value"/> <c>x1,y1 x2,y2</c>.</summary>
     Drag,

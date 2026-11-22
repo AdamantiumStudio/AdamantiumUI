@@ -380,6 +380,66 @@ public class TreeViewVirtualizationTests
         Assert.That(Selected(tree), Is.EqualTo("a1"), "a second Right steps into the branch it just opened");
     }
 
+    // A node whose children are loaded only as its branch opens - a debugger's value: told to have them, it shows as a
+    // branch with none loaded, and takes them as they come once opened.
+    private sealed class LoadedNode
+    {
+        private bool _isExpanded;
+
+        public string Name { get; init; }
+
+        public bool HasChildren { get; init; }
+
+        public ObservableCollection<LoadedNode> Children { get; } = [];
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                _isExpanded = value;
+                if (value && Children.Count == 0)
+                {
+                    Children.Add(new LoadedNode { Name = Name + "-1" });
+                    Children.Add(new LoadedNode { Name = Name + "-2" });
+                }
+            }
+        }
+    }
+
+    [Test]
+    public void ANodeSaidToHaveChildren_OpensAndTakesThemAsTheyAreLoaded()
+    {
+        var root = new LoadedNode { Name = "orbit", HasChildren = true };
+        var style = new Adamantium.UI.Core.Resources.Style
+        {
+            Selector = new Adamantium.UI.Core.Resources.StyleSelector { Types = { typeof(TreeViewItem) } }
+        };
+        style.Setters.Add(new Adamantium.UI.Core.Resources.Setter("IsExpanded", new Binding(nameof(LoadedNode.IsExpanded))));
+        var tree = new TreeView
+        {
+            HasChildrenPath = nameof(LoadedNode.HasChildren),
+            ItemTemplate = new HierarchicalDataTemplate(() => new TemplateResult { RootComponent = new Border() })
+            {
+                ItemsSource = new Binding(nameof(LoadedNode.Children))
+            },
+            ItemContainerStyle = style,
+            ItemsSource = new ObservableCollection<LoadedNode>([root, new LoadedNode { Name = "name" }])
+        };
+        string[] Rows() => tree.Items.Cast<TreeRow>().Select(row => ((LoadedNode)row.Node).Name).ToArray();
+        var before = tree.Items.Cast<TreeRow>().Select(row => row.HasChildren).ToArray();
+
+        Press(tree, Key.DownArrow);
+        Press(tree, Key.RightArrow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo(new[] { true, false }), "the branch shows before its children are read");
+            Assert.That(root.IsExpanded, Is.True, "opening it tells the node, which loads them");
+            Assert.That(Rows(), Is.EqualTo(new[] { "orbit", "orbit-1", "orbit-2", "name" }));
+        });
+    }
+
     [Test]
     public void LeftFoldsTheBranch_AndFromALeafClimbsToItsParent()
     {

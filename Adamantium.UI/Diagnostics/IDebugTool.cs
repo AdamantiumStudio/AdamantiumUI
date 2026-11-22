@@ -1,7 +1,8 @@
 namespace Adamantium.UI.Diagnostics;
 
-/// <summary>A debugging tool an application attaches with <see cref="UIApplication.AttachDebugTool"/>. Attached, it
-/// is handed the application: its windows and their trees, the frame verifier, and every routed event, which it
+/// <summary>A debugging tool an application attaches with <see cref="IApplicationDiagnostics.AttachDebugTool"/>. Attached, it
+/// is handed the application: its windows and their trees, the frame verifier (its <see cref="IApplicationDiagnostics"/>,
+/// from <c>UIContext.Resolve</c>), and every routed event, which it
 /// watches through <see cref="Core.RoutedEvents.RoutedEvent.AddObserver"/> - only the events it watches pay for it.</summary>
 public interface IDebugTool
 {

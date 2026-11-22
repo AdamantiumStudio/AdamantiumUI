@@ -669,6 +669,10 @@ public sealed class AutomationExecutor
             case AutomationCommand.Hover:
                 InputSimulator.Hover(OwnerOf(peer), Label(peer));
                 break;
+            case AutomationCommand.HoverText:
+                InputSimulator.Hover(OwnerOf(peer), Label(peer),
+                    CharacterMiddle(peer, Pattern<ITextProvider>(peer, PatternId.Text), request.Value ?? string.Empty));
+                break;
             case AutomationCommand.Drag:
                 var (from, to) = DragPoints(request.Value);
                 InputSimulator.Drag(OwnerOf(peer), Label(peer), from, to);
@@ -795,6 +799,25 @@ public sealed class AutomationExecutor
         var end = ends.Length == 2 ? TextIndex(text, ends[1]) : start;
         text.Select(start, end - start);
         text.ScrollIntoView(end);
+    }
+
+    // The middle of the character at the text position, in the element's own units - scrolled into view first.
+    private static Vector2<double> CharacterMiddle(AutomationPeer peer, ITextProvider text, string position)
+    {
+        var index = TextIndex(text, position);
+        var element = OwnerOf(peer);
+        var root = element.RootVisual ?? throw new AutomationException($"{Label(peer)} is not in a window.");
+        text.ScrollIntoView(index);
+        // Laid out where the scroll put it before it is measured.
+        LayoutManager.GetOrCreate((IUIComponent)root).ExecuteLayoutPass();
+        var shown = text.Bounds(index, index + 1);
+        if (shown.Count == 0 || shown[0].Width <= 0)
+        {
+            throw new AutomationException($"{Label(peer)} does not show the character at {position}.");
+        }
+
+        return element.PointToClient(new PixelPoint((int)Math.Round(shown[0].X + shown[0].Width / 2),
+            (int)Math.Round(shown[0].Y + shown[0].Height / 2)));
     }
 
     private static int TextIndex(ITextProvider text, string position)
