@@ -14,7 +14,8 @@ namespace Adamantium.UI.Core.Collections;
 /// filter, ordering or source.</summary>
 public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollectionChanged, IPagedSource
 {
-    private readonly ObservableCollection<CollectionViewGroup> _groups = [];
+    private IReadOnlyList<CollectionViewGroup> _groups = [];
+    private bool _groupsStale;
     private readonly List<object> _snapshot = [];
     private readonly List<object> _view = [];
     private readonly List<int> _sourceIndexOfView = [];
@@ -34,8 +35,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         SortDescriptions = new SortDescriptionCollection();
         SortDescriptions.CollectionChanged += (_, _) => Rebuild();
         GroupDescriptions = [];
-        GroupDescriptions.CollectionChanged += (_, _) => RebuildGroups();
-        Groups = new ReadOnlyObservableCollection<CollectionViewGroup>(_groups);
+        GroupDescriptions.CollectionChanged += (_, _) => RegroupLater();
         LiveFilteringProperties = [];
         LiveSortingProperties = [];
         Source = source;
@@ -125,9 +125,21 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     /// <summary>The shown items in groups, by the first of <see cref="GroupDescriptions"/>, each in the order its first
     /// item comes in the view - sorting by the grouped property first orders the groups too; empty while nothing groups
-    /// them. Made again, as a Reset, at every change of what is shown: a view to choose from, not one of thousands.
-    /// </summary>
-    public ReadOnlyObservableCollection<CollectionViewGroup> Groups { get; }
+    /// them. A new list after each change of what is shown, told by <see cref="PropertyChanged"/> and made when it is
+    /// next read - up to date for a handler of <see cref="CollectionChanged"/> too.</summary>
+    public IReadOnlyList<CollectionViewGroup> Groups
+    {
+        get
+        {
+            if (_groupsStale)
+            {
+                _groupsStale = false;
+                _groups = IsGrouped ? GroupsOf(Shown(), 0) : [];
+            }
+
+            return _groups;
+        }
+    }
 
     /// <summary>Whether <see cref="GroupDescriptions"/> group the items.</summary>
     public bool IsGrouped => GroupDescriptions.Count > 0;
@@ -636,25 +648,28 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private void Raise(NotifyCollectionChangedEventArgs e)
     {
+        var regroups = IsGrouped || _groups.Count > 0;
+        if (regroups)
+            _groupsStale = true;
+
         CollectionChanged?.Invoke(this, e);
-        RebuildGroups();
+        if (regroups)
+            Notify(nameof(Groups));
     }
 
-    private void RebuildGroups()
+    private void RegroupLater()
     {
-        if (!IsGrouped && _groups.Count == 0)
-            return;
+        _groupsStale = true;
+        Notify(nameof(Groups));
+    }
 
-        _groups.Clear();
-        if (!IsGrouped)
-            return;
-
+    private List<object> Shown()
+    {
         var shown = new List<object>(Count);
         foreach (var item in this)
             shown.Add(item);
 
-        foreach (var group in GroupsOf(shown, 0))
-            _groups.Add(group);
+        return shown;
     }
 
     // The items in groups by the level's description, each in the order of its first item; the levels below within.
@@ -663,15 +678,21 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         var description = GroupDescriptions[level];
         var names = new List<object>();
         var members = new List<List<object>>();
+        var indexOfName = new Dictionary<object, int>();
+        var indexOfNull = -1;
         foreach (var item in items)
         {
             var name = description.GroupNameOf(item);
-            var index = names.FindIndex(each => Equals(each, name));
+            var index = name == null ? indexOfNull : indexOfName.GetValueOrDefault(name, -1);
             if (index < 0)
             {
                 names.Add(name);
                 members.Add([]);
                 index = names.Count - 1;
+                if (name == null)
+                    indexOfNull = index;
+                else
+                    indexOfName[name] = index;
             }
 
             members[index].Add(item);

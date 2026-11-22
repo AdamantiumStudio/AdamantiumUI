@@ -55,23 +55,31 @@ public class CollectionViewGroupingTests
     }
 
     [Test]
-    public void AnItemAddedOrTakenFromTheSource_ChangesTheGroups()
+    public void AnItemAddedOrTakenFromTheSource_ChangesTheGroups_TellingOnce()
     {
         var source = new ObservableCollection<Part> { Box, Body };
         var view = new CollectionView(source);
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Part.Kind)));
-        var resets = 0;
-        ((System.Collections.Specialized.INotifyCollectionChanged)view.Groups).CollectionChanged += (_, _) => resets++;
+        var told = 0;
+        view.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(CollectionView.Groups))
+                told++;
+        };
+        object[] seenByHandler = null;
+        view.CollectionChanged += (_, _) => seenByHandler = Names(view);
 
         source.Add(Hinge);
         var added = Names(view);
+        var toldForAdd = told;
         source.Remove(Body);
 
         Assert.Multiple(() =>
         {
             Assert.That(added, Is.EqualTo(new object[] { "Collider", "Physics", "Joint" }));
+            Assert.That(toldForAdd, Is.EqualTo(1));
             Assert.That(Names(view), Is.EqualTo(new object[] { "Collider", "Joint" }));
-            Assert.That(resets, Is.GreaterThan(0));
+            Assert.That(seenByHandler, Is.EqualTo(new object[] { "Collider", "Joint" }), "a handler sees the groups after");
         });
     }
 
