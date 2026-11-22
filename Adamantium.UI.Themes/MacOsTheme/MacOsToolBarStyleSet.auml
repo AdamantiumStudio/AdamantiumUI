@@ -108,7 +108,8 @@
                                         <Border x:Name="OverflowContextFrame"
                                                 BorderBrush="{TemplateBinding OverflowContextAccent}"
                                                 BorderThickness="{ResourceReference ToolBarContextFrameThickness}"
-                                                CornerRadius="5" Visibility="Collapsed"/>
+                                                CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                                Visibility="Collapsed"/>
                                         <Path Data="M0,0 L4,4 L8,0"
                                               Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1.2"
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -205,11 +206,13 @@
                         <!-- Where a shown context comes from: washed and framed in its color, just past the commands,
                              so turning it on moves nothing. -->
                         <Grid VerticalAlignment="Center">
-                            <Border x:Name="ContextWash" Margin="-2" Background="{TemplateBinding Accent}" CornerRadius="7"
+                            <Border x:Name="ContextWash" Margin="-2" Background="{TemplateBinding Accent}"
+                                    CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <ItemsPresenter x:Name="PART_ItemsPresenter"/>
                             <Border x:Name="ContextFrame" Margin="-2" BorderBrush="{TemplateBinding Accent}"
-                                    BorderThickness="{ResourceReference ToolBarContextFrameThickness}" CornerRadius="7"
+                                    BorderThickness="{ResourceReference ToolBarContextFrameThickness}"
+                                    CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
                                     IsHitTestVisible="False" Visibility="Collapsed"/>
                         </Grid>
                     </StackPanel>

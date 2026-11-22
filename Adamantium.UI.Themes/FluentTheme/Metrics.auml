@@ -77,6 +77,8 @@
     <sys:Double x:Key="ToolBarContextualWashOpacity">0.25</sys:Double>
     <!-- The frame round a section a shown context comes from, and round the chevron when it is in the menu. -->
     <Thickness x:Key="ToolBarContextFrameThickness">1.5</Thickness>
+    <!-- Its rounding: the commands' (CornerRadiusDefault) plus the 2 it stands past them, so the two curves run alike. -->
+    <CornerRadius x:Key="ToolBarContextFrameRadius">6</CornerRadius>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- ── Insets ─────────────────────────────────────────────────────────────────────────────────────────────────

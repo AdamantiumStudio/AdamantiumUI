@@ -217,12 +217,12 @@
                              so turning it on moves nothing. -->
                         <Grid VerticalAlignment="Center">
                             <Border x:Name="ContextWash" Margin="-2" Background="{TemplateBinding Accent}"
-                                    CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                    CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <ItemsPresenter x:Name="PART_ItemsPresenter"/>
                             <Border x:Name="ContextFrame" Margin="-2" BorderBrush="{TemplateBinding Accent}"
                                     BorderThickness="{ResourceReference ToolBarContextFrameThickness}"
-                                    CornerRadius="{ResourceReference CornerRadiusDefault}"
+                                    CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
                                     IsHitTestVisible="False" Visibility="Collapsed"/>
                         </Grid>
                     </StackPanel>
