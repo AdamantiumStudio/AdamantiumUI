@@ -42,6 +42,65 @@ public class CurveTileTreeTests
         });
     }
 
+    // The buffers keep what a larger tree left in them.
+    [TestCaseSource(nameof(Fills))]
+    public void MadeOnBuffersAnotherTreeWasMadeOn_TheTreeIsTheSame(Geometry geometry)
+    {
+        var fill = geometry.CurvesForDrawing.FillPieces;
+        var corner = new Vector2<double>(fill.Bounds.X, fill.Bounds.Y);
+        var size = new Vector2<double>(fill.Bounds.Width, fill.Bounds.Height);
+        var first = CurveTileTree.Of(fill.Pieces, corner, size);
+        var coast = Coast().CurvesForDrawing.FillPieces;
+        var buffers = new CurveTileBuffers();
+        CurveTileTree.Of(coast.Pieces, new Vector2<double>(coast.Bounds.X + 7, coast.Bounds.Y + 3),
+            new Vector2<double>(coast.Bounds.Width, coast.Bounds.Height), buffers);
+        var again = CurveTileTree.Of(fill.Pieces, corner, size, buffers);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(again.Side, Is.EqualTo(first.Side));
+            Assert.That(again.Points, Is.EqualTo(first.Points));
+            Assert.That(again.Windings, Is.EqualTo(first.Windings));
+            Assert.That(again.Children, Is.EqualTo(first.Children));
+            Assert.That(again.ListStarts, Is.EqualTo(first.ListStarts));
+            Assert.That(again.Entries, Is.EqualTo(first.Entries));
+        });
+    }
+
+    [Test]
+    public void PreparedWithAFill_ItsTilesAreMade_SoDrawingMakesNothing()
+    {
+        var geometry = Coast();
+        geometry.PrepareForDrawing(Brushes.Black);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var tiles = geometry.CurvesForDrawing.FillTiles;
+        var made = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(geometry.IsProcessed, Is.True);
+            Assert.That(tiles, Is.Not.Null);
+            Assert.That(made, Is.Zero, "bytes allocated by the draw");
+        });
+    }
+
+    [Test]
+    public void PreparedWithNoFill_ItIsProcessed_ButNoTilesAreMade()
+    {
+        var geometry = Coast();
+        geometry.PrepareForDrawing(null);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        _ = geometry.CurvesForDrawing.FillTiles;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(geometry.IsProcessed, Is.True);
+            Assert.That(GC.GetAllocatedBytesForCurrentThread() - before, Is.GreaterThan(0), "the tiles made only now");
+        });
+    }
+
     private static Geometry Star(int points, FillRule rule)
     {
         var g = new StreamGeometry { FillRule = rule };

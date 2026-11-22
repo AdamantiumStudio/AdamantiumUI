@@ -40,26 +40,27 @@ internal sealed class PathCurves
 
     /// <summary>The fill's pieces in a tree of its own tiles (<see cref="CurveTileTree"/>) - made once, by whichever
     /// thread asks first; null for a fill of no area.</summary>
-    public CurveTileTree FillTiles
+    public CurveTileTree FillTiles => FillTilesMadeOn(null);
+
+    /// <summary>The <see cref="FillTiles"/>, made on <paramref name="buffers"/> if they are not made yet - new ones
+    /// when none are given.</summary>
+    public CurveTileTree FillTilesMadeOn(CurveTileBuffers buffers)
     {
-        get
+        if (_fillTiles is { } made)
         {
-            if (_fillTiles is { } made)
-            {
-                return made;
-            }
-
-            var fill = FillPieces;
-            if (fill.Pieces.Length == 0 || !(fill.Bounds.Width > 0) || !(fill.Bounds.Height > 0))
-            {
-                return null;
-            }
-
-            var tiles = CurveTileTree.Of(fill.Pieces, new Vector2<double>(fill.Bounds.X, fill.Bounds.Y),
-                new Vector2<double>(fill.Bounds.Width, fill.Bounds.Height));
-            Interlocked.CompareExchange(ref _fillTiles, tiles, null);
-            return _fillTiles;
+            return made;
         }
+
+        var fill = FillPieces;
+        if (fill.Pieces.Length == 0 || !(fill.Bounds.Width > 0) || !(fill.Bounds.Height > 0))
+        {
+            return null;
+        }
+
+        var tiles = CurveTileTree.Of(fill.Pieces, new Vector2<double>(fill.Bounds.X, fill.Bounds.Y),
+            new Vector2<double>(fill.Bounds.Width, fill.Bounds.Height), buffers);
+        Interlocked.CompareExchange(ref _fillTiles, tiles, null);
+        return _fillTiles;
     }
 
     /// <summary>Every curve, the figures' one after another.</summary>

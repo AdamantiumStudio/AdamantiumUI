@@ -126,6 +126,27 @@ public abstract class Geometry : AdamantiumComponent
       }
    }
 
+   /// <summary>Makes on the calling thread what drawing the geometry with <paramref name="fill"/> takes when fills are
+   /// drawn from curves - its outline and, where the fill comes from its curves, those cut into tiles - so a worker can
+   /// have it ready before the loop thread records it. What the renderer makes when it records it.</summary>
+   public void PrepareForDrawing(Brush fill) => PrepareForDrawing(fill, null);
+
+   /// <summary><see cref="PrepareForDrawing(Brush)"/>, the tiles made on <paramref name="buffers"/> - those of one
+   /// thread preparing many geometries.</summary>
+   internal void PrepareForDrawing(Brush fill, Curves.CurveTileBuffers buffers)
+   {
+      ProcessGeometry(TrianglesAreGiven ? GeometryType.Both : GeometryType.Outlined);
+      if (fill != null && !FillsFromTriangles(fill))
+      {
+         _ = CurvesForDrawing.FillTilesMadeOn(buffers);
+      }
+   }
+
+   /// <summary>Whether a fill of <paramref name="fill"/> is drawn from the triangles and ring the geometry was given -
+   /// one color over a map's tile; another brush keeps the curves, as its edge has no ring.</summary>
+   internal bool FillsFromTriangles(Brush fill) =>
+      fill is SolidColorBrush && TrianglesAreGiven && ContoursAreFillBoundary;
+
    private PreparedFill _readyFill;
    private PreparedStroke _readyStroke;
 
