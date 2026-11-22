@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Adamantium.UI.Core;
 using Adamantium.Win32;
@@ -21,7 +22,6 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
 
     public INotificationAreaIcon AddIcon(string toolTip)
     {
-        MakeWindow();
         Icon icon;
         lock (_lock)
         {
@@ -36,30 +36,35 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
             _icons.Add(id, icon);
         }
 
-        icon.Show();
-        return icon;
-    }
-
-    // Made for the first icon - an application with none pays nothing - on the pump thread, which runs its messages.
-    private void MakeWindow()
-    {
-        if (Volatile.Read(ref _window) != null)
-        {
-            return;
-        }
-
+        // The window is made for the first icon - an application with none pays nothing - on the pump thread, which runs
+        // its messages; asked from another thread, the icon is shown there, after the ones asked before it.
         var dispatcher = Threading.Dispatcher.CurrentDispatcher;
         if (dispatcher == null || dispatcher.CheckAccess())
         {
-            MakeWindowHere();
+            MakeWindow();
+            icon.Show();
         }
         else
         {
-            dispatcher.Invoke(MakeWindowHere);
+            dispatcher.Invoke(() =>
+            {
+                MakeWindow();
+                icon.Show();
+            });
         }
+
+        return icon;
     }
 
-    private void MakeWindowHere()
+    /// <summary>Lets the shell's "TaskbarCreated" through to <paramref name="window"/>: the shell runs below an elevated
+    /// application, and without it the icons would not come back after it restarts.</summary>
+    internal static bool HearShellRestarting(IntPtr window)
+    {
+        var status = CHANGEFILTERSTRUCT.Create();
+        return Messages.ChangeWindowMessageFilterEx(window, TaskbarCreatedMessage, MessageFilterAction.Allow, ref status);
+    }
+
+    private void MakeWindow()
     {
         if (_window != null)
         {
@@ -69,6 +74,12 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         var window = new Win32NativeWindowWrapper($"AdamantiumNotificationAreaWindow {Guid.NewGuid()}", 0, 0, 0, 0, 0, 0,
             0, IntPtr.Zero);
         window.AddHook(OnMessage);
+        if (!HearShellRestarting(window.Handle))
+        {
+            Log.Logger.Warning("The shell restarting will not be heard (error {Error}); icons will not come back after it",
+                Marshal.GetLastPInvokeError());
+        }
+
         Volatile.Write(ref _window, window);
     }
 
@@ -137,6 +148,9 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
     private sealed class Icon(WindowsNotificationArea area, uint id, string toolTip) : INotificationAreaIcon
     {
         private const int TipLength = 127;
+
+        // Shown, changed and taken away from any thread; the shell is told nothing before the window is made.
+        private readonly object _lock = new();
         private string _toolTip = toolTip;
         private bool _disposed;
 
@@ -147,14 +161,17 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
             get => _toolTip;
             set
             {
-                _toolTip = value;
-                if (_disposed)
+                lock (_lock)
                 {
-                    return;
-                }
+                    _toolTip = value;
+                    if (!HasWindow || _disposed)
+                    {
+                        return;
+                    }
 
-                var data = Data(NotifyIconFlags.Tip | NotifyIconFlags.ShowTip);
-                Win32Interop.ShellNotifyIcon(NotifyIconMessage.Modify, ref data);
+                    var data = Data(NotifyIconFlags.Tip | NotifyIconFlags.ShowTip);
+                    Win32Interop.ShellNotifyIcon(NotifyIconMessage.Modify, ref data);
+                }
             }
         }
 
@@ -166,23 +183,28 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         // back.
         public void Show()
         {
-            if (_disposed)
+            lock (_lock)
             {
-                return;
-            }
+                if (_disposed)
+                {
+                    return;
+                }
 
-            var data = Data(NotifyIconFlags.Message | NotifyIconFlags.Icon | NotifyIconFlags.Tip | NotifyIconFlags.ShowTip);
-            data.CallbackMessage = IconMessage;
-            data.Icon = ApplicationIcon();
-            if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data))
-            {
-                Log.Logger.Information("The notification area took no icon now; it is put there when the task bar starts");
-                return;
-            }
+                var data = Data(NotifyIconFlags.Message | NotifyIconFlags.Icon | NotifyIconFlags.Tip |
+                    NotifyIconFlags.ShowTip);
+                data.CallbackMessage = IconMessage;
+                data.Icon = ApplicationIcon();
+                if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data))
+                {
+                    Log.Logger.Information(
+                        "The notification area took no icon now; it is put there when the task bar starts");
+                    return;
+                }
 
-            var version = Data(default);
-            version.Version = NOTIFYICONDATA.NotifyIconVersion4;
-            Win32Interop.ShellNotifyIcon(NotifyIconMessage.SetVersion, ref version);
+                var version = Data(default);
+                version.Version = NOTIFYICONDATA.NotifyIconVersion4;
+                Win32Interop.ShellNotifyIcon(NotifyIconMessage.SetVersion, ref version);
+            }
         }
 
         public void RaiseClicked()
@@ -203,20 +225,30 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
 
         public void Dispose()
         {
-            if (_disposed)
+            lock (_lock)
             {
-                return;
-            }
+                if (_disposed)
+                {
+                    return;
+                }
 
-            _disposed = true;
-            area.Remove(this);
-            var data = Data(default);
-            Win32Interop.ShellNotifyIcon(NotifyIconMessage.Delete, ref data);
+                _disposed = true;
+                area.Remove(this);
+                if (!HasWindow)
+                {
+                    return;
+                }
+
+                var data = Data(default);
+                Win32Interop.ShellNotifyIcon(NotifyIconMessage.Delete, ref data);
+            }
         }
+
+        private bool HasWindow => Volatile.Read(ref area._window) != null;
 
         private NOTIFYICONDATA Data(NotifyIconFlags flags)
         {
-            var data = NOTIFYICONDATA.For(area._window.Handle, Id);
+            var data = NOTIFYICONDATA.For(Volatile.Read(ref area._window).Handle, Id);
             data.Flags = flags;
             data.Tip = _toolTip is { Length: > TipLength } ? _toolTip[..TipLength] : _toolTip ?? string.Empty;
             return data;
