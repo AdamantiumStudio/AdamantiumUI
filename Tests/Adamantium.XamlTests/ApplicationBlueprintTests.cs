@@ -87,6 +87,29 @@ public class ApplicationBlueprintTests
         Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()
             .GetCustomAttribute<ApplicationBlueprintAttribute>()?.SplashWindow, Is.Null);
 
+    // Read before anything is made: a copy past the limit ends at once.
+    [Test]
+    public void TheLimitOnCopies_IsNamedToTheAssemblyWithTheBlueprint()
+    {
+        var project = AumlCodegenHarness.Project(Files(
+            ("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} StartupWindow=\"MainWindow\" MaxInstances=\"1\"/>")),
+            sources: [Application]);
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        var assembly = project.Load();
+        var blueprint = (ApplicationBlueprint)Activator.CreateInstance(assembly.GetType("Test.App.AppBlueprint"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.MaxInstances, Is.EqualTo(1));
+            Assert.That(blueprint.MaxInstances, Is.EqualTo(1), "and the blueprint holds it too");
+        });
+    }
+
+    [Test]
+    public void ABlueprintWithNoLimitOnCopies_StatesNone() =>
+        Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()
+            .GetCustomAttribute<ApplicationBlueprintAttribute>()?.MaxInstances, Is.Zero);
+
     [Test]
     public void ASplashWindowThatIsNoSplashWindow_FailsTheBuild() =>
         Assert.That(Errors(Files(("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} SplashWindow=\"MainWindow\"/>")), [Application]),

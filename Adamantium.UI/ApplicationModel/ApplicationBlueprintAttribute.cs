@@ -20,4 +20,8 @@ public sealed class ApplicationBlueprintAttribute : Attribute
 
     /// <summary>The blueprint's startup window, read as early: the splash window appears where it will.</summary>
     public Type StartupWindow { get; set; }
+
+    /// <summary>The blueprint's limit on copies running at once, read before anything starts: a copy past it ends at once.
+    /// 0 has none.</summary>
+    public int MaxInstances { get; set; }
 }

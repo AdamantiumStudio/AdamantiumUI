@@ -45,6 +45,15 @@ public interface IUIApplication
         remove { }
     }
 
+    /// <summary>A copy started past the copies the application lets run handed this one its command line - a file to
+    /// open, say - and the right to come to the front; raised on the loop thread. Not handled, the main window comes to
+    /// the front.</summary>
+    event EventHandler<AnotherCopyStartedEventArgs> AnotherCopyStarted
+    {
+        add { }
+        remove { }
+    }
+
     void AddWindow(IWindow window);
     
     void RemoveWindow(IWindow window);

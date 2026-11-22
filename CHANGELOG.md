@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- A copy of an application started past `UIApplication.MaxInstances` hands its command line and the right to come to
+  the front to a running copy before it ends: `IUIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
+  raised on the loop thread) - a file to open, say, with the folder it was started in; not handled, the main window comes to the front. Under it
+  `InstanceSlot.StartListening`, `Asked` (`InstanceAskedEventArgs`) and `AskHolderAsync`: a process with no place asks
+  one holding a place over a pipe of the user's own. The limit is stated in the blueprint too
+  (`ApplicationBlueprint.MaxInstances`), read before anything starts.
 - `Displays.LargestScreen`: the monitor of the most pixels. A `RemoteUniverse` tells the host its size as it launches,
   so frames that come through memory of the process keep one ring whatever size the view is resized to.
 - `PropertyGrid.AutoGenerateSectionsForMarked`: as `AutoGenerateSectionsFor`, for the items whose own type carries the
