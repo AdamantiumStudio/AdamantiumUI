@@ -831,6 +831,8 @@ All packages share one version.
 
 ### Fixed
 
+- `Window.Hide` on a window with no window of the system behind it - one drawn headless - threw; it does nothing, as
+  everything else that talks to such a window's worker.
 - An ellipse swept past a turn was two shapes: the batch drew it whole, the tessellator - an `EllipseGeometry`, the
   fallback of a batched ellipse, a PDF - what is left over whole turns, and whole turns as nothing (720). Both draw
   what is left now (485 as 125) - the batch too, where 400 was whole and is 40 - and whole turns the whole ellipse. A
