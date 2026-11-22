@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 using System.Linq;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
-using Adamantium.UI.Generators.Localization;
+using Adamantium.Localization.Generators;
 using Adamantium.UI.Generators.Roslyn;
 using Adamantium.UI.Markup.Parsers;
 using Adamantium.UI.Markup.Localization;
@@ -69,7 +69,7 @@ namespace Adamantium.UI.Generators
                 var typeResolver = new RoslynTypeResolver(compilation);
                 var transformer = new DefaultAumlTransformer
                 {
-                    LanguageTables = LanguageFileParser.Shapes(languages, properties.RootNamespace, properties.NeutralLanguage),
+                    LanguageTables = LanguageTableShapes.Of(languages, properties.RootNamespace, properties.NeutralLanguage),
                 };
                 var codeGenerator = new AumlSourceGenerator { HotReload = properties.HotReload };
 

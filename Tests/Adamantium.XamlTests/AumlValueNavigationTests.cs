@@ -22,7 +22,7 @@ public class AumlValueNavigationTests
     private const string Probe = """
         namespace Probe;
 
-        public sealed class Strings : Adamantium.UI.Core.Localization.LocalizedStrings
+        public sealed class Strings : Adamantium.Localization.LocalizedStrings
         {
             public static Strings Current { get; } = new();
 

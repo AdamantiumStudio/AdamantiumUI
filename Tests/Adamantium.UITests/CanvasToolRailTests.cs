@@ -275,10 +275,10 @@ public class CanvasToolRailTests
 
         string Said(int at) => (rail.Children[at] as ToggleButton)?.Content as string;
         var english = new[] { Said(0), Said(1) };
-        Adamantium.UI.Core.Localization.Languages.Current = "ru";
+        Adamantium.Localization.Languages.Current = "ru";
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         var russian = new[] { Said(0), Said(1) };
-        Adamantium.UI.Core.Localization.Languages.Current = null;
+        Adamantium.Localization.Languages.Current = null;
 
         Assert.Multiple(() =>
         {
@@ -293,10 +293,10 @@ public class CanvasToolRailTests
     {
         var canvas = new InfiniteCanvas { Phrases = Adamantium.UI.Themes.Localization.CanvasStrings.Current };
 
-        var english = canvas.Say("InputName", ("number", 3));
-        Adamantium.UI.Core.Localization.Languages.Current = "ru";
-        var russian = canvas.Say("InputName", ("number", 3));
-        Adamantium.UI.Core.Localization.Languages.Current = null;
+        var english = canvas.Say("InputName", new Adamantium.Localization.PhraseArgument("number", 3));
+        Adamantium.Localization.Languages.Current = "ru";
+        var russian = canvas.Say("InputName", new Adamantium.Localization.PhraseArgument("number", 3));
+        Adamantium.Localization.Languages.Current = null;
 
         Assert.Multiple(() =>
         {

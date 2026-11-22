@@ -27,6 +27,8 @@
         <AdamantiumEngineReference Include="Adamantium.Mathematics" />
         <!-- What the source generator above loads: Core.Shared, analyzer-only - the assembly itself comes above. -->
         <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
+        <!-- The string tables from .alang files, and the parser the markup generator reads them with. -->
+        <AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" />
     </ItemGroup>
 
     <!-- The same analyzer dep, taken from the package. -->

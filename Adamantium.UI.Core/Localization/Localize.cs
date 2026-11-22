@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.MarkupExtensions;
 

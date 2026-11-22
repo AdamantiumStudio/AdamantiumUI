@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Adamantium.Localization.Generators;
 using Adamantium.UI.Generators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -26,7 +27,7 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Core.Data.MultiBinding),
         typeof(Adamantium.Core.TypeParsing.TypeParser),   // force-load Adamantium.Core so codegen resolves OUR TypeParser
         typeof(Adamantium.Fonts.FontStyle),   // the font types text properties take that Adamantium.Core does not hold
-        typeof(Adamantium.UI.Markup.Localization.PluralRules),   // what a counted phrase of a table calls
+        typeof(Adamantium.Localization.PluralRules),   // what a table derives from, and a counted phrase calls
         typeof(Adamantium.UI.ApplicationModel.ApplicationBlueprint),   // the application and its blueprint
         typeof(Adamantium.UI.Themes.FluentTheme.Fluent),   // the themes a blueprint starts on
         typeof(Adamantium.UI.Automation.AutomationSession),   // what a scenario's test runs on

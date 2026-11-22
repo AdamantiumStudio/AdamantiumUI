@@ -1,8 +1,8 @@
 using System;
+using Adamantium.Localization;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
-using Adamantium.UI.Core.Localization;
 using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
@@ -80,6 +80,31 @@ public class LanguageFormatBindingTests
         var text = Bound(new Binding { Path = new PropertyPath("At"), StringFormat = "{0:t}" });
 
         Assert.That(text.Text, Is.EqualTo("17:45"));
+    }
+
+    // What listens to the language itself - a window, a pane's title - finds the bindings written in it already.
+    [Test]
+    public void ABinding_IsWrittenInTheNewLanguage_BeforeWhatListensToTheLanguage()
+    {
+        var text = new TextBlock();
+        text.SetBinding("Text", new MultiBinding
+        {
+            StringFormat = "{0:N1}",
+            Bindings = { new Binding { Path = new PropertyPath("Value"), Source = new Reading() } },
+        });
+        string seen = null;
+        EventHandler listener = (_, _) => seen = text.Text;
+        Languages.Changed += listener;
+        try
+        {
+            Languages.Current = "ru";
+        }
+        finally
+        {
+            Languages.Changed -= listener;
+        }
+
+        Assert.That(seen, Is.EqualTo(text.Text).And.Not.EqualTo("1,234.5"));
     }
 
     private static TextBlock Bound(Binding binding)

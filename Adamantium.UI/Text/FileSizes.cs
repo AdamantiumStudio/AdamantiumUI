@@ -1,4 +1,4 @@
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using Adamantium.UI.Themes.Localization;
 
 namespace Adamantium.UI.Text;

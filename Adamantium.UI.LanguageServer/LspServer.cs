@@ -353,7 +353,7 @@ public sealed class LspServer
     }
 
     private static bool IsLanguageFile(string uri) =>
-        uri.EndsWith(Adamantium.UI.Generators.Localization.LanguageFileParser.Extension, StringComparison.OrdinalIgnoreCase);
+        uri.EndsWith(Adamantium.Localization.Generators.LanguageFileParser.Extension, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsScenarioFile(string uri) => ScenarioFileAssist.IsScenario(uri);
 

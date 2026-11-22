@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 
 namespace Adamantium.UI.Controls.DataGrid;
 

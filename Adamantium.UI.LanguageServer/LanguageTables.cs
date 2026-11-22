@@ -7,7 +7,7 @@ namespace Adamantium.UI.LanguageServer;
 /// <summary>Finds the language tables of a compilation: its own and those of the assemblies it references.</summary>
 public static class LanguageTables
 {
-    private const string TableBase = "Adamantium.UI.Core.Localization.LocalizedStrings";
+    private const string TableBase = "Adamantium.Localization.LocalizedStrings";
 
     public static IReadOnlyList<LanguageTableInfo> Collect(Compilation compilation)
     {

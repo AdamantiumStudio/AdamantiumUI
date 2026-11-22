@@ -8,6 +8,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.Localization;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Markup;
 using Adamantium.UI.Core.Templates;

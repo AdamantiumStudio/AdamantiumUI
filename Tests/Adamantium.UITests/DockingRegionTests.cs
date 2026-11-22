@@ -12,7 +12,7 @@ using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Navigation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;

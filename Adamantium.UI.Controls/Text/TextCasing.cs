@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using Adamantium.UI.Core.Localization;
+using Adamantium.Localization;
 
 namespace Adamantium.UI.Controls.Text;
 

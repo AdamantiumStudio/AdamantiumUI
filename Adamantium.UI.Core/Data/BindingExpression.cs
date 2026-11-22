@@ -169,7 +169,7 @@ public class BindingExpression : BindingExpressionBase
    {
       if (!IsProducer && FollowsCulture)
       {
-         Languages.Follow(this);
+         LanguageFollowers.Follow(this);
       }
 
       // A change waiting was made for the source held until now: written there before another is resolved.
@@ -234,7 +234,7 @@ public class BindingExpression : BindingExpressionBase
       // A change still waiting is the source's being let go, written while it is still the one held.
       WriteWhatWaits();
       StopDelay();
-      Languages.Unfollow(this);
+      LanguageFollowers.Unfollow(this);
       UnwatchErrors();
       UnwatchPassed();
       _passed?.Clear();

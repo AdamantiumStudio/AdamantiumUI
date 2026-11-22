@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Specialized;
 using Adamantium.Graphics.Fonts;
+using Adamantium.Localization;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core.Automation;
@@ -8,7 +9,6 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -1378,7 +1378,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>The phrase <paramref name="key"/> of <see cref="Phrases"/> in the application's language, its
     /// placeholders filled by name - for a thing named once, as it is made. The key itself where there is no such
     /// phrase.</summary>
-    public string Say(string key, params (string Name, object Value)[] arguments) =>
+    public string Say(string key, params PhraseArgument[] arguments) =>
         Languages.Say(Phrases, key, arguments);
 
     private static CanvasAlignment? Edge(object said) => said switch

@@ -32,6 +32,7 @@
     <ItemGroup>
         <AdamantiumEngineReference Include="Adamantium.ECS" />
         <AdamantiumEngineReference Include="Adamantium.Fonts" />
+        <AdamantiumEngineReference Include="Adamantium.Localization" />
         <AdamantiumEngineReference Include="Adamantium.Mathematics" />
         <AdamantiumEngineReference Include="Adamantium.MVVM" />
         <AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" />

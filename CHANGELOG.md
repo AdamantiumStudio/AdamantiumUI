@@ -638,6 +638,16 @@ All packages share one version.
 
 ### Changed
 
+- Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
+  code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
+  `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,
+  `PluralForm`, `PhraseCases` and `MessageCatalog` from `Adamantium.UI.Markup.Localization`, to `Adamantium.Localization`;
+  the language file parser and the table generator to `Adamantium.Localization.Generators`. `{Localize}` and
+  `LocalizeExpression` stay. A placeholder's value is a `PhraseArgument` - `Languages.Say`, `InfiniteCanvas.Say`,
+  `MarkupMessages`, `ServerMessages` - in place of a tuple. The messages of language files are the engine's
+  `LanguageMessages`, no longer `MarkupMessages`; `PathExtension.ToNamespace` is `Adamantium.Core.Shared`'s. Bindings
+  still follow the language weakly, by one subscription to `Languages.Changed`. A project that hands the markup
+  generator its analyzers itself names `Adamantium.Localization.Generators` as a generator too.
 - What `UIApplication` offers stands where it belongs, so the class and its interfaces agree:
   - on `IUIApplication`, for the application's own code: `UnhandledException`, `Language`, `StartupCancellation`,
     `IsStarting`, `HoldSplash`, `RefreshRate`, `MinimumRefreshRate`, `MaximumRefreshRate`, `UnlimitedRefreshRate`;

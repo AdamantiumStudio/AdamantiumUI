@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Adamantium.UI.LanguageServer;
 using Adamantium.UI.Markup.AST;
+using Adamantium.Localization;
 using Adamantium.UI.Markup.Localization;
 using NUnit.Framework;
 
