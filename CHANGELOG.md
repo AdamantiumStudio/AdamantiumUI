@@ -903,6 +903,10 @@ All packages share one version.
 
 ### Fixed
 
+- A tray icon's menu opened on a right click showed nothing in an application: a menu stated in the blueprint, made
+  before the theme, had no template, and it was opened before its window's template had put it in a window. It is
+  styled with the current theme at each opening and opened once in the window. `TrayMenuWindow` draws nothing but the
+  menu in every theme - it showed a window's title bar across the top of the screen - and is public for that.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a

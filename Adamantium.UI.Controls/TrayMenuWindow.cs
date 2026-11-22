@@ -12,14 +12,15 @@ namespace Adamantium.UI.Controls;
 /// the active one: a press on the task bar or another application's window never reaches it. One window for one opening:
 /// closed with its menu, so the application never counts a hidden window and no surface over a monitor stays behind.
 /// </summary>
-internal sealed class TrayMenuWindow : Window
+public sealed class TrayMenuWindow : Window
 {
     private readonly Canvas _room = new() { Background = Brushes.Transparent };
     private ContextMenu _menu;
+    private Vector2<double> _menuPoint;
     private bool _wasActive;
     private bool _dismissed;
 
-    public TrayMenuWindow()
+    internal TrayMenuWindow()
     {
         ShowWindowBorder = false;
         ResizeMode = WindowResizeMode.NoResize;
@@ -32,7 +33,7 @@ internal sealed class TrayMenuWindow : Window
     }
 
     /// <summary>Opens <paramref name="menu"/> at <paramref name="point"/> of the desktop, in physical pixels.</summary>
-    public void Open(ContextMenu menu, PixelPoint point)
+    internal void Open(ContextMenu menu, PixelPoint point)
     {
         var screen = WindowPlacer.ScreenAt(point, Displays.Screens);
         if (screen == null)
@@ -53,11 +54,19 @@ internal sealed class TrayMenuWindow : Window
 
         _menu = menu;
         _menu.PropertyChanged += OnMenuPropertyChanged;
-        _menu.Open(_room, new Vector2<double>((point.X - area.X) / scale, (point.Y - area.Y) / scale));
+        _menuPoint = new Vector2<double>((point.X - area.X) / scale, (point.Y - area.Y) / scale);
+        if (_room.RootVisual != null)
+        {
+            OpenMenu();
+        }
+        else
+        {
+            _room.AttachedToVisualTreeEvent += OnRoomAttached;
+        }
     }
 
     /// <summary>Closes the menu, if open, and the window with it.</summary>
-    public void Dismiss()
+    internal void Dismiss()
     {
         if (_dismissed)
         {
@@ -65,6 +74,7 @@ internal sealed class TrayMenuWindow : Window
         }
 
         _dismissed = true;
+        _room.AttachedToVisualTreeEvent -= OnRoomAttached;
         if (_menu is { } menu)
         {
             _menu = null;
@@ -91,6 +101,21 @@ internal sealed class TrayMenuWindow : Window
         else if (_wasActive)
         {
             Dismiss();
+        }
+    }
+
+    private void OnRoomAttached(object sender, VisualTreeAttachmentEventArgs e)
+    {
+        _room.AttachedToVisualTreeEvent -= OnRoomAttached;
+        OpenMenu();
+    }
+
+    private void OpenMenu()
+    {
+        if (!_dismissed && _menu is { } menu)
+        {
+            menu.ApplyCurrentTheme();
+            menu.Open(_room, _menuPoint);
         }
     }
 
