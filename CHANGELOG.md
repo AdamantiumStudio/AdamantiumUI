@@ -907,6 +907,10 @@ All packages share one version.
 
 ### Fixed
 
+- `{ThemeResource}` on a drawing of a dictionary icon, `<GeometryDrawing Stroke="{ThemeResource AccentFillColorDefault}"/>`,
+  did not compile: `ThemeResource.Apply` and `Remove` took only an element. They take any component; one outside
+  the tree takes the application's theme current when it connects and follows that theme's changes, the accent among
+  them - with `x:Shared="False"`, each use of the icon is built for the theme then in force.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a
