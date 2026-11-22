@@ -181,6 +181,44 @@ public class PdfPageDrawingTests
     }
 
     [Test]
+    public void PreparedForDrawing_ItsPathsClipsAndSoftMasks_AreAllProcessed()
+    {
+        var pdf = new TestPdf
+        {
+            Resources = "<< /ExtGState << /S << /SMask << /S /Luminosity /G 5 0 R >> >> >> >>",
+        };
+        pdf.AddStream("/Type /XObject /Subtype /Form /BBox [0 0 50 50] /Group << /S /Transparency /CS /DeviceGray >>",
+            "1 g 0 0 m 50 0 l 25 50 l h f");
+        var (page, session) = Draw(pdf, "q 0 0 m 10 0 l 5 10 l h W n /S gs 0 0 m 9 0 l 9 9 l h f Q 1 1 m 9 1 l S");
+
+        page.PrepareForDrawing();
+
+        var groups = session.All<OpenedGroup>().ToArray();
+        var mask = new RecordingSession();
+        groups.Single(group => group.Options.Mask != null).Options.Mask.Render(mask, Matrix4x4<float>.Identity, null);
+        var geometries = session.All<DrawnGeometry>().Select(drawn => drawn.Geometry)
+            .Concat(groups.Select(group => group.Options.Clip).Where(clip => clip != null))
+            .Concat(mask.All<DrawnGeometry>().Select(drawn => drawn.Geometry))
+            .ToArray();
+        Assert.Multiple(() =>
+        {
+            Assert.That(geometries, Has.Length.EqualTo(4), "two paths, a clip and the mask's path");
+            Assert.That(geometries.Where(geometry => !geometry.IsProcessed), Is.Empty);
+        });
+    }
+
+    [Test]
+    public void PreparingCancelled_StopsQuietly_AndLeavesThePathsToTheirDraw()
+    {
+        var (page, session) = Draw(new TestPdf(), "0 0 m 10 0 l 5 10 l h f");
+        using var cancelled = new System.Threading.CancellationTokenSource();
+        cancelled.Cancel();
+
+        Assert.DoesNotThrow(() => page.PrepareForDrawing(cancelled.Token));
+        Assert.That(session.All<DrawnGeometry>().Single().Geometry.IsProcessed, Is.False);
+    }
+
+    [Test]
     public void AClipToOneRectangleIsARectangle_SoItCanBeAScissor()
     {
         var (_, session) = Draw(new TestPdf(), "10 10 30 20 re W n 0 0 50 50 re f");

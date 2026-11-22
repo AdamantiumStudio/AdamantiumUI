@@ -36,48 +36,46 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// changed nothing on screen until something else forced a re-record.</summary>
     internal Brush LiveBrush => _brush;
 
-    public Geometry Geometry { get; } = Tessellate(geometry, brush != null);
+    public Geometry Geometry { get; } = Prepare(geometry, brush);
 
-    /// <summary>The outline as curves, made on the record thread with their tiles for a fill drawn from them; null when
-    /// the fill is not drawn from curves.</summary>
+    /// <summary>The outline as curves with their tiles for a fill drawn from them, made on the record thread unless a
+    /// worker made them first; null when the fill is not drawn from curves.</summary>
     internal Core.Media.Curves.PathCurves Outline { get; } = OutlineOf(geometry, brush);
 
     /// <summary>Whether the fill is drawn from the triangles and ring the geometry was given - one color over a map's
     /// tile; another brush keeps the curves, as its edge has no ring.</summary>
-    internal bool FillsFromTriangles { get; } = FromTriangles(geometry, brush);
+    internal bool FillsFromTriangles { get; } = geometry != null && geometry.FillsFromTriangles(brush);
 
     /// <summary>What the geometry held WHEN THIS PAYLOAD WAS RECORDED. The instance is not enough: a Polygon reopens its
     /// one StreamGeometry with new points, so the same object describes a different shape from one record to the next.</summary>
     public int GeometryVersion { get; } = geometry?.Version ?? 0;
 
-    private static Geometry Tessellate(Geometry g, bool filled)
+    private static bool DrawsCurves =>
+        Retained.InstancedFillCollector.Enabled && Retained.InstancedFillCollector.CurvesEnabled;
+
+    // With curves, what Geometry.PrepareForDrawing makes - which a worker may have made already.
+    private static Geometry Prepare(Geometry g, Brush brush)
     {
         if (g == null)
         {
             return null;
         }
 
-        var curves = Retained.InstancedFillCollector.Enabled && Retained.InstancedFillCollector.CurvesEnabled;
-        g.ProcessGeometry((curves || !filled) && !g.TrianglesAreGiven ? GeometryType.Outlined : GeometryType.Both);
+        if (DrawsCurves)
+        {
+            g.PrepareForDrawing(brush);
+        }
+        else
+        {
+            g.ProcessGeometry(brush == null && !g.TrianglesAreGiven ? GeometryType.Outlined : GeometryType.Both);
+        }
+
         return g;
     }
 
     // Straight edges need no curves, and the curve shader costs a leaned map's every pixel of every layer.
-    private static bool FromTriangles(Geometry g, Brush brush) =>
-        brush is SolidColorBrush && g is { TrianglesAreGiven: true, ContoursAreFillBoundary: true };
-
-    private static Core.Media.Curves.PathCurves OutlineOf(Geometry g, Brush brush)
-    {
-        if (g == null || brush == null || FromTriangles(g, brush) || !Retained.InstancedFillCollector.Enabled ||
-            !Retained.InstancedFillCollector.CurvesEnabled)
-        {
-            return null;
-        }
-
-        var outline = g.CurvesForDrawing;
-        _ = outline.FillTiles;
-        return outline;
-    }
+    private static Core.Media.Curves.PathCurves OutlineOf(Geometry g, Brush brush) =>
+        g == null || brush == null || g.FillsFromTriangles(brush) || !DrawsCurves ? null : g.CurvesForDrawing;
 
     // A copy, since the caller's pen stays editable on the loop thread; its brush stays live and is read via its snapshot.
     public Pen Pen { get; } = pen?.CloneForRendering();

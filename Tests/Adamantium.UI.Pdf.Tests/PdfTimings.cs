@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Adamantium.UI.Pdf.Tests;
 
 /// <summary>How long the PDFs in the folder <c>ADAM_PDF_TIMINGS</c> names take to be opened and their pages written into
-/// drawings, and how much that allocates: the median of five runs after one to warm up, each on the document opened
+/// drawings - the first also prepared for drawing - and how much that allocates: the median of five runs after one to warm up, each on the document opened
 /// anew - its objects and fonts not yet read, as a viewer meets them. A measure, not a check - run by hand in Release;
 /// the figures go to a file in the temporary folder.</summary>
 [Explicit("Measures the PDFs of a folder of one's own")]
@@ -28,7 +28,7 @@ public class PdfTimings
         var folder = Environment.GetEnvironmentVariable("ADAM_PDF_TIMINGS");
         Assume.That(folder, Is.Not.Null.And.Not.Empty, "ADAM_PDF_TIMINGS names the folder");
         var report = new StringBuilder();
-        report.AppendLine("file  pages  open ms  first page ms  MB  page of scroll ms  MB");
+        report.AppendLine("file  pages  open ms  first page ms  MB  ready to draw ms  MB  page of scroll ms  MB");
         foreach (var file in Directory.EnumerateFiles(folder, "*.pdf", SearchOption.AllDirectories).Order())
         {
             var name = Path.GetRelativePath(folder, file);
@@ -57,6 +57,11 @@ public class PdfTimings
             var document = PdfDocument.Open(bytes);
             PdfPageDrawing.Build(document, document.Pages[0]);
         });
+        var ready = MedianOf(() =>
+        {
+            var document = PdfDocument.Open(bytes);
+            PdfPageDrawing.Build(document, document.Pages[0]).PrepareForDrawing();
+        });
         var scrolled = Math.Min(ScrolledPages, pageCount);
         var scroll = MedianOf(() =>
         {
@@ -66,8 +71,8 @@ public class PdfTimings
                 PdfPageDrawing.Build(document, document.Pages[index]);
             }
         });
-        return $"{name}  {pageCount}  {open.Ms:F1}  {first.Ms:F1}  {first.Megabytes:F1}  {scroll.Ms / scrolled:F1}  " +
-               $"{scroll.Megabytes / scrolled:F1}";
+        return $"{name}  {pageCount}  {open.Ms:F1}  {first.Ms:F1}  {first.Megabytes:F1}  {ready.Ms:F1}  " +
+               $"{ready.Megabytes:F1}  {scroll.Ms / scrolled:F1}  {scroll.Megabytes / scrolled:F1}";
     }
 
     private static Measured MedianOf(Action action)
