@@ -88,6 +88,11 @@ All packages share one version.
 - `ToolBar.IsContextual`: a bar shown by what the user is on - a table, a picture - as a ribbon's contextual tab. The
   tray's menu lists such bars apart, under `ToolBarTray.ContextualBarsHeader`, checked while shown and not switched;
   the user's bars then stand under `ToolBarTray.BarsHeader`. Each theme gives both its own words.
+- `ToolBar.ContextualHeader`: a contextual bar names its context at its start, before its commands, on the ribbon's
+  own label for a context (`RibbonContextualLabel`) in the bar's `Accent`, so it says what it is and which context it
+  goes with, worded as the ribbon words it. `ContextualHeaderTemplate` draws the name; `ShowsContextualHeader` off
+  leaves only the color; `HasContextualHeader` says whether the label stands. Automation reads the context as the
+  bar's help text. A bar down the side shows no label for now - its color alone says it there.
 - `ToolBar.Accent`: a contextual bar is washed in its context's color in every theme, behind the whole bar at the
   theme's `ToolBarContextualWashOpacity`, so it reads apart from the bars always there. The same color as the ribbon's
   contextual group of that context (`RibbonContextualGroup.Accent`) ties the two together; unset, the theme's accent.

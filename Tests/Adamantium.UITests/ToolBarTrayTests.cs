@@ -867,6 +867,74 @@ public class ToolBarTrayTests
         });
     }
 
+    // A contextual bar with its context's name says it at its start, on a label in its color, before its commands; a
+    // bar not contextual, one with no name, or one told not to show it has none.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextualBar_NamesItsContext_AtItsStart_OnALabelInItsColor(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0);
+        var green = new SolidColorBrush(Colors.SeaGreen);
+        table.Accent = green;
+        table.ContextualHeader = "Table Tools";
+        var root = Shown(Tray(table), 1000);
+        var label = (RibbonContextualLabel)table.GetTemplateChild("ContextualHeaderLabel");
+        var notContextual = label.Visibility;
+        var firstCommand = table.Items.OfType<Button>().First();
+        var plainStart = At(firstCommand, root).X;
+
+        table.IsContextual = true;
+        Show(root);
+        var named = label.Visibility;
+        var labelEnd = At(label, root).X + label.RenderSize.Width;
+        var namedStart = At(firstCommand, root).X;
+        table.ShowsContextualHeader = false;
+        Show(root);
+        var hidden = label.Visibility;
+        table.ShowsContextualHeader = true;
+        table.ContextualHeader = null;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notContextual, Is.EqualTo(Visibility.Collapsed), "not contextual");
+            Assert.That(named, Is.EqualTo(Visibility.Visible));
+            Assert.That(label.Content, Is.Null, "the name gone");
+            Assert.That(label.Accent, Is.SameAs(green), "in the bar's color");
+            Assert.That(namedStart, Is.GreaterThanOrEqualTo(labelEnd), "before the commands");
+            Assert.That(namedStart, Is.GreaterThan(plainStart), "the commands make room for it");
+            Assert.That(hidden, Is.EqualTo(Visibility.Collapsed), "told not to show it");
+            Assert.That(label.Visibility, Is.EqualTo(Visibility.Collapsed), "no name");
+        });
+    }
+
+    // Down the side a contextual bar shows no label - its color alone says it there - while automation reads its
+    // context as the bar's help text either way, and the application's own help text before it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextualBarDownTheSide_ShowsNoLabel_ButAutomationReadsItsContext(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0);
+        table.IsContextual = true;
+        table.ContextualHeader = "Table Tools";
+        var tray = Tray(table);
+        tray.Orientation = Orientation.Vertical;
+        Shown(tray, 1000);
+        var label = (RibbonContextualLabel)table.GetTemplateChild("ContextualHeaderLabel");
+        var peer = table.GetAutomationPeer();
+
+        var context = peer.HelpText;
+        AutomationProperties.SetHelpText(table, "Rows and columns");
+        var own = peer.HelpText;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(label.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(context, Is.EqualTo("Table Tools"));
+            Assert.That(own, Is.EqualTo("Rows and columns"));
+        });
+    }
+
     // Contextual bars are listed apart, under a header of their own, checked while shown and not switched by the user;
     // the user's bars get a header too. With no contextual bar the menu has no headers.
     [TestCaseSource(nameof(StyleSets))]

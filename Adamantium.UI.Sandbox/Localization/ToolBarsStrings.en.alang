@@ -29,6 +29,7 @@
     <Phrase Key="Font" Text="Font"/>
     <Phrase Key="Align" Text="Alignment"/>
     <Phrase Key="Table" Text="Table"/>
+    <Phrase Key="TableTools" Text="Table Tools"/>
     <Phrase Key="InsertRow" Text="Insert row"/>
     <Phrase Key="DeleteRow" Text="Delete row"/>
     <Phrase Key="Nothing" Text="nothing yet"/>

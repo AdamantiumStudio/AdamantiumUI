@@ -107,6 +107,14 @@
                                           Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1"
                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </ToggleButton>
+                                <!-- A contextual bar's context, named as the ribbon names it: the same label. -->
+                                <RibbonContextualLabel x:Name="ContextualHeaderLabel"
+                                                       DockPanel.Dock="Left"
+                                                       Margin="0,0,4,0"
+                                                       Visibility="Collapsed"
+                                                       Accent="{TemplateBinding Accent}"
+                                                       Content="{TemplateBinding ContextualHeader}"
+                                                       ContentTemplate="{TemplateBinding ContextualHeaderTemplate}"/>
                                 <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                             Orientation="{TemplateBinding Orientation}"
                                             VerticalAlignment="Center"/>
@@ -162,6 +170,15 @@
         <PropertyTrigger Property="IsContextual" Value="true">
             <Setter TargetName="ContextualWash" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- And named, on the ribbon's label for the context, at its start - along a bar; down the side only its color
+             says it, until bars there get a form of their own. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="HasContextualHeader" Value="true"/>
+                <Condition Property="Orientation" Value="Horizontal"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ContextualHeaderLabel" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
     </Style>
 
     <!-- A section of a bar: a rule before it where a command stands before it, then its commands along the bar. -->
