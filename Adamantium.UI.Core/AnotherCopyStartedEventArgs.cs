@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-namespace Adamantium.UI;
+namespace Adamantium.UI.Core;
 
-/// <summary>A copy of the application started past <see cref="UIApplication.MaxInstances"/> handed the running one
-/// what it was started with.</summary>
+/// <summary>A copy of the application started past the copies it lets run handed the running one what it was started
+/// with (<see cref="IUIApplication.AnotherCopyStarted"/>).</summary>
 public sealed class AnotherCopyStartedEventArgs(IReadOnlyList<string> arguments, string workingDirectory) : EventArgs
 {
     /// <summary>Its command line, without the program.</summary>

@@ -8,7 +8,7 @@ All packages share one version.
 ### Added
 
 - A copy of an application started past `UIApplication.MaxInstances` hands its command line and the right to come to
-  the front to a running copy before it ends: `UIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
+  the front to a running copy before it ends: `IUIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
   raised on the loop thread) - a file to open, say, with the folder it was started in; not handled, the main window comes to the front. Under it
   `InstanceSlot.StartListening`, `Asked` (`InstanceAskedEventArgs`) and `AskHolderAsync`: a process with no place asks
   one holding a place over a pipe of the user's own.
