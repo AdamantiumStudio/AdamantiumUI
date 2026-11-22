@@ -341,6 +341,32 @@ public class InstancedFillCollectorTests
         foreach (var unit in units) unit.Dispose();
     }
 
+    // The keys of one frame are stamped with the time read once: a page of maps asks for thousands a frame, and reading
+    // the clock for each was the most the render thread spent on a frame panned.
+    [Test]
+    public void TheClockIsReadOnceAFrame_NotOnceAFill()
+    {
+        using var collector = NewCollector();
+        var reads = 0;
+        collector.Clock = () =>
+        {
+            reads++;
+            return Stopwatch.GetTimestamp();
+        };
+        collector.BeginFrame();
+        var units = new List<GeometryRenderUnit>();
+        for (var i = 0; i < 50; i++)
+        {
+            var unit = Unit(Brushes.Red, 10 + i);
+            units.Add(unit);
+            collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10 + i, 10 + i), transformSlot: 0);
+            collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10 + i, 10 + i), transformSlot: 0);
+        }
+
+        Assert.That(reads, Is.EqualTo(1), "a hundred fills in one frame, one look at the clock");
+        foreach (var unit in units) unit.Dispose();
+    }
+
     // A still scene walks nothing, so BeginFrame never comes: what it left behind has to go between walks too.
     [Test]
     public void AKeyLeftBehindGoesBetweenWalksToo()

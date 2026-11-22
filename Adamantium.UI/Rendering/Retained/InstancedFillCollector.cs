@@ -166,7 +166,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
         // before a key about to go gets an instance ring made for it below.
         // Past the budget only once more has come since the last look: when what is on screen alone is past it, nothing
         // can go, and looking again every frame would only cost.
-        var now = Clock();
+        var now = Stamp();
         if (now >= _sweepAt || _meshBytes > _meshBudget && _meshBytes > _bytesAtSweep)
         {
             Sweep(now);
@@ -305,7 +305,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     /// walking, and what it left behind was otherwise held until something moved. Render thread, any frame.</summary>
     public void Trim()
     {
-        var now = Clock();
+        var now = Stamp();
         if (!_disposed && now >= _sweepAt)
         {
             Sweep(now);
@@ -385,6 +385,23 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
 
     /// <summary>Where the time a key was last asked for is read from, in <see cref="Stopwatch"/> ticks.</summary>
     internal Func<long> Clock { get; set; } = Stopwatch.GetTimestamp;
+
+    // The time the keys asked for are stamped with: read once a frame, not once a fill - a page of maps asks for
+    // thousands a frame, and reading the clock for each was the most the render thread spent on a frame panned. How old
+    // a key is matters to a frame, not to a tick.
+    private long _stamp;
+    private ulong _stampFrame = ulong.MaxValue;
+
+    // Reads the clock now - a walk, a trim - and stamps this device frame with it.
+    private long Stamp()
+    {
+        _stamp = Clock();
+        _stampFrame = _device.FrameTicket;
+        return _stamp;
+    }
+
+    // The stamp of this device frame - a patch frame asks for keys between walks too - read anew when the frame is new.
+    private long Now() => _device.FrameTicket == _stampFrame ? _stamp : Stamp();
 
     // Drops keys nobody has asked for in a while (changing meshes leave a new key each time), then, past the budget, the
     // ones asked for longest ago - never one a flush record still replays. Keys left that may go cold later wake the
@@ -1518,8 +1535,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     // Build (once) the immutable vtx/idx buffers for a key's shared local mesh. Returns null until it has a drawable mesh.
     private KeySegment GetOrCreate(GeometryKey key, FrozenMesh mesh)
     {
-        // The clock, not the walk's start: a patch frame asks for keys between walks too.
-        var now = Clock();
+        var now = Now();
         if (_keys.TryGetValue(key, out var seg) && seg.MeshUploaded)
         {
             seg.LastUsed = now;

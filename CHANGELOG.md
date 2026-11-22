@@ -914,6 +914,10 @@ All packages share one version.
 
 ### Fixed
 
+- The render thread read the clock for every fill of every frame - a page of maps asks for thousands - to stamp when a
+  shared mesh was last used, and that was the most it spent on a frame panned or zoomed. `InstancedFillCollector`
+  reads it once a device frame - at a walk, a trim, or the first fill of a patch frame - and stamps every fill of the
+  frame with it; meshes still go as they did, by the frame they were last drawn in.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a
