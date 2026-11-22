@@ -860,6 +860,14 @@ All packages share one version.
 
 ### Fixed
 
+- A PDF page of long lines was slow to pan and zoom: the GPU drew every point of every line each frame, on screen or
+  not, closer than a pixel or not - the geologic map of Alaska's 1.14 million, 37 - 58 ms a frame. A long line of
+  straight pieces now has levels, as a map's lines have at its zoom levels: `PrepareForDrawing` works out once how
+  much each of its points matters, and `PdfPageDrawing.AtDetail` draws the line simplified so that every point left
+  out stays within a quarter of a pixel, a level's copy made the first time it is drawn - 20 - 100 ms for that map's
+  lines, once a level. A line that bends, or is dashed, is drawn as given, and a measurement still snaps to the line
+  as given. Panning that map at 100% takes 9 ms a frame, at 300% 21 - 31 ms, not 70; its long thin lines also come
+  out as thin as they are, not thickened by thousands of pieces overlapping their edges.
 - A PDF page of many filled paths held the window when it was first drawn - the geologic map of Alaska for 15 s: the
   tiles a curve fill is drawn from (`CurveTileTree`) were made on the loop thread, path after path.
   `Geometry.PrepareForDrawing` makes them and the outline on the calling thread - what recording the draw makes -
