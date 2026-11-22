@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Toolbars page: a command pressed on a bar says so below; a bar dragged by its grip into the first row and another into the lower tray; the upper tray narrowed, so a bar's last commands go to its menu, and one run from there; the lower tray locked from its menu, its grips gone; the bar of sections narrowed - its last section to the menu, then set to wrap onto a new line of the bar - and a table's contextual bar.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Toolbars page: a command pressed on a bar says so below; a bar dragged by its grip into the first row and another into the lower tray; the upper tray narrowed, so a bar's last commands go to its menu, and one run from there; the lower tray locked from its menu, its grips gone; the bar of sections narrowed - its last section to the menu, then set to wrap onto a new line of the bar - and a table's contextual bar, its source section in its context while it shows.">
   <Select Target="id=GalleryTabs/id=ToolBars" />
   <Wait Target="id=ToolBarsView/id=UpperTray" Timeout="20s" />
   <Invoke Target="id=CutCommand" />
@@ -24,7 +24,8 @@
   <RightClick Target="id=LowerTray" />
   <Click Target="name=Lock the toolbars" />
   <Wait Target="id=LowerTray/id=ExtraBar/id=PART_Grip" Offscreen="True" Timeout="5s" />
-  <!-- The tray of sections narrowed: the Alignment section goes to the bar's menu whole, and Center is pressed there. -->
+  <!-- The tray of sections narrowed: its last sections, Alignment among them, go to the bar's menu whole, and Center is
+       pressed there. -->
   <Expect Target="id=FontGroup" Type="Group" Name="Font" />
   <Set Target="id=SectionsWidth" Value="330" />
   <Wait Target="id=FormatBar/id=PART_OverflowButton" Offscreen="False" />
@@ -44,11 +45,17 @@
   <Set Target="id=SectionsWidth" Value="900" />
   <Expand Target="id=SectionsWrapping" />
   <Select Target="id=SectionsWrapping/name=NoWrap" />
-  <!-- In a table its bar shows; the tray's menu lists it apart, under its header, and does not switch it. -->
+  <!-- In a table its bar shows, and the Tables section it comes from is in its context; the tray's menu lists the bar
+       apart, under its header, and does not switch it. Out of the table, the bar goes and the section is out of it. -->
+  <Expect Target="id=TablesGroup" IsInContext="False" />
   <Toggle Target="id=InTable" />
   <Wait Target="id=TableBar" Offscreen="False" Timeout="5s" />
+  <Expect Target="id=TablesGroup" IsInContext="True" />
   <RightClick Target="id=SectionsTray" />
   <Wait Target="name=Contextual - shown where you are" />
   <Expect Target="type=MenuItem,name=Table" Enabled="False" Toggle="On" />
   <Key Keys="Escape" Into="id=MainWindow" />
+  <Toggle Target="id=InTable" />
+  <Wait Target="id=TableBar" Offscreen="True" Timeout="5s" />
+  <Expect Target="id=TablesGroup" IsInContext="False" />
 </Scenario>

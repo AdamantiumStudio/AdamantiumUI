@@ -11,6 +11,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -57,7 +58,39 @@ public class ToolBar : ItemsControl
     /// <summary>Whether the bar is shown by what the user is on - a table, a picture - rather than by the user, as a
     /// ribbon's contextual tab is: its tray's menu lists it apart, and does not switch it.</summary>
     public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.Register(nameof(IsContextual),
-        typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+        typeof(bool), typeof(ToolBar), new PropertyMetadata(false, OnContextualHeaderChanged));
+
+    /// <summary>The name of a contextual bar's context - a picture's tools, a table's - shown at the bar's start on a
+    /// label in its <see cref="Accent"/>, as the ribbon names a contextual group over its tabs, so the bar says what it is
+    /// and which context it goes with; automation reads it as the bar's help text. None, no label. A bar down the side
+    /// shows only its color for now.</summary>
+    public static readonly AdamantiumProperty ContextualHeaderProperty = AdamantiumProperty.Register(
+        nameof(ContextualHeader), typeof(object), typeof(ToolBar),
+        new PropertyMetadata(null, OnContextualHeaderChanged));
+
+    /// <summary>How <see cref="ContextualHeader"/> is drawn.</summary>
+    public static readonly AdamantiumProperty ContextualHeaderTemplateProperty = AdamantiumProperty.Register(
+        nameof(ContextualHeaderTemplate), typeof(DataTemplate), typeof(ToolBar), new PropertyMetadata(null));
+
+    /// <summary>Whether a contextual bar shows its <see cref="ContextualHeader"/>; off, only its color tells it apart.</summary>
+    public static readonly AdamantiumProperty ShowsContextualHeaderProperty = AdamantiumProperty.Register(
+        nameof(ShowsContextualHeader), typeof(bool), typeof(ToolBar),
+        new PropertyMetadata(true, OnContextualHeaderChanged));
+
+    private static readonly AdamantiumPropertyKey HasContextualHeaderPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasContextualHeader), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasContextualHeaderProperty = HasContextualHeaderPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey HasContextInOverflowPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasContextInOverflow), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasContextInOverflowProperty = HasContextInOverflowPropertyKey.Property;
+
+    private static readonly AdamantiumPropertyKey OverflowContextAccentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(OverflowContextAccent), typeof(Brush), typeof(ToolBar), new PropertyMetadata(default(Brush)));
+
+    public static readonly AdamantiumProperty OverflowContextAccentProperty = OverflowContextAccentPropertyKey.Property;
 
     /// <summary>The color of a contextual bar's context, washed behind the bar - the same as the ribbon's contextual
     /// group of that context (<see cref="RibbonContextualGroup.Accent"/>), so the two read as one. The theme's accent
@@ -176,6 +209,53 @@ public class ToolBar : ItemsControl
         set => SetValue(AccentProperty, value);
     }
 
+    public object ContextualHeader
+    {
+        get => GetValue(ContextualHeaderProperty);
+        set => SetValue(ContextualHeaderProperty, value);
+    }
+
+    public DataTemplate ContextualHeaderTemplate
+    {
+        get => GetValue<DataTemplate>(ContextualHeaderTemplateProperty);
+        set => SetValue(ContextualHeaderTemplateProperty, value);
+    }
+
+    public bool ShowsContextualHeader
+    {
+        get => GetValue<bool>(ShowsContextualHeaderProperty);
+        set => SetValue(ShowsContextualHeaderProperty, value);
+    }
+
+    /// <summary>Whether the bar's context label stands at its start: a contextual bar with a
+    /// <see cref="ContextualHeader"/> it shows.</summary>
+    public bool HasContextualHeader
+    {
+        get => GetValue<bool>(HasContextualHeaderProperty);
+        private set => SetValue(HasContextualHeaderPropertyKey, value);
+    }
+
+    /// <summary>Whether a section a shown context comes from (<see cref="ToolBarGroup.IsInContext"/>) is in the overflow
+    /// menu, so the chevron is marked in its color (<see cref="OverflowContextAccent"/>).</summary>
+    public bool HasContextInOverflow
+    {
+        get => GetValue<bool>(HasContextInOverflowProperty);
+        private set => SetValue(HasContextInOverflowPropertyKey, value);
+    }
+
+    /// <summary>The color of the context whose section is in the overflow menu - the first, when several are.</summary>
+    public Brush OverflowContextAccent
+    {
+        get => GetValue<Brush>(OverflowContextAccentProperty);
+        private set => SetValue(OverflowContextAccentPropertyKey, value);
+    }
+
+    private static void OnContextualHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var bar = (ToolBar)a;
+        bar.HasContextualHeader = bar.IsContextual && bar.ShowsContextualHeader && bar.ContextualHeader != null;
+    }
+
     /// <summary>Where the commands that do not fit on the bar's line go: <see cref="Controls.CommandWrapping.NoWrap"/>,
     /// to its overflow menu, the last first; <see cref="Controls.CommandWrapping.Wrap"/>, onto a new line of the bar, each
     /// whole, the bar growing across - a section is never split, and its rule is hidden where it begins a line.</summary>
@@ -267,6 +347,11 @@ public class ToolBar : ItemsControl
     private void Realize()
     {
         TakeCommandsOut();
+        foreach (var gone in _commands.OfType<ToolBarGroup>())
+        {
+            gone.Bar = null;
+        }
+
         ItemContainerGenerator.Clear();
         _commands.Clear();
         _overflowing.Clear();
@@ -282,6 +367,7 @@ public class ToolBar : ItemsControl
                 if (command is ToolBarGroup group)
                 {
                     group.Orientation = Orientation;
+                    group.Bar = this;
                 }
 
                 _commands.Add(command);
@@ -291,6 +377,7 @@ public class ToolBar : ItemsControl
         }
 
         MarkSeparators();
+        MarkContextInOverflow();
         InvalidateMeasure();
     }
 
@@ -574,6 +661,7 @@ public class ToolBar : ItemsControl
             }
 
             MarkSeparators();
+            MarkContextInOverflow();
         }
 
         HasOverflowItems = overflowing.Contains(true);
@@ -583,6 +671,25 @@ public class ToolBar : ItemsControl
         }
 
         return changed;
+    }
+
+    // Whether a section a shown context comes from is in the overflow menu, and in which context's color: the chevron
+    // then says it is there, as the section would on the bar.
+    internal void MarkContextInOverflow()
+    {
+        var found = false;
+        Brush accent = null;
+        for (var i = 0; i < _commands.Count && !found; i++)
+        {
+            if (_overflowing[i] && _commands[i] is ToolBarGroup { IsInContext: true, Visibility: not Visibility.Collapsed } group)
+            {
+                found = true;
+                accent = group.Accent;
+            }
+        }
+
+        HasContextInOverflow = found;
+        OverflowContextAccent = accent;
     }
 
     private bool Any(ToolBarOverflowMode mode) => _commands.Any(command => GetOverflowMode(command) == mode);

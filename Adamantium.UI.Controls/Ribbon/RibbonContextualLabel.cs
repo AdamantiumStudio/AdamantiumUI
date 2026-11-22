@@ -6,7 +6,9 @@ namespace Adamantium.UI.Controls;
 
 /// <summary>The name of a contextual group, standing in the tab row just before its run of tabs; placed by
 /// <see cref="Panels.RibbonTabPanel"/>. In the row, not over it, so a context appearing never changes the strip's
-/// height. Only a group that shows its header has one (<see cref="RibbonContextualGroup.ShowContextualHeader"/>).</summary>
+/// height. Only a group that shows its header has one (<see cref="RibbonContextualGroup.ShowContextualHeader"/>). A
+/// contextual <see cref="ToolBar"/> names its context on the same label, at its start
+/// (<see cref="ToolBar.ContextualHeader"/>), so the two read alike.</summary>
 public class RibbonContextualLabel : ContentControl
 {
     /// <summary>The group's color. Its own property rather than Background, so the theme decides how the color is

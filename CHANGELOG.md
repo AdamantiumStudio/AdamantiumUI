@@ -112,6 +112,18 @@ All packages share one version.
 - `ToolBar.IsContextual`: a bar shown by what the user is on - a table, a picture - as a ribbon's contextual tab. The
   tray's menu lists such bars apart, under `ToolBarTray.ContextualBarsHeader`, checked while shown and not switched;
   the user's bars then stand under `ToolBarTray.BarsHeader`. Each theme gives both its own words.
+- `ToolBarGroup.IsInContext` and `ToolBarGroup.Accent`: the section a shown context comes from - the one a picture or
+  a table was put in from - is framed and washed in the context's color while its contextual bar shows, so the two
+  read as kin at a glance; nothing moves for it. Gone to the overflow menu, it marks its bar's chevron in that color
+  (`ToolBar.HasContextInOverflow`, `ToolBar.OverflowContextAccent`). The frame's width and rounding are the theme's
+  `ToolBarContextFrameThickness` and `ToolBarContextFrameRadius` - the commands' rounding plus the room it stands past
+  them, so the curves run alike.
+- `ToolBar.ContextualHeader`: a contextual bar names its context at its start, before its commands, on the ribbon's
+  own label for a context (`RibbonContextualLabel`) on a plate in the bar's `Accent`, rounded as its commands are (the
+  ribbon's stays square to meet its tabs), so it says what it is and which context it
+  goes with, worded as the ribbon words it. `ContextualHeaderTemplate` draws the name; `ShowsContextualHeader` off
+  leaves only the color; `HasContextualHeader` says whether the label stands. Automation reads the context as the
+  bar's help text. A bar down the side shows no label for now - its color alone says it there.
 - `ToolBar.Accent`: a contextual bar is washed in its context's color in every theme, behind the whole bar at the
   theme's `ToolBarContextualWashOpacity`, so it reads apart from the bars always there. The same color as the ribbon's
   contextual group of that context (`RibbonContextualGroup.Accent`) ties the two together; unset, the theme's accent.
@@ -672,6 +684,10 @@ All packages share one version.
 - Breaking: `IDropGapPanel.TryGetDropSlot` gives a `DropSlot` instead of an index, `ShowDropGap` takes one
   (`DropSlot.None` closes the gap), and so does `VirtualizingPanel.TryGetDropSlot`; `TiledPanel` keeps its index-based
   methods.
+- A driven application starts where nobody sees it unless told otherwise: `LaunchOptions.VirtualDisplay` is true by
+  default, and `adam-auto start` hides it unless given `--visible` (`--virtual` is still taken). A run that needs the
+  desktop - input through the system's own pointer (`--os`, a real mouse) - says so with `VirtualDisplay = false` or
+  `--visible`; no other launch can forget it and show over someone's work.
 - Localization is the engine's `Adamantium.Localization` and its generator `Adamantium.Localization.Generators`, so
   code with no UI reads the same `.alang` files: `Languages`, `LocalizedStrings`, `ILanguageTable`, `LanguageFormat`,
   `LanguageTableAttribute` and `FormattedArgument` move from `Adamantium.UI.Core.Localization`, and `PluralRules`,

@@ -867,6 +867,153 @@ public class ToolBarTrayTests
         });
     }
 
+    // A contextual bar with its context's name says it at its start, on a label in its color, before its commands; a
+    // bar not contextual, one with no name, or one told not to show it has none.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextualBar_NamesItsContext_AtItsStart_OnALabelInItsColor(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0);
+        var green = new SolidColorBrush(Colors.SeaGreen);
+        table.Accent = green;
+        table.ContextualHeader = "Table Tools";
+        var root = Shown(Tray(table), 1000);
+        var label = (RibbonContextualLabel)table.GetTemplateChild("ContextualHeaderLabel");
+        var plate = (Border)table.GetTemplateChild("ContextualHeaderPlate");
+        var notContextual = plate.Visibility;
+        var firstCommand = table.Items.OfType<Button>().First();
+        var plainStart = At(firstCommand, root).X;
+
+        table.IsContextual = true;
+        Show(root);
+        var named = plate.Visibility;
+        var said = label.Content;
+        var plateEnd = At(plate, root).X + plate.RenderSize.Width;
+        var namedStart = At(firstCommand, root).X;
+        table.ShowsContextualHeader = false;
+        Show(root);
+        var hidden = plate.Visibility;
+        table.ShowsContextualHeader = true;
+        table.ContextualHeader = null;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(notContextual, Is.EqualTo(Visibility.Collapsed), "not contextual");
+            Assert.That(named, Is.EqualTo(Visibility.Visible));
+            Assert.That(said, Is.EqualTo("Table Tools"));
+            Assert.That(label.Content, Is.Null, "the name gone");
+            Assert.That(plate.Background, Is.SameAs(green), "in the bar's color");
+            Assert.That(label.GetVisualAncestors().Contains(plate), Is.True, "the ribbon's label, on the plate");
+            Assert.That(namedStart, Is.GreaterThanOrEqualTo(plateEnd), "before the commands");
+            Assert.That(namedStart, Is.GreaterThan(plainStart), "the commands make room for it");
+            Assert.That(hidden, Is.EqualTo(Visibility.Collapsed), "told not to show it");
+            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed), "no name");
+        });
+    }
+
+    // Down the side a contextual bar shows no label - its color alone says it there - while automation reads its
+    // context as the bar's help text either way, and the application's own help text before it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextualBarDownTheSide_ShowsNoLabel_ButAutomationReadsItsContext(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0);
+        table.IsContextual = true;
+        table.ContextualHeader = "Table Tools";
+        var tray = Tray(table);
+        tray.Orientation = Orientation.Vertical;
+        Shown(tray, 1000);
+        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
+        var peer = table.GetAutomationPeer();
+
+        var context = peer.HelpText;
+        AutomationProperties.SetHelpText(table, "Rows and columns");
+        var own = peer.HelpText;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(context, Is.EqualTo("Table Tools"));
+            Assert.That(own, Is.EqualTo("Rows and columns"));
+        });
+    }
+
+    // The section a shown context comes from is framed and washed in the context's color, and nothing moves for it; a
+    // section in no context has neither.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ASectionAContextComesFrom_IsFramedAndWashedInItsColor_AndNothingMoves(System.Type styleSet)
+    {
+        Use(styleSet);
+        var green = new SolidColorBrush(Colors.SeaGreen);
+        var tables = new ToolBarGroup { Header = "Tables", Accent = green };
+        tables.Items.Add(new Button { Width = CommandWidth, Height = 24, Content = "Table" });
+        var other = new ToolBarGroup { Header = "Align" };
+        other.Items.Add(new Button { Width = CommandWidth, Height = 24, Content = "Left" });
+        Style(tables);
+        Style(other);
+        var bar = new ToolBar { Header = "Insert", Items = { other, tables } };
+        var root = Shown(Tray(bar), 1000);
+        var command = tables.Items.OfType<Button>().Single();
+        var before = At(command, root);
+        var barWidth = bar.RenderSize.Width;
+
+        tables.IsInContext = true;
+        Show(root);
+        var frame = (Border)tables.GetTemplateChild("ContextFrame");
+        var wash = (Border)tables.GetTemplateChild("ContextWash");
+        var after = At(command, root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(frame.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(wash.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(frame.BorderBrush, Is.SameAs(green));
+            Assert.That(wash.Background, Is.SameAs(green));
+            Assert.That(frame.RenderSize.Width, Is.GreaterThan(command.RenderSize.Width), "round the commands");
+            Assert.That(after, Is.EqualTo(before), "nothing moves");
+            Assert.That(bar.RenderSize.Width, Is.EqualTo(barWidth).Within(0.5));
+            Assert.That(((UIComponent)other.GetTemplateChild("ContextFrame")).Visibility, Is.EqualTo(Visibility.Collapsed));
+        });
+    }
+
+    // A section a shown context comes from, gone to the overflow menu: its bar's chevron is marked in the context's color
+    // while it is in context, and no longer once it is not.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ASectionAContextComesFrom_InTheMenu_MarksTheChevron(System.Type styleSet)
+    {
+        Use(styleSet);
+        var green = new SolidColorBrush(Colors.SeaGreen);
+        var bar = Bar("Insert", 0, 0, commands: 6);
+        var tables = new ToolBarGroup { Header = "Tables", Accent = green, IsInContext = true };
+        tables.Items.Add(new Button { Width = CommandWidth, Height = 24, Content = "Table" });
+        Style(tables);
+        bar.Items.Add(tables);
+        var root = Shown(Tray(bar), 120);
+        var marked = bar.HasContextInOverflow;
+        var accent = bar.OverflowContextAccent;
+        var frame = (Border)bar.GetTemplateChild("OverflowContextFrame");
+        var drawn = frame.Visibility;
+        var drawnIn = frame.BorderBrush;
+        var chevron = (UIComponent)bar.GetTemplateChild("PART_OverflowButton");
+
+        tables.IsInContext = false;
+        Show(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bar.HasOverflowItems, Is.True, "short of room");
+            Assert.That(marked, Is.True);
+            Assert.That(accent, Is.SameAs(green));
+            Assert.That(drawn, Is.EqualTo(Visibility.Visible), "the chevron framed");
+            Assert.That(drawnIn, Is.SameAs(green));
+            Assert.That(frame.GetVisualAncestors().Contains(chevron), Is.True, "in the chevron, over its own states");
+            Assert.That(bar.HasContextInOverflow, Is.False, "out of context");
+            Assert.That(bar.OverflowContextAccent, Is.Null);
+            Assert.That(frame.Visibility, Is.EqualTo(Visibility.Collapsed));
+        });
+    }
+
     // Contextual bars are listed apart, under a header of their own, checked while shown and not switched by the user;
     // the user's bars get a header too. With no contextual bar the menu has no headers.
     [TestCaseSource(nameof(StyleSets))]
