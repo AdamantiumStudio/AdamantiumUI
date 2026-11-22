@@ -135,17 +135,33 @@ internal sealed class PdfPathBuilder
             }
 
             var figure = context.BeginFigure(subpath.Start, true, subpath.Closed);
-            for (var i = 0; i < subpath.Points.Count; i++)
+            var points = subpath.Points;
+            for (var i = 0; i < points.Count; i++)
             {
                 if (subpath.OnCurve[i])
                 {
-                    figure.CubicBezierTo(subpath.Points[i], subpath.Points[i + 1], subpath.Points[i + 2]);
+                    figure.CubicBezierTo(points[i], points[i + 1], points[i + 2]);
                     i += 2;
+                    continue;
+                }
+
+                // A run of straight pieces is one polyline: one segment for the run, not one for each piece.
+                var end = i + 1;
+                while (end < points.Count && !subpath.OnCurve[end])
+                {
+                    end++;
+                }
+
+                if (end - i == 1)
+                {
+                    figure.LineTo(points[i]);
                 }
                 else
                 {
-                    figure.LineTo(subpath.Points[i]);
+                    figure.PolylineLineTo(points.GetRange(i, end - i));
                 }
+
+                i = end - 1;
             }
 
             if (subpath.Closed)
