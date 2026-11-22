@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- A copy of an application started past `UIApplication.MaxInstances` hands its command line and the right to come to
+  the front to a running copy before it ends: `UIApplication.AnotherCopyStarted` (`AnotherCopyStartedEventArgs`,
+  raised on the loop thread) - a file to open, say, with the folder it was started in; not handled, the main window comes to the front. Under it
+  `InstanceSlot.StartListening`, `Asked` (`InstanceAskedEventArgs`) and `AskHolderAsync`: a process with no place asks
+  one holding a place over a pipe of the user's own.
 - `TrayIcon` and `UIApplication.TrayIcons`: an icon of the application's in the desktop's notification area - the
   application's own icon, a `ToolTip`, a `Command` (and `Clicked`) on a click or from the keyboard, a `ContextMenu`
   opened at the pointer on a right click - shown from the application's start, or from when it is added, while

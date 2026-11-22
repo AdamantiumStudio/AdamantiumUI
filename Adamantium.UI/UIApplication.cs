@@ -692,9 +692,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     /// <summary>How many copies of the application the user may have running at once; 0 (the default) has no limit. A
-    /// copy started past the limit ends in <see cref="Run()"/> before it shows anything. Copies are counted by the
-    /// application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives its
-    /// place up.</summary>
+    /// copy started past the limit hands its command line and the right to come to the front to a running one
+    /// (<see cref="AnotherCopyStarted"/>) and ends in <see cref="Run()"/> before it shows anything. Copies are counted
+    /// by the application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives
+    /// its place up.</summary>
     public int MaxInstances
     {
         get => GetValue<int>(MaxInstancesProperty);
@@ -1303,15 +1304,43 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
 
         var folder = Path.GetFullPath(ApplicationData.Folder);
-        _instanceSlot = InstanceSlot.TryTake("copies of " + (OperatingSystem.IsLinux() ? folder : folder.ToUpperInvariant()),
-            MaxInstances);
+        var name = "copies of " + (OperatingSystem.IsLinux() ? folder : folder.ToUpperInvariant());
+        _instanceSlot = InstanceSlot.TryTake(name, MaxInstances);
         if (_instanceSlot != null)
         {
+            _instanceSlot.Asked += OnAnotherCopyAsked;
+            _instanceSlot.StartListening();
             return true;
         }
 
-        Log.Logger.Information("{Count} copies of the application already run; this one ends", MaxInstances);
+        // Run has no thread of the application's yet to wait on: the ask is only pipes.
+        var handed = InstanceSlot.AskHolderAsync(name, MaxInstances, Environment.GetCommandLineArgs()[1..],
+            Environment.CurrentDirectory,
+            OperatingSystem.IsWindows() ? Win32WindowWorker.GiveUpForeground() : TakeActivationToken())
+            .GetAwaiter().GetResult();
+        Log.Logger.Information(handed
+            ? "{Count} copies of the application already run; one took this one's command line, and this one ends"
+            : "{Count} copies of the application already run, none answered; this one ends", MaxInstances);
         return false;
+    }
+
+    // Asked on a thread of the pool: answered on the loop thread, once it runs.
+    private void OnAnotherCopyAsked(object sender, InstanceAskedEventArgs e)
+    {
+        var started = new AnotherCopyStartedEventArgs(e.Arguments, e.WorkingDirectory);
+        LoopSignal.Post(() =>
+        {
+            if (e.ActivationToken != null)
+            {
+                AcceptActivationToken(e.ActivationToken);
+            }
+
+            AnotherCopyStarted?.Invoke(this, started);
+            if (!started.Handled && MainWindow is { } window)
+            {
+                _ = ExecuteOnUIThreadAsync(window.Activate);
+            }
+        });
     }
 
     private void StartLoop()
@@ -2431,6 +2460,12 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     public event EventHandler<EventArgs> Started;
+
+    /// <summary>A copy started past <see cref="MaxInstances"/> handed this one its command line - a file to open, say -
+    /// and the right to come to the front; raised on the loop thread. Not handled, the main window comes to the front.
+    /// </summary>
+    public event EventHandler<AnotherCopyStartedEventArgs> AnotherCopyStarted;
+
     public event EventHandler<EventArgs> ShuttingDown;
     public event EventHandler<EventArgs> UIThreadExiting;
     public event EventHandler<EventArgs> Stopped;
