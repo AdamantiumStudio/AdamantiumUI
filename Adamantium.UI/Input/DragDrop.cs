@@ -257,6 +257,8 @@ public static partial class DragDrop
 
         if (!PressedOnDragHandle(input, e.Pointer)) return;   // the source has a grip and this press missed it
 
+        // The press means a drag here, not a selection in the text it landed on.
+        e.IsTakenForDrag = true;
         _pointer = e.Pointer;
         _source = input;
         _startScreen = DragPointer.GetScreenPosition();

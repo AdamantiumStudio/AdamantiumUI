@@ -14,4 +14,8 @@ public class PointerPressedEventArgs : PointerEventArgs
 
     /// <summary>1 for a single press, 2 for a double one, and so on.</summary>
     public int ClickCount { get; internal set; } = 1;
+
+    /// <summary>Whether something the press landed in took it for a drag, as it tunneled down: what is dragged is picked
+    /// up by it, so text under the pointer does not select from it or take the keyboard.</summary>
+    public bool IsTakenForDrag { get; set; }
 }

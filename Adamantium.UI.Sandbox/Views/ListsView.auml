@@ -32,41 +32,6 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- One list of tiles grouped by kind: each group's header a line of the wrap panel, its tiles under it. A tile
-             dragged opens a gap where it would land - in its own group or another, which it then joins. -->
-        <TextBlock x:Name="GroupsLabel" Text="{Localize ListsStrings.GroupsTitle}" FontSize="18" Margin="0,24,0,8"/>
-        <ItemsControl Width="340" HorizontalAlignment="Left" ItemsSource="{Binding Bodies}"
-                      AutomationProperties.AutomationId="GroupedBodies"
-                      AutomationProperties.LabeledBy="{Binding ElementName=GroupsLabel}"
-                      DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropBodyCommand}">
-            <ItemsControl.GroupStyle>
-                <GroupStyle CanCollapse="True">
-                    <GroupStyle.HeaderTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}" Margin="4,8,4,4"
-                                       Foreground="{ResourceReference TextFillColorSecondary}"/>
-                        </DataTemplate>
-                    </GroupStyle.HeaderTemplate>
-                </GroupStyle>
-            </ItemsControl.GroupStyle>
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel ItemWidth="84" ItemHeight="40"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Width="80" Height="36" CornerRadius="4"
-                            Background="{ResourceReference CardBackgroundFillColorDefault}"
-                            BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1"
-                            AutomationProperties.Name="{Binding Name}" TextBlock.IsTextSelectionEnabled="False"
-                            DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
-                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
         <!-- 20 000 rows through one CollectionView (filter, sort, page) shared by the list and the pager. -->
         <TextBlock x:Name="LargeLabel" Text="{Localize ListsStrings.LargeTitle}" FontSize="18" Margin="0,24,0,8"/>
 
@@ -153,6 +118,42 @@
         <DataPager AutomationProperties.AutomationId="CompactPager" Width="420" HorizontalAlignment="Left"
                    Source="{Binding Large}" DisplayMode="{Binding PagerMode}"
                    PageSizes="{Binding PageSteps}"/>
+
+        <!-- One list of tiles grouped by kind: each group's header a line of the wrap panel, its tiles under it. A tile
+             dragged opens a gap where it would land - in its own group or another, which it then joins. Last on the page,
+             so the lists above stay where a finger and the scenarios find them. -->
+        <TextBlock x:Name="GroupsLabel" Text="{Localize ListsStrings.GroupsTitle}" FontSize="18" Margin="0,24,0,8"/>
+        <ItemsControl Width="340" HorizontalAlignment="Left" ItemsSource="{Binding Bodies}"
+                      AutomationProperties.AutomationId="GroupedBodies"
+                      AutomationProperties.LabeledBy="{Binding ElementName=GroupsLabel}"
+                      DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropBodyCommand}">
+            <ItemsControl.GroupStyle>
+                <GroupStyle CanCollapse="True">
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" Margin="4,8,4,4"
+                                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </ItemsControl.GroupStyle>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel ItemWidth="84" ItemHeight="40"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Width="80" Height="36" CornerRadius="4"
+                            Background="{ResourceReference CardBackgroundFillColorDefault}"
+                            BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1"
+                            AutomationProperties.Name="{Binding Name}"
+                            DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
+                        <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
     </StackPanel>
     </ScrollViewer>

@@ -941,6 +941,9 @@ All packages share one version.
 
 ### Fixed
 
+- Text on something dragged (`DragDrop.AllowDrag`) selected under the press that picked it up - a letter of a tile
+  highlighted, a double click selecting its word and taking the keyboard: a press a drag source takes is marked
+  (`PointerPressedEventArgs.IsTakenForDrag`), and text under it neither selects nor takes the focus.
 - A `ContentControl` without a template of its own showed data content as large text, passing its `ContentTemplate`
   (and `ContentTemplateSelector`) by: such content is now shown through the template.
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
