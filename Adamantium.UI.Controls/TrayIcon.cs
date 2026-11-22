@@ -68,6 +68,9 @@ public sealed class TrayIcon : FundamentalUIComponent
     /// <summary>The icon clicked, or picked from the keyboard.</summary>
     public event EventHandler Clicked;
 
+    /// <summary>The window its menu is open in; null while it is closed.</summary>
+    internal TrayMenuWindow MenuWindow => _menuWindow;
+
     /// <summary>One of the application's icons from now on: shown, if visible.</summary>
     internal void Place()
     {

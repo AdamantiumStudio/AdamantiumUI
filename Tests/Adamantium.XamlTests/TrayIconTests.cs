@@ -96,30 +96,70 @@ public class TrayIconTests
         icon.TakeAway();
     }
 
+    // Near the task bar at the bottom right, the menu is turned up and left: its window's corner is at the point.
     [Test]
-    public void ItsMenuAsked_OpensTheMenu_InAWindowOverTheMonitorsWorkArea()
+    public void ItsMenuAsked_OpensTheMenu_InAWindowOfItsSize_TurnedIntoTheWorkArea()
     {
         var menu = new ContextMenu { ItemsSource = new[] { "Show", "Exit" } };
         var icon = new TrayIcon { ContextMenu = menu };
         icon.Place();
 
-        _area.Shown.Single().AskMenu(new PixelPoint(1900, 1000));
-        LoopSignal.Drain();
+        AskMenu(icon, new PixelPoint(1900, 1000));
 
-        var window = menu.PlacementTarget is UIComponent room ? FocusManager.WindowOf(room) as WindowBase : null;
+        var window = icon.MenuWindow;
+        var card = (Adamantium.UI.Controls.Base.MeasurableUIComponent)menu.Popup.ChildValue;
         Assert.Multiple(() =>
         {
             Assert.That(menu.IsOpen, Is.True);
-            Assert.That(window, Is.Not.Null, "the menu is in a window of its own");
-            Assert.That(window?.Left, Is.EqualTo(0));
-            Assert.That(window?.ClientHeight, Is.EqualTo(1040), "the work area, the task bar left out");
-            Assert.That(menu.HorizontalOffset, Is.EqualTo(1900));
-            Assert.That(menu.VerticalOffset, Is.EqualTo(1000));
+            Assert.That(FocusManager.WindowOf((UIComponent)menu.PlacementTarget), Is.SameAs(window),
+                "the menu is in a window of its own");
+            Assert.That(window.ClientWidth, Is.EqualTo(card.DesiredSize.Width), "as wide as the menu");
+            Assert.That(window.ClientHeight, Is.EqualTo(card.DesiredSize.Height), "as tall as the menu");
+            Assert.That(window.Position.X + window.ClientWidth, Is.EqualTo(1900));
+            Assert.That(window.Position.Y + window.ClientHeight, Is.EqualTo(1000));
         });
 
         icon.TakeAway();
         LoopSignal.Drain();
         Assert.That(menu.IsOpen, Is.False, "taken away, the icon closes its menu");
+    }
+
+    // Asked as the desktop asks, then laid out as the loop lays the menu's window out, frame after frame: the menu opens
+    // once its window's template has put the menu's room into the window, and the window takes the menu's size.
+    private void AskMenu(TrayIcon icon, PixelPoint point)
+    {
+        _area.Shown.Single().AskMenu(point);
+        LoopSignal.Drain();
+        for (var frame = 0; frame < 6 && icon.MenuWindow is { } window; frame++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            ((IPopupHost)window).PopupLayer.UpdateLayout(new Size<double>(window.ClientWidth, window.ClientHeight));
+            LoopSignal.Drain();
+        }
+    }
+
+    [Test]
+    public void AMenuOfItems_Opens()
+    {
+        var menu = new ContextMenu();
+        menu.Items.Add(new Adamantium.UI.Controls.Primitives.MenuItem { Header = "Show" });
+        menu.Items.Add(new Adamantium.UI.Controls.Primitives.MenuItem { Header = "Along the bottom", IsCheckable = true });
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new Adamantium.UI.Controls.Primitives.MenuItem { Header = "Exit" });
+        var icon = new TrayIcon { ContextMenu = menu, DataContext = new object() };
+        icon.Place();
+
+        AskMenu(icon, new PixelPoint(1900, 1000));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True);
+            Assert.That(menu.Template, Is.Not.Null, "styled: a menu with no template shows nothing");
+            Assert.That(FocusManager.WindowOf((UIComponent)menu.PlacementTarget), Is.SameAs(icon.MenuWindow),
+                "opened in its window");
+        });
+        icon.TakeAway();
+        LoopSignal.Drain();
     }
 
     // A press on the task bar or another application's window never reaches the menu's window: it only stops being the
@@ -130,8 +170,7 @@ public class TrayIconTests
         var menu = new ContextMenu { ItemsSource = new[] { "Show", "Exit" } };
         var icon = new TrayIcon { ContextMenu = menu };
         icon.Place();
-        _area.Shown.Single().AskMenu(new PixelPoint(100, 100));
-        LoopSignal.Drain();
+        AskMenu(icon, new PixelPoint(100, 100));
         var window = (WindowBase)FocusManager.WindowOf((UIComponent)menu.PlacementTarget);
 
         window.IsActive = true;
@@ -150,8 +189,7 @@ public class TrayIconTests
         var menu = new ContextMenu { ItemsSource = new[] { "Show", "Exit" } };
         var icon = new TrayIcon { ContextMenu = menu };
         icon.Place();
-        _area.Shown.Single().AskMenu(new PixelPoint(100, 100));
-        LoopSignal.Drain();
+        AskMenu(icon, new PixelPoint(100, 100));
         var window = (WindowBase)FocusManager.WindowOf((UIComponent)menu.PlacementTarget);
 
         menu.IsOpen = false;
