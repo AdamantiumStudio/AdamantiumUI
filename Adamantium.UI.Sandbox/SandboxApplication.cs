@@ -23,6 +23,7 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         EnableGraphicsDebug = Environment.GetEnvironmentVariable("ADAM_VK_DEBUG") == "1";
         DesiredFPS = 300;
         this.UseAutomationAgent();
+        AddTrayIcon();
         if (Environment.GetEnvironmentVariable("ADAM_EVENT_TRACE") is { Length: > 0 } eventTrace)
         {
             try
@@ -35,6 +36,23 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
                 Serilog.Log.Logger.Warning(e, "ADAM_EVENT_TRACE: cannot write {Path}", eventTrace);
             }
         }
+    }
+
+    // An icon in the notification area: a click brings the window to the front, its menu does the same or ends the
+    // application.
+    private void AddTrayIcon()
+    {
+        var bringToFront = new MVVM.AdamantiumCommand(() => MainWindow?.Activate());
+        var menu = new UI.Controls.ContextMenu();
+        menu.Items.Add(new UI.Controls.Primitives.MenuItem { Header = "Show the sandbox", Command = bringToFront });
+        menu.Items.Add(new UI.Controls.Primitives.MenuItem
+        {
+            Header = "Exit", Command = new MVVM.AdamantiumCommand(ShutDown)
+        });
+        TrayIcons.Add(new UI.Controls.TrayIcon
+        {
+            ToolTip = "Adamantium UI Sandbox", Command = bringToFront, ContextMenu = menu
+        });
     }
 
     protected override Adamantium.Graphics.Core.GraphicsSettings CreateGraphicsSettings()

@@ -29,7 +29,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="QuantumBinding.Utils" Version="3.1.0" />
+        <QuantumBindingUtilsReference Include="QuantumBinding.Utils" />
     </ItemGroup>
 
 </Project>

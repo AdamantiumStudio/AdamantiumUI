@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `TrayIcon` and `UIApplication.TrayIcons`: an icon of the application's in the desktop's notification area - the
+  application's own icon, a `ToolTip`, a `Command` (and `Clicked`) on a click or from the keyboard, a `ContextMenu`
+  opened at the pointer on a right click - shown from the application's start, or from when it is added, while
+  `IsVisible`, and taken away when taken out or when the application ends. The menu is the framework's own, in the
+  theme, opened in a clear window over the monitor's work area and closed by a press beside it, Escape, or another
+  window becoming the active one. `NotificationArea` (`INotificationAreaPlatform`, `INotificationAreaIcon`) is the
+  platform's side: on Windows `Shell_NotifyIconW` (AdamantiumEngine #359), the icons put back when the task bar
+  starts again. Not on Linux yet. The sandbox has one.
 - `INativeKeyboard.SendKey`, `SendText`, `SendsToOtherApplications` and `ForegroundWindowTitle`: keys and text put
   into the system's input for the window the system gives keys to - another application's - and that window's title,
   for an on-screen keyboard typing outside the application; false back when nothing got in. On Windows by `SendInput`
@@ -601,6 +609,8 @@ All packages share one version.
 
 ### Changed
 
+- A tool bar's first command stands 3 px clear of its grip, in every theme - under it on a bar down the side - so the grip
+  no longer reads as the command's edge. The room is the grip style's margin.
 - An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it
   is hit. `ArcSpan` (new) is the one statement of them: parametric degrees, as an HTML canvas measures them, so a
   sector's share of the area is its share of the turn; any start taken round the turn (`-90` starts at twelve); the
@@ -836,11 +846,15 @@ All packages share one version.
 - A PDF page of many filled paths held the window when it was first drawn - the geologic map of Alaska for 15 s: the
   tiles a curve fill is drawn from (`CurveTileTree`) were made on the loop thread, path after path.
   `Geometry.PrepareForDrawing` makes them and the outline on the calling thread - what recording the draw makes -
-  and `PdfPageDrawing.PrepareForDrawing` does so for a page's paths, clips and soft masks on all the cores, stopping
-  when cancelled. The tree is made with every tile's list in one buffer, a thread's buffers kept from tree to tree:
-  for that map's 3.8 million pieces, made on one thread, 0.6 GB, not 4 GB, the trees the same to the bit - the collections had stopped
-  the whole process for 4.4 s; nothing is held once the page is prepared. The page, prepared on 24 cores, is ready
-  1.3 s after it is written, not 5.6 s; `PdfTimings` measures it.
+  and `PdfPageDrawing.PrepareForDrawing` does so for a page's paths, clips and soft masks on one worker to a core,
+  stopping when cancelled; a path that fails is left to its draw. The tree is made with every tile's list in one
+  buffer, a worker's buffers kept from tree to tree: for that map's 3.8 million pieces on one thread 0.6 GB, not
+  4 GB, the trees the same to the bit - the collections had stopped the whole process for 4.4 s; nothing is held
+  once the page is prepared. The page, prepared on 24 cores, is ready 1.3 s after it is written, not 5.6 s;
+  `PdfTimings` measures it.
+- A universe of another process (`RemoteUniverseHost`) on the same GPU had its frames come through host memory, copied
+  there and back each frame: the GPU's UUID was read wrong, so the two GPUs seemed others. With Adamantium.Vulkan 1.3.2
+  and QuantumBinding.Utils 3.2.0 the frames are shared on the GPU.
 - A PDF page of long straight paths - a geologic map, a topographic one - took seconds to be written into its drawing
   and gigabytes to do it: each straight piece was a segment object of its own. A run of straight pieces is now one
   polyline segment, the same points. The geologic map of Alaska (USGS SIM 3340, sheet 1), opened and its page written,

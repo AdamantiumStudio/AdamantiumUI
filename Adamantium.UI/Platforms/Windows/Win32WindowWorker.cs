@@ -788,7 +788,7 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
     // the visual tree, which must NOT happen concurrently with the measure/arrange/render running on the loop thread.
     // The event args are built synchronously by the caller (capturing the message's transient state); only the raising
     // is marshaled onto the loop thread (drained at the start of Update). Order is preserved (a single FIFO queue).
-    private static void DispatchInput(Action raise)
+    internal static void DispatchInput(Action raise)
     {
         var dispatcher = Threading.Dispatcher.CurrentDispatcher;
         if (dispatcher != null) dispatcher.Post(raise);

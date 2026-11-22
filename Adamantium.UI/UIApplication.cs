@@ -701,6 +701,63 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         set => SetValue(MaxInstancesProperty, value);
     }
 
+    /// <summary>The application's icons in the desktop's notification area: shown from its start, or from when they are
+    /// added, until they are taken out or it ends.</summary>
+    private TrackingCollection<TrayIcon> _trayIcons;
+    private bool _trayIconsPlaced;
+
+    public TrackingCollection<TrayIcon> TrayIcons
+    {
+        get
+        {
+            if (_trayIcons == null)
+            {
+                _trayIcons = new TrackingCollection<TrayIcon>();
+                _trayIcons.CollectionChanged += OnTrayIconsChanged;
+            }
+
+            return _trayIcons;
+        }
+    }
+
+    private void OnTrayIconsChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        // A move keeps the icon where it is.
+        if (!_trayIconsPlaced || e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Move)
+        {
+            return;
+        }
+
+        foreach (TrayIcon icon in e.OldItems ?? Array.Empty<TrayIcon>())
+        {
+            icon.TakeAway();
+        }
+
+        foreach (TrayIcon icon in e.NewItems ?? Array.Empty<TrayIcon>())
+        {
+            icon.Place();
+        }
+    }
+
+    // Placed once the platform is up, which is what puts them on the desktop.
+    private void PlaceTrayIcons()
+    {
+        _trayIconsPlaced = true;
+        foreach (var icon in _trayIcons ?? [])
+        {
+            icon.Place();
+        }
+    }
+
+    private void TakeTrayIconsAway()
+    {
+        _trayIconsPlaced = false;
+        foreach (var icon in _trayIcons ?? [])
+        {
+            icon.TakeAway();
+        }
+    }
+
     /// <summary>The language the application shows. Setting it switches every string while the application runs.</summary>
     public string Language
     {
@@ -1428,6 +1485,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void OnStartupInternal()
     {
+        PlaceTrayIcons();
         Started?.Invoke(this, EventArgs.Empty);
         OnStartup();
     }
@@ -2270,6 +2328,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
 
         _splash?.Abandon();
+        TakeTrayIconsAway();
         Stopped?.Invoke(this, EventArgs.Empty);
         _instanceSlot?.Dispose();
         _instanceSlot = null;
