@@ -138,7 +138,12 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             if (_groupsStale)
             {
                 _groupsStale = false;
-                _groups = IsGrouped ? GroupsOf(Shown(), 0) : [];
+                var shown = Shown();
+                // The outer names as the items were put in order: an item whose name changed since, with no live
+                // grouping, stays in the group it is shown in until the view is made again - not a second one of a name.
+                _groups = IsGrouped
+                    ? GroupsOf(shown, 0, _outerNameOfView.Count == shown.Count ? _outerNameOfView : null)
+                    : [];
             }
 
             return _groups;
@@ -478,8 +483,9 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
                 SourceRemoved(e.OldStartingIndex, e.OldItems.Count);
                 break;
             case NotifyCollectionChangedAction.Replace when e.OldStartingIndex >= 0:
-                SourceRemoved(e.OldStartingIndex, e.OldItems.Count);
-                SourceInserted(e.OldStartingIndex, e.NewItems);
+                // Made again on the way - from the source as it is now, the new items in it - nothing is left to insert.
+                if (!SourceRemoved(e.OldStartingIndex, e.OldItems.Count))
+                    SourceInserted(e.OldStartingIndex, e.NewItems);
                 break;
             default:
                 Rebuild();
@@ -527,7 +533,8 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             _outerNameOfView.RemoveAt(position);
     }
 
-    private void SourceRemoved(int sourceIndex, int count)
+    // True when the view was made again from the source instead.
+    private bool SourceRemoved(int sourceIndex, int count)
     {
         for (var i = count - 1; i >= 0; i--)
         {
@@ -538,7 +545,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
                 if (IsGrouped && !RemovalKeepsGroupOrder(found))
                 {
                     Rebuild();   // the groups change order: made again, from the source as it is now
-                    return;
+                    return true;
                 }
 
                 var item = _view[found];
@@ -551,6 +558,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         }
 
         ShiftSourceIndexes(sourceIndex, -count);
+        return false;
     }
 
     private void ShiftSourceIndexes(int fromSourceIndex, int delta)
@@ -883,14 +891,15 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     // The items in groups by the level's description, the levels below within. The view is in group order already, so a
     // group is a run of items of one name.
-    private List<CollectionViewGroup> GroupsOf(List<object> items, int level)
+    private List<CollectionViewGroup> GroupsOf(List<object> items, int level, IReadOnlyList<object> namesInOrder = null)
     {
         var description = GroupDescriptions[level];
         var names = new List<object>();
         var members = new List<List<object>>();
-        foreach (var item in items)
+        for (var index = 0; index < items.Count; index++)
         {
-            var name = description.GroupNameOf(item);
+            var item = items[index];
+            var name = namesInOrder != null ? namesInOrder[index] : description.GroupNameOf(item);
             if (names.Count == 0 || !Equals(names[^1], name))
             {
                 names.Add(name);

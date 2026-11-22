@@ -493,6 +493,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     // How long a header of each level is along the scroll axis; NaN until one of the level is measured.
     private readonly List<double> _headerExtents = [];
+    private readonly List<double> _longestInWindow = [];   // reused each pass
 
     /// <summary>How long a header of each level is along the scroll axis, the outermost first.</summary>
     private protected IReadOnlyList<double> HeaderExtents => _headerExtents;
@@ -527,16 +528,33 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     {
         SetHeaderWindow(window.FirstPlace, window.LastPlace);
         var places = Owner.GroupHeaderPlaces;
-        var changed = false;
+
+        // A level is as long as its longest header in view: two of one level that differ - one name wrapping - would
+        // otherwise each set it in turn, and the panel measure again for ever.
+        _longestInWindow.Clear();
         for (var place = window.FirstPlace; place <= window.LastPlace; place++)
         {
             var header = RealizeHeaderInWindow(place);
             header.Measure(constraint);
             var extent = alongHeight ? header.DesiredSize.Height : header.DesiredSize.Width;
             var level = places[place].Level;
-            if (level < _headerExtents.Count && Math.Abs(extent - _headerExtents[level]) > 0.5)
+            while (_longestInWindow.Count <= level)
             {
-                _headerExtents[level] = extent;
+                _longestInWindow.Add(double.NaN);
+            }
+
+            if (double.IsNaN(_longestInWindow[level]) || extent > _longestInWindow[level])
+            {
+                _longestInWindow[level] = extent;
+            }
+        }
+
+        var changed = false;
+        for (var level = 0; level < _longestInWindow.Count && level < _headerExtents.Count; level++)
+        {
+            if (!double.IsNaN(_longestInWindow[level]) && Math.Abs(_longestInWindow[level] - _headerExtents[level]) > 0.5)
+            {
+                _headerExtents[level] = _longestInWindow[level];
                 changed = true;
             }
         }

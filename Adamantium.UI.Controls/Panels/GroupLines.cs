@@ -201,6 +201,10 @@ internal sealed class GroupLines
 
             at = _expanded[group] ? 0 : _itemCount[group];
         }
+        else if (!_expanded[group])
+        {
+            at = _itemCount[group];   // past a folded group's header - the last one's, below all lines - as on it: its end
+        }
         else
         {
             var line = System.Math.Max(0, LineAt(group, along - itemsStart));

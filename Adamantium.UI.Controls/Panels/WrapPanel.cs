@@ -250,7 +250,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    private double _cellFlow = 1;        // cell size along the flow axis
    private double _cellScroll = 1;      // cell size along the scroll (wrap) axis
    private int _columns = 1;            // items per line
-   private int _lastFirstLine;          // remembered first visible line -> probe next pass
+   private int _probeItem;              // the first item in view last pass -> probed next pass
    private int _lastItemCount = -1;     // detect data changes -> re-establish the cached cell
 
    /// <summary>Grid metrics from the last virtualized measure (items-host mode): items per line, and the uniform cell
@@ -659,8 +659,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          var topLine = (int)Math.Floor(scrollOffset / _cellScroll);
          var firstLine = Math.Max(0, topLine - _bufferLines);
          var lastLine = Math.Min(lines - 1, firstLine + spanRows);
-         _lastFirstLine = firstLine;
          first = firstLine * _columns;
+         _probeItem = first;
          last = Math.Min(count - 1, (lastLine + 1) * _columns - 1);
          // The window is always the full visible range; SetWindow binds and measures (OnSlotBound) within the budget and
          // defers the rest to PendingIndices, shown as skeletons. GrowCell feeds back through _cellGrew.
@@ -841,7 +841,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          _bufferLines = ResolveBufferLines(effectiveViewport);
          var lead = _bufferLines * _cellScroll;
          window = _groupLines.Window(scrollOffset - lead, scrollOffset + effectiveViewport + lead);
-         _lastFirstLine = window.FirstItem / _columns;   // SeedCell probes the window's start next pass, not item 0
+         // SeedCell probes the window's first item next pass - not item 0, and not a line start of no group's.
+         _probeItem = window.FirstItem;
 
          _measuringHorizontal = horizontal;
          _cellGrew = false;
@@ -927,7 +928,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       if (heightExplicit) { if (horizontal) _cellScroll = Math.Max(1, ItemHeight); else _cellFlow = Math.Max(1, ItemHeight); }
       if (widthExplicit && heightExplicit) return;
 
-      var probeIndex = Math.Clamp(_lastFirstLine * Math.Max(1, _columns), 0, count - 1);
+      var probeIndex = Math.Clamp(_probeItem, 0, count - 1);
       var probe = (IMeasurableComponent)RealizeInWindow(probeIndex);
       probe.Measure(CellConstraint(horizontal));
       GrowCell(horizontal, probe.DesiredSize);

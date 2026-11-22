@@ -454,8 +454,15 @@ public class ItemsControlGroupingTests
         var onFolded = SlotAt(folded, 10, 10);
         var onOuter = SlotAt(nested, 10, 10);
 
+        // The last group folded: below its header, past all the lines, is still its end.
+        var lastFolded = Tiles(new Group("Physics", 7), new Group("Joints", 5));
+        lastFolded.GroupHeaderGenerator.HeaderAt(1).IsExpanded = false;
+        Lay(lastFolded, 300, 1000);
+        var belowTheLast = SlotAt(lastFolded, 10, 2 * Header + 2 * Tile + 10);
+
         Assert.Multiple(() =>
         {
+            Assert.That((belowTheLast.Index, NameOf(belowTheLast)), Is.EqualTo((12, "Joints")));
             Assert.That((onFolded.Index, NameOf(onFolded)), Is.EqualTo((7, "Physics")));
             Assert.That((onOuter.Index, NameOf(onOuter)), Is.EqualTo((0, "Box")));
         });
@@ -570,6 +577,79 @@ public class ItemsControlGroupingTests
             Assert.That(KeyboardNavigation.Move(FocusNavigationDirection.Up), Is.True);
             Assert.That(FocusManager.Focused, Is.SameAs(TileAt(5)), "up the column, into the physics");
         });
+    }
+
+    // Two headers of one level that differ - one name wrapping - settle at the longer: the panel does not ask for another
+    // measure on every pass.
+    [Test]
+    public void HeadersOfOneLevelThatDiffer_SettleAtTheLonger()
+    {
+        var list = List(Grouped(Parts(new Group("Physics", 3), new Group("Joints", 2)), nameof(Part.Kind)), new StackPanel());
+        list.GroupStyle[0].HeaderTemplate = new DataTemplate(() =>
+        {
+            var header = new Border();
+            header.SetBinding(Border.HeightProperty, new Adamantium.UI.Core.Data.Binding(nameof(CollectionViewGroup.Name))
+            {
+                Converter = new NameToHeight(),
+            });
+            return new TemplateResult { RootComponent = header };
+        });
+        var root = new Border { Width = 200, Height = 1000, Child = list };
+        for (var pass = 0; pass < 6; pass++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(LayoutManager.For(list).IsSettled, Is.True, "no measure asked for again");
+            Assert.That(HeaderBounds(list, 1).Y - HeaderBounds(list, 0).Y, Is.EqualTo(40 + 3 * ItemBounds(list, 0).Height));
+        });
+    }
+
+    private sealed class NameToHeight : Adamantium.UI.Core.Data.ValueConverter
+    {
+        public override object Convert(object value, System.Type targetType, object parameter,
+            System.Globalization.CultureInfo culture) => Equals(value, "Joints") ? 40.0 : 20.0;
+
+        public override object ConvertBack(object value, System.Type targetType, object parameter,
+            System.Globalization.CultureInfo culture) => throw new System.NotSupportedException();
+    }
+
+    // A folded group of a hundred thousand between two small open ones, all in view: a pass costs what the shown rows do,
+    // not what the folded ones would.
+    [TestCase(true)]
+    [TestCase(false)]
+    public void AHugeFoldedGroupInView_CostsLittle(bool wrap)
+    {
+        Panel MakePanel() => wrap ? new WrapPanel { ItemWidth = Tile, ItemHeight = Tile } : new StackPanel();
+        var folded = List(Grouped(Parts(new Group("A", 10), new Group("B", 100_000), new Group("C", 10)), nameof(Part.Kind)),
+            MakePanel());
+        Lay(folded, 300, 2000);
+        folded.GroupHeaderGenerator.HeaderAt(1).IsExpanded = false;
+        Lay(folded, 300, 2000);
+        var small = List(Grouped(Parts(new Group("A", 10), new Group("C", 10)), nameof(Part.Kind)), MakePanel());
+        Lay(small, 300, 2000);
+
+        var withFolded = PerPass(folded);
+        var without = PerPass(small);
+        TestContext.Out.WriteLine($"{(wrap ? "wrap" : "stack")}: {withFolded:F3} ms a pass with the folded group, {without:F3} without");
+
+        Assert.That(withFolded, Is.LessThan(without * 3 + 0.5), "the folded rows cost next to nothing");
+    }
+
+    private static double PerPass(ItemsControl list)
+    {
+        const int passes = 50;
+        var panel = list.ItemsHostPanel;
+        var watch = Stopwatch.StartNew();
+        for (var pass = 0; pass < passes; pass++)
+        {
+            panel.InvalidateMeasure();
+            panel.Measure(new Size<double>(300, 2000));
+        }
+
+        return watch.Elapsed.TotalMilliseconds / passes;
     }
 
     // A folded header the drag rests on opens.

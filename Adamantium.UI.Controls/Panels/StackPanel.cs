@@ -112,6 +112,10 @@ public class StackPanel : VirtualizingPanel
       var vertical = Orientation == Orientation.Vertical;
       if (ShowsGroups)
       {
+         // Not virtualized, a row is where it was stacked: one not stacked yet - added since - is nowhere to tell of.
+         if (!IsVirtualizing && (index >= _itemStarts.Count || Owner.ItemContainerGenerator.ContainerFromIndex(index) == null))
+            return false;
+
          rect = GroupedItemRect(index, vertical ? RenderSize.Width : RenderSize.Height);
          return true;
       }
@@ -495,9 +499,17 @@ public class StackPanel : VirtualizingPanel
       var folded = _groupLines.FoldedItems;
       foreach (var c in Owner.ItemContainerGenerator.SetWindow(window.FirstItem, window.LastItem, folded)) ParkContainer(c);
       double crossMax = 0;
+      var range = 0;
       for (var i = window.FirstItem; i <= window.LastItem; i++)
       {
-         if (Owner.ItemContainerGenerator.ContainerFromIndex(i) == null && IsFolded(folded, i)) continue;
+         // Past a folded group's rows in one step - a folded group can be thousands of them.
+         while (range < folded.Count && folded[range].Last < i) range++;
+         if (range < folded.Count && folded[range].Contains(i))
+         {
+            i = folded[range].Last;
+            continue;
+         }
+
          var container = (IMeasurableComponent)RealizeInWindow(i);
          container.Measure(childConstraint);
          crossMax = Math.Max(crossMax, vertical ? container.DesiredSize.Width : container.DesiredSize.Height);
@@ -512,16 +524,6 @@ public class StackPanel : VirtualizingPanel
 
       var mainExtent = Math.Max(0, _groupLines.Extent - gap);
       return vertical ? new Size<double>(crossMax, mainExtent) : new Size<double>(mainExtent, crossMax);
-   }
-
-   private static bool IsFolded(IReadOnlyList<ItemRange> folded, int index)
-   {
-      foreach (var range in folded)
-      {
-         if (range.Contains(index)) return true;
-      }
-
-      return false;
    }
 
    // Not virtualized: every item and every header at its own extent, stacked in order - a group's headers before its

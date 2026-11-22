@@ -77,6 +77,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     // A group's path: the names of the groups it is in and its own, outermost first - what keeps a group folded when the
     // groups are made again after a change of the items.
     private const char PathSeparator = '\u001F';
+    private const string NoName = "\u001E";
 
     /// <summary>How the groups of a grouped <see cref="ItemsSource"/> (a <see cref="Core.Collections.CollectionView"/> with
     /// group descriptions) are shown: one per level, the first the outermost. Empty shows no groups - the items alone.
@@ -157,7 +158,9 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         foreach (var entry in groups)
         {
             var group = (Core.Collections.CollectionViewGroup)entry;
-            var path = level == 0 ? group.Name?.ToString() ?? string.Empty : outerPath + PathSeparator + group.Name;
+            // A group of no name is not the group named "": its own mark.
+            var name = group.Name == null ? NoName : group.Name.ToString();
+            var path = level == 0 ? name : outerPath + PathSeparator + name;
             var expanded = !_collapsedGroups.Contains(path);
             places.Add(new GroupHeaderPlace(group, level, nextItem, expanded));
             _placePaths.Add(path);
@@ -436,7 +439,11 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     private static void OnItemsSourceChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        ((ItemsControl)a).ApplyItemsSource(e.NewValue as IEnumerable);
+        var list = (ItemsControl)a;
+        // Groups folded in one source are not folded in another that has groups of the same names.
+        list._collapsedGroups.Clear();
+        list._groupsStale = true;
+        list.ApplyItemsSource(e.NewValue as IEnumerable);
     }
 
     /// <summary>Applies a new ItemsSource to the effective item list. Base points <see cref="Items"/> straight at the

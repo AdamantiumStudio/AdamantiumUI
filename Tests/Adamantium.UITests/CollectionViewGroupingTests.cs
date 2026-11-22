@@ -152,6 +152,57 @@ public class CollectionViewGroupingTests
         });
     }
 
+    // An item replaced in the source by one of another group, where taking the old one changes the groups' order: the
+    // new item is shown once.
+    [Test]
+    public void AReplacedItem_IsShownOnce_EvenWhenTheGroupsChangeOrder()
+    {
+        var source = new TrackingCollection<Part> { Box, Body, Sphere };
+        var view = new CollectionView(source);
+        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Part.Kind)));
+
+        source[0] = Hinge;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(view.Count, Is.EqualTo(3));
+            Assert.That(view.Cast<Part>().Select(part => part.Name), Is.EqualTo(new[] { "Hinge", "Body", "Sphere" }));
+        });
+    }
+
+    public sealed class Changing(string kind) : System.ComponentModel.INotifyPropertyChanged
+    {
+        private string _kind = kind;
+
+        public string Kind
+        {
+            get => _kind;
+            set
+            {
+                _kind = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Kind)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    // With no live grouping, an item whose group changes stays where it is shown until the view is made again: the next
+    // change of the source does not split its old group into two of one name.
+    [Test]
+    public void AnItemWhoseGroupChanged_StaysInItsGroup_UntilTheViewIsMadeAgain()
+    {
+        var first = new Changing("A");
+        var source = new TrackingCollection<Changing> { first, new Changing("A"), new Changing("B") };
+        var view = new CollectionView(source);
+        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Changing.Kind)));
+
+        first.Kind = "B";
+        source.Add(new Changing("C"));
+
+        Assert.That(Names(view), Is.EqualTo(new object[] { "A", "B", "C" }));
+    }
+
     [Test]
     public void AnItemAddedOrTakenFromTheSource_ChangesTheGroups_TellingOnce()
     {
