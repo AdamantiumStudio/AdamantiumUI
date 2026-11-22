@@ -95,7 +95,8 @@ All packages share one version.
   `ToolBarContextFrameThickness` and `ToolBarContextFrameRadius` - the commands' rounding plus the room it stands past
   them, so the curves run alike.
 - `ToolBar.ContextualHeader`: a contextual bar names its context at its start, before its commands, on the ribbon's
-  own label for a context (`RibbonContextualLabel`) in the bar's `Accent`, so it says what it is and which context it
+  own label for a context (`RibbonContextualLabel`) on a plate in the bar's `Accent`, rounded as its commands are (the
+  ribbon's stays square to meet its tabs), so it says what it is and which context it
   goes with, worded as the ribbon words it. `ContextualHeaderTemplate` draws the name; `ShowsContextualHeader` off
   leaves only the color; `HasContextualHeader` says whether the label stands. Automation reads the context as the
   bar's help text. A bar down the side shows no label for now - its color alone says it there.

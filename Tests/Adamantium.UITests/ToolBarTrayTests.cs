@@ -879,18 +879,20 @@ public class ToolBarTrayTests
         table.ContextualHeader = "Table Tools";
         var root = Shown(Tray(table), 1000);
         var label = (RibbonContextualLabel)table.GetTemplateChild("ContextualHeaderLabel");
-        var notContextual = label.Visibility;
+        var plate = (Border)table.GetTemplateChild("ContextualHeaderPlate");
+        var notContextual = plate.Visibility;
         var firstCommand = table.Items.OfType<Button>().First();
         var plainStart = At(firstCommand, root).X;
 
         table.IsContextual = true;
         Show(root);
-        var named = label.Visibility;
-        var labelEnd = At(label, root).X + label.RenderSize.Width;
+        var named = plate.Visibility;
+        var said = label.Content;
+        var plateEnd = At(plate, root).X + plate.RenderSize.Width;
         var namedStart = At(firstCommand, root).X;
         table.ShowsContextualHeader = false;
         Show(root);
-        var hidden = label.Visibility;
+        var hidden = plate.Visibility;
         table.ShowsContextualHeader = true;
         table.ContextualHeader = null;
         Show(root);
@@ -899,12 +901,14 @@ public class ToolBarTrayTests
         {
             Assert.That(notContextual, Is.EqualTo(Visibility.Collapsed), "not contextual");
             Assert.That(named, Is.EqualTo(Visibility.Visible));
+            Assert.That(said, Is.EqualTo("Table Tools"));
             Assert.That(label.Content, Is.Null, "the name gone");
-            Assert.That(label.Accent, Is.SameAs(green), "in the bar's color");
-            Assert.That(namedStart, Is.GreaterThanOrEqualTo(labelEnd), "before the commands");
+            Assert.That(plate.Background, Is.SameAs(green), "in the bar's color");
+            Assert.That(label.GetVisualAncestors().Contains(plate), Is.True, "the ribbon's label, on the plate");
+            Assert.That(namedStart, Is.GreaterThanOrEqualTo(plateEnd), "before the commands");
             Assert.That(namedStart, Is.GreaterThan(plainStart), "the commands make room for it");
             Assert.That(hidden, Is.EqualTo(Visibility.Collapsed), "told not to show it");
-            Assert.That(label.Visibility, Is.EqualTo(Visibility.Collapsed), "no name");
+            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed), "no name");
         });
     }
 
@@ -920,7 +924,7 @@ public class ToolBarTrayTests
         var tray = Tray(table);
         tray.Orientation = Orientation.Vertical;
         Shown(tray, 1000);
-        var label = (RibbonContextualLabel)table.GetTemplateChild("ContextualHeaderLabel");
+        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
         var peer = table.GetAutomationPeer();
 
         var context = peer.HelpText;
@@ -929,7 +933,7 @@ public class ToolBarTrayTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(label.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed));
             Assert.That(context, Is.EqualTo("Table Tools"));
             Assert.That(own, Is.EqualTo("Rows and columns"));
         });
