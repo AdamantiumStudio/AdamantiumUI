@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Pdf.Interpretation;
@@ -27,5 +28,15 @@ internal sealed class PdfSubpath
         OnCurve.Clear();
         Closed = false;
         return this;
+    }
+
+    /// <summary>Moves its start and every point by <paramref name="by"/>.</summary>
+    public void Move(Vector2<double> by)
+    {
+        Start += by;
+        foreach (ref var point in CollectionsMarshal.AsSpan(Points))
+        {
+            point += by;
+        }
     }
 }
