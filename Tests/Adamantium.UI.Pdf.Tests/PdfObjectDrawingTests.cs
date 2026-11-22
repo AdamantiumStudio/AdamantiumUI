@@ -20,7 +20,7 @@ public class PdfObjectDrawingTests
         Assert.That(clip.Options.Clip, Is.InstanceOf<RectangleGeometry>());
         var drawn = session.All<DrawnGeometry>().Single();
         Assert.That(drawn.Depth, Is.EqualTo(1));
-        Assert.That(At(drawn.Transform, 5, 5), Is.EqualTo((40.0, 90.0)));
+        Assert.That(At(drawn, 5, 5), Is.EqualTo((40.0, 90.0)));
     }
 
     [Test]
@@ -222,8 +222,8 @@ public class PdfObjectDrawingTests
         pdf.AddStream("/Type /XObject /Subtype /Form /BBox [0 0 2 1]", "0 0 2 1 re f");
         var (_, session) = Draw(pdf, "");
         var drawn = session.All<DrawnGeometry>().Single();
-        Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((100.0, 50.0)));
-        Assert.That(At(drawn.Transform, 2, 1), Is.EqualTo((120.0, 40.0)));
+        Assert.That(At(drawn, 0, 0), Is.EqualTo((100.0, 50.0)));
+        Assert.That(At(drawn, 2, 1), Is.EqualTo((120.0, 40.0)));
 
         var (_, skipped) = Draw(pdf, "", new PdfPageDrawingOptions { SkipAnnotation = a => a.Subtype == "Square" });
         Assert.That(skipped.All<DrawnGeometry>(), Is.Empty);
@@ -259,7 +259,8 @@ public class PdfObjectDrawingTests
             Assert.That(drawn.Pen, Is.Not.Null, "the border is stroked");
             Assert.That(((SolidColorBrush)drawn.Pen.Brush).Color.B, Is.EqualTo(255), "in the link's blue");
             Assert.That(((SolidColorBrush)drawn.Pen.Brush).Color.R, Is.EqualTo(0));
-            Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((100.0, 50.0)), "in the link's rectangle");
+            // The border is drawn half its width inside the rectangle: its own corner is at (0.5, 0.5).
+            Assert.That(At(drawn, 0, 0, 0.5, 0.5), Is.EqualTo((100.0, 50.0)), "in the link's rectangle");
             Assert.That(Draw(plain, "").Session.All<DrawnGeometry>(), Is.Empty);
         });
     }
@@ -280,7 +281,7 @@ public class PdfObjectDrawingTests
                 "multiplied into the page");
             Assert.That(((SolidColorBrush)drawn.Brush).Color.B, Is.EqualTo(0), "in the highlight's yellow");
             Assert.That(((SolidColorBrush)drawn.Brush).Color.R, Is.EqualTo(255));
-            Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((100.0, 50.0)), "over its area");
+            Assert.That(At(drawn, 0, 0), Is.EqualTo((100.0, 50.0)), "over its area");
         });
     }
 

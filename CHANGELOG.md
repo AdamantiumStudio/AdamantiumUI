@@ -907,6 +907,18 @@ All packages share one version.
 
 ### Fixed
 
+- A PDF page was drawn whole every frame, however little of it a view showed, and drawn by as many draws as it has
+  paths, each walked by the renderer every frame: the geologic map of Alaska, panned at 400%, took 27 - 30 ms of the GPU
+  a frame. `PdfPageDrawing.Seen` draws only what meets a view - each draw's box, and a group's, worked out once where
+  the page is prepared (`PrepareForDrawing`); and the paths a page draws one after another with the same opaque paint,
+  in one part of the page, are joined into one draw (a fill by the nonzero rule whose figures all turn one way, a
+  stroke without dashes) - that map's
+  20,449 paths are 8,137 draws. A path placed by a translation of its own, as a map's exporter places each, is placed
+  by the corner of a 256-point square of the page instead, its points moved by the rest, so the paths of one part share
+  their matrix. Panning that map at 400% takes 1.8 - 4.9 ms of the GPU a frame; at 200% over land the renderer's thread
+  spends about a third less on a frame. Joined long lines come under their levels of detail too, and are drawn as thin
+  as they are.
+
 - A tree's rows (`FlatRowCollection`), expanded or collapsed, were put in and taken out one by one, the rows after them
   moved once a row: a branch's rows go in and out through `InsertRange` and `RemoveRange`, stored at once and told as
   one change (AdamantiumEngine #367). `CanvasTools`, `RowDefinitions` and `ColumnDefinitions` refuse a range with a
