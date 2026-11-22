@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `Displays.LargestScreen`: the monitor of the most pixels. A `RemoteUniverse` tells the host its size as it launches,
+  so frames that come through memory of the process keep one ring whatever size the view is resized to.
 - `PropertyGrid.AutoGenerateSectionsForMarked`: as `AutoGenerateSectionsFor`, for the items whose own type carries the
   attribute given - the components a library marks as its users' to add, of no one base type. A type below a marked one
   counts only if marked itself.
