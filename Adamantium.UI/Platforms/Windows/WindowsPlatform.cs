@@ -138,5 +138,6 @@ public class WindowsPlatform : IApplicationPlatform
         resolver.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
         resolver.RegisterSingleton<ISpellChecker, WindowsSpellChecker>();
         resolver.RegisterSingleton<Multiverse.Input.IGamepadBackend, WindowsGamepadBackend>();
+        resolver.RegisterSingleton<ISystemStartup, RunKeyStartup>();
     }
 }

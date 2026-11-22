@@ -54,6 +54,7 @@ public static class LinuxPlatform
         }
         container.RegisterSingleton<ISpellChecker, EnchantSpellChecker>();
         container.RegisterSingleton<IGamepadBackend, EvdevGamepadBackend>();
+        container.RegisterSingleton<ISystemStartup, AutostartFolderStartup>();
         WaylandPlatform.Initialize(container);
     }
 }

@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `ISystemStartup`, from the application's container: `IsOn` puts the application in the user's startup list or takes
+  it out - the Run key on Windows, the XDG autostart folder on Linux - and reads off when the system's own settings
+  turned it off (Task Manager's mark, `Hidden`, `X-GNOME-Autostart-enabled=false`) or the entry starts another program.
+  The system starts it with `ISystemStartup.Argument`, which `StartedTheApplication` tells of. Not on macOS yet.
 - `CollectionView` groups what it shows: `GroupDescriptions` (`PropertyGroupDescription` by a property, or a
   `GroupDescription` of one's own), `Groups` of `CollectionViewGroup` (`Name`, `Items`, `ItemCount`, `IsBottomLevel`),
   more levels nested inside. Groups come in the order of their first item after the filter and the ordering, a group
