@@ -41,13 +41,9 @@ internal sealed class RunKeyStartup : ISystemStartup
         {
             ForgetTurnedOff();
             if (value)
-            {
                 PutIn();
-            }
             else
-            {
                 TakeOut();
-            }
         }
     }
 

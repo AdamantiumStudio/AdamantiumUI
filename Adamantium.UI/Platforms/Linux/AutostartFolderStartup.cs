@@ -47,13 +47,9 @@ internal sealed class AutostartFolderStartup : ISystemStartup
         set
         {
             if (value)
-            {
                 PutIn();
-            }
             else
-            {
                 TakeOut();
-            }
         }
     }
 
