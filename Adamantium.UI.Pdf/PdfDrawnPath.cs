@@ -15,7 +15,8 @@ public sealed class PdfDrawnPath
         IsFilled = isFilled;
     }
 
-    /// <summary>Its outline, in its own units.</summary>
+    /// <summary>Its outline, in its own units; its <see cref="Geometry.Bounds"/> are worked out once it is processed -
+    /// <see cref="PdfPageDrawing.PrepareForDrawing"/> does, as does drawing it.</summary>
     public Geometry Geometry { get; }
 
     /// <summary>From its own units to the drawing's: the page's points, y down, from the crop box's top left.</summary>

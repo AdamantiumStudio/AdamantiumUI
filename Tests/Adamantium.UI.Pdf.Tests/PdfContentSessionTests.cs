@@ -34,6 +34,8 @@ public class PdfContentSessionTests
 
     private static Rect OnSheet(DrawnGeometry drawn)
     {
+        // Read back, the page's paths come as they are made, their bounds not worked out yet.
+        drawn.Geometry.RecalculateBounds();
         var box = drawn.Geometry.Bounds;
         var corners = new[]
         {

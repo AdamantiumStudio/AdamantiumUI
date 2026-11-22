@@ -881,6 +881,12 @@ All packages share one version.
 
 ### Fixed
 
+- Writing a PDF page of long paths into its drawing did work twice and grew lists anew: each path's bounds were
+  worked out as it was written - its every figure cut into contours - though they are worked out again where it is
+  processed; each subpath's lists grew from nothing; each run of straight pieces was copied once more than taken. A
+  path's bounds are now worked out where it is processed (`PdfDrawnPath.Geometry`), the subpaths of a painted path
+  are begun again for the next, and a run is handed on uncopied. With AdamantiumEngine #365, the geologic map of
+  Alaska's page is written in 3.0 s, not 3.6 s, allocating 1.7 GB, not 2.35 GB; a page of scrolling 2.7 s, not 3.7 s.
 - A PDF page of long lines was slow to pan and zoom: the GPU drew every point of every line each frame, on screen or
   not, closer than a pixel or not - the geologic map of Alaska's 1.14 million, 37 - 58 ms a frame. A long line of
   straight pieces now has levels, as a map's lines have at its zoom levels: `PrepareForDrawing` works out once how
