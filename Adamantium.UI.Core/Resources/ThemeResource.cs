@@ -11,7 +11,7 @@ public class ThemeResource : MarkupExtension
     // Live expressions created by Apply, per target, keyed by "property@priority". Lets a setter/trigger dispose the
     // exact expression it established (Remove) without disturbing a same-property expression at another priority - e.g.
     // a template's base {ThemeResource} sitting under a hover trigger's override. Weak keys: never pins a control.
-    private static readonly ConditionalWeakTable<IFundamentalUIComponent, Dictionary<(string Slot, object Token), ThemeResourceExpression>> _applied = new();
+    private static readonly ConditionalWeakTable<IAdamantiumComponent, Dictionary<(string Slot, object Token), ThemeResourceExpression>> _applied = new();
 
     public ThemeResource()
     {
@@ -29,8 +29,9 @@ public class ThemeResource : MarkupExtension
     /// <summary>Connects a live <see cref="ThemeResourceExpression"/> from the theme's <see cref="Key"/> property to
     /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and the runtime loader.
     /// A name the target has no property for connects nothing, and is reported through
-    /// <see cref="Diagnostics.PropertyTrace"/>.</summary>
-    public ThemeResourceExpression Apply(IFundamentalUIComponent target, string propertyName,
+    /// <see cref="Diagnostics.PropertyTrace"/>. A target outside the tree - a drawing of a dictionary icon - takes the
+    /// application's theme current when it connects, and that theme's changes live.</summary>
+    public ThemeResourceExpression Apply(IAdamantiumComponent target, string propertyName,
         ValuePriority priority = ValuePriority.Template, object token = null)
     {
         var property = target.GetProperty(propertyName);
@@ -55,7 +56,7 @@ public class ThemeResource : MarkupExtension
 
     /// <summary>Disposes the expression a setter/trigger established (closing its theme subscription) and clears the
     /// value it pushed - so leaving a trigger or detaching a style fully undoes a <c>{ThemeResource}</c>.</summary>
-    public static void Remove(IFundamentalUIComponent target, string propertyName, ValuePriority priority, object token = null)
+    public static void Remove(IAdamantiumComponent target, string propertyName, ValuePriority priority, object token = null)
     {
         if (!_applied.TryGetValue(target, out var map)) return;
         if (!map.Remove((propertyName + "@" + priority, token), out var expression)) return;
@@ -95,7 +96,7 @@ public class ThemeResource : MarkupExtension
 
     public override object ProvideObject(MarkupContext context)
     {
-        if (context?.TargetObject is IFundamentalUIComponent target && !string.IsNullOrEmpty(context.TargetPropertyName))
+        if (context?.TargetObject is IAdamantiumComponent target && !string.IsNullOrEmpty(context.TargetPropertyName))
             Apply(target, context.TargetPropertyName);
         return this;
     }
