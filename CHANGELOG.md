@@ -626,6 +626,15 @@ All packages share one version.
 
 ### Changed
 
+- What `UIApplication` offers stands where it belongs, so the class and its interfaces agree:
+  - on `IUIApplication`, for the application's own code: `UnhandledException`, `Language`, `StartupCancellation`,
+    `IsStarting`, `HoldSplash`, `RefreshRate`, `MinimumRefreshRate`, `MaximumRefreshRate`, `UnlimitedRefreshRate`;
+  - in the blueprint, for how it starts: `ApplicationBlueprint.EnableGraphicsDebug` (read before the graphics device is
+    made, as `MaxInstances` before anything), `PresentPolicy` and `TrayIcons`; a value set in code before `Run` wins,
+    and `UIApplication.PresentPolicy` is an `AdamantiumProperty` now for it;
+  - for automation and debugging, `IApplicationDiagnostics`, resolved from the application's container: `LoopRate`,
+    `FrameVerification`, `CycleFinished`, `IdleBlocker`, `WaitForIdleAsync`, `AttachDebugTool`, `DetachDebugTool` -
+    no longer members of `UIApplication` itself. `UIApplication.SwapchainTrailing` is internal.
 - A tool bar's first command stands 3 px clear of its grip, in every theme - under it on a bar down the side - so the grip
   no longer reads as the command's edge. The room is the grip style's margin.
 - An ellipse's angles mean the same however it is drawn - batched, tessellated, as a ring, into a PDF - and however it

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
+using Adamantium.UI.Diagnostics;
 
 namespace Adamantium.UI.Automation;
 
@@ -12,10 +13,12 @@ namespace Adamantium.UI.Automation;
 public sealed class ApplicationHost : IAutomationHost
 {
     private readonly UIApplication _application;
+    private readonly IApplicationDiagnostics _diagnostics;
 
     public ApplicationHost(UIApplication application)
     {
         _application = application;
+        _diagnostics = application.UIContext.Resolve<IApplicationDiagnostics>();
     }
 
     public IReadOnlyList<IWindow> Windows => _application.Windows;
@@ -49,13 +52,13 @@ public sealed class ApplicationHost : IAutomationHost
     {
         try
         {
-            await _application.WaitForIdleAsync().WaitAsync(timeout);
+            await _diagnostics.WaitForIdleAsync().WaitAsync(timeout);
         }
         catch (TimeoutException)
         {
             throw new AutomationException(
                 $"The application did not go idle within {timeout.TotalSeconds:0.#} s; it waits on " +
-                $"{_application.IdleBlocker ?? "nothing it can name"}.");
+                $"{_diagnostics.IdleBlocker ?? "nothing it can name"}.");
         }
     }
 

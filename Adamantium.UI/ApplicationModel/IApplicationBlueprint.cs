@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.UI.Controls;
 using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.ApplicationModel;
@@ -25,6 +27,9 @@ public interface IApplicationBlueprint
 
     /// <summary>The monitor a window with no place of its own opens on, by the end of its id.</summary>
     string DefaultScreen { get; }
+
+    /// <summary>The application's icons in the desktop's notification area, shown from its start.</summary>
+    IReadOnlyList<TrayIcon> TrayIcons { get; }
 
     /// <summary>Resources every part of the application finds by key, and the dictionaries they link.</summary>
     ResourceDictionary Resources { get; }

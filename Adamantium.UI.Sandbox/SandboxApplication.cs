@@ -28,7 +28,8 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         {
             try
             {
-                AttachDebugTool(new Diagnostics.EventTraceTool(eventTrace));
+                UIContext.Resolve<UI.Diagnostics.IApplicationDiagnostics>()
+                    .AttachDebugTool(new Diagnostics.EventTraceTool(eventTrace));
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException
                                           or NotSupportedException)
