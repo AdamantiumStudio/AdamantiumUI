@@ -125,26 +125,30 @@ public sealed class TrayIcon : FundamentalUIComponent
 
         OnUiThread(() =>
         {
-            _menuWindow ??= new TrayMenuWindow();
-            _menuWindow.Open(menu, e.Point);
+            // A window for each opening: the one before closes with its menu.
+            _menuWindow?.Dismiss();
+            var window = new TrayMenuWindow();
+            window.Closed += OnMenuWindowClosed;
+            _menuWindow = window;
+            window.Open(menu, e.Point);
         });
     }
 
-    private void CloseMenuWindow()
+    private void OnMenuWindowClosed(object sender, EventArgs e)
     {
-        if (_menuWindow == null)
+        var window = (TrayMenuWindow)sender;
+        window.Closed -= OnMenuWindowClosed;
+        if (ReferenceEquals(_menuWindow, window))
         {
-            return;
+            _menuWindow = null;
         }
-
-        var window = _menuWindow;
-        _menuWindow = null;
-        OnUiThread(() =>
-        {
-            window.Dismiss();
-            window.Close();
-        });
     }
+
+    private void CloseMenuWindow() => OnUiThread(() =>
+    {
+        _menuWindow?.Dismiss();
+        _menuWindow = null;
+    });
 
     // Windows are shown, placed and closed on the UI thread.
     private static void OnUiThread(Action action)

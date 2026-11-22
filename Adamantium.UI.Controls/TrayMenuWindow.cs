@@ -9,12 +9,15 @@ namespace Adamantium.UI.Controls;
 /// <summary>Where the menu of a <see cref="TrayIcon"/> opens: a menu shows only in a window, so this one, clear and
 /// borderless, covers the work area of the monitor the menu was asked on, and the menu opens in it as in any window -
 /// placed, flipped at the edges, closed by a press beside it or Escape. It closes as well when another window becomes
-/// the active one: a press on the task bar or another application's window never reaches it.</summary>
+/// the active one: a press on the task bar or another application's window never reaches it. One window for one opening:
+/// closed with its menu, so the application never counts a hidden window and no surface over a monitor stays behind.
+/// </summary>
 internal sealed class TrayMenuWindow : Window
 {
     private readonly Canvas _room = new() { Background = Brushes.Transparent };
     private ContextMenu _menu;
     private bool _wasActive;
+    private bool _dismissed;
 
     public TrayMenuWindow()
     {
@@ -31,10 +34,10 @@ internal sealed class TrayMenuWindow : Window
     /// <summary>Opens <paramref name="menu"/> at <paramref name="point"/> of the desktop, in physical pixels.</summary>
     public void Open(ContextMenu menu, PixelPoint point)
     {
-        Dismiss();
-        var screen = ScreenAt(point);
+        var screen = WindowPlacer.ScreenAt(point, Displays.Screens);
         if (screen == null)
         {
+            Dismiss();
             return;
         }
 
@@ -56,17 +59,20 @@ internal sealed class TrayMenuWindow : Window
     /// <summary>Closes the menu, if open, and the window with it.</summary>
     public void Dismiss()
     {
-        if (_menu == null)
+        if (_dismissed)
         {
             return;
         }
 
-        var menu = _menu;
-        _menu = null;
-        menu.PropertyChanged -= OnMenuPropertyChanged;
-        menu.IsOpen = false;
-        _wasActive = false;
-        Hide();
+        _dismissed = true;
+        if (_menu is { } menu)
+        {
+            _menu = null;
+            menu.PropertyChanged -= OnMenuPropertyChanged;
+            menu.IsOpen = false;
+        }
+
+        Close();
     }
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
@@ -94,26 +100,5 @@ internal sealed class TrayMenuWindow : Window
         {
             Dismiss();
         }
-    }
-
-    private static ScreenInfo ScreenAt(PixelPoint point)
-    {
-        ScreenInfo primary = null;
-        foreach (var screen in Displays.Screens)
-        {
-            var bounds = screen.Bounds;
-            if (point.X >= bounds.X && point.X < bounds.X + bounds.Width && point.Y >= bounds.Y
-                && point.Y < bounds.Y + bounds.Height)
-            {
-                return screen;
-            }
-
-            if (screen.IsPrimary)
-            {
-                primary = screen;
-            }
-        }
-
-        return primary;
     }
 }

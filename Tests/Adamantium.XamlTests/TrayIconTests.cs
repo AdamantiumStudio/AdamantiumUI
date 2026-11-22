@@ -142,6 +142,25 @@ public class TrayIconTests
         icon.TakeAway();
     }
 
+    // A window left only hidden is one the application still counts: one that closes with its last window would stay
+    // running, and a window over a whole monitor keeps its surface.
+    [Test]
+    public void ItsMenuClosed_ItsWindowIsClosed()
+    {
+        var menu = new ContextMenu { ItemsSource = new[] { "Show", "Exit" } };
+        var icon = new TrayIcon { ContextMenu = menu };
+        icon.Place();
+        _area.Shown.Single().AskMenu(new PixelPoint(100, 100));
+        LoopSignal.Drain();
+        var window = (WindowBase)FocusManager.WindowOf((UIComponent)menu.PlacementTarget);
+
+        menu.IsOpen = false;
+        LoopSignal.Drain();
+
+        Assert.That(window.IsClosed, Is.True);
+        icon.TakeAway();
+    }
+
     private sealed class Area : INotificationAreaPlatform
     {
         public List<Icon> Shown { get; } = [];

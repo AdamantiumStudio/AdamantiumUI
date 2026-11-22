@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Adamantium.UI.Core;
 using Adamantium.Win32;
 using Serilog;
@@ -16,28 +17,59 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
 
     private readonly object _lock = new();
     private readonly Dictionary<uint, Icon> _icons = new();
-    private readonly Win32NativeWindowWrapper _window;
-    private uint _lastId;
-
-    /// <summary>Made on the pump thread, which the hidden window belongs to.</summary>
-    public WindowsNotificationArea()
-    {
-        _window = new Win32NativeWindowWrapper($"AdamantiumNotificationAreaWindow {Guid.NewGuid()}", 0, 0, 0, 0, 0, 0, 0,
-            IntPtr.Zero);
-        _window.AddHook(OnMessage);
-    }
+    private Win32NativeWindowWrapper _window;
 
     public INotificationAreaIcon AddIcon(string toolTip)
     {
+        MakeWindow();
         Icon icon;
         lock (_lock)
         {
-            icon = new Icon(this, ++_lastId, toolTip);
-            _icons.Add(icon.Id, icon);
+            // The lowest free id: the shell tells an icon's id back in 16 bits.
+            var id = 1u;
+            while (_icons.ContainsKey(id))
+            {
+                id++;
+            }
+
+            icon = new Icon(this, id, toolTip);
+            _icons.Add(id, icon);
         }
 
         icon.Show();
         return icon;
+    }
+
+    // Made for the first icon - an application with none pays nothing - on the pump thread, which runs its messages.
+    private void MakeWindow()
+    {
+        if (Volatile.Read(ref _window) != null)
+        {
+            return;
+        }
+
+        var dispatcher = Threading.Dispatcher.CurrentDispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            MakeWindowHere();
+        }
+        else
+        {
+            dispatcher.Invoke(MakeWindowHere);
+        }
+    }
+
+    private void MakeWindowHere()
+    {
+        if (_window != null)
+        {
+            return;
+        }
+
+        var window = new Win32NativeWindowWrapper($"AdamantiumNotificationAreaWindow {Guid.NewGuid()}", 0, 0, 0, 0, 0, 0,
+            0, IntPtr.Zero);
+        window.AddHook(OnMessage);
+        Volatile.Write(ref _window, window);
     }
 
     private void Remove(Icon icon)
@@ -78,16 +110,17 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
             }
         }
 
+        // Raised on the loop thread, where the controls that answer live.
         if (happened is NotifyIconEvent.Select or NotifyIconEvent.KeySelect)
         {
-            Tell(target.RaiseClicked);
+            Win32WindowWorker.DispatchInput(target.RaiseClicked);
         }
         else if (happened == (uint)WindowMessages.Contextmenu)
         {
             // Where, in the version 4 form: the anchor's screen point in wParam, each half signed.
             var anchor = (long)wParam;
             var point = new PixelPoint((short)(anchor & 0xFFFF), (short)((anchor >> 16) & 0xFFFF));
-            Tell(() => target.RaiseMenuAsked(point));
+            Win32WindowWorker.DispatchInput(() => target.RaiseMenuAsked(point));
         }
 
         return IntPtr.Zero;
@@ -99,14 +132,6 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         {
             return [.. _icons.Values];
         }
-    }
-
-    // Raised on the loop thread, where the controls that answer live.
-    private static void Tell(Action raise)
-    {
-        var dispatcher = Threading.Dispatcher.CurrentDispatcher;
-        if (dispatcher != null) dispatcher.Post(raise);
-        else raise();
     }
 
     private sealed class Icon(WindowsNotificationArea area, uint id, string toolTip) : INotificationAreaIcon
