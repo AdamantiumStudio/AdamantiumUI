@@ -14,5 +14,9 @@ public class ColumnDefinitions:TrackingCollection<ColumnDefinition>
          
    }
 
-   protected override void CheckItems(ReadOnlySpan<ColumnDefinition> range) => ThrowIfAnyNull(range);
+   protected override void CheckItems(ReadOnlySpan<ColumnDefinition> range)
+   {
+      base.CheckItems(range);
+      ThrowIfAnyNull(range);
+   }
 }

@@ -13,7 +13,11 @@ public class UITrackingCollection<T> : TrackingCollection<T> where T : Adamantiu
         newItem.ComponentUpdated += OnComponentUpdated;
     }
 
-    protected override void CheckItems(System.ReadOnlySpan<T> range) => ThrowIfAnyNull(range);
+    protected override void CheckItems(System.ReadOnlySpan<T> range)
+    {
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
+    }
 
     protected override void OnInsert(int index, System.ReadOnlySpan<T> range)
     {

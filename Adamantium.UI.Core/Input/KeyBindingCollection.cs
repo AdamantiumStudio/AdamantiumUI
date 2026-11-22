@@ -22,7 +22,11 @@ public sealed class KeyBindingCollection : TrackingCollection<KeyBinding>
         }
     }
 
-    protected override void CheckItems(ReadOnlySpan<KeyBinding> range) => ThrowIfAnyNull(range);
+    protected override void CheckItems(ReadOnlySpan<KeyBinding> range)
+    {
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
+    }
 
     protected override void OnInsert(int index, ReadOnlySpan<KeyBinding> range)
     {

@@ -11,7 +11,11 @@ public class BehaviorCollection : TrackingCollection<Behavior>
         _adamantiumComponent = adamantiumComponent;
     }
 
-    protected override void CheckItems(System.ReadOnlySpan<Behavior> range) => ThrowIfAnyNull(range);
+    protected override void CheckItems(System.ReadOnlySpan<Behavior> range)
+    {
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
+    }
 
     protected override void OnInsert(int index, System.ReadOnlySpan<Behavior> range)
     {

@@ -14,5 +14,9 @@ public class RowDefinitions: TrackingCollection<RowDefinition>
          
    }
 
-   protected override void CheckItems(ReadOnlySpan<RowDefinition> range) => ThrowIfAnyNull(range);
+   protected override void CheckItems(ReadOnlySpan<RowDefinition> range)
+   {
+      base.CheckItems(range);
+      ThrowIfAnyNull(range);
+   }
 }
