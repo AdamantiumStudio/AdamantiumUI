@@ -34,6 +34,9 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     public static readonly AdamantiumProperty DefaultScreenProperty = AdamantiumProperty.Register(nameof(DefaultScreen),
         typeof(string), typeof(ApplicationBlueprint), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty MaxInstancesProperty = AdamantiumProperty.Register(nameof(MaxInstances),
+        typeof(int), typeof(ApplicationBlueprint), new PropertyMetadata(0));
+
     /// <summary>The window the application opens first.</summary>
     [TypeOf(typeof(Window))]
     public Type StartupWindow
@@ -93,6 +96,14 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     {
         get => GetValue<string>(DefaultScreenProperty);
         set => SetValue(DefaultScreenProperty, value);
+    }
+
+    /// <summary>How many copies of the application the user may have running at once; 0 (unset) has no limit. A copy
+    /// started past it hands its command line to a running one and ends.</summary>
+    public int MaxInstances
+    {
+        get => GetValue<int>(MaxInstancesProperty);
+        set => SetValue(MaxInstancesProperty, value);
     }
 
     /// <summary>Resources every part of the application finds by key, and the dictionaries they link.</summary>

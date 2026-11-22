@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Adamantium.Core.Shared;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.Building;
@@ -64,11 +65,11 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
-    /// <summary>Names the blueprint to the assembly, with its splash and startup windows when it names them, and writes the
-    /// entry point that runs the application. A blueprint whose markup failed (<paramref name="blueprintFullName"/> null)
-    /// is not named; the entry point is written all the same.</summary>
+    /// <summary>Names the blueprint to the assembly, with its splash and startup windows and its limit on copies when it
+    /// states them, and writes the entry point that runs the application. A blueprint whose markup failed
+    /// (<paramref name="blueprintFullName"/> null) is not named; the entry point is written all the same.</summary>
     public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string splashWindowQualifiedName,
-        string startupWindowQualifiedName, string applicationQualifiedName, string rootNamespace)
+        string startupWindowQualifiedName, int maxInstances, string applicationQualifiedName, string rootNamespace)
     {
         var textGenerator = new TextGenerator();
         textGenerator.WriteLine(_sourceGeneratorNotice);
@@ -76,7 +77,8 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         {
             var splash = splashWindowQualifiedName == null ? string.Empty : $", SplashWindow = typeof({splashWindowQualifiedName})";
             var startup = startupWindowQualifiedName == null ? string.Empty : $", StartupWindow = typeof({startupWindowQualifiedName})";
-            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}){splash}{startup})]");
+            var copies = maxInstances == 0 ? string.Empty : $", MaxInstances = {maxInstances.ToString(CultureInfo.InvariantCulture)}";
+            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}){splash}{startup}{copies})]");
             textGenerator.NewLine();
         }
 

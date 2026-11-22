@@ -695,7 +695,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// copy started past the limit hands its command line and the right to come to the front to a running one
     /// (<see cref="AnotherCopyStarted"/>) and ends in <see cref="Run()"/> before it shows anything. Copies are counted
     /// by the application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives
-    /// its place up.</summary>
+    /// its place up. The blueprint states it; a value set in code before <see cref="Run()"/> wins.</summary>
     public int MaxInstances
     {
         get => GetValue<int>(MaxInstancesProperty);
@@ -1298,6 +1298,13 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private bool TakeInstanceSlot()
     {
+        // From the attribute, not the blueprint: a copy past the limit ends before anything is made.
+        var blueprint = GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>();
+        if (blueprint is { MaxInstances: not 0 })
+        {
+            TakeFromBlueprint(MaxInstancesProperty, blueprint.MaxInstances);
+        }
+
         if (MaxInstances <= 0 || _instanceSlot != null)
         {
             return true;
