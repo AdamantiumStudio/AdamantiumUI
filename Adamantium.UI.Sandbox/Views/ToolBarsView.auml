@@ -78,7 +78,7 @@
                     <Button x:Name="SectionRightCommand" Content="{Localize ToolBarsStrings.Right}" Command="{Binding PressCommand}" CommandParameter="Right"/>
                 </ToolBarGroup>
             </ToolBar>
-            <ToolBar x:Name="TableBar" Header="{Localize ToolBarsStrings.Table}" IsContextual="True" Band="1"
+            <ToolBar x:Name="TableBar" Header="{Localize ToolBarsStrings.Table}" IsContextual="True" Accent="#3C8C5A" Band="1"
                      Visibility="{Binding InTable, Converter={BooleanToVisibilityConverter}}">
                 <Button x:Name="InsertRowCommand" Content="{Localize ToolBarsStrings.InsertRow}" Command="{Binding PressCommand}" CommandParameter="InsertRow"/>
                 <Button x:Name="DeleteRowCommand" Content="{Localize ToolBarsStrings.DeleteRow}" Command="{Binding PressCommand}" CommandParameter="DeleteRow"/>

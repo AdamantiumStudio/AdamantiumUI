@@ -15,6 +15,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
@@ -825,6 +826,45 @@ public class ToolBarTrayTests
         Shown(Tray(bar), 1000);
 
         Assert.That(new[] { narrow.RenderSize.Width, wide.RenderSize.Width }, Is.EqualTo(new[] { 30.0, 70.0 }));
+    }
+
+    // A bar made contextual is washed in its context's color behind the whole of it, its commands over the wash; an
+    // ordinary bar is not, and a bar no longer contextual loses it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextualBar_IsWashedBehindTheWholeBar_AnOrdinaryOneIsNot(System.Type styleSet)
+    {
+        Use(styleSet);
+        var home = Bar("Home", 0, 0);
+        var table = Bar("Table", 1, 0);
+        var root = Shown(Tray(home, table), 1000);
+        var wash = (UIComponent)table.GetTemplateChild("ContextualWash");
+        var before = wash.Visibility;
+        var green = new SolidColorBrush(Colors.SeaGreen);
+        table.IsContextual = true;
+        table.Accent = green;
+        Show(root);
+        var plain = ((UIComponent)home.GetTemplateChild("ContextualWash")).Visibility;
+        var grid = (Grid)wash.VisualParent;
+        var first = grid.Children[0];
+        var border = (Border)grid.VisualParent;
+        var washed = wash.Visibility;
+        var size = wash.RenderSize;
+
+        table.IsContextual = false;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo(Visibility.Collapsed), "not contextual yet");
+            Assert.That(washed, Is.EqualTo(Visibility.Visible));
+            Assert.That(((Border)wash).Background, Is.SameAs(green), "in its context's color");
+            Assert.That(size.Width, Is.EqualTo(border.RenderSize.Width - border.BorderThickness.Left
+                - border.BorderThickness.Right).Within(0.5), "the whole bar across");
+            Assert.That(size.Height, Is.EqualTo(border.RenderSize.Height - border.BorderThickness.Top
+                - border.BorderThickness.Bottom).Within(0.5), "the whole bar down");
+            Assert.That(first, Is.SameAs(wash), "drawn first, under the commands");
+            Assert.That(plain, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(wash.Visibility, Is.EqualTo(Visibility.Collapsed), "no longer contextual");
+        });
     }
 
     // Contextual bars are listed apart, under a header of their own, checked while shown and not switched by the user;

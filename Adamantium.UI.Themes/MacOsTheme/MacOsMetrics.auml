@@ -48,6 +48,8 @@
     <!-- A Mac toolbar's buttons stand apart, not shoulder to shoulder. -->
     <sys:Double x:Key="ToolBarSpacing">6</sys:Double>
     <sys:Double x:Key="ToolBarGripLength">14</sys:Double>
+    <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
+    <sys:Double x:Key="ToolBarContextualWashOpacity">0.25</sys:Double>
 
     <!-- A HAIRLINE, not a stroke. Fluent draws control borders 2 wide; a Mac's are one device pixel and are there to
          seat the control on its surface rather than to outline it. -->

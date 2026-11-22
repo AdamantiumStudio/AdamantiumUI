@@ -66,6 +66,7 @@
     <!-- A bar: a soft rounded group with no edge, as the Mac groups a toolbar's buttons. -->
     <Style Selector="ToolBar">
         <Setter Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
+        <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="Padding" Value="3"/>
         <Setter Property="Margin" Value="0,0,8,4"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
@@ -76,48 +77,53 @@
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="8"
-                            Padding="{TemplateBinding Padding}">
-                        <DockPanel>
-                            <!-- The grip: drawn by Thumb.ToolBarGrip below. -->
-                            <Thumb x:Name="PART_Grip"
-                                   Classes="ToolBarGrip"
-                                   DockPanel.Dock="Left"
-                                   Width="{ResourceReference ToolBarGripLength}"
-                                   Cursor="SizeAll"
-                                   AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
-                            <ToggleButton x:Name="PART_OverflowButton"
-                                          DockPanel.Dock="Right"
-                                          Width="{TemplateBinding OverflowButtonLength}"
-                                          MinWidth="0"
-                                          Padding="0"
-                                          Visibility="Collapsed"
-                                          IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
-                                          ToolTip="{Localize ToolBarStrings.MoreCommands}"
-                                          AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
-                                <Path Data="M0,0 L4,4 L8,0"
-                                      Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1.2"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </ToggleButton>
-                            <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
-                                        Orientation="{TemplateBinding Orientation}"
-                                        VerticalAlignment="Center"/>
-                            <Popup x:Name="PART_OverflowPopup"
-                                   Placement="Bottom"
-                                   PlacementAlignment="End"
-                                   KeepOpen="False"
-                                   IgnoreTargetPress="True"
-                                   IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
-                                <Border Background="{ResourceReference FlyoutSurfaceFill}"
-                                        BorderBrush="{ResourceReference ControlStrokeColorDefault}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Padding="5">
-                                    <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
-                                                Orientation="{TemplateBinding Orientation}"/>
-                                </Border>
-                            </Popup>
-                        </DockPanel>
+                            CornerRadius="8">
+                        <Grid>
+                            <!-- A contextual bar's wash: its context's accent, faint, behind the whole bar. -->
+                            <Border x:Name="ContextualWash" Background="{TemplateBinding Accent}"
+                                    CornerRadius="8"
+                                    Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
+                            <DockPanel Margin="{TemplateBinding Padding}">
+                                <!-- The grip: drawn by Thumb.ToolBarGrip below. -->
+                                <Thumb x:Name="PART_Grip"
+                                       Classes="ToolBarGrip"
+                                       DockPanel.Dock="Left"
+                                       Width="{ResourceReference ToolBarGripLength}"
+                                       Cursor="SizeAll"
+                                       AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
+                                <ToggleButton x:Name="PART_OverflowButton"
+                                              DockPanel.Dock="Right"
+                                              Width="{TemplateBinding OverflowButtonLength}"
+                                              MinWidth="0"
+                                              Padding="0"
+                                              Visibility="Collapsed"
+                                              IsChecked="{TemplateBinding IsOverflowOpen, Mode=TwoWay}"
+                                              ToolTip="{Localize ToolBarStrings.MoreCommands}"
+                                              AutomationProperties.Name="{Localize ToolBarStrings.MoreCommands}">
+                                    <Path Data="M0,0 L4,4 L8,0"
+                                          Stroke="{ResourceReference TextFillColorPrimary}" StrokeThickness="1.2"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </ToggleButton>
+                                <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
+                                            Orientation="{TemplateBinding Orientation}"
+                                            VerticalAlignment="Center"/>
+                                <Popup x:Name="PART_OverflowPopup"
+                                       Placement="Bottom"
+                                       PlacementAlignment="End"
+                                       KeepOpen="False"
+                                       IgnoreTargetPress="True"
+                                       IsOpen="{TemplateBinding IsOverflowOpen, Mode=TwoWay}">
+                                    <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="5">
+                                        <StackPanel x:Name="PART_OverflowItems" Spacing="{TemplateBinding Spacing}"
+                                                    Orientation="{TemplateBinding Orientation}"/>
+                                    </Border>
+                                </Popup>
+                            </DockPanel>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -145,6 +151,9 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsMoving" Value="true">
             <Setter Property="Opacity" Value="0.85"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsContextual" Value="true">
+            <Setter TargetName="ContextualWash" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
 

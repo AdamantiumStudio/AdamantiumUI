@@ -73,6 +73,8 @@
     <sys:Double x:Key="ToolBarOverflowButtonLength">20</sys:Double>
     <!-- Between two commands of a bar. -->
     <sys:Double x:Key="ToolBarSpacing">4</sys:Double>
+    <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
+    <sys:Double x:Key="ToolBarContextualWashOpacity">0.25</sys:Double>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- ── Insets ─────────────────────────────────────────────────────────────────────────────────────────────────
