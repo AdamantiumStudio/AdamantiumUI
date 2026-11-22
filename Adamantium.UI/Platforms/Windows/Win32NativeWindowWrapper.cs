@@ -9,7 +9,8 @@ namespace Adamantium.UI.Platforms.Windows;
 public class Win32NativeWindowWrapper : AdamantiumComponent, IDisposable
 {
     private const int ERROR_CLASS_ALREADY_EXISTS = 1410;
-    private const int ApplicationIconId = 32512;
+    /// <summary>The icon resource the application's executable carries as its own.</summary>
+    internal const int ApplicationIconId = 32512;
     private const string windowName = "AdamantiumWindow";
 
     public Win32NativeWindowWrapper(
