@@ -1,4 +1,3 @@
-using System;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
@@ -14,17 +13,17 @@ public static class ApplicationBuilder
     public static void Build(IDependencyContainer container)
     {
         container.RegisterSingleton<IGraphicsDeviceFactory, GraphicsDeviceFactory>();
-        if (OperatingSystem.IsWindows())
+        switch (Configuration.Platform)
         {
-            WindowsPlatform.Initialize(container);
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            MacOSPlatform.Initialize(container);
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            LinuxPlatform.Initialize(container);
+            case Platform.Windows:
+                WindowsPlatform.Initialize(container);
+                break;
+            case Platform.OSX:
+                MacOSPlatform.Initialize(container);
+                break;
+            case Platform.Linux:
+                LinuxPlatform.Initialize(container);
+                break;
         }
     }
 }

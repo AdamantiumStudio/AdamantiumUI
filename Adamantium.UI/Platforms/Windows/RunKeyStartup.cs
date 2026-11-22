@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.Versioning;
 using Adamantium.UI.Core;
 using Microsoft.Win32;
 
@@ -10,7 +9,6 @@ namespace Adamantium.UI.Platforms.Windows;
 /// <summary>The user's Run key: a value named after the application holds the command that starts it. Task Manager
 /// turns a value off without taking it out, in StartupApproved - an odd first byte; putting the application back in the
 /// list takes that mark away.</summary>
-[SupportedOSPlatform("windows")]
 internal sealed class RunKeyStartup : ISystemStartup
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";

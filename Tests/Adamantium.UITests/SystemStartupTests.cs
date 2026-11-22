@@ -72,7 +72,6 @@ public class SystemStartupTests
         Assert.That(RunKeyStartup().IsOn, Is.True);
     }
 
-    [SupportedOSPlatform("windows")]
     private RunKeyStartup RunKeyStartup() => new(RunKey, ApprovedKey, Name, Command);
 
     private AutostartFolderStartup FolderStartup() => new(_root, Name, "Test App", Exec);
