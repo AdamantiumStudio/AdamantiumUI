@@ -130,6 +130,11 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
         _width = launch.Width;
         _height = launch.Height;
         launch.ViewerDeviceUuid = _deviceUuid;
+        if (Displays.LargestScreen is { } screen)
+        {
+            launch.LargestScreenWidth = (uint)Math.Round(screen.Bounds.Width);
+            launch.LargestScreenHeight = (uint)Math.Round(screen.Bounds.Height);
+        }
         await Host.LaunchAsync(launch, cancellationToken);
         Host.Resize(_width, _height, PixelsPerPoint);
         Host.Focus(HasKeyboard);

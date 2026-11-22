@@ -11,6 +11,7 @@ using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Resources;
@@ -80,6 +81,8 @@ public sealed class AutomationExecutor
                     return await _host.RunOnLoopAsync(Memory, timeout);
                 case AutomationCommand.DeviceMemory:
                     return await _host.RunOnLoopAsync(DeviceMemory, timeout);
+                case AutomationCommand.Stats:
+                    return await _host.RunOnLoopAsync(Stats, timeout);
                 case AutomationCommand.Theme:
                     return await ThemeAsync(request, timeout);
                 case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches or AutomationCommand.Pinch
@@ -126,6 +129,33 @@ public sealed class AutomationExecutor
         var info = GC.GetGCMemoryInfo();
         var text = FormattableString.Invariant(
             $"managed {GC.GetTotalMemory(false) / 1048576.0:0.0} MB, committed {info.TotalCommittedBytes / 1048576.0:0.0} MB, private {process.PrivateMemorySize64 / 1048576.0:0.0} MB, handles {process.HandleCount}");
+        return new AutomationReply { Ok = true, Text = text };
+    }
+
+    private long _gpuFramesRead;
+    private double _gpuMsRead;
+
+    private AutomationReply Stats()
+    {
+        long allFrames;
+        double allMilliseconds;
+        lock (RuntimeStats.WindowGpuLock)
+        {
+            allFrames = RuntimeStats.WindowGpuFrames;
+            allMilliseconds = RuntimeStats.WindowGpuMsTotal;
+        }
+
+        var frames = allFrames - _gpuFramesRead;
+        var milliseconds = allMilliseconds - _gpuMsRead;
+        _gpuFramesRead = allFrames;
+        _gpuMsRead = allMilliseconds;
+        // The frame rate is counted as frames are drawn: with none, it is that of the last ones.
+        var gpu = frames > 0
+            ? FormattableString.Invariant(
+                $"gpu {milliseconds / frames:0.0} ms a frame over {frames} frames since the last reading, the last {RuntimeStats.LastWindowGpuMs:0.0} ms; {RuntimeStats.WindowFps:0} frames a second")
+            : "no frame timed on the gpu since the last reading";
+        var text = FormattableString.Invariant(
+            $"{gpu}; layout {RuntimeStats.LastLayoutPassMs:0.0} ms, record {RuntimeStats.LastRecordMs:0.0} ms, apply {RuntimeStats.LastApplyMs:0.0} ms");
         return new AutomationReply { Ok = true, Text = text };
     }
 

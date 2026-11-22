@@ -11,6 +11,10 @@ public static class Displays
     /// <summary>The monitors connected now, in physical pixels; empty when the platform does not say.</summary>
     public static IReadOnlyList<ScreenInfo> Screens => Platform?.Screens ?? [];
 
+    /// <summary>The monitor of the most pixels, which shows the largest window filling one; null when the platform does
+    /// not say.</summary>
+    public static ScreenInfo LargestScreen => Screens.MaxBy(screen => screen.Bounds.Width * screen.Bounds.Height);
+
     /// <summary>Every monitor as one rectangle, in physical pixels, or an empty one when the platform does not say.
     /// Used to check that a remembered window position still exists - see <see cref="IsOnScreen"/>.</summary>
     public static Rect VirtualScreen => Platform?.VirtualScreen ?? default;

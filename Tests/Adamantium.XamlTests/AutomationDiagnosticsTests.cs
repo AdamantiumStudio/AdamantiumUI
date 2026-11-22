@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.FluentTheme;
 using NUnit.Framework;
@@ -70,6 +71,24 @@ public class AutomationDiagnosticsTests
             Assert.That(details.Bindings.Single().Binding, Is.EqualTo("Binding Caption"));
             Assert.That(details.Layout, Does.Contain("desired"));
             Assert.That(details.DataContext, Does.EndWith("Model"));
+        });
+    }
+
+    [Test]
+    public async Task Stats_GiveTheFramesGpuTimeSinceTheLastReading()
+    {
+        await using var session = await Driving(new StackPanel());
+        await session.StatsAsync();
+        RuntimeStats.WindowGpuFrames += 2;
+        RuntimeStats.WindowGpuMsTotal += 10 + 30;
+
+        var read = await session.StatsAsync();
+        var again = await session.StatsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(read, Does.StartWith("gpu 20.0 ms a frame over 2 frames since the last reading"));
+            Assert.That(again, Does.StartWith("no frame timed on the gpu since the last reading"));
         });
     }
 
