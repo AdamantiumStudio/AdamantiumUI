@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `CollectionView` groups what it shows: `GroupDescriptions` (`PropertyGroupDescription` by a property, or a
+  `GroupDescription` of one's own), `Groups` of `CollectionViewGroup` (`Name`, `Items`, `ItemCount`, `IsBottomLevel`),
+  more levels nested inside. Groups come in the order of their first item after the filter and the ordering, a group
+  left empty goes; after each change of what is shown they are a new list, told once by `PropertyChanged` and made when
+  next read. The view's collections are the framework's `TrackingCollection`: `GroupDescriptions`,
+  `LiveFilteringProperties`, `LiveSortingProperties`, and `SortDescriptionCollection` derives from it, no longer from
+  `ObservableCollection`.
 - `TreeView.HasChildrenPath`: as `TreeDataGrid`'s, the member saying whether a node has children, for children loaded
   only as its branch opens - a debugger's value: the expander shows with none read yet.
 - A scenario's `<Hover Character="30:13"/>` (`AutomationElement.HoverTextAsync`, `AutomationCommand.HoverText`): the

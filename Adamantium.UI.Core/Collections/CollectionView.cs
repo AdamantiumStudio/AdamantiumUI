@@ -1,18 +1,21 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Adamantium.Core.Collections;
 
 namespace Adamantium.UI.Core.Collections;
 
-/// <summary>A live filtered, sorted and paged view over a collection, always in that order. Item changes are reported as
-/// narrow Add/Remove at view indices; Reset only for a new filter, ordering or source.</summary>
+/// <summary>A live filtered, sorted and paged view over a collection, always in that order, and grouped by its
+/// <see cref="GroupDescriptions"/>. Item changes are reported as narrow Add/Remove at view indices; Reset only for a new
+/// filter, ordering or source.</summary>
 public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollectionChanged, IPagedSource
 {
+    private IReadOnlyList<CollectionViewGroup> _groups = [];
+    private bool _groupsStale;
     private readonly List<object> _snapshot = [];
     private readonly List<object> _view = [];
     private readonly List<int> _sourceIndexOfView = [];
@@ -31,6 +34,8 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     {
         SortDescriptions = new SortDescriptionCollection();
         SortDescriptions.CollectionChanged += (_, _) => Rebuild();
+        GroupDescriptions = [];
+        GroupDescriptions.CollectionChanged += (_, _) => RegroupLater();
         LiveFilteringProperties = [];
         LiveSortingProperties = [];
         Source = source;
@@ -115,6 +120,30 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     /// <summary>True while anything is ordering the view - which is also when its order stops matching the source's.</summary>
     public bool IsSorted => _customSort != null || SortDescriptions.Count > 0;
 
+    /// <summary>The levels the shown items are grouped by, the first the outermost; empty groups nothing.</summary>
+    public TrackingCollection<GroupDescription> GroupDescriptions { get; }
+
+    /// <summary>The shown items in groups, by the first of <see cref="GroupDescriptions"/>, each in the order its first
+    /// item comes in the view - sorting by the grouped property first orders the groups too; empty while nothing groups
+    /// them. A new list after each change of what is shown, told by <see cref="PropertyChanged"/> and made when it is
+    /// next read - up to date for a handler of <see cref="CollectionChanged"/> too.</summary>
+    public IReadOnlyList<CollectionViewGroup> Groups
+    {
+        get
+        {
+            if (_groupsStale)
+            {
+                _groupsStale = false;
+                _groups = IsGrouped ? GroupsOf(Shown(), 0) : [];
+            }
+
+            return _groups;
+        }
+    }
+
+    /// <summary>Whether <see cref="GroupDescriptions"/> group the items.</summary>
+    public bool IsGrouped => GroupDescriptions.Count > 0;
+
     /// <summary>Re-evaluates the filter when an item changes. Off by default, since it subscribes to every item.</summary>
     public bool IsLiveFiltering
     {
@@ -142,11 +171,11 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     /// <summary>Which property changes the FILTER cares about. Empty means every change re-evaluates the predicate,
     /// which on a long list is the expensive answer - name them.</summary>
-    public ObservableCollection<string> LiveFilteringProperties { get; }
+    public TrackingCollection<string> LiveFilteringProperties { get; }
 
     /// <summary>Properties whose change re-places an item; empty means those in <see cref="SortDescriptions"/>, or every
     /// change with a <see cref="CustomSort"/>.</summary>
-    public ObservableCollection<string> LiveSortingProperties { get; }
+    public TrackingCollection<string> LiveSortingProperties { get; }
 
     /// <summary>How many items a page holds; 0 - the default - shows the whole shaped set and pages nothing.
     /// <para>Changing it keeps the FIRST ITEM of the current page in view rather than dropping to the beginning: the
@@ -617,5 +646,66 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         return names;
     }
 
-    private void Raise(NotifyCollectionChangedEventArgs e) => CollectionChanged?.Invoke(this, e);
+    private void Raise(NotifyCollectionChangedEventArgs e)
+    {
+        var regroups = IsGrouped || _groups.Count > 0;
+        if (regroups)
+            _groupsStale = true;
+
+        CollectionChanged?.Invoke(this, e);
+        if (regroups)
+            Notify(nameof(Groups));
+    }
+
+    private void RegroupLater()
+    {
+        _groupsStale = true;
+        Notify(nameof(Groups));
+    }
+
+    private List<object> Shown()
+    {
+        var shown = new List<object>(Count);
+        foreach (var item in this)
+            shown.Add(item);
+
+        return shown;
+    }
+
+    // The items in groups by the level's description, each in the order of its first item; the levels below within.
+    private List<CollectionViewGroup> GroupsOf(List<object> items, int level)
+    {
+        var description = GroupDescriptions[level];
+        var names = new List<object>();
+        var members = new List<List<object>>();
+        var indexOfName = new Dictionary<object, int>();
+        var indexOfNull = -1;
+        foreach (var item in items)
+        {
+            var name = description.GroupNameOf(item);
+            var index = name == null ? indexOfNull : indexOfName.GetValueOrDefault(name, -1);
+            if (index < 0)
+            {
+                names.Add(name);
+                members.Add([]);
+                index = names.Count - 1;
+                if (name == null)
+                    indexOfNull = index;
+                else
+                    indexOfName[name] = index;
+            }
+
+            members[index].Add(item);
+        }
+
+        var isBottom = level == GroupDescriptions.Count - 1;
+        var groups = new List<CollectionViewGroup>(names.Count);
+        for (var i = 0; i < names.Count; i++)
+        {
+            IReadOnlyList<object> inside = isBottom ? members[i] : GroupsOf(members[i], level + 1);
+            groups.Add(new CollectionViewGroup(names[i], inside, members[i].Count, isBottom));
+        }
+
+        return groups;
+    }
 }
