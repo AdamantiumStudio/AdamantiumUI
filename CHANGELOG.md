@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `CollectionView` groups what it shows: `GroupDescriptions` (`PropertyGroupDescription` by a property, or a
+  `GroupDescription` of one's own), `Groups` of `CollectionViewGroup` (`Name`, `Items`, `ItemCount`, `IsBottomLevel`),
+  more levels nested inside. Groups come in the order of their first item after the filter and the ordering, a group
+  left empty goes, and they follow every change of what is shown.
+
 - `Displays.LargestScreen`: the monitor of the most pixels. A `RemoteUniverse` tells the host its size as it launches,
   so frames that come through memory of the process keep one ring whatever size the view is resized to.
 - `PropertyGrid.AutoGenerateSectionsForMarked`: as `AutoGenerateSectionsFor`, for the items whose own type carries the
