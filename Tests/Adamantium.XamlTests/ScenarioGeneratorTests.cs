@@ -72,6 +72,22 @@ public class ScenarioGeneratorTests
         });
     }
 
+    // A hover over the middle, a point, or a character of the text - as a hand rests the pointer on a word.
+    [Test]
+    public void AHover_GoesOverTheMiddle_APoint_OrACharacter()
+    {
+        var scenario = Read("  <Hover Target=\"id=Code\" />\n  <Hover Target=\"id=Code\" At=\"4,6\" />\n" +
+                            "  <Hover Target=\"id=Code\" Character=\"30:13\" />");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scenario.Problems, Is.Empty);
+            Assert.That(scenario.Steps[0], Does.EndWith(".HoverAsync();"));
+            Assert.That(scenario.Steps[1], Does.EndWith(".HoverAsync(4, 6);"));
+            Assert.That(scenario.Steps[2], Does.EndWith(".HoverTextAsync(30, 13);"));
+        });
+    }
+
     [Test]
     public void APenDrawnHarderAlongTheStroke_PressesFromOneToTheOther()
     {

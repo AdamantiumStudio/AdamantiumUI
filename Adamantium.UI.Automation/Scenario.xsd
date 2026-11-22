@@ -34,7 +34,7 @@
           <xs:annotation><xs:documentation>Clicks the middle of the element with the right mouse button.</xs:documentation></xs:annotation>
         </xs:element>
         <xs:element name="Hover" type="HoverStep">
-          <xs:annotation><xs:documentation>Moves the mouse over the middle of the element, or over a point of it.</xs:documentation></xs:annotation>
+          <xs:annotation><xs:documentation>Moves the mouse over the middle of the element, over a point of it, or over a character of its text.</xs:documentation></xs:annotation>
         </xs:element>
         <xs:element name="Expand" type="TargetStep">
           <xs:annotation><xs:documentation>Expands the element: a tree item, an expander, a menu.</xs:documentation></xs:annotation>
@@ -345,6 +345,8 @@
       <xs:extension base="TargetStep">
         <!-- Over this point of it, in its own units from its top left; its middle when left out. -->
         <xs:attribute name="At" type="Pair" />
+        <!-- Over the character of its text at line:column, both from 1, scrolled into view first. -->
+        <xs:attribute name="Character" type="TextPosition" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

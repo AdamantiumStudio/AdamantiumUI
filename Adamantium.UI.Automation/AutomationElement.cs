@@ -374,6 +374,12 @@ public sealed class AutomationElement
     public Task HoverAsync(double x, double y) =>
         RunAsync(AutomationCommand.Hover, FormattableString.Invariant($"{x},{y}"));
 
+    /// <summary>Moves the pointer over the character of its text at <paramref name="line"/> and <paramref name="column"/>,
+    /// both from 1, scrolled into view first - as a hand rests it on a word - by input simulated inside the application.
+    /// </summary>
+    public Task HoverTextAsync(int line, int column = 1) =>
+        RunAsync(AutomationCommand.HoverText, string.Create(CultureInfo.InvariantCulture, $"{line}:{column}"));
+
     /// <summary>A left-button drag across it from one point to another, in its own units, by input simulated inside the
     /// application.</summary>
     public Task DragAsync(double fromX, double fromY, double toX, double toY) =>
