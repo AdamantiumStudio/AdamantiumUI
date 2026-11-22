@@ -10,16 +10,31 @@ public class BehaviorCollection : TrackingCollection<Behavior>
     {
         _adamantiumComponent = adamantiumComponent;
     }
-    protected override void OnInsert(int index, Behavior item)
+
+    protected override void CheckItems(System.ReadOnlySpan<Behavior> range)
     {
-        item.AttachTo(_adamantiumComponent);
-        base.OnInsert(index, item);
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
     }
 
-    protected override void OnRemoveItem(int index, Behavior item)
+    protected override void OnInsert(int index, System.ReadOnlySpan<Behavior> range)
     {
-        item.DetachFrom(_adamantiumComponent);
-        base.OnRemoveItem(index, item);
+        foreach (var item in range)
+        {
+            item.AttachTo(_adamantiumComponent);
+        }
+
+        base.OnInsert(index, range);
+    }
+
+    protected override void OnRemove(int index, System.ReadOnlySpan<Behavior> range)
+    {
+        foreach (var item in range)
+        {
+            item.DetachFrom(_adamantiumComponent);
+        }
+
+        base.OnRemove(index, range);
     }
 
     protected override void OnSet(int index, Behavior oldItem, Behavior newItem)

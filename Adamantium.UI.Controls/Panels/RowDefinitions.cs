@@ -14,9 +14,9 @@ public class RowDefinitions: TrackingCollection<RowDefinition>
          
    }
 
-   protected override void InsertItem(int index, RowDefinition item)
+   protected override void CheckItems(ReadOnlySpan<RowDefinition> range)
    {
-      ArgumentNullException.ThrowIfNull(item);
-      base.InsertItem(index, item);
+      base.CheckItems(range);
+      ThrowIfAnyNull(range);
    }
 }

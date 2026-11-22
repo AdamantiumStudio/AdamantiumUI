@@ -225,7 +225,7 @@ internal sealed class TreeFlattener
             return;
         }
 
-        Rows.InsertMany(AfterDetailsOf(index), FollowAndBuild(row, children, row.Depth + 1));
+        Rows.InsertRange(AfterDetailsOf(index), FollowAndBuild(row, children, row.Depth + 1));
     }
 
     // Where a row's children begin: after the row, and after the details panel it may have open - the panel belongs to
@@ -256,7 +256,7 @@ internal sealed class TreeFlattener
         var end = SubtreeEnd(index, row.Depth);
         var from = AfterDetailsOf(index);
         UnsubscribeRange(from, end);
-        Rows.RemoveMany(from, end - from);
+        Rows.RemoveRange(from, end - from);
     }
 
     // ---- Children observability ---------------------------------------------------------------------------------
@@ -292,7 +292,7 @@ internal sealed class TreeFlattener
                 var pos = FlatIndexForChild(parent, e.NewStartingIndex);
                 var rows = new List<TreeRow>(e.NewItems.Count);
                 AppendRows(rows, e.NewItems, baseDepth);
-                Rows.InsertMany(pos, rows);
+                Rows.InsertRange(pos, rows);
                 break;
             }
             case NotifyCollectionChangedAction.Remove:
@@ -307,7 +307,7 @@ internal sealed class TreeFlattener
 
                     var end = SubtreeEnd(idx, Rows[idx].Depth);
                     UnsubscribeRange(idx, end);
-                    Rows.RemoveMany(idx, end - idx);
+                    Rows.RemoveRange(idx, end - idx);
                 }
 
                 break;
@@ -336,8 +336,8 @@ internal sealed class TreeFlattener
         var end = SubtreeEnd(index, parent.Depth);
         var from = AfterDetailsOf(index);
         UnsubscribeRange(from, end);
-        Rows.RemoveMany(from, end - from);
-        Rows.InsertMany(from, FollowAndBuild(parent, _childrenOf(parent.Node), parent.Depth + 1));
+        Rows.RemoveRange(from, end - from);
+        Rows.InsertRange(from, FollowAndBuild(parent, _childrenOf(parent.Node), parent.Depth + 1));
     }
 
     // ---- Geometry over the flat list ----------------------------------------------------------------------------

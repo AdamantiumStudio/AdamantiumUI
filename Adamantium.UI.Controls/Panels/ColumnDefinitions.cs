@@ -14,9 +14,9 @@ public class ColumnDefinitions:TrackingCollection<ColumnDefinition>
          
    }
 
-   protected override void InsertItem(int index, ColumnDefinition item)
+   protected override void CheckItems(ReadOnlySpan<ColumnDefinition> range)
    {
-      ArgumentNullException.ThrowIfNull(item);
-      base.InsertItem(index, item);
+      base.CheckItems(range);
+      ThrowIfAnyNull(range);
    }
 }

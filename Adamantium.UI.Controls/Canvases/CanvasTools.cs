@@ -6,9 +6,9 @@ namespace Adamantium.UI.Controls.Canvases;
 /// <summary>The tools an <see cref="InfiniteCanvas"/> offers - see <see cref="InfiniteCanvas.Tools"/>.</summary>
 public class CanvasTools : TrackingCollection<ICanvasTool>
 {
-    protected override void InsertItem(int index, ICanvasTool item)
+    protected override void CheckItems(ReadOnlySpan<ICanvasTool> range)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        base.InsertItem(index, item);
+        base.CheckItems(range);
+        ThrowIfAnyNull(range);
     }
 }

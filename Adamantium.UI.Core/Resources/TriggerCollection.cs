@@ -8,18 +8,17 @@ public class TriggerCollection : AdamantiumCollection<ITrigger>
     // Stamp every setter with where it stands in the MARKUP, so two triggers writing one property resolve by what the
     // author wrote rather than by which happened to fire last (see ISetter.DeclarationOrder). Done on insert, because
     // that is the one moment a trigger's position in the collection is known - and re-stamped for the whole collection,
-    // since inserting in the middle moves everything after it.
-    protected override void InsertItem(int index, ITrigger item)
+    // since inserting in the middle moves everything after it. Once a range, not once an item of it.
+    protected override void InsertItems(int index, ReadOnlySpan<ITrigger> range)
     {
-        base.InsertItem(index, item);
+        base.InsertItems(index, range);
         Restamp();
     }
 
-    protected override ITrigger RemoveItem(int index)
+    protected override void RemoveItems(int index, int count)
     {
-        var removed = base.RemoveItem(index);
+        base.RemoveItems(index, count);
         Restamp();
-        return removed;
     }
 
     private void Restamp()
