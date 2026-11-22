@@ -833,6 +833,9 @@ All packages share one version.
 
 ### Fixed
 
+- A universe of another process (`RemoteUniverseHost`) on the same GPU had its frames come through host memory, copied
+  there and back each frame: the GPU's UUID was read wrong, so the two GPUs seemed others. With Adamantium.Vulkan 1.3.2
+  and QuantumBinding.Utils 3.2.0 the frames are shared on the GPU.
 - A PDF page of long straight paths - a geologic map, a topographic one - took seconds to be written into its drawing
   and gigabytes to do it: each straight piece was a segment object of its own. A run of straight pieces is now one
   polyline segment, the same points. The geologic map of Alaska (USGS SIM 3340, sheet 1), opened and its page written,
