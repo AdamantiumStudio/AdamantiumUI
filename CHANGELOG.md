@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `TrayIcon` and `UIApplication.TrayIcons`: an icon of the application's in the desktop's notification area - the
+  application's own icon, a `ToolTip`, a `Command` (and `Clicked`) on a click or from the keyboard, a `ContextMenu`
+  opened at the pointer on a right click - shown from the application's start, or from when it is added, while
+  `IsVisible`, and taken away when taken out or when the application ends. The menu is the framework's own, in the
+  theme, opened in a clear window over the monitor's work area and closed by a press beside it, Escape, or another
+  window becoming the active one. `NotificationArea` (`INotificationAreaPlatform`, `INotificationAreaIcon`) is the
+  platform's side: on Windows `Shell_NotifyIconW` (AdamantiumEngine #359), the icons put back when the task bar
+  starts again. Not on Linux yet. The sandbox has one.
 - `INativeKeyboard.SendKey`, `SendText`, `SendsToOtherApplications` and `ForegroundWindowTitle`: keys and text put
   into the system's input for the window the system gives keys to - another application's - and that window's title,
   for an on-screen keyboard typing outside the application; false back when nothing got in. On Windows by `SendInput`

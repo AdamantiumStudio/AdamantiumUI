@@ -46,6 +46,7 @@ public class WindowsPlatform : IApplicationPlatform
         FileDialog.Platform = new WindowsFileDialog();               // where a file goes is the user's to say
         FileManager.Platform = new ExplorerFileManager();
         Trash.Platform = new RecycleBinTrash();
+        NotificationArea.Platform = new WindowsNotificationArea();
         WindowsOle.Initialize();   // OLE on THIS (the UI) thread - the precondition for OS drag-drop on every window
     }
 
