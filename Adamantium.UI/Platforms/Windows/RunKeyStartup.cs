@@ -36,37 +36,51 @@ internal sealed class RunKeyStartup : ISystemStartup
 
     public bool IsOn
     {
-        get
-        {
-            using var run = Registry.CurrentUser.OpenSubKey(_runKey);
-            // A path names the same program in any case.
-            if (!string.Equals(run?.GetValue(_name, null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string,
-                    _command, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            using var approved = Registry.CurrentUser.OpenSubKey(_approvedKey);
-            return approved?.GetValue(_name) is not byte[] { Length: > 0 } mark || (mark[0] & 1) == 0;
-        }
+        get => IsListed() && !IsTurnedOff();
         set
         {
-            using (var approved = Registry.CurrentUser.OpenSubKey(_approvedKey, true))
-            {
-                approved?.DeleteValue(_name, false);
-            }
-
+            ForgetTurnedOff();
             if (value)
             {
-                using var run = Registry.CurrentUser.CreateSubKey(_runKey);
-                run.SetValue(_name, _command, RegistryValueKind.String);
+                PutIn();
             }
             else
             {
-                using var run = Registry.CurrentUser.OpenSubKey(_runKey, true);
-                run?.DeleteValue(_name, false);
+                TakeOut();
             }
         }
+    }
+
+    // A path names the same program in any case.
+    private bool IsListed()
+    {
+        using var run = Registry.CurrentUser.OpenSubKey(_runKey);
+        return string.Equals(run?.GetValue(_name, null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string,
+            _command, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsTurnedOff()
+    {
+        using var approved = Registry.CurrentUser.OpenSubKey(_approvedKey);
+        return approved?.GetValue(_name) is byte[] { Length: > 0 } mark && (mark[0] & 1) == 1;
+    }
+
+    private void ForgetTurnedOff()
+    {
+        using var approved = Registry.CurrentUser.OpenSubKey(_approvedKey, true);
+        approved?.DeleteValue(_name, false);
+    }
+
+    private void PutIn()
+    {
+        using var run = Registry.CurrentUser.CreateSubKey(_runKey);
+        run.SetValue(_name, _command, RegistryValueKind.String);
+    }
+
+    private void TakeOut()
+    {
+        using var run = Registry.CurrentUser.OpenSubKey(_runKey, true);
+        run?.DeleteValue(_name, false);
     }
 
     /// <summary>The command starting <paramref name="assembly"/> with <see cref="ISystemStartup.Argument"/>: the program

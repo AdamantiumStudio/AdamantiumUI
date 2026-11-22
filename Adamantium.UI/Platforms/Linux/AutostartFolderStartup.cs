@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -42,38 +43,50 @@ internal sealed class AutostartFolderStartup : ISystemStartup
 
     public bool IsOn
     {
-        get
-        {
-            if (!File.Exists(_entryPath))
-            {
-                return false;
-            }
-
-            var values = DesktopEntry.Values(_entryPath);
-            return values.TryGetValue(ExecKey, out var exec) && exec == _exec &&
-                   !(values.TryGetValue(HiddenKey, out var hidden) && hidden == True) &&
-                   !(values.TryGetValue(GnomeEnabledKey, out var enabled) && enabled == False);
-        }
+        get => IsListed();
         set
         {
-            if (!value)
+            if (value)
             {
-                if (File.Exists(_entryPath))
-                {
-                    File.Delete(_entryPath);
-                }
-
-                return;
+                PutIn();
             }
+            else
+            {
+                TakeOut();
+            }
+        }
+    }
 
-            var text = new StringBuilder()
-                .Append("[Desktop Entry]\n")
-                .Append("Type=Application\n")
-                .Append("Name=").Append(DesktopEntry.Escape(_name)).Append('\n')
-                .Append(ExecKey).Append('=').Append(_exec).Append('\n')
-                .Append(GnomeEnabledKey).Append('=').Append(True).Append('\n')
-                .ToString();
-            DesktopEntry.WriteIfChanged(_entryPath, Encoding.UTF8.GetBytes(text));
+    // Our entry, not turned off by the desktop.
+    private bool IsListed()
+    {
+        if (!File.Exists(_entryPath))
+        {
+            return false;
+        }
+
+        var values = DesktopEntry.Values(_entryPath);
+        return values.GetValueOrDefault(ExecKey) == _exec && values.GetValueOrDefault(HiddenKey) != True &&
+               values.GetValueOrDefault(GnomeEnabledKey) != False;
+    }
+
+    private void PutIn()
+    {
+        var text = new StringBuilder()
+            .Append("[Desktop Entry]\n")
+            .Append("Type=Application\n")
+            .Append("Name=").Append(DesktopEntry.Escape(_name)).Append('\n')
+            .Append(ExecKey).Append('=').Append(_exec).Append('\n')
+            .Append(GnomeEnabledKey).Append('=').Append(True).Append('\n')
+            .ToString();
+        DesktopEntry.WriteIfChanged(_entryPath, Encoding.UTF8.GetBytes(text));
+    }
+
+    private void TakeOut()
+    {
+        if (File.Exists(_entryPath))
+        {
+            File.Delete(_entryPath);
         }
     }
 
