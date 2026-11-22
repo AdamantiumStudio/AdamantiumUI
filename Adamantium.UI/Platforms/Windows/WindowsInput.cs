@@ -62,6 +62,73 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
         }
     }
 
+    public bool SendsToOtherApplications => true;
+
+    public string ForegroundWindowTitle
+    {
+        get
+        {
+            var window = Win32Interop.GetForegroundWindow();
+            var length = window == IntPtr.Zero ? 0 : Win32Interop.GetWindowTextLength(window);
+            if (length <= 0)
+                return null;
+
+            var title = new char[length + 1];
+            var read = Win32Interop.GetWindowText(window, title, title.Length);
+            return read > 0 ? new string(title, 0, read) : null;
+        }
+    }
+
+    // Key values are the virtual-key codes. A window of a process with more rights than ours does not get them (UIPI):
+    // the system puts in none, and says so.
+    public bool SendKey(Key key, bool down) => Send([KeyInput(key, down)]);
+
+    public bool SendText(string text) => string.IsNullOrEmpty(text) || Send(TextInputs(text));
+
+    // With its scan code from the system's layout - applications that tell keys by their place read it - and its extended
+    // flag. The system gives the flag's prefix for the media and browser keys, not for the keys whose scan code they
+    // share with the numeric pad's (measured: Left gives 4B, as the pad's 4), so those are named: without the flag an
+    // arrow is the pad's.
+    internal static INPUT KeyInput(Key key, bool down)
+    {
+        var scan = Win32Interop.MapVirtualKey((uint)key, MapVirtualKeyType.VirtualKeyToScanCodeEx);
+        var extended = (scan & 0xFF00) is 0xE000 or 0xE100 || SharesItsPlaceWithThePad(key);
+        return INPUT.Key((ushort)key, (ushort)(scan & 0xFF), down, extended);
+    }
+
+    private static bool SharesItsPlaceWithThePad(Key key) => key is Key.LeftArrow or Key.RightArrow or Key.UpArrow
+        or Key.DownArrow or Key.Home or Key.End or Key.PageUp or Key.PageDown or Key.Insert or Key.Delete
+        or Key.NumPadDivide or Key.NumLock or Key.RightCtrl or Key.RightAlt or Key.PrintScreen;
+
+    // Each UTF-16 unit as a character of its own, a surrogate pair too: the system puts the pair together. A line break
+    // or a tab goes as the key, which is what the window acts on - "\r\n" as one Enter.
+    internal static INPUT[] TextInputs(string text)
+    {
+        var inputs = new List<INPUT>(text.Length * 2);
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (character == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
+                continue;
+
+            if (character is '\r' or '\n' or '\t')
+            {
+                var key = character == '\t' ? Key.Tab : Key.Enter;
+                inputs.Add(KeyInput(key, down: true));
+                inputs.Add(KeyInput(key, down: false));
+                continue;
+            }
+
+            inputs.Add(INPUT.Character(character, down: true));
+            inputs.Add(INPUT.Character(character, down: false));
+        }
+
+        return inputs.ToArray();
+    }
+
+    private static bool Send(INPUT[] inputs) =>
+        Win32Interop.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>()) == inputs.Length;
+
     public uint DoubleClickTime => Win32Interop.GetDoubleClickTime();
 
     // SM_CXDOUBLECLK/SM_CYDOUBLECLK - the box the second click has to land in. Read live, like the rest: a mouse the

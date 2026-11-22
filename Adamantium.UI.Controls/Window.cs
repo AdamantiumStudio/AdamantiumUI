@@ -67,7 +67,8 @@ public class Window : WindowBase
         // Cancel a deferred show too, or a window hidden before its first frame reappears after it.
         ShouldDisplayWindow = false;
         _displayed = false;
-        WindowWorkerService.HideWindow();
+        // A window with no window of the system behind it - drawn headless - has nothing to hide.
+        WindowWorkerService?.HideWindow();
     }
 
     public override bool IsDisplayed => _displayed;

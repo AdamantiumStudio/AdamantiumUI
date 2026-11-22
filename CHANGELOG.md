@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `INativeKeyboard.SendKey`, `SendText`, `SendsToOtherApplications` and `ForegroundWindowTitle`: keys and text put
+  into the system's input for the window the system gives keys to - another application's - and that window's title,
+  for an on-screen keyboard typing outside the application; false back when nothing got in. On Windows by `SendInput`
+  (AdamantiumEngine #356): text as its characters whatever the layout, a line break or a tab as its key; a key with
+  its scan code, the arrows and the like as the extended keys; a window of a process with more rights takes none.
+  Not on Linux yet: a platform that cannot send says so by the interface's own answers. `WindowBase.ActivateOnShow` says what it did already: false, a
+  window on Windows is never activated, not by a click either.
 - `FocusManager.FocusMoved`: raised once the focus has moved and the elements were told, wherever it went - an element
   of any window, one on a popup or in a dialog, or none - with where it came from and how. An element's own focus
   events reach only the tree it is in, so what follows the focus everywhere, as an on-screen keyboard, had no way to
@@ -824,6 +831,8 @@ All packages share one version.
 
 ### Fixed
 
+- `Window.Hide` on a window with no window of the system behind it - one drawn headless - threw; it does nothing, as
+  everything else that talks to such a window's worker.
 - An ellipse swept past a turn was two shapes: the batch drew it whole, the tessellator - an `EllipseGeometry`, the
   fallback of a batched ellipse, a PDF - what is left over whole turns, and whole turns as nothing (720). Both draw
   what is left now (485 as 125) - the batch too, where 400 was whole and is 40 - and whole turns the whole ellipse. A

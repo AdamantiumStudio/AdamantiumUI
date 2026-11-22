@@ -372,7 +372,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         typeof(bool), typeof(WindowBase), new PropertyMetadata(false, OverlayTraitChanged));
 
     /// <summary>False to show without taking focus - an overlay that stole activation would end the very drag it is
-    /// there to help with. Read when the window is shown.</summary>
+    /// there to help with - and on Windows not to take it on a click either (WS_EX_NOACTIVATE), as an on-screen
+    /// keyboard leaves the window it types into active; <see cref="Activate"/> still activates it. Such a window is
+    /// kept out of the task bar.</summary>
     public static readonly AdamantiumProperty ActivateOnShowProperty = AdamantiumProperty.Register(nameof(ActivateOnShow),
         typeof(bool), typeof(WindowBase), new PropertyMetadata(true, OverlayTraitChanged));
 
