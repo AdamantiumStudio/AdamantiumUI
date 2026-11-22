@@ -90,6 +90,9 @@ public static class Program
                                                               memory left - one reading of a leak hunt
           device-memory                                       the GPU memory the graphics resources hold, by kind
                                                               and the largest; also into logs/device-memory.txt
+          stats                                               the frames' GPU time on average since the last
+                                                              stats and the last frame's, frames a second, the last
+                                                              layout, record and apply
           theme [<name>] [--variant <name>]                   move onto a theme and variant once the swap settles;
                                                               alone, which one is in use and which there are;
                                                               --variant System follows the desktop's
