@@ -75,8 +75,16 @@ public class RasterDrawingRenderTests
             using var image = _renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)image.TotalSizeInBytes];
             Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
+            if (Environment.GetEnvironmentVariable("ADAM_TEMP_RASTER_SHOTS") is { Length: > 0 } shots)   // TEMP
+            {
+                _renderer.Save(System.IO.Path.Combine(shots, $"{TestContext.CurrentContext.Test.MethodName}-{++_shot}.png"),
+                    Adamantium.Imaging.ImageFileType.Png);
+            }
+
             return new Frame(bytes, drawn);
         }
+
+        private static int _shot;
 
         public void Dispose() => _renderer.Dispose();
     }
