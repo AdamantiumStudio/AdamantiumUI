@@ -37,7 +37,7 @@ public interface INativePlatformSettings
     uint KeyRepeatInterval { get; }
 
     /// <summary>The languages the user set up in the OS, in the user's order, as language tags ("ru-RU") - Windows'
-    /// language list, most wanted first; the desktop's input sources on Linux, in the order they switch. Read anew as the user changes them, cheaply enough to ask on
+    /// language list, most wanted first; the desktop's input sources on Linux, the session's own language first. Read anew as the user changes them, cheaply enough to ask on
     /// every use; none where the platform does not say.</summary>
     IReadOnlyList<string> UserLanguages => [];
 }

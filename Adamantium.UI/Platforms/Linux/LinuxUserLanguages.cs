@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace Adamantium.UI.Platforms.Linux;
 
 /// <summary>The user's languages on a Linux desktop: the input sources they added (GNOME's
-/// <c>org.gnome.desktop.input-sources</c>), in the order the user switches between them - which is not always the
-/// order they prefer: a Russian install lists English first - each xkb layout or input method taken for the language
-/// it types; where the desktop does not say, the languages of the session (<c>LANGUAGE</c>, then the locale).</summary>
+/// <c>org.gnome.desktop.input-sources</c>), each xkb layout or input method taken for the language it types, the
+/// session's own languages first; where the desktop does not say, the languages of the session (<c>LANGUAGE</c>, then
+/// the locale).</summary>
 internal static class LinuxUserLanguages
 {
     // An xkb layout is named by its country more often than by its language: «us», «br», «ua».
@@ -89,6 +89,41 @@ internal static class LinuxUserLanguages
         }
 
         return listed.Count > 0 ? listed : languages;
+    }
+
+    /// <summary>The input sources' languages with the session's own first: the order of the sources is the order the
+    /// user switches in, while the session's languages are the ones they chose to work in - a Russian install lists
+    /// «us» before «ru». A session language is matched to a source by its first subtag (ru to ru-RU); the rest keep the
+    /// sources' order.</summary>
+    public static List<string> PreferredFirst(IReadOnlyList<string> sources, IReadOnlyList<string> session)
+    {
+        List<string> ordered = [];
+        foreach (var wanted in session)
+        {
+            foreach (var source in sources)
+            {
+                if (!ordered.Contains(source) && string.Equals(Primary(source), Primary(wanted), StringComparison.OrdinalIgnoreCase))
+                {
+                    ordered.Add(source);
+                }
+            }
+        }
+
+        foreach (var source in sources)
+        {
+            if (!ordered.Contains(source))
+            {
+                ordered.Add(source);
+            }
+        }
+
+        return ordered;
+    }
+
+    private static string Primary(string language)
+    {
+        var end = language.IndexOf('-');
+        return end < 0 ? language : language[..end];
     }
 
     // «ru_RU.UTF-8@euro» is ru-RU; C and POSIX are no language.

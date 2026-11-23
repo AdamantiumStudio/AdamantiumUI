@@ -39,6 +39,23 @@ public class LinuxUserLanguagesTests
     }
 
     [Test]
+    public void TheSessionsLanguage_ComesFirst_TheRestInTheSourcesOrder()
+    {
+        // A Russian install: English switched to first, Russian the language the user works in.
+        var ordered = LinuxUserLanguages.PreferredFirst(["en-US", "de-DE", "ru-RU"], ["ru-RU"]);
+
+        Assert.That(ordered, Is.EqualTo(new[] { "ru-RU", "en-US", "de-DE" }));
+    }
+
+    [Test]
+    public void ASessionLanguage_MatchesItsSource_ByTheFirstSubtag()
+    {
+        var ordered = LinuxUserLanguages.PreferredFirst(["en-US", "pt-BR", "uk-UA"], ["uk", "pt-PT", "fr-FR"]);
+
+        Assert.That(ordered, Is.EqualTo(new[] { "uk-UA", "pt-BR", "en-US" }));
+    }
+
+    [Test]
     public void NoSources_GiveNoLanguages() => Assert.That(LinuxUserLanguages.FromInputSources(null), Is.Empty);
 
     [Test]

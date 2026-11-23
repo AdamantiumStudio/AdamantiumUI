@@ -24,9 +24,30 @@ public static class LinuxPlatform
     private static bool _desktopEntryWritten;
     private static Task<AtSpiBridge> _accessibility;
 
-    /// <summary>The user's languages: their input sources' where the desktop says, else the session's.</summary>
-    internal static IReadOnlyList<string> UserLanguages =>
-        _desktopSettings?.UserLanguages is { Count: > 0 } sources ? sources : SessionLanguages.Value;
+    /// <summary>The user's languages: their input sources' where the desktop says, the session's own first; else the
+    /// session's.</summary>
+    internal static IReadOnlyList<string> UserLanguages
+    {
+        get
+        {
+            if (_desktopSettings?.UserLanguages is not { Count: > 0 } sources)
+            {
+                return SessionLanguages.Value;
+            }
+
+            // Ordered once per list the portal gives: asked on every key, it allocates nothing.
+            var ordered = _orderedLanguages;
+            if (!ReferenceEquals(ordered?.Sources, sources))
+            {
+                ordered = new OrderedLanguages(sources, LinuxUserLanguages.PreferredFirst(sources, SessionLanguages.Value));
+                _orderedLanguages = ordered;
+            }
+
+            return ordered.Languages;
+        }
+    }
+
+    private static volatile OrderedLanguages _orderedLanguages;
 
     // The session's languages are its environment's, set before it started.
     private static readonly Lazy<IReadOnlyList<string>> SessionLanguages =
