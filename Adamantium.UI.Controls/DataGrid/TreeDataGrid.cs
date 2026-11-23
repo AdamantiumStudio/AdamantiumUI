@@ -485,6 +485,14 @@ public partial class TreeDataGrid : Selector
         InvalidateRealizedRows();
     }
 
+    private void ArrangeRealizedRowsAgain()
+    {
+        foreach (var index in ItemContainerGenerator.RealizedIndices)
+        {
+            (ItemContainerGenerator.ContainerFromIndex(index) as IMeasurableComponent)?.InvalidateArrange();
+        }
+    }
+
     private void InvalidateRealizedRows()
     {
         foreach (var index in ItemContainerGenerator.RealizedIndices)
@@ -3954,6 +3962,9 @@ public partial class TreeDataGrid : Selector
             RightFrozenWidth = regrownRight;
             UpdateColumnWindow(availableSize.Width);
             desired = base.MeasureOverride(availableSize);
+            // The rows place their cells by the widths: a star column taking up what the Auto one gained leaves a row as
+            // wide as it was, and a row not arranged again kept its cells where they stood.
+            ArrangeRealizedRowsAgain();
         }
 
         // A panel changed height: tell the stack for the next pass rather than measuring every open panel twice now.

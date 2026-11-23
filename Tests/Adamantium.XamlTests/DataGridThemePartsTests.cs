@@ -458,8 +458,18 @@ public class DataGridThemePartsTests
         for (var pass = 0; pass < 4; pass++)
             Adamantium.UI.Core.LayoutManager.For(window).ExecuteLayoutPass();
 
-        TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}");
-        Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(before + 40), "the Auto column takes its widest cell");
+        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        var cells = row.VisualChildren.OfType<DataGridCell>().OrderBy(cell => cell.ColumnIndex).ToList();
+        TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}, cells {cells[0].RenderSize.Width} at " +
+                              $"{cells[0].Bounds.X}, {cells[1].RenderSize.Width} at {cells[1].Bounds.X}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(before + 40), "the Auto column takes its widest cell");
+            Assert.That(cells[0].RenderSize.Width, Is.EqualTo(grid.Columns[0].ActualWidth).Within(0.5),
+                "and its cell is laid out at it");
+            Assert.That(cells[1].Bounds.X, Is.EqualTo(grid.Columns[0].ActualWidth).Within(0.5),
+                "the next column's cell starts after it");
+        });
     }
 
     private static void Settle(Window window)

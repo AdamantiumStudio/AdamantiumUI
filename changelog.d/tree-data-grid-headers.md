@@ -5,5 +5,8 @@
 
 ### Fixed
 
-- An Auto column of a `TreeDataGrid` did not grow when a row was measured again on its own, as one whose text is bound
-  a frame after it is built is: the next column stood over its cells. The grid now lays its columns out again.
+- An Auto column of a `TreeDataGrid` did not grow to a cell whose content was bound after it was built, and its cells
+  stayed where they were when it did grow beside a star column. The next column stood over its cells. Now:
+  - a cell of an Auto column measures its content unbounded and reports the width itself, however it is measured;
+  - a width reported outside the grid's own pass lays the grid and its header out again;
+  - a grown Auto column has the rows shown arrange their cells again.
