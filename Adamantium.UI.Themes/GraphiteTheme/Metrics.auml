@@ -266,7 +266,8 @@
     <Thickness x:Key="ToolBarContextFrameThickness">1.5</Thickness>
     <!-- Its rounding: the commands' (CornerRadiusDefault) plus the 2 it stands past them, so the two curves run alike. -->
     <CornerRadius x:Key="ToolBarContextFrameRadius">5</CornerRadius>
-    <!-- Down the side: the widest a command stands on the bar's column - a number's narrow form fits, a list is folded. -->
+    <!-- Down the side: the widest a command stands on the bar's column - an icon's button (34) and a number's narrow form
+         fit, a list is folded. -->
     <sys:Double x:Key="ToolBarColumnWidth">36</sys:Double>
     <!-- The card a folded command opens beside the column. -->
     <Thickness x:Key="ToolBarCardPadding">8</Thickness>
