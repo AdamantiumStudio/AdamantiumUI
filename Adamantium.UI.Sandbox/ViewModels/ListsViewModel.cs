@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core.Collections;
+using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -41,6 +42,64 @@ public partial class ListsViewModel : TabPageViewModel
     [Command] private void RemoveSelected()
     {
         if (SelectedItem != null) Items.Remove(SelectedItem);
+    }
+
+    // --- Tiles in groups ------------------------------------------------------------------------------------------
+
+    private readonly Adamantium.Core.Collections.TrackingCollection<Body> _bodies =
+    [
+        new("Sun", "Stars"),
+        new("Mercury", "Planets"), new("Venus", "Planets"), new("Earth", "Planets"), new("Mars", "Planets"),
+        new("Jupiter", "Planets"), new("Saturn", "Planets"), new("Uranus", "Planets"), new("Neptune", "Planets"),
+        new("Moon", "Moons"), new("Phobos", "Moons"), new("Deimos", "Moons"), new("Io", "Moons"), new("Europa", "Moons"),
+    ];
+
+    private CollectionView _bodiesView;
+
+    /// <summary>The bodies of a solar system by kind: one list of tiles, each kind's header a line of its own.</summary>
+    public CollectionView Bodies => _bodiesView ??= GroupedBodies();
+
+    private CollectionView GroupedBodies()
+    {
+        var view = new CollectionView(_bodies);
+        view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Body.Kind)));
+        return view;
+    }
+
+    /// <summary>A body dragged to where it was dropped: before the body it landed before, or at its group's end - and
+    /// into that group, of the kind it now is.</summary>
+    [Command]
+    private void DropBody(object arg)
+    {
+        if (arg is not DragDropEventArgs { DropGroup.Name: string kind } e || e.Data?.Get<Body>() is not { } body)
+        {
+            return;
+        }
+
+        _bodies.Remove(body);
+        body.Kind = kind;
+        var at = e.InsertBefore is Body before ? _bodies.IndexOf(before) : -1;
+        if (at < 0)
+        {
+            // The group's end: after its last body, or - the body was its only one - at the end.
+            var last = LastIndexOfKind(kind);
+            at = last >= 0 ? last + 1 : _bodies.Count;
+        }
+
+        _bodies.Insert(at, body);
+    }
+
+    private int LastIndexOfKind(string kind)
+    {
+        for (var i = _bodies.Count - 1; i >= 0; i--)
+        {
+            if (_bodies[i].Kind == kind)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     // --- The large list ------------------------------------------------------------------------------------------
@@ -203,6 +262,18 @@ public sealed class BigItem(string name, int number)
 
     /// <summary>Its position in the original set, so a sort has something of its own to order by.</summary>
     public int Number { get; } = number;
+
+    /// <inheritdoc/>
+    public override string ToString() => Name;
+}
+
+/// <summary>A tile of the grouped list: a body of a solar system and the kind it is grouped by.</summary>
+public sealed class Body(string name, string kind)
+{
+    public string Name { get; } = name;
+
+    /// <summary>Stars, planets or moons: the group it is shown in; a drop into another group changes it.</summary>
+    public string Kind { get; set; } = kind;
 
     /// <inheritdoc/>
     public override string ToString() => Name;

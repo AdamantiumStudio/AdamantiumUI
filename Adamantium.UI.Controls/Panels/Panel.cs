@@ -75,6 +75,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
          // Skip what is not on screen: a virtualizing panel PARKS an off-screen container (hidden, still a child) rather
          // than detaching it, and a parked one is not somewhere the focus can go.
          if (child.Visibility != Visibility.Visible) continue;
+         // A group's header is a row of the panel, not an item the arrows stop at.
+         if (child is GroupHeader) continue;
 
          if (passed) return forward ? child : previous;
          previous = child;

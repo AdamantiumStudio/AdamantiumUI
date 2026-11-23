@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- A list's group header: the group's template, and before it the arrow of a group that folds - right when folded,
+         down when open - with the whole row to click. One set for every theme: the arrow is the theme's own icon. -->
+    <Style Selector="GroupHeader">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="GroupHeader">
+                    <Border x:Name="PART_Row"
+                            Background="{TemplateBinding Background}"
+                            TextBlock.IsTextSelectionEnabled="False">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Image Grid.Column="0" x:Name="Glyph"
+                                   Source="{ResourceReference ChevronRightIcon}"
+                                   Width="10" Height="10" Margin="0 0 6 0"
+                                   VerticalAlignment="Center"
+                                   Visibility="Collapsed"/>
+                            <ContentPresenter Grid.Column="1"
+                                    x:Name="PART_ContentPresenter"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="CanCollapse" Value="true">
+                            <Setter TargetName="Glyph" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PART_Row" Property="Cursor" Value="Hand"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsExpanded" Value="true">
+                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>

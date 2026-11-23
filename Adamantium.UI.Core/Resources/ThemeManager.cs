@@ -110,7 +110,8 @@ public class ThemeManager : IThemeManager
 
         // Announce the swap BEFORE the cascade so a busy indicator is already up when the tree starts churning.
         _swapArgs = new ThemeChangedEventArgs(oldTheme, theme);
-        _pendingOld = oldTheme;
+        // A swap still waiting keeps the theme it started from: that one's palette is live and read, the one between never was.
+        _pendingOld ??= oldTheme;
         IsThemeChanging = true;
         ThemeChanging?.Invoke(this, _swapArgs);
 
@@ -160,9 +161,21 @@ public class ThemeManager : IThemeManager
         // Palette activation is SYMMETRIC and LAZY: deactivate the outgoing theme's resource sources, then activate the
         // incoming one's - only the CURRENT theme's palette is live in the Theme provider, so N themes cost nothing until
         // chosen. This is the single owner of the "exactly one palette live" invariant.
-        if (_pendingOld != null) _resourceManager.RemoveSources(_pendingOld);
+        var left = _pendingOld;
+        if (left != null) _resourceManager.RemoveSources(left);
         ActivateThemeSources(CurrentTheme);
         _pendingOld = null;
+
+        // What reads the theme outside the tree (a drawing of an icon), a scope's sibling of it too, moves with the
+        // palette; the restyle below moves the elements.
+        if (left is Theme concrete)
+        {
+            foreach (var theme in concrete.WithItsSiblings()) Data.ThemeResourceExpression.Retarget(theme);
+        }
+        else if (left != null)
+        {
+            Data.ThemeResourceExpression.Retarget(left);
+        }
 
         var windows = UIAppContext.Current.Windows;
         _swapping = [];

@@ -10,8 +10,9 @@ using Adamantium.Core.Collections;
 namespace Adamantium.UI.Core.Collections;
 
 /// <summary>A live filtered, sorted and paged view over a collection, always in that order, and grouped by its
-/// <see cref="GroupDescriptions"/>. Item changes are reported as narrow Add/Remove at view indices; Reset only for a new
-/// filter, ordering or source.</summary>
+/// <see cref="GroupDescriptions"/>: grouped, its items come group by group. Item changes are reported as narrow
+/// Add/Remove at view indices; Reset for a new filter, ordering, grouping or source - and, grouped, for a change that
+/// brings one group before another or with more than one level of groups.</summary>
 public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollectionChanged, IPagedSource
 {
     private IReadOnlyList<CollectionViewGroup> _groups = [];
@@ -19,6 +20,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     private readonly List<object> _snapshot = [];
     private readonly List<object> _view = [];
     private readonly List<int> _sourceIndexOfView = [];
+    private readonly List<object> _outerNameOfView = [];   // grouped: each shown item's outermost group name
     private readonly Dictionary<object, int> _subscribed = new();
     private readonly List<object> _page = [];
     private int _pageSize;
@@ -35,7 +37,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         SortDescriptions = new SortDescriptionCollection();
         SortDescriptions.CollectionChanged += (_, _) => Rebuild();
         GroupDescriptions = [];
-        GroupDescriptions.CollectionChanged += (_, _) => RegroupLater();
+        GroupDescriptions.CollectionChanged += (_, _) => Rebuild();
         LiveFilteringProperties = [];
         LiveSortingProperties = [];
         Source = source;
@@ -120,7 +122,9 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     /// <summary>True while anything is ordering the view - which is also when its order stops matching the source's.</summary>
     public bool IsSorted => _customSort != null || SortDescriptions.Count > 0;
 
-    /// <summary>The levels the shown items are grouped by, the first the outermost; empty groups nothing.</summary>
+    /// <summary>The levels the shown items are grouped by, the first the outermost; empty groups nothing. Grouped, the
+    /// view's items come group by group - each group where its first item comes after the filter and the ordering, the
+    /// ordering kept inside it - so a list can show a group's header and then its items.</summary>
     public TrackingCollection<GroupDescription> GroupDescriptions { get; }
 
     /// <summary>The shown items in groups, by the first of <see cref="GroupDescriptions"/>, each in the order its first
@@ -134,7 +138,12 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             if (_groupsStale)
             {
                 _groupsStale = false;
-                _groups = IsGrouped ? GroupsOf(Shown(), 0) : [];
+                var shown = Shown();
+                // The outer names as the items were put in order: an item whose name changed since, with no live
+                // grouping, stays in the group it is shown in until the view is made again - not a second one of a name.
+                _groups = IsGrouped
+                    ? GroupsOf(shown, 0, _outerNameOfView.Count == shown.Count ? _outerNameOfView : null)
+                    : [];
             }
 
             return _groups;
@@ -267,6 +276,158 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         RebuildPage();
     }
 
+    // Group by group, each where its first item comes, the levels below within; the order inside a group kept. Made on
+    // every rebuild of the page - which is told as a Reset - so a name an item changed without a word is taken then too.
+    private void PutInGroupOrder()
+    {
+        var positions = new List<int>(_view.Count);
+        for (var i = 0; i < _view.Count; i++)
+            positions.Add(i);
+
+        var ordered = new List<int>(_view.Count);
+        AddInGroupOrder(positions, 0, ordered);
+
+        var items = new List<object>(_view.Count);
+        var indexes = new List<int>(_view.Count);
+        foreach (var position in ordered)
+        {
+            items.Add(_view[position]);
+            indexes.Add(_sourceIndexOfView[position]);
+        }
+
+        _view.Clear();
+        _view.AddRange(items);
+        _sourceIndexOfView.Clear();
+        _sourceIndexOfView.AddRange(indexes);
+
+        _outerNameOfView.Clear();
+        var outer = GroupDescriptions[0];
+        foreach (var item in _view)
+            _outerNameOfView.Add(outer.GroupNameOf(item));
+    }
+
+    // Grouped by one level, the view goes group by group, the groups in the order of their first items: an item joins
+    // its group where the ordering puts it, a new group goes before the first group whose first item comes after it.
+    // -1 when the item would bring its group before the one ahead of it - the order of the groups changes - or with more
+    // levels: the view is then made again.
+    private int GroupedInsertionPoint(object item, int sourceIndex)
+    {
+        if (GroupDescriptions.Count > 1)
+            return -1;
+
+        var name = GroupDescriptions[0].GroupNameOf(item);
+        var start = -1;
+        var end = -1;
+        for (var i = 0; i < _outerNameOfView.Count; i++)
+        {
+            if (Equals(_outerNameOfView[i], name))
+            {
+                if (start < 0)
+                    start = i;
+                end = i + 1;
+            }
+            else if (start >= 0)
+            {
+                break;
+            }
+        }
+
+        if (start < 0)
+        {
+            for (var i = 0; i < _view.Count; i++)
+            {
+                if (StartsGroup(i) && Order(item, sourceIndex, i) < 0)
+                    return i;
+            }
+
+            return _view.Count;
+        }
+
+        var low = start;
+        var high = end;
+        while (low < high)
+        {
+            var middle = (low + high) / 2;
+            if (Order(item, sourceIndex, middle) > 0)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+
+        if (low == start && start > 0 && Order(item, sourceIndex, FirstOfGroupAt(start - 1)) < 0)
+            return -1;
+
+        return low;
+    }
+
+    // Whether taking the item at `position` keeps the groups in the order of their first items: it does unless it is a
+    // group's first and the group's next item comes after the next group's first.
+    private bool RemovalKeepsGroupOrder(int position)
+    {
+        if (GroupDescriptions.Count > 1)
+            return false;
+
+        if (!StartsGroup(position) || position + 1 >= _view.Count || StartsGroup(position + 1))
+            return true;
+
+        var nextGroup = position + 1;
+        while (nextGroup < _view.Count && !StartsGroup(nextGroup))
+            nextGroup++;
+
+        return nextGroup >= _view.Count || Order(_view[nextGroup], _sourceIndexOfView[nextGroup], position + 1) > 0;
+    }
+
+    private bool StartsGroup(int position) =>
+        position == 0 || !Equals(_outerNameOfView[position], _outerNameOfView[position - 1]);
+
+    private int FirstOfGroupAt(int position)
+    {
+        while (position > 0 && !StartsGroup(position))
+            position--;
+
+        return position;
+    }
+
+    // Where `item` from `sourceIndex` comes against the view's item at `position`: by the ordering, then by the source.
+    private int Order(object item, int sourceIndex, int position)
+    {
+        var byKey = IsSorted ? Compare(item, _view[position]) : 0;
+        return byKey != 0 ? byKey : sourceIndex.CompareTo(_sourceIndexOfView[position]);
+    }
+
+    private void AddInGroupOrder(List<int> positions, int level, List<int> ordered)
+    {
+        if (level == GroupDescriptions.Count)
+        {
+            ordered.AddRange(positions);
+            return;
+        }
+
+        var description = GroupDescriptions[level];
+        var members = new List<List<int>>();
+        var indexOfName = new Dictionary<object, int>();
+        var indexOfNull = -1;
+        foreach (var position in positions)
+        {
+            var name = description.GroupNameOf(_view[position]);
+            var index = name == null ? indexOfNull : indexOfName.GetValueOrDefault(name, -1);
+            if (index < 0)
+            {
+                members.Add([]);
+                index = members.Count - 1;
+                if (name == null)
+                    indexOfNull = index;
+                else
+                    indexOfName[name] = index;
+            }
+
+            members[index].Add(position);
+        }
+
+        foreach (var group in members)
+            AddInGroupOrder(group, level + 1, ordered);
+    }
+
     private void SortView()
     {
         var order = Enumerable.Range(0, _view.Count).ToList();
@@ -306,6 +467,13 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        // Grouped by more than one level, the view is made again; by one, an item joins its group (GroupedInsertionPoint).
+        if (GroupDescriptions.Count > 1)
+        {
+            Rebuild();
+            return;
+        }
+
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add when e.NewStartingIndex >= 0:
@@ -315,8 +483,9 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
                 SourceRemoved(e.OldStartingIndex, e.OldItems.Count);
                 break;
             case NotifyCollectionChangedAction.Replace when e.OldStartingIndex >= 0:
-                SourceRemoved(e.OldStartingIndex, e.OldItems.Count);
-                SourceInserted(e.OldStartingIndex, e.NewItems);
+                // Made again on the way - from the source as it is now, the new items in it - nothing is left to insert.
+                if (!SourceRemoved(e.OldStartingIndex, e.OldItems.Count))
+                    SourceInserted(e.OldStartingIndex, e.NewItems);
                 break;
             default:
                 Rebuild();
@@ -337,13 +506,35 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             if (!Passes(item)) continue;
 
             var viewIndex = InsertionPointFor(item, at);
-            _view.Insert(viewIndex, item);
-            _sourceIndexOfView.Insert(viewIndex, at);
+            if (viewIndex < 0)
+            {
+                Rebuild();   // the groups change order: made again, from the source as it is now
+                return;
+            }
+
+            InsertShown(viewIndex, item, at);
             ShapedInserted(viewIndex, item);
         }
     }
 
-    private void SourceRemoved(int sourceIndex, int count)
+    private void InsertShown(int position, object item, int sourceIndex)
+    {
+        _view.Insert(position, item);
+        _sourceIndexOfView.Insert(position, sourceIndex);
+        if (IsGrouped)
+            _outerNameOfView.Insert(position, GroupDescriptions[0].GroupNameOf(item));
+    }
+
+    private void RemoveShown(int position)
+    {
+        _view.RemoveAt(position);
+        _sourceIndexOfView.RemoveAt(position);
+        if (IsGrouped)
+            _outerNameOfView.RemoveAt(position);
+    }
+
+    // True when the view was made again from the source instead.
+    private bool SourceRemoved(int sourceIndex, int count)
     {
         for (var i = count - 1; i >= 0; i--)
         {
@@ -351,9 +542,14 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             var found = ViewPositionOfSource(at);
             if (found >= 0)
             {
+                if (IsGrouped && !RemovalKeepsGroupOrder(found))
+                {
+                    Rebuild();   // the groups change order: made again, from the source as it is now
+                    return true;
+                }
+
                 var item = _view[found];
-                _view.RemoveAt(found);
-                _sourceIndexOfView.RemoveAt(found);
+                RemoveShown(found);
                 ShapedRemoved(found, item);
             }
 
@@ -362,6 +558,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         }
 
         ShiftSourceIndexes(sourceIndex, -count);
+        return false;
     }
 
     private void ShiftSourceIndexes(int fromSourceIndex, int delta)
@@ -370,7 +567,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         {
             if (_sourceIndexOfView[i] < fromSourceIndex)
             {
-                if (IsSorted) continue;
+                if (IsReordered) continue;
                 break;
             }
 
@@ -378,9 +575,12 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         }
     }
 
+    // Sorted or grouped, the view's order is not the source's: a source index is looked for, not searched in halves.
+    private bool IsReordered => IsSorted || IsGrouped;
+
     private int ViewPositionOfSource(int sourceIndex)
     {
-        if (!IsSorted) return _sourceIndexOfView.BinarySearch(sourceIndex);
+        if (!IsReordered) return _sourceIndexOfView.BinarySearch(sourceIndex);
 
         for (var i = 0; i < _sourceIndexOfView.Count; i++)
         {
@@ -390,8 +590,12 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         return -1;
     }
 
+    // Where a new shown item goes; -1 when the view has to be made again for it (grouped: the groups change order).
     private int InsertionPointFor(object item, int sourceIndex)
     {
+        if (IsGrouped)
+            return GroupedInsertionPoint(item, sourceIndex);
+
         if (!IsSorted)
         {
             var found = _sourceIndexOfView.BinarySearch(sourceIndex);
@@ -459,6 +663,11 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private void RebuildPage()
     {
+        if (IsGrouped)
+            PutInGroupOrder();
+        else
+            _outerNameOfView.Clear();
+
         if (!IsPaged)
         {
             _page.Clear();
@@ -609,10 +818,16 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         var shown = position >= 0;
         var passes = Passes(sender);
 
+        // Grouped, an item leaving its place can bring a group forward or back: then the view is made again.
+        if (shown && (!passes || reordered) && IsGrouped && !RemovalKeepsGroupOrder(position))
+        {
+            Rebuild();
+            return;
+        }
+
         if (shown && !passes)
         {
-            _view.RemoveAt(position);
-            _sourceIndexOfView.RemoveAt(position);
+            RemoveShown(position);
             ShapedRemoved(position, sender);
             return;
         }
@@ -620,20 +835,28 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         if (!shown && passes)
         {
             var at = InsertionPointFor(sender, sourceIndex);
-            _view.Insert(at, sender);
-            _sourceIndexOfView.Insert(at, sourceIndex);
+            if (at < 0)
+            {
+                Rebuild();
+                return;
+            }
+
+            InsertShown(at, sender, sourceIndex);
             ShapedInserted(at, sender);
             return;
         }
 
         if (!shown || !reordered) return;
 
-        _view.RemoveAt(position);
-        _sourceIndexOfView.RemoveAt(position);
+        RemoveShown(position);
         var moved = InsertionPointFor(sender, sourceIndex);
-        _view.Insert(moved, sender);
-        _sourceIndexOfView.Insert(moved, sourceIndex);
+        if (moved < 0)
+        {
+            Rebuild();
+            return;
+        }
 
+        InsertShown(moved, sender, sourceIndex);
         if (moved != position) ShapedMoved(position, moved, sender);
     }
 
@@ -657,12 +880,6 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
             Notify(nameof(Groups));
     }
 
-    private void RegroupLater()
-    {
-        _groupsStale = true;
-        Notify(nameof(Groups));
-    }
-
     private List<object> Shown()
     {
         var shown = new List<object>(Count);
@@ -672,30 +889,24 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         return shown;
     }
 
-    // The items in groups by the level's description, each in the order of its first item; the levels below within.
-    private List<CollectionViewGroup> GroupsOf(List<object> items, int level)
+    // The items in groups by the level's description, the levels below within. The view is in group order already, so a
+    // group is a run of items of one name.
+    private List<CollectionViewGroup> GroupsOf(List<object> items, int level, IReadOnlyList<object> namesInOrder = null)
     {
         var description = GroupDescriptions[level];
         var names = new List<object>();
         var members = new List<List<object>>();
-        var indexOfName = new Dictionary<object, int>();
-        var indexOfNull = -1;
-        foreach (var item in items)
+        for (var index = 0; index < items.Count; index++)
         {
-            var name = description.GroupNameOf(item);
-            var index = name == null ? indexOfNull : indexOfName.GetValueOrDefault(name, -1);
-            if (index < 0)
+            var item = items[index];
+            var name = namesInOrder != null ? namesInOrder[index] : description.GroupNameOf(item);
+            if (names.Count == 0 || !Equals(names[^1], name))
             {
                 names.Add(name);
                 members.Add([]);
-                index = names.Count - 1;
-                if (name == null)
-                    indexOfNull = index;
-                else
-                    indexOfName[name] = index;
             }
 
-            members[index].Add(item);
+            members[^1].Add(item);
         }
 
         var isBottom = level == GroupDescriptions.Count - 1;

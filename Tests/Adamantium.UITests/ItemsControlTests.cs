@@ -616,7 +616,7 @@ public class ItemsControlTests
         var overSlot6 = new Vector2<double>(110, 60);      // column 2, line 1
 
         Assert.That(panel.TryGetDropSlot(overSlot6, out var before), Is.True);
-        Assert.That(before, Is.EqualTo(6), "column 2 of line 1");
+        Assert.That(before.Index, Is.EqualTo(6), "column 2 of line 1");
 
         foreach (var gap in new[] { 0, 5, 6, 7, 11 })
         {
@@ -625,7 +625,7 @@ public class ItemsControlTests
             panel.Arrange(new Rect(0, 0, 200, 300), true);
 
             Assert.That(panel.TryGetDropSlot(overSlot6, out var withGap), Is.True);
-            Assert.That(withGap, Is.EqualTo(before), $"the same point must answer the same slot with a gap at {gap}");
+            Assert.That(withGap.Index, Is.EqualTo(before.Index), $"the same point must answer the same slot with a gap at {gap}");
         }
     }
 

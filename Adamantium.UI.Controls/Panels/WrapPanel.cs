@@ -18,9 +18,10 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    // The grid answers where a drop lands, from the SAME arithmetic the hit-test uses. The cell size, the column count and
    // the origin are all unaffected by an open gap - only which item sits in which slot is - so the answer does not move
    // when the gap does, and the feedback loop that made the gap flicker between two slots cannot form.
-   public override bool TryGetDropSlot(Vector2<double> point, out int index)
+   // Grouped, the lines as they stand: nothing before the gap moves for it, and the cell under the pointer is the gap's.
+   public override bool TryGetDropSlot(Vector2<double> point, out DropSlot slot)
    {
-      index = -1;
+      slot = DropSlot.None;
       // A cell of 1 is the UNSEEDED value, not a real one: an empty list returns from measure before SeedCell runs, so
       // there is no item to probe a cell from and the gap would be a single pixel. Say no, and the drag keeps its caret -
       // which is the honest cue when we cannot say how big the thing being dropped will be.
@@ -28,12 +29,19 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
       var horizontal = Orientation == Orientation.Horizontal;
       var flow = Math.Max(0, horizontal ? point.X : point.Y);
-      var scroll = Math.Max(0, horizontal ? point.Y : point.X);
+      var scroll = horizontal ? point.Y : point.X;
       var col = Math.Min(_columns - 1, (int)(flow / _cellFlow));
-      var slot = (int)(scroll / _cellScroll) * _columns + col;
+      if (ShowsGroups)
+      {
+         if (!_groupLines.TryGetDropSlot(scroll, col, out var inGroup)) return false;
+         slot = DropSlotOf(inGroup);
+         return true;
+      }
+
+      var cell = (int)(Math.Max(0, scroll) / _cellScroll) * _columns + col;
 
       // Past the last item the drop appends - the grid keeps answering with empty slots beyond it.
-      index = Math.Clamp(slot, 0, Owner.Items?.Count ?? 0);
+      slot = new DropSlot(Math.Clamp(cell, 0, Owner.Items?.Count ?? 0));
       return true;
    }
 
@@ -55,6 +63,12 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    {
       rect = default;
       if (!IsItemsHost || _columns <= 0 || _cellFlow <= 0 || _cellScroll <= 0 || index < 0) return false;
+
+      if (ShowsGroups)
+      {
+         rect = GroupedItemRect(index);
+         return true;
+      }
 
       var flow = index % _columns * _cellFlow;
       var scroll = index / _columns * _cellScroll;
@@ -92,6 +106,9 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       foreach (var candidate in VisualChildren)
       {
          if (ReferenceEquals(candidate, from)) { isOurs = true; continue; }
+
+         // A group's header is a row of the panel, not an item: the arrows pass it by to the group's tiles.
+         if (candidate is GroupHeader) continue;
 
          // A PARKED container is still a visual child - virtualization hides it rather than detaching it - and it keeps
          // the bounds it had when it was last on screen. Offering one as a neighbor put the focus nowhere and left the
@@ -154,7 +171,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
    IReadOnlyList<IUIComponent> IHitTestChildren.GetHitTestChildren(Vector2<double> local)
    {
-      if (!IsItemsHost) return null;
+      // With groups, headers stand between the lines and the grid arithmetic no longer names the slot: the default walk.
+      if (!IsItemsHost || ShowsGroups) return null;
       var horizontal = Orientation == Orientation.Horizontal;
       var flow = horizontal ? local.X : local.Y;
       var scroll = horizontal ? local.Y : local.X;
@@ -232,7 +250,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    private double _cellFlow = 1;        // cell size along the flow axis
    private double _cellScroll = 1;      // cell size along the scroll (wrap) axis
    private int _columns = 1;            // items per line
-   private int _lastFirstLine;          // remembered first visible line -> probe next pass
+   private int _probeItem;              // the first item in view last pass -> probed next pass
    private int _lastItemCount = -1;     // detect data changes -> re-establish the cached cell
 
    /// <summary>Grid metrics from the last virtualized measure (items-host mode): items per line, and the uniform cell
@@ -552,7 +570,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    // base can skip re-realizing it and just slide + track the thumb. Cell not measured yet (_cellScroll <= 0) -> re-realize.
    protected override bool RealizedWindowMovesFor(Vector2<double> from, Vector2<double> to)
    {
-      if (_cellScroll <= 0) return true;
+      // Headers between the lines move the line boundaries off the grid: always realize again.
+      if (_cellScroll <= 0 || ShowsGroups) return true;
       var horizontal = Orientation == Orientation.Horizontal;
       var fromScroll = horizontal ? from.Y : from.X;
       var toScroll = horizontal ? to.Y : to.X;
@@ -570,9 +589,15 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       if (count == 0)
       {
          foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, -1)) ParkContainer(c);
+         SetHeaderWindow(0, -1);
          _lastItemCount = 0;
          return new Size<double>();
       }
+
+      if (ShowsGroups) return MeasureGrouped(availableSize, offset, count);
+
+      // No groups (any more): headers a grouped pass made are put away.
+      SetHeaderWindow(0, -1);
 
       var viewportFlow = horizontal ? availableSize.Width : availableSize.Height;
       var viewportScroll = horizontal ? availableSize.Height : availableSize.Width;
@@ -634,8 +659,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
          var topLine = (int)Math.Floor(scrollOffset / _cellScroll);
          var firstLine = Math.Max(0, topLine - _bufferLines);
          var lastLine = Math.Min(lines - 1, firstLine + spanRows);
-         _lastFirstLine = firstLine;
          first = firstLine * _columns;
+         _probeItem = first;
          last = Math.Min(count - 1, (lastLine + 1) * _columns - 1);
          // The window is always the full visible range; SetWindow binds and measures (OnSlotBound) within the budget and
          // defers the rest to PendingIndices, shown as skeletons. GrowCell feeds back through _cellGrew.
@@ -667,6 +692,11 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
    {
       var horizontal = Orientation == Orientation.Horizontal;
+      if (ShowsGroups)
+      {
+         ArrangeGrouped(finalSize);
+         return;
+      }
 
       // Tiles sit at absolute slots (the presenter translates the panel on scroll), so only rebound slots re-arrange; a
       // change of cell, columns, drop gap or item count forces one full pass.
@@ -757,6 +787,136 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       }
    }
 
+   // ---- Groups: each a header line across the panel, then its tiles in lines of the uniform cell ----------------
+
+   private readonly GroupLines _groupLines = new();
+
+   // As the plain virtualized measure, with the lines laid out by group: the cell and the columns as there, a header's
+   // length along the scroll axis by its level, the window the items and headers whose lines it crosses.
+   private Size<double> MeasureGrouped(Size<double> availableSize, Vector2<double> offset, int count)
+   {
+      var horizontal = Orientation == Orientation.Horizontal;
+      var viewportFlow = horizontal ? availableSize.Width : availableSize.Height;
+      var viewportScroll = horizontal ? availableSize.Height : availableSize.Width;
+      if (double.IsInfinity(viewportFlow))
+         viewportFlow = _lastViewportFlow > 0 ? _lastViewportFlow : DefaultViewportFlow;
+      else if (viewportFlow > 0)
+         _lastViewportFlow = viewportFlow;
+
+      if (count != _lastItemCount)
+      {
+         _cellFlow = _cellScroll = 1;
+         _lastItemCount = count;
+      }
+
+      SeedCell(horizontal, count);
+      var places = Owner.GroupHeaderPlaces;
+      var headerConstraint = HeaderConstraint(horizontal, viewportFlow);
+      ProbeHeaderExtents(headerConstraint, horizontal);
+
+      var scrolling = offset != _lastMeasuredOffset;
+      _lastMeasuredOffset = offset;
+      var bindBudget = PassBudget(scrolling ? ScrollBindBudget : FillBindBudget);
+
+      var window = default(LinesWindow);
+      for (var pass = 0; pass < MaxCellPasses; pass++)
+      {
+         _columns = Math.Max(1, (int)Math.Floor(viewportFlow / _cellFlow));
+         var gapPlace = DropGapPlace(out var gapSlot);
+         _groupLines.Build(places, count, _columns, HeaderExtents, 0, _cellScroll, null, gapPlace, gapSlot);
+
+         double effectiveViewport;
+         if (double.IsInfinity(viewportScroll))
+         {
+            OnNoViewport();
+            effectiveViewport = UnboundedWindow(horizontal, _lastViewportScroll, DefaultViewportScroll);
+         }
+         else
+         {
+            effectiveViewport = viewportScroll;
+            _lastViewportScroll = viewportScroll;
+         }
+
+         var scrollOffset = horizontal ? offset.Y : offset.X;
+         _bufferLines = ResolveBufferLines(effectiveViewport);
+         var lead = _bufferLines * _cellScroll;
+         window = _groupLines.Window(scrollOffset - lead, scrollOffset + effectiveViewport + lead);
+         // SeedCell probes the window's first item next pass - not item 0, and not a line start of no group's.
+         _probeItem = window.FirstItem;
+
+         _measuringHorizontal = horizontal;
+         _cellGrew = false;
+         _onSlotBound ??= OnSlotBound;
+         // A folded group's tiles are inside the window's span, not in what it shows: none of them is made.
+         foreach (var c in Owner.ItemContainerGenerator.SetWindow(window.FirstItem, window.LastItem,
+                     _groupLines.FoldedItems, bindBudget, PassMinBinds, _onSlotBound))
+            ParkContainer(c);
+
+         if (!_cellGrew) break;
+      }
+
+      if (Owner.ItemContainerGenerator.PendingIndices.Count > 0 && FillsPending)
+         LayoutManager.For(this).InvalidateMeasureNextPass(this);
+
+      ShowHeadersInWindow(window, headerConstraint, horizontal);
+
+      var flowExtent = _columns * _cellFlow;
+      var scrollExtent = _groupLines.Extent;
+      return horizontal ? new Size<double>(flowExtent, scrollExtent) : new Size<double>(scrollExtent, flowExtent);
+   }
+
+   // A header is a whole line: the panel's width across, its own length along the scroll axis.
+   private static Size<double> HeaderConstraint(bool horizontal, double viewportFlow) => horizontal
+      ? new Size<double>(viewportFlow, double.PositiveInfinity)
+      : new Size<double>(double.PositiveInfinity, viewportFlow);
+
+   private Rect GroupedItemRect(int index)
+   {
+      var scrollPos = _groupLines.ItemStart(index, out var column);
+      var flowPos = column * _cellFlow;
+      return Orientation == Orientation.Horizontal
+         ? new Rect(flowPos, scrollPos, _cellFlow, _cellScroll)
+         : new Rect(scrollPos, flowPos, _cellScroll, _cellFlow);
+   }
+
+   // Every realized tile and header at its line: the tiles' places depend on the groups before them, so a grouped
+   // arrange is a full pass over the window rather than the plain path's only-what-moved.
+   private void ArrangeGrouped(Size<double> finalSize)
+   {
+      _stampValid = false;   // the plain path re-stamps once groups go
+      var horizontal = Orientation == Orientation.Horizontal;
+      foreach (var index in Owner.ItemContainerGenerator.RealizedIndices)
+      {
+         if (Owner.ItemContainerGenerator.ContainerFromIndex(index) is IMeasurableComponent container)
+            container.Arrange(GroupedItemRect(index));
+      }
+
+      var flowLength = Math.Max(horizontal ? finalSize.Width : finalSize.Height, _columns * _cellFlow);
+      foreach (var place in Owner.GroupHeaderGenerator.RealizedPlaces)
+      {
+         var header = Owner.GroupHeaderGenerator.HeaderAt(place);
+         var start = _groupLines.HeaderStart(place);
+         var extent = _groupLines.HeaderExtent(place);
+         header.Arrange(horizontal
+            ? new Rect(0, start, flowLength, extent)
+            : new Rect(start, 0, extent, flowLength));
+      }
+
+      ReconcileSkeletons(GroupedItemRect);
+      AnimateLayoutMoves(GroupedItemRect);
+      ShowDropPlaceholder(GroupedGapRect());
+   }
+
+   // The open gap's cell in its group, or null.
+   private Rect? GroupedGapRect()
+   {
+      if (!_groupLines.TryGetGapStart(out var scrollPos, out var column)) return null;
+      var flowPos = column * _cellFlow;
+      return Orientation == Orientation.Horizontal
+         ? new Rect(flowPos, scrollPos, _cellFlow, _cellScroll)
+         : new Rect(scrollPos, flowPos, _cellScroll, _cellFlow);
+   }
+
    // Seed the assumed uniform cell. Explicit ItemWidth/ItemHeight are taken as-is; an unspecified axis is probed from a
    // representative item (the first one in view) - the window measure then grows it to fit. We keep whatever the cell
    // already holds (it only grows), so the column count stays stable across scrolls instead of flickering per pass.
@@ -768,7 +928,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       if (heightExplicit) { if (horizontal) _cellScroll = Math.Max(1, ItemHeight); else _cellFlow = Math.Max(1, ItemHeight); }
       if (widthExplicit && heightExplicit) return;
 
-      var probeIndex = Math.Clamp(_lastFirstLine * Math.Max(1, _columns), 0, count - 1);
+      var probeIndex = Math.Clamp(_probeItem, 0, count - 1);
       var probe = (IMeasurableComponent)RealizeInWindow(probeIndex);
       probe.Measure(CellConstraint(horizontal));
       GrowCell(horizontal, probe.DesiredSize);

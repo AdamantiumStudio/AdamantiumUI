@@ -44,14 +44,28 @@ public static class ThemeContext
 
     private static void RestyleSystemFollowers()
     {
+        HashSet<Theme> left = null;
         lock (Followers)
         {
             for (var i = Followers.Count - 1; i >= 0; i--)
             {
-                if (Followers[i].TryGetTarget(out var element)) element.InvalidateStyles();
-                else Followers.RemoveAt(i);
+                if (!Followers[i].TryGetTarget(out var element))
+                {
+                    Followers.RemoveAt(i);
+                    continue;
+                }
+
+                element.InvalidateStyles();
+
+                // The variant the system just left, still read by what is outside the tree under the follower.
+                if ((GetTheme(element) ?? UIAppContext.Current?.ThemeManager?.CurrentTheme) is Theme theme
+                    && theme.ExistingSiblingFor(theme.ResolveSystemVariant(!SystemAppearance.PrefersDark)) is { } wasShown)
+                    (left ??= []).Add(wasShown);
             }
         }
+
+        if (left == null) return;
+        foreach (var theme in left) Data.ThemeResourceExpression.Retarget(theme);
     }
 
     // How many elements ever got a scope; zero lets every resource lookup skip the inherited-property reads.
@@ -98,7 +112,12 @@ public static class ThemeContext
     // system propagates before it calls back - so everything below now answers with the new theme.
     private static void OnScopeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
-        if (component is not FundamentalUIComponent element) return;
+        // Outside the tree (a drawing of an icon), no restyle reaches it: its {ThemeResource}s follow the scope here.
+        if (component is not FundamentalUIComponent element)
+        {
+            ThemeResource.FollowScope(component);
+            return;
+        }
 
         // A scope now exists, so the fast path in For() has to stop being taken. Counted rather than a bool because the
         // count only ever grows - a scope removed is still a tree that once had one, and getting that wrong would mean

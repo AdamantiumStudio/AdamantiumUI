@@ -11,6 +11,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
@@ -196,6 +197,7 @@ public static partial class DragDrop
     private static bool _indicatorFrame;   // frame (drop-into) vs caret - part of the "nothing moved" cache key
     private static int _insertIndex = -1;
     private static object _insertBefore;   // the item at the insertion point - insert BEFORE it (robust to same-list shifts)
+    private static CollectionViewGroup _insertGroup;   // the group of a grouped list the drop lands in
     private static bool _intoItsOwnOrder;  // over the list it came from, which keeps an order of its own: nothing to do
 
     // Hybrid tree-drop: the hovered node + where the drop lands relative to it (before/after sibling, or into as a child).
@@ -255,6 +257,8 @@ public static partial class DragDrop
 
         if (!PressedOnDragHandle(input, e.Pointer)) return;   // the source has a grip and this press missed it
 
+        // The press means a drag here, not a selection in the text it landed on.
+        e.IsTakenForDrag = true;
         _pointer = e.Pointer;
         _source = input;
         _startScreen = DragPointer.GetScreenPosition();
@@ -436,6 +440,7 @@ public static partial class DragDrop
             OriginalSource = _hit,
             InsertIndex = _insertIndex,
             InsertBefore = _insertBefore,
+            DropGroup = _insertGroup,
             DropTarget = _dropTarget,
             Placement = _placement,
         };
@@ -534,6 +539,7 @@ public static partial class DragDrop
         // Flat list: a caret at the insertion seam; no hierarchical placement.
         _placement = DropPlacement.None;
         _dropTarget = null;
+        _insertGroup = null;
         var flow = ItemFlowOrientation(list);
         var index = ComputeInsertion(list, flow, out var caret);
         _insertIndex = index;
@@ -546,27 +552,46 @@ public static partial class DragDrop
         // highlight is the cue and the drop lands at index 0.
         if ((items?.Count ?? 0) == 0)
         {
-            SetDropGap(null, -1);
+            SetDropGap(null, DropSlot.None);
             ClearIndicatorVisual();
             _insertIndex = 0;
             _insertBefore = null;
             return;
         }
 
-        var hostPanel = GetInsertionCue(list) == DropInsertionCue.Gap ? HostPanel(list) : null;
-        // The gap's index comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the
-        // containers, and the gap moves them, so feeding it back would make the gap chase itself between two slots.
-        if (hostPanel is { SupportsDropGap: true } &&
-            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), LiftedFrom(list), out var slot))
+        // The slot comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the containers,
+        // and the gap moves them, so feeding it back would make the gap chase itself between two slots. In a list showing
+        // groups it is asked even for a caret: only the panel knows which group a seam between two belongs to.
+        var hostPanel = HostPanel(list);
+        var gapWanted = GetInsertionCue(list) == DropInsertionCue.Gap && hostPanel is { SupportsDropGap: true };
+        var slot = DropSlot.None;
+        if (hostPanel != null && (gapWanted || list.GroupHeaderPlaces.Count > 0) &&
+            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), LiftedFrom(list), out slot))
         {
-            ClearIndicatorVisual();
-            _insertIndex = slot;
-            _insertBefore = AnchorAt(list, slot);
-            SetDropGap(hostPanel, slot, list);
-            return;
+            TakeSlot(list, slot);
+
+            // A folded group shows no items to open a gap or a caret among: the drop goes in it, framed on its header.
+            if (slot.Group != null && FoldedHeaderOf(list, slot.Group) is { } folded)
+            {
+                SetDropGap(null, DropSlot.None);
+                ShowIndicator(list, host, folded.TransformBoundsToVisual(list), Orientation.Horizontal, frame: true);
+                return;
+            }
+
+            if (gapWanted)
+            {
+                ClearIndicatorVisual();
+                SetDropGap(hostPanel, slot, list);
+                return;
+            }
+
+            if (slot.Group != null)
+            {
+                caret = GroupCaret(list, flow, slot, caret);
+            }
         }
 
-        SetDropGap(null, -1);
+        SetDropGap(null, DropSlot.None);
         // The bar runs PERPENDICULAR to the item flow.
         var barOrientation = flow == Orientation.Vertical ? Orientation.Horizontal : Orientation.Vertical;
         ShowIndicator(list, host, caret, barOrientation, frame: false);
@@ -584,6 +609,7 @@ public static partial class DragDrop
 
         _insertIndex = -1;
         _insertBefore = null;
+        _insertGroup = null;
 
         if (container == null)   // empty area -> drop into the root, no cue
         {
@@ -771,13 +797,16 @@ public static partial class DragDrop
     // would keep a hole in it for the rest of the gesture.
     // The first item at or after the seam that is not being dragged: the source removes dragged items before the target
     // inserts before this anchor, so it must survive the removal.
-    private static object AnchorAt(ItemsControl list, int index)
+    // In a group, only an item of that group: past its end the drop appends to the group, and the next group's first
+    // item is no anchor for it.
+    private static object AnchorAt(ItemsControl list, int index, int end = -1)
     {
         var items = list?.Items;
         if (items == null) return null;
 
         var dragged = LiftedFrom(list);
-        for (var i = index; i >= 0 && i < items.Count; i++)
+        var stop = end >= 0 ? Math.Min(end, items.Count) : items.Count;
+        for (var i = index; i >= 0 && i < stop; i++)
         {
             if (dragged?.Contains(items[i]) != true) return items[i];
         }
@@ -785,11 +814,50 @@ public static partial class DragDrop
         return null;   // nothing but dragged items after the seam - append
     }
 
-    private static void SetDropGap(IDropGapPanel panel, int index, ItemsControl list = null)
+    private static void SetDropGap(IDropGapPanel panel, DropSlot slot, ItemsControl list = null)
     {
-        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.ShowDropGap(-1, null);
+        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.ShowDropGap(DropSlot.None, null);
         _gapPanel = panel;
-        panel?.ShowDropGap(index, index >= 0 && list != null ? LiftedFrom(list) : null);
+        panel?.ShowDropGap(slot, slot.Exists && list != null ? LiftedFrom(list) : null);
+    }
+
+    // Where the drop lands, as the panel's slot says - in its group, if it has one.
+    private static void TakeSlot(ItemsControl list, DropSlot slot)
+    {
+        _insertIndex = slot.Index;
+        _insertGroup = slot.Group;
+        _insertBefore = AnchorAt(list, slot.Index, slot.Group != null ? slot.GroupEnd : -1);
+    }
+
+    // The header of a group shown and folded, which a drop into it is framed on; null for an open one.
+    private static GroupHeader FoldedHeaderOf(ItemsControl list, CollectionViewGroup group)
+    {
+        foreach (var place in list.GroupHeaderGenerator.RealizedPlaces)
+        {
+            if (list.GroupHeaderGenerator.HeaderAt(place) is { IsExpanded: false } header &&
+                ReferenceEquals(header.DataContext, group))
+            {
+                return header;
+            }
+        }
+
+        return null;
+    }
+
+    // The caret at a slot in a group: between two of its items, or at the edge of its first or last - never against the
+    // next group's first item, which a seam found by distance alone could land on.
+    private static Rect GroupCaret(ItemsControl list, Orientation flow, DropSlot slot, Rect nearCaret)
+    {
+        const double thickness = 8.0;
+        var horizontal = flow == Orientation.Horizontal;
+        var before = slot.Index > slot.GroupStart ? RealizedRect(list, slot.Index - 1) : null;
+        var after = slot.Index < slot.GroupEnd ? RealizedRect(list, slot.Index) : null;
+        if (after is { } next)
+        {
+            return SeamCaret(horizontal, thickness, before, after, next, afterSide: false);
+        }
+
+        return before is { } last ? SeamCaret(horizontal, thickness, null, null, last, afterSide: true) : nearCaret;
     }
 
     private static bool IsWithin(IInputComponent source, IUIComponent list)
@@ -832,10 +900,11 @@ public static partial class DragDrop
 
     private static void ClearIndicator()
     {
-        SetDropGap(null, -1);
+        SetDropGap(null, DropSlot.None);
         ClearIndicatorVisual();
         _insertIndex = -1;
         _insertBefore = null;
+        _insertGroup = null;
         _dropTarget = null;
         _placement = DropPlacement.None;
     }
@@ -1341,6 +1410,7 @@ public static partial class DragDrop
             Effects = effects,
             InsertIndex = _insertIndex,     // where the insertion line was; -1 if not over an items host
             InsertBefore = _insertBefore,   // the item after the caret (survives the source removal - use for a stable reorder)
+            DropGroup = _insertGroup,       // the group of a grouped list it lands in
             DropTarget = _dropTarget,       // hybrid tree-drop: the hovered node
             Placement = _placement,         // before/after sibling, or into as a child (None for a flat list)
             OriginalSource = _hit,

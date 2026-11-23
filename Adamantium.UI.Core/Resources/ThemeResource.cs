@@ -49,9 +49,19 @@ public class ThemeResource : MarkupExtension
         // Keyed per token so two trigger {ThemeResource}s on the same part property (a checkbox's accent under its
         // checked+hover accent-secondary) each keep their own live connection and stack, instead of one closing the other.
         var slot = (propertyName + "@" + priority, token);
-        if (map.TryGetValue(slot, out var previous)) previous.CloseConnection();   // defensive: re-apply on the same slot
+        if (map.TryGetValue(slot, out var previous)) previous.Release();   // defensive: re-apply on the same slot
         map[slot] = expression;
         return expression;
+    }
+
+    /// <summary>Connects every <c>{ThemeResource}</c> on <paramref name="target"/>, a component outside the tree, to
+    /// the theme now in force where it hangs - called as a scope's values reach it.</summary>
+    internal static void FollowScope(IAdamantiumComponent target)
+    {
+        if (!_applied.TryGetValue(target, out var map) || map.Count == 0) return;
+
+        // A snapshot: connecting again can apply a trigger that applies or removes another entry here.
+        foreach (var expression in map.Values.ToArray()) expression.FollowScope();
     }
 
     /// <summary>Disposes the expression a setter/trigger established (closing its theme subscription) and clears the
@@ -61,7 +71,7 @@ public class ThemeResource : MarkupExtension
         if (!_applied.TryGetValue(target, out var map)) return;
         if (!map.Remove((propertyName + "@" + priority, token), out var expression)) return;
 
-        expression.CloseConnection();
+        expression.Release();
 
         // A TOKEN owns one contribution on the trigger stack and nothing else, so it always takes that contribution
         // with it - a survivor on the same slot keeps its own. Standing aside here is what left a color on a part
