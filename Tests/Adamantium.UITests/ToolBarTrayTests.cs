@@ -949,6 +949,44 @@ public class ToolBarTrayTests
         });
     }
 
+    // Down the side, a contextual bar whose commands want the room its context's name takes: the name is cut to a strip
+    // of its color, its text the tooltip, and the commands stand; given room again, the whole name comes back.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextsNameDownTheSide_IsCutToAStrip_WhenTheCommandsNeedTheRoom(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0, commands: 6);
+        table.IsContextual = true;
+        table.ContextualHeader = "Table Tools";
+        var tray = Tray(table);
+        tray.Orientation = Orientation.Vertical;
+        var side = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { tray } } };
+        Show(side);
+        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlateDown");
+        var whole = table.RenderSize.Height;
+        var plateWhole = plate.RenderSize.Height;
+
+        tray.MaxHeight = whole - plateWhole / 2;
+        Show(side);
+        var cutShort = table.IsContextualHeaderShort;
+        var cutOverflow = table.HasOverflowItems;
+        var cutPlate = plate.RenderSize.Height;
+        var cutTip = ToolTipService.GetToolTip(plate);
+        tray.MaxHeight = whole + 20;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plateWhole, Is.GreaterThan(30), "the whole name, turned");
+            Assert.That(cutShort, Is.True);
+            Assert.That(cutOverflow, Is.False, "the commands stand in the room the name gave");
+            Assert.That(cutPlate, Is.LessThan(10), "a strip");
+            Assert.That(cutTip, Is.EqualTo("Table Tools"));
+            Assert.That(table.IsContextualHeaderShort, Is.False, "room again: the whole name");
+            Assert.That(plate.RenderSize.Height, Is.EqualTo(plateWhole).Within(0.5));
+        });
+    }
+
     // The section a shown context comes from is framed and washed in the context's color, and nothing moves for it; a
     // section in no context has neither.
     [TestCaseSource(nameof(StyleSets))]

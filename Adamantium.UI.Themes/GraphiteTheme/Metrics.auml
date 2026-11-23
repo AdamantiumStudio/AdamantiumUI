@@ -258,6 +258,8 @@
     <sys:Double x:Key="DragHandleWidth">12</sys:Double>
     <sys:Double x:Key="DragHandleHeight">16</sys:Double>
     <sys:Double x:Key="ToolBarGripLength">8</sys:Double>
+    <!-- Down the side, a context's name cut to a strip of its color when the commands need the room. -->
+    <sys:Double x:Key="ToolBarContextualStripLength">5</sys:Double>
     <sys:Double x:Key="ToolBarOverflowButtonLength">16</sys:Double>
     <sys:Double x:Key="ToolBarSpacing">2</sys:Double>
     <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
