@@ -95,7 +95,7 @@ public class ToolBarTrayTests
     private static DragHandle Grip(ToolBar bar) => (DragHandle)bar.GetTemplateChild("PART_Grip");
 
     // Let go of at a point of the window, as a drag drops it: on the first tray there that takes it - the tray says where
-    // it lands; the drag itself is DragDrop's (ToolBarTrayDragBehavior).
+    // it lands; the drag itself is DragDrop's (ToolBarDragBehavior).
     private static void Drag(ToolBar bar, IUIComponent root, Vector2<double> to)
     {
         foreach (var tray in root.GetVisualDescendants().OfType<ToolBarTray>())

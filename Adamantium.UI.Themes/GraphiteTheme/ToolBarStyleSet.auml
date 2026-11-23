@@ -90,7 +90,7 @@
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">
                                 <!-- The grip a drag carries the bar by, where the application lets bars be dragged
-                                     (ToolBarTrayDragBehavior); drawn by DragHandle.ToolBarGrip above. -->
+                                     (ToolBarDragBehavior); drawn by DragHandle.ToolBarGrip above. -->
                                 <DragHandle x:Name="PART_Grip"
                                             Classes="ToolBarGrip"
                                             DockPanel.Dock="Left"

@@ -316,7 +316,7 @@ public class ToolBarTray : ItemsControl
     }
 
     // --- Taking a bar dropped on the tray -------------------------------------------------------------------------
-    // The tray moves no bar itself: whoever lets the user drag bars - with DragDrop, ToolBarTrayDragBehavior - asks it
+    // The tray moves no bar itself: whoever lets the user drag bars - with DragDrop, ToolBarDragBehavior - asks it
     // where a bar would land and puts it there.
 
     /// <summary>Whether <paramref name="bar"/>, let go of at <paramref name="point"/> of the tray, would land in it - a bar

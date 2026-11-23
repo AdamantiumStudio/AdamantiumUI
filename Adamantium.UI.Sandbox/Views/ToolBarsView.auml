@@ -19,7 +19,7 @@
         <ToolBarTray x:Name="UpperTray" Width="{Binding TrayWidth}" HorizontalAlignment="Left" MarginBottom="16">
             <!-- The application lets the bars be carried by their grips, with DragDrop: here, and in each tray below. -->
             <ToolBarTray.Behaviors>
-                <ToolBarTrayDragBehavior/>
+                <ToolBarDragBehavior/>
             </ToolBarTray.Behaviors>
             <ToolBar x:Name="EditBar" Header="{Localize ToolBarsStrings.Edit}" Band="0" BandIndex="0">
                 <Button x:Name="CutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
@@ -45,7 +45,7 @@
         <TextBlock Text="{Localize ToolBarsStrings.Lower}" FontSize="14" MarginBottom="6"/>
         <ToolBarTray x:Name="LowerTray" HorizontalAlignment="Stretch" MarginBottom="16">
             <ToolBarTray.Behaviors>
-                <ToolBarTrayDragBehavior/>
+                <ToolBarDragBehavior/>
             </ToolBarTray.Behaviors>
             <ToolBar x:Name="ExtraBar" Header="{Localize ToolBarsStrings.Extra}">
                 <Button x:Name="HelpCommand" Content="{Localize ToolBarsStrings.Help}" Command="{Binding PressCommand}" CommandParameter="Help"/>
@@ -73,7 +73,7 @@
         <ToolBarTray x:Name="SectionsTray" SharesBars="False" Width="{Binding SectionsWidth}" HorizontalAlignment="Left"
                      MarginBottom="16">
             <ToolBarTray.Behaviors>
-                <ToolBarTrayDragBehavior/>
+                <ToolBarDragBehavior/>
             </ToolBarTray.Behaviors>
             <ToolBar x:Name="FormatBar" Header="{Localize ToolBarsStrings.Format}" CommandWrapping="{Binding SectionsWrapping}">
                 <ToolBarGroup x:Name="ClipboardGroup" Header="{Localize ToolBarsStrings.Clipboard}">
@@ -119,7 +119,7 @@
         <ToolBarTray x:Name="SideTray" SharesBars="False" Orientation="{Binding SideOrientation}" HorizontalAlignment="Left"
                      MarginBottom="16">
             <ToolBarTray.Behaviors>
-                <ToolBarTrayDragBehavior/>
+                <ToolBarDragBehavior/>
             </ToolBarTray.Behaviors>
             <ToolBar x:Name="PictureBar" Header="{Localize ToolBarsStrings.Picture}" IsContextual="True" Accent="#3F7CBF"
                      ContextualHeader="{Localize ToolBarsStrings.PictureTools}">
