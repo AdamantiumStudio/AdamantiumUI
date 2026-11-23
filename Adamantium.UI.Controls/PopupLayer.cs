@@ -350,6 +350,10 @@ public class PopupLayer
             case PlacementMode.Left:     x = Side(tx - size.Width + dx, tx + tw - dx); y = cy + dy; break;
             case PlacementMode.Right:    x = Side(tx + tw + dx, tx - size.Width - dx); y = cy + dy; break;
             case PlacementMode.Center:   x = tx + (tw - size.Width) / 2 + dx; y = ty + (th - size.Height) / 2 + dy; break;
+            // Aligned to the end, the offset is from the target's top-right corner to the popup's.
+            case PlacementMode.Relative when popup.PlacementAlignment == PlacementAlignment.End:
+                (x, y) = AtTargetPoint((popup.EffectiveTarget?.RenderSize.Width ?? tw) - dx - size.Width, dy);
+                break;
             case PlacementMode.Relative: (x, y) = AtTargetPoint(dx, dy); break;
             default:                     x = cx + dx; y = Pick(ty + th + dy, ty - size.Height - dy, size.Height, windowSize.Height, out _); break;   // Bottom
         }

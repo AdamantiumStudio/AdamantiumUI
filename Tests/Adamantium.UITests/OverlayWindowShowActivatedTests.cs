@@ -208,6 +208,37 @@ public class OverlayWindowShowActivatedTests
         Assert.That(overlay.Height, Is.EqualTo(260));
     }
 
+    // Opened at the top-right, its Left and Top the room from the window's right and top edges; moved, it stands at its
+    // top-left as any other.
+    [Test]
+    public void OpenedAtTheTopRight_StandsThatFarFromTheRightEdge_AndMovedStandsAtItsTopLeft()
+    {
+        var (window, _) = WindowWithAButton();
+        var (overlay, _) = Overlay(showActivated: false);
+        overlay.Width = 320;
+        overlay.Height = 140;
+        overlay.StartupLocation = Adamantium.Navigation.OverlayStartupLocation.TopRight;
+        overlay.Left = 16;
+        overlay.Top = 40;
+
+        window.ShowOverlayWindow(overlay);
+        Settle(window);
+        var opened = overlay.WorldTransform.TranslationVector;
+        overlay.Left = 100;
+        overlay.Top = 50;
+        Settle(window);
+        var moved = overlay.WorldTransform.TranslationVector;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened.X, Is.EqualTo(800 - 16 - 320).Within(0.5), "its right edge 16 from the window's");
+            Assert.That(opened.Y, Is.EqualTo(40).Within(0.5));
+            Assert.That(moved.X, Is.EqualTo(100).Within(0.5), "its top-left, once moved");
+            Assert.That(moved.Y, Is.EqualTo(50).Within(0.5));
+        });
+        overlay.Close();
+    }
+
     private static (Window Window, Button Outside) WindowWithAButton()
     {
         var outside = new Button { Content = "Outside" };
