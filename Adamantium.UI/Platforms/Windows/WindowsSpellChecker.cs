@@ -14,9 +14,10 @@ namespace Adamantium.UI.Platforms.Windows;
 
 /// <summary>Windows' own spelling (Windows 8 and later): the dictionaries of the languages installed and the user's
 /// dictionary. A language is matched to one the system has by its tag, then by its first subtag; a word ignored is
-/// ignored for every tag of its language. Its objects live in the multithreaded apartment, so it is called from any
-/// thread; a repeated word is no misspelling here.</summary>
-internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
+/// ignored for every tag of its language. The user adding or removing a language (their list in the registry changing)
+/// is seen on the next call. Its objects live in the multithreaded apartment, so it is called from any thread; a
+/// repeated word is no misspelling here.</summary>
+internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker, IDisposable
 {
     private static readonly Guid FactoryClass = new("7AB36653-1796-484B-BDFA-E74F1DB7C1DC");
     private static readonly Guid FactoryInterface = typeof(ISpellCheckerFactory).GUID;
@@ -25,9 +26,18 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
     private readonly Dictionary<string, string> _matched = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, NativeChecker> _checkers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<(string Language, string Word)> _ignored = [];
+    private readonly RegistryKeyWatch _userLanguages;
     private ISpellCheckerFactory _factory;
     private bool _factoryTried;
     private string[] _supported;
+
+    public WindowsSpellChecker() : this(RegistryKeyWatch.UserLanguagesKey)
+    {
+    }
+
+    /// <summary>A checker that takes a change of <paramref name="userLanguagesKey"/> (of the current user) for the
+    /// user's languages changing.</summary>
+    internal WindowsSpellChecker(string userLanguagesKey) => _userLanguages = new RegistryKeyWatch(userLanguagesKey);
 
     public bool Supports(string language) => InApartment(() => CheckerFor(language) != null);
 
@@ -159,7 +169,8 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         }
     }
 
-    private static string Primary(string language)
+    /// <summary>The first subtag of a BCP 47 tag, lower case: the language, without its region or script.</summary>
+    internal static string Primary(string language)
     {
         var tag = language?.Trim() ?? string.Empty;
         var dash = tag.IndexOf('-');
@@ -176,6 +187,28 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         return true;
     });
 
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            foreach (var checker in _checkers.Values)
+            {
+                if (checker != null)
+                {
+                    Marshal.ReleaseComObject(checker);
+                }
+            }
+
+            _checkers.Clear();
+            _userLanguages.Dispose();
+            if (_factory != null)
+            {
+                Marshal.ReleaseComObject(_factory);
+                _factory = null;
+            }
+        }
+    }
+
     private static T InApartment<T>(Func<T> call) =>
         Thread.CurrentThread.GetApartmentState() == ApartmentState.MTA ? call() : Task.Run(call).GetAwaiter().GetResult();
 
@@ -187,6 +220,12 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
             if (string.IsNullOrEmpty(tag) || Factory() is not { } factory)
             {
                 return null;
+            }
+
+            if (_userLanguages.TakeChange())
+            {
+                _supported = null;
+                _matched.Clear();
             }
 
             if (!_matched.TryGetValue(tag, out var supported))
