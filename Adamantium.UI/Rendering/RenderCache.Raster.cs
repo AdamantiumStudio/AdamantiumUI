@@ -139,7 +139,11 @@ public partial class RenderCache
                 }
 
                 still = MixContent(ref print, unit, ref hasText);
-                MixMatrix(ref print, World(unit.Component) * run.FromWindow);
+                if (!ReferenceEquals(unit.Component, run.Element))
+                {
+                    MixRelative(ref print, World(unit.Component) * run.FromWindow);
+                }
+
                 if (unit.Placement is { } placement)
                 {
                     MixMatrix(ref print, Newest(placement));
@@ -159,6 +163,18 @@ public partial class RenderCache
     }
 
     private long _rasterFrames;
+
+    // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes
+    // back a few float steps apart as the camera moves, which is not a change.
+    private static void MixRelative(ref ulong print, Matrix4x4F relative)
+    {
+        Mix(ref print, (long)Math.Round(relative.M11 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M12 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M21 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M22 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M41 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M42 * 4096.0));
+    }
 
     // Opens the next tile of the run to draw, and draws the subtree into it from here: under the matrix from the window to
     // the tile, a texel to the device pixel.
