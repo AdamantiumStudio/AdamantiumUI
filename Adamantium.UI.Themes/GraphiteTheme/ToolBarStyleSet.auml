@@ -136,7 +136,7 @@
                                      folded pane's tab does: a layout turn, so the plate is as tall as the name is long. -->
                                 <Border x:Name="ContextualHeaderPlateDown"
                                         DockPanel.Dock="Top"
-                                        Margin="0,0,0,3"
+                                        Margin="0,3,0,3"
                                         Visibility="Collapsed"
                                         Background="{TemplateBinding Accent}"
                                         CornerRadius="{ResourceReference CornerRadiusDefault}">
