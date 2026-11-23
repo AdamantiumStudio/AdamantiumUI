@@ -432,9 +432,10 @@ public class DataGridThemePartsTests
     public void AnAutoTemplateColumnIsAsWideAsItsCells()
     {
         Use(Fluent());
-        var grid = new TreeDataGrid { HeadersVisibility = Visibility.Collapsed };
+        var grid = new TreeDataGrid { Width = 400 };
         grid.Columns.Add(new DataGridTemplateColumn
         {
+            Header = "Name",
             Width = GridLength.Auto,
             CellTemplate = new Adamantium.UI.Core.Templates.DataTemplate(() =>
             {
@@ -443,7 +444,10 @@ public class DataGridThemePartsTests
                 return new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = text };
             })
         });
-        grid.Columns.Add(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Value", Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star)
+        });
         var item = new NamedItem { Name = "a" };
         grid.ItemsSource = new[] { item };
         var window = new Window { Width = 400, Height = 300, Content = grid };
@@ -460,8 +464,11 @@ public class DataGridThemePartsTests
 
         var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
         var cells = row.VisualChildren.OfType<DataGridCell>().OrderBy(cell => cell.ColumnIndex).ToList();
+        var strip = (IUIComponent)grid.GetTemplateChild("PART_Headers");
+        var valueHeader = strip.VisualChildren.OfType<DataGridColumnHeader>().Single(header => header.ColumnIndex == 1);
         TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}, cells {cells[0].RenderSize.Width} at " +
-                              $"{cells[0].Bounds.X}, {cells[1].RenderSize.Width} at {cells[1].Bounds.X}");
+                              $"{cells[0].Bounds.X}, {cells[1].RenderSize.Width} at {cells[1].Bounds.X}, header at " +
+                              $"{valueHeader.Bounds.X}, value measured at {cells[1].PreviousMeasureConstraint?.Width}");
         Assert.Multiple(() =>
         {
             Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(before + 40), "the Auto column takes its widest cell");
@@ -469,7 +476,52 @@ public class DataGridThemePartsTests
                 "and its cell is laid out at it");
             Assert.That(cells[1].Bounds.X, Is.EqualTo(grid.Columns[0].ActualWidth).Within(0.5),
                 "the next column's cell starts after it");
+            Assert.That(valueHeader.Bounds.X, Is.EqualTo(cells[1].Bounds.X).Within(0.5), "and its header over it");
+            Assert.That(cells[1].PreviousMeasureConstraint?.Width, Is.EqualTo(cells[1].RenderSize.Width).Within(0.5),
+                "measured, as text is trimmed, at the narrower width it is laid out at");
         });
+    }
+
+    // The strip for a new record shows a hint in its first cell: no record's value, so no width for an Auto column.
+    [Test]
+    public void TheNewRecordHintDoesNotWidenAnAutoColumn()
+    {
+        Use(Fluent());
+        var grid = new TreeDataGrid { Width = 400, ShowNewItemRow = true, NewRowHint = "Add a record with a very long hint" };
+        grid.Columns.Add(new DataGridTextColumn { Header = "Id", Binding = new Binding("Name"), Width = GridLength.Auto });
+        grid.Columns.Add(new DataGridTextColumn { Header = "Value", Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star) });
+        grid.ItemsSource = new Adamantium.Core.Collections.TrackingCollection<Item> { new Item { Name = "7" } };
+        var window = new Window { Width = 400, Height = 300, Content = grid };
+        grid.ApplyCurrentTheme();
+        Settle(window);
+        for (var pass = 0; pass < 4; pass++)
+            Adamantium.UI.Core.LayoutManager.For(window).ExecuteLayoutPass();
+
+        TestContext.WriteLine($"auto column {grid.Columns[0].ActualWidth}");
+        Assert.That(grid.Columns[0].ActualWidth, Is.LessThan(100), "as wide as its values and its header, not the hint");
+    }
+
+    // Held under its widest by MaxWidth, an Auto column cuts its text: the text is measured at the column's width, where
+    // it is trimmed, not unbounded.
+    [Test]
+    public void AnAutoColumnHeldByMaxWidthTrimsItsText()
+    {
+        Use(Fluent());
+        var grid = new TreeDataGrid { Width = 400 };
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Name", Binding = new Binding("Name"), Width = GridLength.Auto, MaxWidth = 80
+        });
+        grid.ItemsSource = new[] { new Item { Name = "a much longer name than eighty pixels" } };
+        var window = new Window { Width = 400, Height = 300, Content = grid };
+        grid.ApplyCurrentTheme();
+        Settle(window);
+
+        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        var cell = row.VisualChildren.OfType<DataGridCell>().Single();
+        var presenter = (Adamantium.UI.Controls.Base.MeasurableUIComponent)cell.GetTemplateChild("PART_ContentPresenter");
+        TestContext.WriteLine($"column {grid.Columns[0].ActualWidth}, content measured at {presenter.PreviousMeasureConstraint?.Width}");
+        Assert.That(presenter.PreviousMeasureConstraint?.Width, Is.LessThanOrEqualTo(80), "measured at most as wide as the column");
     }
 
     private static void Settle(Window window)

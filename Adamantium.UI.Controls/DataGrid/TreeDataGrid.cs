@@ -485,14 +485,6 @@ public partial class TreeDataGrid : Selector
         InvalidateRealizedRows();
     }
 
-    private void ArrangeRealizedRowsAgain()
-    {
-        foreach (var index in ItemContainerGenerator.RealizedIndices)
-        {
-            (ItemContainerGenerator.ContainerFromIndex(index) as IMeasurableComponent)?.InvalidateArrange();
-        }
-    }
-
     private void InvalidateRealizedRows()
     {
         foreach (var index in ItemContainerGenerator.RealizedIndices)
@@ -2652,15 +2644,33 @@ public partial class TreeDataGrid : Selector
     {
         if (!DataGridColumnLayout.RecordMeasured(column, desired)) return;
 
-        _autoWidthGrew = true;
-        // The in-pass re-run catches a cell measured while this grid measures its rows; a row measured on its own later -
-        // its text bound a frame after it was built - needs the widths laid out again, and the header and the other
-        // strips placed by them.
-        if (!_measuringRows)
+        // Measuring its rows, the grid lays the widths out again in this pass. A cell measured on its own later - its
+        // text bound a frame after it was built - has the next pass take the new width from the start, and the rows
+        // and strips placed by the old one laid out again.
+        if (_measuringRows)
         {
-            InvalidateMeasure();
-            RefreshStrips();
+            _autoWidthGrew = true;
+            return;
         }
+
+        InvalidateMeasure();
+        RelayRowsAndStrips();
+    }
+
+    // The rows and strips place their cells by the widths: a star column taking up what an Auto one gained leaves them as
+    // wide as they were, and not laid out again they kept their cells where they stood - measured, as text is trimmed
+    // there, at the widths they had.
+    private void RelayRowsAndStrips()
+    {
+        foreach (var index in ItemContainerGenerator.RealizedIndices)
+        {
+            if (ItemContainerGenerator.ContainerFromIndex(index) is MeasurableUIComponent row)
+            {
+                row.InvalidateMeasure();
+            }
+        }
+
+        RefreshStrips();
     }
 
     private bool _autoWidthGrew;
@@ -3962,9 +3972,6 @@ public partial class TreeDataGrid : Selector
             RightFrozenWidth = regrownRight;
             UpdateColumnWindow(availableSize.Width);
             desired = base.MeasureOverride(availableSize);
-            // The rows place their cells by the widths: a star column taking up what the Auto one gained leaves a row as
-            // wide as it was, and a row not arranged again kept its cells where they stood.
-            ArrangeRealizedRowsAgain();
         }
 
         // A panel changed height: tell the stack for the next pass rather than measuring every open panel twice now.

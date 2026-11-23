@@ -546,21 +546,27 @@ public class DataGridCell : ContentControl
     }
 
     /// <summary>Content is PUSHED RIGHT by <see cref="Indent"/> - that shift is the whole of what depth looks like in a
-    /// tree table. The cell keeps its column's width whatever its content wants: the grid decided the widths once for
-    /// everyone.</summary>
-    // An Auto column's cell measures its content unbounded - the column grows to its widest cell, so there is nothing to
-    // trim - and tells its grid what that came to. Measured unbounded, content built or bound later changes its desired
-    // size and so re-measures the cell; measured at the column's width it stayed clipped there, and nothing asked again.
+    /// tree table. A row's cell of an Auto column measures its content unbounded and tells its grid what that came to:
+    /// the column grows to its widest cell, so there is nothing to trim. Measured unbounded, content built or bound
+    /// later changes its desired size and so re-measures the cell; measured at the column's width it stayed clipped
+    /// there, and nothing asked again. Every other cell keeps its column's width.</summary>
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Column is not { Width.IsAuto: true })
+        // Not the strip for a new record, whose hint is no record's value; not an editor, which scrolls inside the
+        // column rather than widening it per keystroke.
+        if (Column is not { Width.IsAuto: true } || IsEditing || VisualParent is not DataGridRow { Owner: { } grid })
         {
             return base.MeasureOverride(availableSize);
         }
 
         var wanted = base.MeasureOverride(new Size<double>(double.PositiveInfinity, availableSize.Height));
-        OwningGrid()?.ReportAutoWidth(Column, wanted.Width + Margin.Left + Margin.Right);
-        return new Size<double>(Math.Min(wanted.Width, availableSize.Width), wanted.Height);
+        var margin = EffectiveMargin;
+        grid.ReportAutoWidth(Column, wanted.Width + margin.Left + margin.Right);
+
+        // Held under its widest by MaxWidth, the column cuts it: measured at its width, it is trimmed there.
+        return !double.IsNaN(Column.MaxWidth) && wanted.Width > availableSize.Width
+            ? base.MeasureOverride(availableSize)
+            : new Size<double>(Math.Min(wanted.Width, availableSize.Width), wanted.Height);
     }
 
     protected override Size<double> ArrangeOverride(Size<double> finalSize)

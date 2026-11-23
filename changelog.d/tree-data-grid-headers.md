@@ -5,8 +5,9 @@
 
 ### Fixed
 
-- An Auto column of a `TreeDataGrid` did not grow to a cell whose content was bound after it was built, and its cells
-  stayed where they were when it did grow beside a star column. The next column stood over its cells. Now:
-  - a cell of an Auto column measures its content unbounded and reports the width itself, however it is measured;
-  - a width reported outside the grid's own pass lays the grid and its header out again;
-  - a grown Auto column has the rows shown arrange their cells again.
+- An Auto column of a `TreeDataGrid` did not grow to a cell whose content was bound after it was built, and when it did
+  grow beside a star column its rows and header kept their cells where they stood: the next column stood over them.
+  - A row's cell of an Auto column now measures its content unbounded and reports the width itself, however it comes
+    to be measured. A column held under its widest by `MaxWidth` still measures at its width and trims there.
+  - A width reported outside the grid's own pass lays out again the grid, the rows shown and the header.
+  - The strip for a new record and a cell being edited do not widen an Auto column.
