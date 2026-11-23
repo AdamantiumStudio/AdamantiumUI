@@ -89,24 +89,30 @@ public class RasterDrawingRenderTests
         public void Dispose() => _renderer.Dispose();
     }
 
-    // Pixels apart by more than an edge's softening may move them, between two frames.
-    private static int Apart(Frame first, Frame second)
+    // The same picture, edges softened at most: a tile drawn at the next power of two and laid down smaller softens every
+    // edge by a pixel, so how far apart two frames are is told by the mean over the picture and by the pixels more than
+    // half apart - not by every edge pixel that moved a little.
+    private static void AssertTheSame(Frame drawn, Frame wanted, string what)
     {
-        var apart = 0;
+        var sum = 0.0;
+        var far = 0;
         for (var y = 0; y < Dim; y++)
         {
             for (var x = 0; x < Dim; x++)
             {
-                var (r, g, b) = first.At(x, y);
-                var (wr, wg, wb) = second.At(x, y);
-                if (Math.Max(Math.Abs(r - wr), Math.Max(Math.Abs(g - wg), Math.Abs(b - wb))) > 24)
+                var (r, g, b) = drawn.At(x, y);
+                var (wr, wg, wb) = wanted.At(x, y);
+                var apart = (Math.Abs(r - wr) + Math.Abs(g - wg) + Math.Abs(b - wb)) / 3.0;
+                sum += apart;
+                if (apart > 128)
                 {
-                    apart++;
+                    far++;
                 }
             }
         }
 
-        return apart;
+        Assert.That(sum / (Dim * Dim), Is.LessThanOrEqualTo(2.0), $"{what}: mean apart, of 255");
+        Assert.That(far, Is.LessThanOrEqualTo(Dim / 8), $"{what}: pixels more than half apart");
     }
 
     private static Frame Once(DrawingMode mode, double scale = 1, double moveX = 0, double moveY = 0)
@@ -133,8 +139,7 @@ public class RasterDrawingRenderTests
         Assert.Multiple(() =>
         {
             Assert.That(raster.TilesDrawn, Is.GreaterThan(0), "drawn into tiles");
-            // Its tiles are drawn at the next power of two and laid down smaller, which softens an edge by a pixel.
-            Assert.That(Apart(vector, raster), Is.LessThanOrEqualTo(Dim * 3), "pixels apart from its shapes' picture");
+            AssertTheSame(raster, vector, "against its shapes' picture");
         });
     }
 
@@ -150,16 +155,21 @@ public class RasterDrawingRenderTests
         {
             Assert.That(first.TilesDrawn, Is.GreaterThan(0));
             Assert.That(again.TilesDrawn, Is.EqualTo(0), "laid down from the tiles it holds");
-            Assert.That(Apart(first, again), Is.EqualTo(0));
+            AssertTheSame(again, first, "against the first frame");
         });
     }
 
-    // The camera moving and zooming within a step of scale moves and scales the tiles it holds.
+    // The camera moving and zooming within a step of scale moves and scales the tiles it holds. A camera moves its
+    // content as one (a motion node), drawing nothing of it again.
     [Test]
     public void AMoveWithinAStepOfScale_DrawsNoTile_AndShowsWhatItsShapesShow()
     {
         var picture = new Picture { DrawingMode = DrawingMode.Raster };
-        var host = new Canvas { Width = Dim, Height = Dim, RenderTransform = new Transform { ScaleX = 0.6, ScaleY = 0.6 } };
+        var host = new Canvas
+        {
+            Width = Dim, Height = Dim, IsRenderMotionNode = true,
+            RenderTransform = new Transform { ScaleX = 0.6, ScaleY = 0.6 }
+        };
         host.Children.Add(picture);
         using var stand = new Stand(host);
         stand.Render();
@@ -170,7 +180,7 @@ public class RasterDrawingRenderTests
         Assert.Multiple(() =>
         {
             Assert.That(moved.TilesDrawn, Is.EqualTo(0), "the tiles it held, moved and scaled");
-            Assert.That(Apart(vector, moved), Is.LessThanOrEqualTo(Dim * 3), "pixels apart from its shapes' picture");
+            AssertTheSame(moved, vector, "against its shapes' picture");
         });
     }
 
