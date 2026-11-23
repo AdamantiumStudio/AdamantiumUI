@@ -19,6 +19,10 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
     private const int KeyPressed = 0x8000;   // the high-order bit: the key is down
     private const int KeyToggled = 0x1;      // the low-order bit: the lock is lit
 
+    // Made on first ask: most applications never ask for the user's languages.
+    private readonly Lazy<WindowsUserLanguages> _userLanguages =
+        new(() => new WindowsUserLanguages(RegistryKeyWatch.UserLanguagesKey));
+
     public PixelPoint Position
     {
         get
@@ -162,6 +166,8 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
     public uint KeyRepeatInterval => ReadSystemParameter(SPI.GetKeyboardSpeed) is { } step
         ? (uint)Math.Round(1000 / (2.5 + step * 27.5 / 31))
         : 33;
+
+    public IReadOnlyList<string> UserLanguages => _userLanguages.Value.Current;
 
     private static int? ReadSystemParameter(SPI parameter)
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Multiverse.Input;
@@ -22,6 +23,14 @@ public static class LinuxPlatform
     private static bool _desktopSettingsRead;
     private static bool _desktopEntryWritten;
     private static Task<AtSpiBridge> _accessibility;
+
+    /// <summary>The user's languages: their input sources' where the desktop says, else the session's.</summary>
+    internal static IReadOnlyList<string> UserLanguages =>
+        _desktopSettings?.UserLanguages is { Count: > 0 } sources ? sources : SessionLanguages.Value;
+
+    // The session's languages are its environment's, set before it started.
+    private static readonly Lazy<IReadOnlyList<string>> SessionLanguages =
+        new(() => LinuxUserLanguages.FromEnvironment(Environment.GetEnvironmentVariable));
 
     public static void Initialize(IDependencyContainer container)
     {
