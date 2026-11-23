@@ -23,9 +23,6 @@ public class DataGridHeadersPresenter : Panel
         ClipToBounds = true;
     }
 
-    /// <summary>How close to a separator the pointer counts as being on it.</summary>
-    private const double GripWidth = 6;
-
     private TreeDataGrid _owner;
 
     /// <summary>The grid whose columns this strip draws. Setting it REGISTERS the strip with that grid: the sort state
@@ -44,9 +41,6 @@ public class DataGridHeadersPresenter : Panel
     private readonly Dictionary<int, DataGridColumnHeader> _headers = new();
     private readonly List<int> _leaving = new();
 
-    private int _resizing = -1;
-    private double _resizeFrom;
-    private double _startWidth;
     private int _pressed = -1;
     private int _dragging = -1;
     private int _dropTarget = -1;
@@ -159,13 +153,12 @@ public class DataGridHeadersPresenter : Panel
 
         // The strip sits OUTSIDE the rows' scroller, so it carries the sideways offset itself. One number, the grid's,
         // so a header can never stand over another column's cells.
-        var offset = Owner.HorizontalOffset;
         foreach (var pair in _headers)
         {
             if (pair.Key >= columns.Count) continue;
 
             var column = columns[pair.Key];
-            pair.Value.Arrange(new Rect(ScreenXOf(column, offset), 0, column.ActualWidth, finalSize.Height));
+            pair.Value.Arrange(new Rect(Owner.ScreenXOf(column), 0, column.ActualWidth, finalSize.Height));
         }
 
         // ...and the corner stands over the whole left zone - the toggles AND the numbers - from the very edge.
@@ -179,34 +172,8 @@ public class DataGridHeadersPresenter : Panel
         return finalSize;
     }
 
-    // Where a column's header stands in the strip, pinned sides included; one answer shared by arrange and both hit-tests.
-    private double ScreenXOf(DataGridColumn column, double offset) =>
-        column.IsFrozenLeft ? column.Offset
-        : column.IsFrozenRight ? column.Offset + Owner.RightPinShift - offset
-        : column.Offset - offset;
-
     /// <summary>The column whose right-hand separator is under <paramref name="x"/>, or -1.</summary>
-    internal int SeparatorAt(double x)
-    {
-        var columns = Owner?.Columns;
-        if (columns == null) return -1;
-
-        var offset = Owner.HorizontalOffset;
-        for (var pinned = 0; pinned < 2; pinned++)
-        {
-            for (var i = 0; i < columns.Count; i++)
-            {
-                // PINNED headers first: they are drawn over what scrolls beneath them, so they are also what the
-                // pointer reaches there.
-                if (columns[i].IsFrozen != (pinned == 0)) continue;
-
-                var edge = ScreenXOf(columns[i], offset) + columns[i].ActualWidth;
-                if (Math.Abs(x - edge) <= GripWidth / 2) return i;
-            }
-        }
-
-        return -1;
-    }
+    internal int SeparatorAt(double x) => Owner?.ColumnResize.SeparatorAt(x) ?? -1;
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
@@ -217,23 +184,13 @@ public class DataGridHeadersPresenter : Panel
         }
 
         var x = e.GetPosition(this).X;
-        var separator = SeparatorAt(x);
-
-        if (separator >= 0 && Owner.Columns[separator].CanUserResize)
+        if (Owner.ColumnResize.Press(x, e.ClickCount))
         {
-            // Double-click on a separator fits the column to what is on screen NOW - the only width it can honestly know,
-            // since measuring the rows it has not built would mean building them.
-            if (e.ClickCount >= 2)
+            if (Owner.ColumnResize.IsResizing)
             {
-                Owner.FitColumn(separator);
-                e.Handled = true;
-                return;
+                e.Pointer.Capture(this);
             }
 
-            _resizing = separator;
-            _resizeFrom = x;
-            _startWidth = Owner.Columns[separator].ActualWidth;
-            e.Pointer.Capture(this);
             e.Handled = true;
             return;
         }
@@ -261,7 +218,7 @@ public class DataGridHeadersPresenter : Panel
             return;
         }
 
-        if (_resizing < 0)
+        if (!Owner.ColumnResize.IsResizing || !ReferenceEquals(e.Pointer.Captured, this))
         {
             var x = e.GetPosition(this).X;
 
@@ -282,17 +239,18 @@ public class DataGridHeadersPresenter : Panel
             }
 
             // The separator advertises itself before the press, the way the splitter and the window's resize grip do.
-            var over = SeparatorAt(x);
-            Cursor = over >= 0 && Owner.Columns[over].CanUserResize ? Cursors.SizeWE : Cursors.Arrow;
+            Cursor = Owner.ColumnResize.CursorAt(x) ?? Cursors.Arrow;
             return;
         }
 
-        var column = Owner.Columns[_resizing];
-        var wanted = _startWidth + (e.GetPosition(this).X - _resizeFrom);
-        // At the slot the width already sits in, not a fresh Local one: a page can bind a column's width, and a Local
-        // write outranks Binding for good - one drag and that binding would never be heard from again.
-        column.SetCurrentValue(DataGridColumn.WidthProperty, new GridLength(Math.Max(column.MinWidth, wanted)));
-        Owner.InvalidateColumns();
+        Owner.ColumnResize.Move(e.GetPosition(this).X);
+    }
+
+    // Capture taken away mid-drag, the drag ends with it - a width left being dragged would follow a mere hover.
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        Owner?.ColumnResize.Release();
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -303,9 +261,9 @@ public class DataGridHeadersPresenter : Panel
             return;
         }
 
-        if (_resizing >= 0)
+        if (Owner != null && Owner.ColumnResize.IsResizing)
         {
-            _resizing = -1;
+            Owner.ColumnResize.Release();
             e.Pointer.Capture(null);
             return;
         }
@@ -433,14 +391,13 @@ public class DataGridHeadersPresenter : Panel
         var columns = Owner?.Columns;
         if (columns == null) return -1;
 
-        var offset = Owner.HorizontalOffset;
         for (var pinned = 0; pinned < 2; pinned++)
         {
             for (var i = 0; i < columns.Count; i++)
             {
                 if (columns[i].IsFrozen != (pinned == 0)) continue;
 
-                var at = ScreenXOf(columns[i], offset);
+                var at = Owner.ScreenXOf(columns[i]);
                 if (x >= at && x < at + columns[i].ActualWidth) return i;
             }
         }

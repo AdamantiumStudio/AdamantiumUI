@@ -679,6 +679,21 @@ public class DataGridRow : Panel
             return;
         }
 
+        // No headers to drag a column's line in: it is dragged in the rows - with a mouse or a pen; a finger scrolls the
+        // rows. A press in the cell being edited is its editor's.
+        if (ResizesColumns && e.Pointer.Type != PointerType.Touch
+            && CellAt(ColumnAt(e.GetPosition(this).X)) is not { IsEditing: true }
+            && Owner.ColumnResize.Press(ViewportX(e), e.ClickCount))
+        {
+            if (Owner.ColumnResize.IsResizing)
+            {
+                e.Pointer.Capture(this);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         // The expander is NOT handled here: the cell's own PART_Expander answers for it, so the area that reacts is the
         // area that is drawn. Working the rectangle out here meant two descriptions of one strip, and they disagreed by
         // the cell's padding.
@@ -728,10 +743,59 @@ public class DataGridRow : Panel
         }
     }
 
+    private bool _showsResizeCursor;
+
+    // Off the line - or no line to drag here any more - the row's own cursor.
+    private void ClearResizeCursor()
+    {
+        if (!_showsResizeCursor) return;
+
+        ClearValue(CursorProperty);
+        _showsResizeCursor = false;
+    }
+
+    // Capture taken away mid-drag - the window deactivated, the row recycled - the drag ends with it.
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        Owner?.ColumnResize.Release();
+    }
+
+    // Whether a column's line is dragged in this row: only while the table shows no headers to drag it in, and only in a
+    // row of cells - a group's caption and a row's details draw no column lines.
+    private bool ResizesColumns => Owner is { HeadersVisibility: not Visibility.Visible } && !IsGroup && !IsRowDetails;
+
+    // Where the pointer is in the table's viewport, as the columns' lines are found: the row scrolls with the columns.
+    private double ViewportX(PointerEventArgs e) => e.GetPosition(this).X - Owner.HorizontalOffset;
+
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
         _tap.Move(e);
+        if (ResizesColumns)
+        {
+            if (Owner.ColumnResize.IsResizing && ReferenceEquals(e.Pointer.Captured, this))
+            {
+                Owner.ColumnResize.Move(ViewportX(e));
+                return;
+            }
+
+            // The line advertises itself before the press, as a header's separator does.
+            if (e.Pointer.Type != PointerType.Touch && Owner.ColumnResize.CursorAt(ViewportX(e)) is { } resize)
+            {
+                Cursor = resize;
+                _showsResizeCursor = true;
+            }
+            else
+            {
+                ClearResizeCursor();
+            }
+        }
+        else
+        {
+            ClearResizeCursor();
+        }
+
         if (Owner is not { IsDragSelecting: true })
         {
             return;
@@ -750,6 +814,14 @@ public class DataGridRow : Panel
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (e.ChangedButton == MouseButtons.Left && Owner is { ColumnResize.IsResizing: true }
+            && ReferenceEquals(e.Pointer.Captured, this))
+        {
+            Owner.ColumnResize.Release();
+            e.Pointer.Capture(null);
+            return;
+        }
+
         if (_tap.End(e) && Owner != null && _tapColumn < Owner.Columns.Count)
         {
             SelectCell(_tapColumn, _tap.Modifiers);

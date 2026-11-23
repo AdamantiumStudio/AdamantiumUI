@@ -97,6 +97,11 @@ public class DataGridCell : ContentControl
         typeof(object), typeof(DataGridCell), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty IsReadOnlyProperty = AdamantiumProperty.Register(nameof(IsReadOnly),
+        typeof(bool), typeof(DataGridCell), new PropertyMetadata(false, (a, _) => ((DataGridCell)a).UpdateLooksReadOnly()));
+
+    /// <summary>Whether the cell looks read-only: it is, and its grid marks such cells
+    /// (<see cref="TreeDataGrid.MarksReadOnlyCells"/>). What a theme's read-only look triggers on.</summary>
+    public static readonly AdamantiumProperty LooksReadOnlyProperty = AdamantiumProperty.Register(nameof(LooksReadOnly),
         typeof(bool), typeof(DataGridCell), new PropertyMetadata(false));
 
     /// <summary>Whether this cell draws the rule down its right edge - the grid's
@@ -481,6 +486,14 @@ public class DataGridCell : ContentControl
         set => SetValue(IsReadOnlyProperty, value);
     }
 
+    public bool LooksReadOnly
+    {
+        get => GetValue<bool>(LooksReadOnlyProperty);
+        private set => SetValue(LooksReadOnlyProperty, value);
+    }
+
+    private void UpdateLooksReadOnly() => LooksReadOnly = IsReadOnly && (OwningGrid()?.MarksReadOnlyCells ?? true);
+
     public Double Indent
     {
         get => GetValue<Double>(IndentProperty);
@@ -520,6 +533,8 @@ public class DataGridCell : ContentControl
                      || (column != null && !IsPlaceholder && !column.Writes(item));
 
         var grid = OwningGrid();
+        // Read again here too: the grid may have changed whether it marks them, with the cell's own read-only unchanged.
+        UpdateLooksReadOnly();
         ShowsVerticalLine = grid?.ShowsVerticalLines ?? false;
         ShowsHorizontalLine = grid?.ShowsHorizontalLines ?? false;
 

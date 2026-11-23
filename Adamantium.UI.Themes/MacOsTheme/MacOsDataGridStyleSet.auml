@@ -559,8 +559,9 @@
                         <!-- A cell nobody can edit says so the way every table says it: a faint wash behind it AND
                              disabled-weight text. Dimmer text alone is not a cue among data that is dim anyway.
                              Declared first, so a selection, an error or an edit still wins over it. The cell knows this
-                             whether the whole COLUMN is read-only or the view-model refused this one cell. -->
-                        <PropertyTrigger Property="IsReadOnly" Value="true">
+                             whether the whole COLUMN is read-only or the view-model refused this one cell - and its
+                             grid may not mark such cells at all (MarksReadOnlyCells). -->
+                        <PropertyTrigger Property="LooksReadOnly" Value="true">
                             <Setter TargetName="CellBorder" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"

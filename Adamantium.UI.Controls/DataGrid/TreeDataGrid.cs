@@ -120,13 +120,26 @@ public partial class TreeDataGrid : Selector
         if (_dropIndicator != null) _dropIndicator.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>Whether a cell that cannot be edited looks so - the theme's faint wash. Off where nothing in the table is
+    /// meant to be edited but a few cells, a value card say: the cells still cannot be edited, they only do not look
+    /// apart. On by default.</summary>
+    public static readonly AdamantiumProperty MarksReadOnlyCellsProperty = AdamantiumProperty.Register(
+        nameof(MarksReadOnlyCells), typeof(bool), typeof(TreeDataGrid),
+        new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender, OnGridLinesChanged));
+
+    public bool MarksReadOnlyCells
+    {
+        get => GetValue<bool>(MarksReadOnlyCellsProperty);
+        set => SetValue(MarksReadOnlyCellsProperty, value);
+    }
+
     /// <summary>Whether cells draw the rule down their right edge.</summary>
     internal bool ShowsVerticalLines => (GridLinesVisibility & DataGridGridLines.Vertical) != 0;
 
     /// <summary>Whether cells draw the rule under themselves.</summary>
     internal bool ShowsHorizontalLines => (GridLinesVisibility & DataGridGridLines.Horizontal) != 0;
 
-    // A cell reads this when it is BOUND, and the header strip when it syncs - so a change reaches neither until
+    // A cell reads these when it is BOUND, and the header strip when it syncs - so a change reaches neither until
     // something makes them do it again.
     private static void OnGridLinesChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
@@ -2467,12 +2480,25 @@ public partial class TreeDataGrid : Selector
         }
 
         if (widest <= 0) return;
-        // At the slot the width already sits in - see the resize in DataGridHeadersPresenter.
+        // At the slot the width already sits in - see DataGridColumnResize.Move.
         column.SetCurrentValue(DataGridColumn.WidthProperty,
             new GridLength(Math.Clamp(widest, column.MinWidth, column.MaxWidth)));
         column.ResetMeasuredWidth();
         InvalidateColumns();
     }
+
+    private DataGridColumnResize _columnResize;
+
+    /// <summary>A column's width dragged by the line on its right: from its header, or from the rows while the table shows
+    /// no headers.</summary>
+    internal DataGridColumnResize ColumnResize => _columnResize ??= new DataGridColumnResize(this);
+
+    /// <summary>Where a column stands in the viewport, pinned sides included: one answer for the headers' layout and for
+    /// every hit-test on the columns' lines.</summary>
+    internal double ScreenXOf(DataGridColumn column) =>
+        column.IsFrozenLeft ? column.Offset
+        : column.IsFrozenRight ? column.Offset + RightPinShift - HorizontalOffset
+        : column.Offset - HorizontalOffset;
 
     /// <summary>Re-runs the width pass and the rows that depend on it.</summary>
     public void InvalidateColumns()
