@@ -38,6 +38,7 @@
                             <!-- The header band is OUTSIDE the scroller: it must not scroll away vertically. Sideways
                                  it follows by hand, from the same offset the rows use. -->
                             <Border Grid.Row="3" Grid.Column="0"
+                                    Visibility="{TemplateBinding HeadersVisibility}"
                                     Background="{ObservableResource SolidBackgroundFillColorTertiary}"
                                     BorderBrush="{ObservableResource DataGridLineColor}"
                                     BorderThickness="0 0 0 1">
@@ -464,6 +465,11 @@
                         </MultiTrigger>
                         <PropertyTrigger Property="IsExpanded" Value="true">
                             <Setter TargetName="Expander" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
+                        </PropertyTrigger>
+                        <!-- CHANGED since the step before - see the macOS set. -->
+                        <PropertyTrigger Property="State" Value="Changed">
+                            <Setter TargetName="CellBorder" Property="Background"
+                                    Value="{ThemeResource AccentFillColorChanged}"/>
                         </PropertyTrigger>
                         <!-- A WASH, and the content keeps its own colors: a cell holds controls and meanings, and a
                              plate of accent swallows both. -->

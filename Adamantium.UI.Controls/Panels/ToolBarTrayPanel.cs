@@ -18,12 +18,17 @@ public class ToolBarTrayPanel : Panel
 
     private Orientation Orientation => (ItemsOwner as ToolBarTray)?.Orientation ?? Orientation.Horizontal;
 
+    private double BarSpacing => Math.Max(0, (ItemsOwner as ToolBarTray)?.BarSpacing ?? 0);
+
+    private double BandSpacing => Math.Max(0, (ItemsOwner as ToolBarTray)?.BandSpacing ?? 0);
+
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var horizontal = Orientation == Orientation.Horizontal;
         var room = horizontal ? availableSize.Width : availableSize.Height;
         _bands.Clear();
 
+        // Room only between neighbours: none before the first bar or row, none after the last.
         double longest = 0, across = 0;
         foreach (var bars in Children.OfType<ToolBar>()
                      .Where(bar => bar.Visibility != Visibility.Collapsed)
@@ -31,10 +36,16 @@ public class ToolBarTrayPanel : Panel
                      .OrderBy(band => band.Key))
         {
             var band = new ToolBarBand(bars.OrderBy(bar => bar.BandIndex).ThenBy(bar => Children.IndexOf(bar)).ToList());
-            MeasureBand(band, room, horizontal);
+            var gaps = BarSpacing * (band.Bars.Count - 1);
+            MeasureBand(band, room - gaps, horizontal);
+            if (_bands.Count > 0)
+            {
+                across += BandSpacing;
+            }
+
             band.Offset = across;
             across += band.Thickness;
-            longest = Math.Max(longest, band.Lengths.Sum());
+            longest = Math.Max(longest, band.Lengths.Sum() + gaps);
             _bands.Add(band);
         }
 
@@ -120,7 +131,7 @@ public class ToolBarTrayPanel : Panel
                 band.Bars[i].Arrange(horizontal
                     ? new Rect(along, band.Offset, length, band.Thickness)
                     : new Rect(band.Offset, along, band.Thickness, length));
-                along += length;
+                along += length + BarSpacing;
             }
         }
 

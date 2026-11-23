@@ -27,8 +27,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             ClipToBounds="True">
-                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
-                            <RepeatButton x:Name="PART_Decrease" Grid.Column="0"
+                        <!-- Fluent's seats: rows over, at and under the number; columns 0-1 and 4-5 the pairs, the
+                             two starred halving the width for a pair over or under it. -->
+                        <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,Auto,*,*,Auto,Auto">
+                            <RepeatButton x:Name="PART_Decrease" Grid.Row="1" Grid.Column="0"
                                     Width="{TemplateBinding ButtonsWidth}"
                                     Content="{TemplateBinding DecreaseButtonContent}"
                                     Delay="{TemplateBinding Delay}"
@@ -38,27 +40,37 @@
                                     Background="Transparent" BorderThickness="0" CornerRadius="0" Padding="0"
                                     MinWidth="0" MinHeight="0"
                                     VerticalAlignment="Stretch"/>
-                            <TextBox x:Name="PART_TextBox" Grid.Column="2"
-                                    Foreground="{TemplateBinding Foreground}"
-                                    FontSize="{TemplateBinding FontSize}"
-                                    Margin="{TemplateBinding Padding}"
-                                    MinWidth="0" MinHeight="0"
-                                    VerticalAlignment="Center">
-                                <!-- The embedded editor gets a bare template, so the TextBox theme's state triggers find no
-                                     PART_Border to restyle. -->
-                                <TextBox.Template>
-                                    <ControlTemplate TargetType="TextBox">
-                                        <ScrollViewer x:Name="PART_ContentHost"
-                                                HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
-                                                VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}">
-                                            <TextPresenter x:Name="PART_TextPresenter"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Stretch"/>
-                                        </ScrollViewer>
-                                    </ControlTemplate>
-                                </TextBox.Template>
-                            </TextBox>
-                            <RepeatButton x:Name="PART_Increase" Grid.Column="4"
+                            <!-- The number, and what it counts beside it - under it, down the side. -->
+                            <DockPanel x:Name="ValueArea" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2"
+                                       Margin="{TemplateBinding Padding}">
+                                <TextBlock x:Name="UnitText" DockPanel.Dock="Right"
+                                           Text="{TemplateBinding Unit}"
+                                           Foreground="{ObservableResource TextFillColorSecondary}"
+                                           FontSize="{ResourceReference FontSizeCaption}"
+                                           Margin="{ResourceReference NumericUnitInset}"
+                                           VerticalAlignment="Center"
+                                           Visibility="Collapsed"/>
+                                <TextBox x:Name="PART_TextBox"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        FontSize="{TemplateBinding FontSize}"
+                                        MinWidth="0" MinHeight="0"
+                                        VerticalAlignment="Center">
+                                    <!-- The embedded editor gets a bare template, so the TextBox theme's state triggers
+                                         find no PART_Border to restyle. -->
+                                    <TextBox.Template>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <ScrollViewer x:Name="PART_ContentHost"
+                                                    HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+                                                    VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}">
+                                                <TextPresenter x:Name="PART_TextPresenter"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Stretch"/>
+                                            </ScrollViewer>
+                                        </ControlTemplate>
+                                    </TextBox.Template>
+                                </TextBox>
+                            </DockPanel>
+                            <RepeatButton x:Name="PART_Increase" Grid.Row="1" Grid.Column="5"
                                     Width="{TemplateBinding ButtonsWidth}"
                                     Content="{TemplateBinding IncreaseButtonContent}"
                                     Delay="{TemplateBinding Delay}"
@@ -84,7 +96,7 @@
                 <Condition Property="AreButtonsSwapped" Value="true"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="PART_Increase" Property="Grid.Column" Value="0"/>
-            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="4"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="5"/>
         </MultiTrigger>
 
         <MultiTrigger>
@@ -110,8 +122,8 @@
                 <Condition Property="ButtonsPlacement" Value="Right"/>
                 <Condition Property="AreButtonsSwapped" Value="false"/>
             </MultiTrigger.Conditions>
-            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="3"/>
-            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="4"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="4"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="5"/>
         </MultiTrigger>
 
         <MultiTrigger>
@@ -119,9 +131,100 @@
                 <Condition Property="ButtonsPlacement" Value="Right"/>
                 <Condition Property="AreButtonsSwapped" Value="true"/>
             </MultiTrigger.Conditions>
-            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="3"/>
-            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="4"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="4"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="5"/>
         </MultiTrigger>
+
+        <!-- A pair over the number, each button half its width. -->
+        <PropertyTrigger Property="ButtonsPlacement" Value="Top">
+            <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="3"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Row" Value="0"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="3"/>
+            <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="3"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
+            <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
+        </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="ButtonsPlacement" Value="Top"/>
+                <Condition Property="AreButtonsSwapped" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="3"/>
+        </MultiTrigger>
+
+        <!-- ...or under it. -->
+        <PropertyTrigger Property="ButtonsPlacement" Value="Bottom">
+            <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="2"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="3"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Row" Value="2"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="3"/>
+            <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="3"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
+            <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
+        </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="ButtonsPlacement" Value="Bottom"/>
+                <Condition Property="AreButtonsSwapped" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="3"/>
+        </MultiTrigger>
+
+        <!-- Vertical, Split stands one over the number, one under it; stated last, so it wins over Split along. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="Orientation" Value="Vertical"/>
+                <Condition Property="ButtonsPlacement" Value="Split"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="6"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Row" Value="2"/>
+            <Setter TargetName="PART_Increase" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="6"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
+            <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="Orientation" Value="Vertical"/>
+                <Condition Property="ButtonsPlacement" Value="Split"/>
+                <Condition Property="AreButtonsSwapped" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Increase" Property="Grid.Row" Value="0"/>
+            <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="2"/>
+        </MultiTrigger>
+    </Style>
+
+    <!-- Vertical: as narrow as its number - the box's own minimum along goes - the number centered, its unit under it. A
+         box on the column of a bar down the side stands so unless it is set otherwise. -->
+    <Style Selector="NumericUpDown">
+        <PropertyTrigger Property="ToolBar.CommandOrientation" Value="Vertical">
+            <Setter Property="Orientation" Value="Vertical"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="HasUnit" Value="true">
+            <Setter TargetName="UnitText" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Orientation" Value="Vertical">
+            <Setter Property="MinWidth" Value="0"/>
+            <!-- The entry as wide as its number, in the middle. -->
+            <Setter TargetName="PART_TextBox" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="UnitText" Property="DockPanel.Dock" Value="Bottom"/>
+            <Setter TargetName="UnitText" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="UnitText" Property="Margin" Value="0"/>
+            <Setter TargetName="ValueArea" Property="Margin" Value="{ResourceReference NumericNarrowPadding}"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- States. No IsPointerOver among them, deliberately - see the head of this file. Read-only and "no typing allowed"

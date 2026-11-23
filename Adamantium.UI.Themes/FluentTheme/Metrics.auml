@@ -79,6 +79,15 @@
     <Thickness x:Key="ToolBarContextFrameThickness">1.5</Thickness>
     <!-- Its rounding: the commands' (CornerRadiusDefault) plus the 2 it stands past them, so the two curves run alike. -->
     <CornerRadius x:Key="ToolBarContextFrameRadius">6</CornerRadius>
+    <!-- Down the side: the widest a command stands on the bar's column - a number's narrow form fits, a list is folded. -->
+    <sys:Double x:Key="ToolBarColumnWidth">40</sys:Double>
+    <!-- The card a folded command opens beside the column. -->
+    <Thickness x:Key="ToolBarCardPadding">10</Thickness>
+    <sys:Double x:Key="ToolBarCardSpacing">6</sys:Double>
+    <!-- A number's unit, after it along the box. -->
+    <Thickness x:Key="NumericUnitInset">4,0,0,0</Thickness>
+    <!-- Round a number standing vertically: as narrow as the number, so it fits the column of a bar down the side. -->
+    <Thickness x:Key="NumericNarrowPadding">2,0</Thickness>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- ── Insets ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -154,6 +163,12 @@
     <CornerRadius x:Key="SplitButtonLeadingRadius">4 0 0 4</CornerRadius>
     <CornerRadius x:Key="SplitButtonTrailingRadius">0 4 4 0</CornerRadius>
     <Thickness x:Key="SplitButtonArrowPadding">8 0</Thickness>
+    <!-- ...and down the side of a bar, the arrow's half under the body: the seam across. -->
+    <CornerRadius x:Key="SplitButtonTopRadius">4 4 0 0</CornerRadius>
+    <CornerRadius x:Key="SplitButtonBottomRadius">0 0 4 4</CornerRadius>
+    <Thickness x:Key="SplitButtonArrowPaddingDown">0 3</Thickness>
+    <!-- A drop-down button's arrow under its content, down the side of a bar. -->
+    <Thickness x:Key="DropDownChevronInsetDown">0 3 0 0</Thickness>
     <CornerRadius x:Key="RibbonSplitLeadingRadius">4 0 0 4</CornerRadius>
     <CornerRadius x:Key="RibbonSplitTrailingRadius">0 4 4 0</CornerRadius>
     <Thickness x:Key="RibbonSplitDropDownPadding">3 2</Thickness>

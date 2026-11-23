@@ -181,6 +181,43 @@ public class GridAutoTrackTests
         });
     }
 
+    // A child spanning Auto tracks only - stars too, measured with no limit, are Auto then - is the tracks' size: they
+    // share it. It counted for nothing, and a number box standing vertically, its number across all its columns, was
+    // measured as wide as its buttons' glyphs.
+    [Test]
+    public void AChildSpanningOnlyAutoTracks_SizesThem()
+    {
+        var auto = new Grid { ColumnDefinitions = { Auto(), Auto() } };
+        var spanning = new Border { Width = 40, Height = 10 };
+        Grid.SetColumnSpan(spanning, 2);
+        auto.Children.Add(spanning);
+
+        var stars = new Grid { ColumnDefinitions = { Star(), Star() } };
+        var acrossStars = new Border { Width = 30, Height = 10 };
+        Grid.SetColumnSpan(acrossStars, 2);
+        stars.Children.Add(acrossStars);
+
+        // The number box's own shape: pairs of Auto seats either side of two stars, the number across them all.
+        var mixed = new Grid { ColumnDefinitions = { Auto(), Auto(), Star(), Star(), Auto(), Auto() } };
+        var across = new Border { Width = 16, Height = 10 };
+        Grid.SetColumnSpan(across, 6);
+        var glyph = new Border { Width = 7, Height = 10 };
+        Grid.SetColumnSpan(glyph, 6);
+        mixed.Children.Add(glyph);
+        mixed.Children.Add(across);
+
+        auto.Measure(Size<double>.Infinity);
+        stars.Measure(Size<double>.Infinity);
+        mixed.Measure(Size<double>.Infinity);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(auto.DesiredSize.Width, Is.EqualTo(40));
+            Assert.That(stars.DesiredSize.Width, Is.EqualTo(30), "stars with no limit are as wide as what they hold");
+            Assert.That(mixed.DesiredSize.Width, Is.EqualTo(16), "the widest child across them, whole");
+        });
+    }
+
     // Rows are the same rule turned ninety degrees - the split button's three stacked rows are Auto for this reason.
     [Test]
     public void AutoRows_FollowTheSameRule()

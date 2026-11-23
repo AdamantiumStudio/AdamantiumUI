@@ -1,5 +1,7 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Scrolled: the page is taller than the window once the bar down the side is on it. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Orientation="Vertical" Margin="24" MaxWidth="1000">
 
         <TextBlock Text="ToolBarTray + ToolBar" FontSize="20" MarginBottom="4"/>
@@ -15,6 +17,10 @@
 
         <!-- Two rows: Edit and Text in the first, Paragraph and View in the second. -->
         <ToolBarTray x:Name="UpperTray" Width="{Binding TrayWidth}" HorizontalAlignment="Left" MarginBottom="16">
+            <!-- The application lets the bars be carried by their grips, with DragDrop: here, and in each tray below. -->
+            <ToolBarTray.Behaviors>
+                <ToolBarDragBehavior/>
+            </ToolBarTray.Behaviors>
             <ToolBar x:Name="EditBar" Header="{Localize ToolBarsStrings.Edit}" Band="0" BandIndex="0">
                 <Button x:Name="CutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
                 <Button x:Name="CopyCommand" Content="{Localize ToolBarsStrings.Copy}" Command="{Binding PressCommand}" CommandParameter="Copy"/>
@@ -38,6 +44,9 @@
 
         <TextBlock Text="{Localize ToolBarsStrings.Lower}" FontSize="14" MarginBottom="6"/>
         <ToolBarTray x:Name="LowerTray" HorizontalAlignment="Stretch" MarginBottom="16">
+            <ToolBarTray.Behaviors>
+                <ToolBarDragBehavior/>
+            </ToolBarTray.Behaviors>
             <ToolBar x:Name="ExtraBar" Header="{Localize ToolBarsStrings.Extra}">
                 <Button x:Name="HelpCommand" Content="{Localize ToolBarsStrings.Help}" Command="{Binding PressCommand}" CommandParameter="Help"/>
             </ToolBar>
@@ -63,6 +72,9 @@
         </StackPanel>
         <ToolBarTray x:Name="SectionsTray" SharesBars="False" Width="{Binding SectionsWidth}" HorizontalAlignment="Left"
                      MarginBottom="16">
+            <ToolBarTray.Behaviors>
+                <ToolBarDragBehavior/>
+            </ToolBarTray.Behaviors>
             <ToolBar x:Name="FormatBar" Header="{Localize ToolBarsStrings.Format}" CommandWrapping="{Binding SectionsWrapping}">
                 <ToolBarGroup x:Name="ClipboardGroup" Header="{Localize ToolBarsStrings.Clipboard}">
                     <Button x:Name="SectionCutCommand" Content="{Localize ToolBarsStrings.Cut}" Command="{Binding PressCommand}" CommandParameter="Cut"/>
@@ -91,7 +103,70 @@
             </ToolBar>
         </ToolBarTray>
 
+        <!-- A bar down the side: a column as wide as a command. A number stands in its narrow form, its label become its
+             tooltip; a field or a list too wide for the column is folded into a button that opens it beside the column,
+             under its label; a drop-down's arrow goes under it; the context's name is turned. Along, all as before. -->
+        <TextBlock Text="{Localize ToolBarsStrings.Side}" FontSize="14" MarginBottom="4"/>
+        <TextBlock Text="{Localize ToolBarsStrings.SideHint}" TextWrapping="WrapByWords"
+                   FontSize="13" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="8"/>
+        <StackPanel Orientation="Horizontal" MarginBottom="10">
+            <TextBlock x:Name="SideOrientationLabel" Text="{Localize ToolBarsStrings.SideOrientation}" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <DropDown x:Name="SideOrientation" Width="120" EnumType="{x:Type Orientation}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=SideOrientationLabel}"
+                      SelectedItem="{Binding SideOrientation, Mode=TwoWay}"/>
+        </StackPanel>
+        <ToolBarTray x:Name="SideTray" SharesBars="False" Orientation="{Binding SideOrientation}" HorizontalAlignment="Left"
+                     MarginBottom="16">
+            <ToolBarTray.Behaviors>
+                <ToolBarDragBehavior/>
+            </ToolBarTray.Behaviors>
+            <ToolBar x:Name="PictureBar" Header="{Localize ToolBarsStrings.Picture}" IsContextual="True" Accent="#3F7CBF"
+                     ContextualHeader="{Localize ToolBarsStrings.PictureTools}">
+                <ToolBarGroup x:Name="PictureSizeGroup" Header="{Localize ToolBarsStrings.PictureSize}">
+                    <Button x:Name="CropCommand" Content="⌗" ToolTip="{Localize ToolBarsStrings.Crop}"
+                            Command="{Binding PressCommand}" CommandParameter="Crop"/>
+                    <TextBlock x:Name="PictureWidthLabel" Text="{Localize ToolBarsStrings.PictureWidth}" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="PictureWidth" Unit="cm" Minimum="0.01" SmallChange="0.1" StringFormat="0.##"
+                                   AutomationProperties.LabeledBy="{Binding ElementName=PictureWidthLabel}"
+                                   Value="{Binding PictureWidth, Mode=TwoWay}"/>
+                    <TextBlock x:Name="PictureHeightLabel" Text="{Localize ToolBarsStrings.PictureHeight}" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="PictureHeight" Unit="cm" Minimum="0.01" SmallChange="0.1" StringFormat="0.##"
+                                   ButtonsPlacement="Top"
+                                   AutomationProperties.LabeledBy="{Binding ElementName=PictureHeightLabel}"
+                                   Value="{Binding PictureHeight, Mode=TwoWay}"/>
+                    <TextBlock x:Name="AuthorLabel" Text="{Localize ToolBarsStrings.Author}" VerticalAlignment="Center"/>
+                    <TextBox x:Name="Author" Width="120" Text="{Binding Author, Mode=TwoWay}"
+                             AutomationProperties.LabeledBy="{Binding ElementName=AuthorLabel}"/>
+                </ToolBarGroup>
+                <ToolBarGroup x:Name="PictureArrangeGroup" Header="{Localize ToolBarsStrings.Arrange}">
+                    <DropDownButton x:Name="WrapCommand" Content="≡" ToolTip="{Localize ToolBarsStrings.Wrap}"
+                                    ItemsSource="{Binding WrapKinds}" ItemCommand="{Binding PressCommand}">
+                        <DropDownButton.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Localize ToolBarsStrings, Key={Binding}}"/>
+                            </DataTemplate>
+                        </DropDownButton.ItemTemplate>
+                    </DropDownButton>
+                    <SplitButton x:Name="RotateCommand" Content="⟳" ToolTip="{Localize ToolBarsStrings.Rotate}"
+                                 Command="{Binding PressCommand}" CommandParameter="RotateRight"
+                                 ItemsSource="{Binding RotateKinds}" ItemCommand="{Binding PressCommand}">
+                        <SplitButton.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Localize ToolBarsStrings, Key={Binding}}"/>
+                            </DataTemplate>
+                        </SplitButton.ItemTemplate>
+                    </SplitButton>
+                    <TextBlock x:Name="CaptionFontLabel" Text="{Localize ToolBarsStrings.CaptionFont}" VerticalAlignment="Center"/>
+                    <DropDown x:Name="CaptionFont" Width="120" ItemsSource="{Binding Fonts}"
+                              AutomationProperties.LabeledBy="{Binding ElementName=CaptionFontLabel}"
+                              SelectedItem="{Binding Font, Mode=TwoWay}"/>
+                </ToolBarGroup>
+            </ToolBar>
+        </ToolBarTray>
+
         <TextBlock x:Name="ToolBarsReport"
                    Text="{Localize ToolBarsStrings.Report, command={Localize ToolBarsStrings, Key={Binding Pressed}}}"/>
     </StackPanel>
+    </ScrollViewer>
 </View>

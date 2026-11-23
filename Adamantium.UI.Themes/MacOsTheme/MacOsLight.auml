@@ -90,7 +90,8 @@
     <PaletteColor Key="OnAccentOverlayPressed" Color="#00000000"/>
     <PaletteColor Key="OnAccentShadePointerOver" Color="#1A000000"/>
     <PaletteColor Key="OnAccentShadePressed" Color="#40000000"/>
-    <PaletteColor Key="ContextualLabelFill" Color="#40000000"/>
+    <!-- Light over the context's color, as the variant is: a dark chip read as a hole in a light window. -->
+    <PaletteColor Key="ContextualLabelFill" Color="#99FFFFFF"/>
 
     <PaletteColor Key="DockFoldedStripFill" Color="#12000000"/>
     <PaletteColor Key="DockCompassFillColor" Color="#E6F2F2F2"/>

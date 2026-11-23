@@ -62,7 +62,9 @@ public static class ResourceResolver
 
             visual.AttachedToVisualTreeEvent += (_, _) =>
             {
-                var scoped = resourceManager.FindResource(visual, key);
+                // The application's resources as they are when the element arrives: there may have been none yet when
+                // the reference was written - a template built before the application context was.
+                var scoped = UIAppContext.Current?.ResourceManager?.FindResource(visual, key);
                 if (scoped != null)
                     visual.SetValue(property, scoped, priority);
             };

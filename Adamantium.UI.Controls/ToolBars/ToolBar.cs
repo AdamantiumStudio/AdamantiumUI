@@ -63,7 +63,7 @@ public class ToolBar : ItemsControl
     /// <summary>The name of a contextual bar's context - a picture's tools, a table's - shown at the bar's start on a
     /// label in its <see cref="Accent"/>, as the ribbon names a contextual group over its tabs, so the bar says what it is
     /// and which context it goes with; automation reads it as the bar's help text. None, no label. A bar down the side
-    /// shows only its color for now.</summary>
+    /// shows it under its grip, turned to read top to bottom.</summary>
     public static readonly AdamantiumProperty ContextualHeaderProperty = AdamantiumProperty.Register(
         nameof(ContextualHeader), typeof(object), typeof(ToolBar),
         new PropertyMetadata(null, OnContextualHeaderChanged));
@@ -118,15 +118,45 @@ public class ToolBar : ItemsControl
         typeof(ToolBarOverflowMode), typeof(AdamantiumComponent),
         new PropertyMetadata(ToolBarOverflowMode.AsNeeded, PropertyMetadataOptions.AffectsParentMeasure));
 
+    /// <summary>How a command stands on the column of a bar down the side; set on the command.</summary>
+    public static readonly AdamantiumProperty VerticalFormProperty = AdamantiumProperty.RegisterAttached("VerticalForm",
+        typeof(ToolBarVerticalForm), typeof(AdamantiumComponent),
+        new PropertyMetadata(ToolBarVerticalForm.Auto, OnCommandFormChanged));
+
+    /// <summary>The icon of the button a command is folded into on the column; set on the command. None, the first two
+    /// letters of its label.</summary>
+    public static readonly AdamantiumProperty FoldedIconProperty = AdamantiumProperty.RegisterAttached("FoldedIcon",
+        typeof(object), typeof(AdamantiumComponent),
+        new PropertyMetadata(null, static (a, _) => ItemOf(a)?.ShowFoldedIcon()));
+
+    // Told to its item: the command may be on the item's card, out of the column's layout.
+    private static void OnCommandFormChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+        ItemOf(a)?.Restand();
+
+    private static ToolBarItem ItemOf(AdamantiumComponent command) =>
+        (command as UIComponent)?.ContentOwner as ToolBarItem;
+
+    /// <summary>The way the commands under it stand, set by their <see cref="ToolBarItem"/>: vertical on the column of a
+    /// bar down the side, horizontal along a bar, in its overflow menu and on a folded command's card. A theme draws the
+    /// narrow form of a control - a number's buttons over and under it - from it.</summary>
+    public static readonly AdamantiumProperty CommandOrientationProperty = AdamantiumProperty.RegisterAttached(
+        "CommandOrientation", typeof(Orientation), typeof(AdamantiumComponent),
+        new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How wide a command may be to stand on the column of a bar down the side; a wider one is folded
+    /// (<see cref="ToolBarVerticalForm.Auto"/>) - a theme metric.</summary>
+    public static readonly AdamantiumProperty ColumnWidthProperty = AdamantiumProperty.Register(nameof(ColumnWidth),
+        typeof(double), typeof(ToolBar),
+        new PropertyMetadata(40.0, PropertyMetadataOptions.AffectsMeasure,
+            static (a, _) => ((ToolBar)a).OnColumnWidthChanged()));
+
     private readonly List<IMeasurableComponent> _commands = [];
     private readonly List<bool> _overflowing = [];
     private readonly Dictionary<IMeasurableComponent, double> _lengths = new();
     private Panel _onBar;
     private Panel _inOverflow;
-    private Thumb _grip;
     private double _chrome = double.NaN;
     private readonly RoutedEventHandler _closeOverflow;
-    private ToolBarTray _movedIn;
 
     public ToolBar()
     {
@@ -147,6 +177,42 @@ public class ToolBar : ItemsControl
 
     public static void SetOverflowMode(IAdamantiumComponent element, ToolBarOverflowMode value) =>
         element.SetValue(OverflowModeProperty, value);
+
+    public static ToolBarVerticalForm GetVerticalForm(IAdamantiumComponent element) =>
+        element.GetValue<ToolBarVerticalForm>(VerticalFormProperty);
+
+    public static void SetVerticalForm(IAdamantiumComponent element, ToolBarVerticalForm value) =>
+        element.SetValue(VerticalFormProperty, value);
+
+    public static object GetFoldedIcon(IAdamantiumComponent element) => element.GetValue(FoldedIconProperty);
+
+    public static void SetFoldedIcon(IAdamantiumComponent element, object value) =>
+        element.SetValue(FoldedIconProperty, value);
+
+    public static Orientation GetCommandOrientation(IAdamantiumComponent element) =>
+        element.GetValue<Orientation>(CommandOrientationProperty);
+
+    public static void SetCommandOrientation(IAdamantiumComponent element, Orientation value) =>
+        element.SetValue(CommandOrientationProperty, value);
+
+    public double ColumnWidth
+    {
+        get => GetValue<double>(ColumnWidthProperty);
+        set => SetValue(ColumnWidthProperty, value);
+    }
+
+    protected internal override bool IsItemItsOwnContainer(object item) => ToolBarItem.IsOwnContainer(item);
+
+    protected internal override IUIComponent GetContainerForItem(object item) => ToolBarItem.Create(ItemContainerStyle);
+
+    protected internal override void PrepareContainer(IUIComponent container, object item) =>
+        ToolBarItem.Prepare(container, item, ItemTemplate);
+
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        ToolBarItem.Release(container);
+        base.ClearContainer(container);
+    }
 
     /// <summary>The bar's name: in its tray's menu and to automation.</summary>
     public object Header
@@ -190,7 +256,8 @@ public class ToolBar : ItemsControl
         private set => SetValue(HasOverflowItemsPropertyKey, value);
     }
 
-    /// <summary>Whether the bar is being dragged by its grip.</summary>
+    /// <summary>Whether the bar is being carried by its grip - it stays put while its ghost moves; set through
+    /// <see cref="ToolBarTray.SetIsMoving"/> by whoever lets the user drag bars.</summary>
     public bool IsMoving
     {
         get => GetValue<bool>(IsMovingProperty);
@@ -302,7 +369,6 @@ public class ToolBar : ItemsControl
         _onBar = GetTemplateChild("PART_Items") as Panel;
 
         HookOverflow(GetTemplateChild("PART_OverflowItems") as Panel);
-        HookGrip(GetTemplateChild("PART_Grip") as Thumb);
 
         // The menu of what does not fit opens under its chevron.
         if (GetTemplateChild("PART_OverflowPopup") is Popup popup && popup.PlacementTarget == null &&
@@ -317,7 +383,6 @@ public class ToolBar : ItemsControl
     public override void OnRemoveTemplate()
     {
         TakeCommandsOut();
-        HookGrip(null);
         HookOverflow(null);
         _onBar = null;
         base.OnRemoveTemplate();
@@ -368,6 +433,7 @@ public class ToolBar : ItemsControl
                 {
                     group.Orientation = Orientation;
                     group.Bar = this;
+                    group.IsInOverflow = false;
                 }
 
                 _commands.Add(command);
@@ -386,6 +452,16 @@ public class ToolBar : ItemsControl
     {
         // The panel reads it from the bar, measured on its own: told nothing, it would keep its old lines.
         _onBar?.InvalidateMeasure();
+    }
+
+    // Its sections place their commands as they are measured: measured as they were, they would not be.
+    private void OnColumnWidthChanged()
+    {
+        _lengths.Clear();
+        foreach (var group in _commands.OfType<ToolBarGroup>())
+        {
+            group.InvalidateMeasure();
+        }
     }
 
     // Turned, the bar measures its commands again along the new way, its sections turned with it.
@@ -441,46 +517,6 @@ public class ToolBar : ItemsControl
         _inOverflow?.Children.Clear();
     }
 
-    private void HookGrip(Thumb grip)
-    {
-        if (_grip != null)
-        {
-            _grip.DragStarted -= OnGripDragStarted;
-            _grip.DragDelta -= OnGripDragDelta;
-            _grip.DragCompleted -= OnGripDragCompleted;
-        }
-
-        _grip = grip;
-        if (_grip != null)
-        {
-            _grip.DragStarted += OnGripDragStarted;
-            _grip.DragDelta += OnGripDragDelta;
-            _grip.DragCompleted += OnGripDragCompleted;
-        }
-    }
-
-    // The tray the bar is moved in is found once, when the grip is pressed.
-    private void OnGripDragStarted(object sender, DragStartedEventArgs e)
-    {
-        e.Handled = true;
-        _movedIn = Tray;
-        _movedIn?.StartMoving(this, e.Offset);
-    }
-
-    private void OnGripDragDelta(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        _movedIn?.Move(this, e.Change);
-    }
-
-    private void OnGripDragCompleted(object sender, DragCompletedEventArgs e)
-    {
-        e.Handled = true;
-        var tray = _movedIn;
-        _movedIn = null;
-        tray?.FinishMoving(this, e.IsCanceled);
-    }
-
     // The commands that do not fit go to the overflow menu, the last first. What decides it is each command's length as
     // last measured on the bar, so the decision does not change what it was made from.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
@@ -513,6 +549,7 @@ public class ToolBar : ItemsControl
         // A command shown or hidden since the last pass moves the rules of the sections after it: marked before the
         // sections are measured, so they are measured as they will be drawn.
         MarkSeparators();
+        PlaceItems();
         var lengths = MeasureCommands(horizontal, across);
 
         PlaceCommands(Overflowing(room, lengths));
@@ -542,6 +579,28 @@ public class ToolBar : ItemsControl
     }
 
     private static double Along(Size<double> size, bool horizontal) => horizontal ? size.Width : size.Height;
+
+    private readonly List<ToolBarItem> _onColumn = [];
+    private readonly List<ToolBarItem> _offColumn = [];
+
+    // The bar's own commands, outside its sections: those left on the bar's column take their forms there, those in the
+    // overflow menu stand as they are. A section places its own.
+    private void PlaceItems()
+    {
+        _onColumn.Clear();
+        _offColumn.Clear();
+        var vertical = Orientation == Orientation.Vertical;
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            if (_commands[i] is ToolBarItem item)
+            {
+                (vertical && !_overflowing[i] ? _onColumn : _offColumn).Add(item);
+            }
+        }
+
+        ToolBarItem.Place(_onColumn, true, ColumnWidth);
+        ToolBarItem.Place(_offColumn, false, ColumnWidth);
+    }
 
     private double[] MeasureCommands(bool horizontal, double across)
     {
@@ -589,7 +648,7 @@ public class ToolBar : ItemsControl
                 break;
             }
 
-            if (!overflowing[i] && GetOverflowMode(_commands[i]) == ToolBarOverflowMode.AsNeeded)
+            if (!overflowing[i] && OverflowModeOf(_commands[i]) == ToolBarOverflowMode.AsNeeded)
             {
                 overflowing[i] = true;
             }
@@ -603,7 +662,7 @@ public class ToolBar : ItemsControl
         var overflowing = new bool[_commands.Count];
         for (var i = 0; i < _commands.Count; i++)
         {
-            overflowing[i] = goes(GetOverflowMode(_commands[i]));
+            overflowing[i] = goes(OverflowModeOf(_commands[i]));
         }
 
         return overflowing;
@@ -631,7 +690,7 @@ public class ToolBar : ItemsControl
         var longest = 0.0;
         for (var i = 0; i < lengths.Length; i++)
         {
-            if (GetOverflowMode(_commands[i]) != ToolBarOverflowMode.Always && _commands[i].Visibility != Visibility.Collapsed)
+            if (OverflowModeOf(_commands[i]) != ToolBarOverflowMode.Always && _commands[i].Visibility != Visibility.Collapsed)
             {
                 longest = Math.Max(longest, lengths[i]);
             }
@@ -657,6 +716,11 @@ public class ToolBar : ItemsControl
             for (var i = 0; i < overflowing.Length; i++)
             {
                 _overflowing[i] = overflowing[i];
+                if (_commands[i] is ToolBarGroup group)
+                {
+                    group.IsInOverflow = overflowing[i];
+                }
+
                 (overflowing[i] ? _inOverflow : _onBar)?.Children.Add(_commands[i]);
             }
 
@@ -692,9 +756,12 @@ public class ToolBar : ItemsControl
         OverflowContextAccent = accent;
     }
 
-    private bool Any(ToolBarOverflowMode mode) => _commands.Any(command => GetOverflowMode(command) == mode);
+    private bool Any(ToolBarOverflowMode mode) => _commands.Any(command => OverflowModeOf(command) == mode);
 
-    private bool All(ToolBarOverflowMode mode) => _commands.All(command => GetOverflowMode(command) == mode);
+    private bool All(ToolBarOverflowMode mode) => _commands.All(command => OverflowModeOf(command) == mode);
+
+    private static ToolBarOverflowMode OverflowModeOf(IMeasurableComponent command) =>
+        GetOverflowMode(ToolBarItem.CommandOf(command));
 
     private static void OnIsOverflowOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
