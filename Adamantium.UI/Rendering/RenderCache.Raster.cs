@@ -5,6 +5,7 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
@@ -61,13 +62,15 @@ public partial class RenderCache
     }
 
     // An element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it turns on the
-    // window, has no size, holds copies of its subtree, lies outside the window, or would take a texture too large.
+    // window, has no size, lies under a rounded clip (the texture is laid down cut square), holds copies of its subtree
+    // or layers - its own or inside it, which a texture drawn as a clone does not open - lies outside the window, or
+    // would take a texture too large.
     private RasterRun StartRaster(int groupIndex, Rect2D fullScissor)
     {
         var element = _groups[groupIndex].Component;
         var world = World(element);
         var size = ApplySnap(element).RenderSize;
-        if (!AlongTheAxes(world) || !(size.Width > 0) || !(size.Height > 0))
+        if (!AlongTheAxes(world) || !(size.Width > 0) || !(size.Height > 0) || UnderARoundedClip(element))
         {
             return null;
         }
@@ -132,9 +135,60 @@ public partial class RenderCache
         }
 
         _rasterParts[element.RenderId] = (run.Scale, run.Part);
+        _rasterShown.Add(element);
         _offscreenLayers ??= new OffscreenLayers();
         run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
         return run;
+    }
+
+    // The elements drawn as a raster this frame - laid down or drawn anew; the rest are drawn from their shapes.
+    private readonly HashSet<IUIComponent> _rasterShown = [];
+
+    // A frame's walk begins: what each element held is forgotten once it is drawn no more.
+    private void BeginRasterFrame()
+    {
+        _rasterRun = null;
+        if (_rasterParts.Count > _rasterShown.Count)
+        {
+            _rasterShownIds.Clear();
+            foreach (var element in _rasterShown)
+            {
+                _rasterShownIds.Add(element.RenderId);
+            }
+
+            _rasterGone.Clear();
+            foreach (var id in _rasterParts.Keys)
+            {
+                if (!_rasterShownIds.Contains(id))
+                {
+                    _rasterGone.Add(id);
+                }
+            }
+
+            foreach (var id in _rasterGone)
+            {
+                _rasterParts.Remove(id);
+            }
+        }
+
+        _rasterShown.Clear();
+    }
+
+    private readonly HashSet<Guid> _rasterShownIds = [];
+    private readonly List<Guid> _rasterGone = [];
+
+    private bool UnderARoundedClip(IUIComponent element)
+    {
+        for (var c = element; c != null; c = ApplySnap(c).RenderParent)
+        {
+            var s = ApplySnap(c);
+            if (s.ClipToBounds && s.ClipRadii != Vector4F.Zero)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool Holds(Rect outer, Rect inner) =>
@@ -162,7 +216,7 @@ public partial class RenderCache
         for (var i = run.Start; i < run.End; i++)
         {
             var group = _groups[i];
-            if (group.Clones is { Count: > 0 })
+            if (group.Clones is { Count: > 0 } || OpensLayer(group.Component))
             {
                 return false;
             }
@@ -176,6 +230,8 @@ public partial class RenderCache
             foreach (var unit in group.Units)
             {
                 still &= MixRasterUnit(ref print, unit, ref hasText);
+                // Faded in place, not recorded again: the texture holds it at the fade it was drawn at.
+                Mix(ref print, (double)EffectiveOpacity(unit.Component));
                 if (unit.Placement is { } placement)
                 {
                     MixRelative(ref print, Newest(placement));
@@ -200,7 +256,8 @@ public partial class RenderCache
     private static void Mix(ref ulong print, double value) => Mix(ref print, BitConverter.DoubleToInt64Bits(value));
 
     // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
-    // text's revision. False for a living halo, which changes every frame.
+    // text's revision. False for a living halo, which changes every frame, and for a kind of draw not known here, whose
+    // changes in place could not be told.
     private static bool MixRasterUnit(ref ulong print, IRenderUnit unit, ref bool hasText)
     {
         if (unit.RenderData?.LivingHalo != null)
@@ -210,21 +267,44 @@ public partial class RenderCache
 
         switch (unit)
         {
+            case RenderUnits.RectangleRenderUnit { Payload: { } rectangle }:
+                MixPaint(ref print, rectangle.Brush);
+                MixPaint(ref print, rectangle.BorderBrush);
+                MixPaint(ref print, rectangle.Pen?.Brush);
+                return true;
+            case RenderUnits.EllipseRenderUnit { Payload: { } ellipse }:
+                MixPaint(ref print, ellipse.Brush);
+                MixPaint(ref print, ellipse.Pen?.Brush);
+                return true;
+            case RenderUnits.RegularPolygonRenderUnit { Payload: { } polygon }:
+                MixPaint(ref print, polygon.Brush);
+                MixPaint(ref print, polygon.Pen?.Brush);
+                return true;
             case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
-                Mix(ref print, shape.Brush?.PaintVersion ?? 0);
-                Mix(ref print, shape.Pen?.Brush?.PaintVersion ?? 0);
-                break;
+                MixPaint(ref print, shape.Brush);
+                MixPaint(ref print, shape.Pen?.Brush);
+                return true;
+            case RenderUnits.LineRenderUnit { Payload: { } line }:
+                MixPaint(ref print, line.Pen?.Brush);
+                return true;
             case RenderUnits.TextRenderUnit { Payload: { } text }:
                 hasText = true;
                 Mix(ref print, text.Revision);
-                Mix(ref print, text.Foreground?.PaintVersion ?? 0);
-                Mix(ref print, text.Background?.PaintVersion ?? 0);
-                Mix(ref print, text.Stroke?.PaintVersion ?? 0);
-                break;
+                MixPaint(ref print, text.Foreground);
+                MixPaint(ref print, text.Background);
+                MixPaint(ref print, text.Stroke);
+                return true;
+            case RenderUnits.ImageRenderUnit { Payload: { } image }:
+                // A picture still decoding draws nothing until its texture is there; a live surface changes in place.
+                Mix(ref print, (image.Image as BitmapSource)?.Texture != null ? 1 : 0);
+                MixPaint(ref print, image.Filter);
+                return image.Image is not (SharedSurfaceImage or RenderTargetImage);
+            default:
+                return false;
         }
-
-        return true;
     }
+
+    private static void MixPaint(ref ulong print, Core.Media.Brush brush) => Mix(ref print, brush?.PaintVersion ?? 0);
 
     // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes
     // back a few float steps apart as the camera moves, which is not a change.
@@ -249,19 +329,30 @@ public partial class RenderCache
         toTexture.M41 = (float)(-run.Part.X * toTexels);
         toTexture.M42 = (float)(-run.Part.Y * toTexels);
         _cloneMatrix = run.FromWindow * toTexture;
+        // Its subtree is cut by its own clip only in here (CumulativeClip): what was worked out for it outside is not.
+        _clipCache.Clear();
         return DrawIn(_offscreenLayers.BeginTile(device, run.Element.RenderId, run.Print, _projectionMatrix, run.Bounds,
             run.Width, run.Height));
     }
 
-    private Rect2D CloseRasterTile(IGraphicsDevice device) => DrawIn(_offscreenLayers.EndTile(device));
+    private Rect2D CloseRasterTile(IGraphicsDevice device)
+    {
+        _clipCache.Clear();
+        return DrawIn(_offscreenLayers.EndTile(device));
+    }
 
-    /// <summary>Whether <paramref name="unit"/> is drawn into the texture of an element drawn as a raster - its own or an
-    /// ancestor's - rather than into the frame's batches.</summary>
+    /// <summary>Whether <paramref name="unit"/> was drawn this frame into the texture of an element drawn as a raster - its
+    /// own or an ancestor's - rather than into the frame's batches.</summary>
     internal bool DrawnIntoTiles(IRenderUnit unit)
     {
+        if (_rasterShown.Count == 0)
+        {
+            return false;
+        }
+
         for (var c = unit.Component; c != null; c = ApplySnap(c).RenderParent)
         {
-            if (c.DrawingMode == DrawingMode.Raster)
+            if (_rasterShown.Contains(c))
             {
                 return true;
             }

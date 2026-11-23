@@ -1257,9 +1257,10 @@ public partial class RenderCache
         if (_clipCache.TryGetValue(c, out var cached)) return cached;
         var s = ApplySnap(c);
         // An adorner skips its TARGET's own clip and, above it, obeys only the VIEWPORTS - see ClippedByRenderParent.
-        // A layer drawn whole holds itself and its subtree cut by its own clip only; see LaidDownClip. So do the tiles of
-        // an element drawn as a raster, which hold it wherever the window is.
-        if (DrawsWhole(c) || c.DrawingMode == DrawingMode.Raster)
+        // A layer drawn whole holds itself and its subtree cut by its own clip only; see LaidDownClip. So does the texture
+        // of an element drawn as a raster while it is drawn, which holds it wherever the window is; drawn from its shapes,
+        // it is cut as anything else.
+        if (DrawsWhole(c) || ReferenceEquals(_rasterRun?.Element, c))
         {
             var own = OwnClip(c);
             _clipCache[c] = own;

@@ -73,12 +73,18 @@ public partial class RenderCache
             if (Units.Count == 0) return;
             Units.Clear();
             BumpMembership();
-            Recorded++;
+            MarkRecorded();
         }
 
-        /// <summary>How many times its units were rebuilt or emptied - what an element drawn as a raster tells a change of
-        /// what it draws by.</summary>
+        /// <summary>When its units were last rebuilt or emptied, as a number no other group ever had - what an element
+        /// drawn as a raster tells a change of what it draws by. Counted per group from one, a subtree built anew in the
+        /// same shape came back with the same numbers, and the old texture was laid down.</summary>
         public long Recorded;
+
+        private static long _records;
+
+        /// <summary>Say that its units were rebuilt, changed in place or emptied.</summary>
+        public void MarkRecorded() => Recorded = System.Threading.Interlocked.Increment(ref _records);
 
         // Per-group batch slot runs + the ARENA they live in, for the spliced-patch draw path. One arena per group: a
         // group whose units land in two different families has no single segment to repair and falls back to the walk,

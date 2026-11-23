@@ -1002,7 +1002,7 @@ public partial class RenderCache
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
         _bandsDrawnUnder = null;
-        _rasterRun = null;
+        BeginRasterFrame();
         ResetGroups();
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)

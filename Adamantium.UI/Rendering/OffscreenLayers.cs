@@ -310,20 +310,14 @@ internal sealed class OffscreenLayers : IDisposable
     private PooledTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
     {
         var pick = -1;
-        var largest = -1;
         for (var i = 0; i < _freeGroupTargets.Count; i++)
         {
             var free = _freeGroupTargets[i];
-            var area = (ulong)free.Width * free.Height;
             if (free.Width >= width && free.Height >= height
-                && (pick < 0 || area < (ulong)_freeGroupTargets[pick].Width * _freeGroupTargets[pick].Height))
+                && (pick < 0 || (ulong)free.Width * free.Height
+                    < (ulong)_freeGroupTargets[pick].Width * _freeGroupTargets[pick].Height))
             {
                 pick = i;
-            }
-
-            if (largest < 0 || area > (ulong)_freeGroupTargets[largest].Width * _freeGroupTargets[largest].Height)
-            {
-                largest = i;
             }
         }
 
@@ -335,20 +329,9 @@ internal sealed class OffscreenLayers : IDisposable
         }
         else
         {
-            // None holds it: the largest free one is made over to hold both, so the store does not gather every size.
+            // None holds it: one of its own size. Made over to hold both, a tall one and a wide one took a square
+            // texture as large as both together; what is left unused goes once it has not been taken for a while.
             target = new PooledTarget { Width = StepUp(width), Height = StepUp(height) };
-            if (largest >= 0)
-            {
-                var grown = _freeGroupTargets[largest];
-                _freeGroupTargets.RemoveAt(largest);
-                target.Width = Math.Max(target.Width, grown.Width);
-                target.Height = Math.Max(target.Height, grown.Height);
-                if (grown.Texture is IDisposable old)
-                {
-                    gd.AddToDeferDisposeQueue(old);
-                }
-            }
-
             target.Texture = gd.CreateRenderTarget(target.Width, target.Height, MSAALevel.None,
                 gd.CurrentRenderTarget.SurfaceFormat, ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit,
                 ImageLayout.ShaderReadOnlyOptimal, "GroupTarget");
@@ -401,7 +384,7 @@ internal sealed class OffscreenLayers : IDisposable
     }
 
     private DrawSpace Open(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
-        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, Color clear, out bool reused)
+        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, Color clear, out bool reused, bool tile = false)
     {
         reused = false;
         if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
@@ -427,7 +410,15 @@ internal sealed class OffscreenLayers : IDisposable
             return EnterSpace(gd, region, projection, bounds, whole);
         }
 
-        EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
+        if (tile)
+        {
+            EnsureTileRing(gd, entry, region.Extent.Width, region.Extent.Height);
+        }
+        else
+        {
+            EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
+        }
+
         var slot = (entry.Latest + 1) % entry.Ring.Length;
         OpenOver(gd, entry.Ring[slot], entry.TextureWidth, entry.TextureHeight, region, entry, slot, print, reusable, clear);
         return EnterSpace(gd, region, projection, bounds, whole);
@@ -589,7 +580,7 @@ internal sealed class OffscreenLayers : IDisposable
     {
         var region = new Rect2D
             { Offset = new Offset2D(), Extent = new Extent2D { Width = (uint)width, Height = (uint)height } };
-        return Open(gd, key, region, print, true, false, projection, bounds, true, Colors.Transparent, out _);
+        return Open(gd, key, region, print, true, false, projection, bounds, true, Colors.Transparent, out _, tile: true);
     }
 
     /// <summary>Closes the tile <see cref="BeginTile"/> opened, keeping what it holds for <see cref="LayDownTile"/> in this
@@ -1023,6 +1014,36 @@ internal sealed class OffscreenLayers : IDisposable
             entry.Ring[i] = gd.CreateRenderTarget(entry.TextureWidth, entry.TextureHeight, MSAALevel.None, format,
                 ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit, ImageLayout.ShaderReadOnlyOptimal,
                 $"Layer:{i}");
+        }
+    }
+
+    // A raster's texture: two - the one laid down and the one drawn anew, which the device draws into after the frames
+    // before it are done sampling it, as it keeps the order of one queue - not a ring a frame in flight apiece, for a
+    // texture that can be 8192 texels a side. Made again at the size asked when that is far smaller, not kept at the
+    // largest it ever was.
+    private const int TileRingLength = 2;
+
+    private static void EnsureTileRing(IGraphicsDevice gd, CachedLayer entry, uint width, uint height)
+    {
+        var fits = entry.TextureWidth >= width && entry.TextureHeight >= height;
+        var farLarger = (ulong)entry.TextureWidth * entry.TextureHeight > 4UL * width * height;
+        if (entry.Ring.Length == TileRingLength && fits && !farLarger)
+        {
+            return;
+        }
+
+        Release(gd, entry.Ring);
+        entry.TextureWidth = width;
+        entry.TextureHeight = height;
+        entry.Ring = new IRenderTarget[TileRingLength];
+        entry.Latest = -1;
+        entry.Valid = false;
+        var format = gd.CurrentRenderTarget.SurfaceFormat;
+        for (var i = 0; i < TileRingLength; i++)
+        {
+            entry.Ring[i] = gd.CreateRenderTarget(width, height, MSAALevel.None, format,
+                ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit, ImageLayout.ShaderReadOnlyOptimal,
+                $"Raster:{i}");
         }
     }
 

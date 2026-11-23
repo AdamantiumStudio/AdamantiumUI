@@ -2,7 +2,9 @@ using System;
 using System.Runtime.InteropServices;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -227,6 +229,96 @@ public class RasterDrawingRenderTests
 
         protected override void OnRender(IDrawingContext context) =>
             context.ForControl(this).DrawRectangle(new SolidColorBrush(color), new Rect(0, 0, 40, 40));
+    }
+
+    private static Frame InARoundedBox(DrawingMode mode)
+    {
+        var box = new Border
+        {
+            Width = 100, Height = 100, CornerRadius = new CornerRadius(30), ClipToBounds = true,
+            Child = new Picture { DrawingMode = mode }
+        };
+        var host = new Canvas { Width = Dim, Height = Dim };
+        Canvas.SetLeft(box, 30);
+        Canvas.SetTop(box, 30);
+        host.Children.Add(box);
+        using var stand = new Stand(host);
+        return stand.Render();
+    }
+
+    // Under a rounded clip it is drawn from its shapes - a texture is laid down cut square - and cut as they are: by
+    // the box it lies in, rounded corners and all, nothing of it past them.
+    [Test]
+    public void ARasterUnderARoundedClip_IsCutAsItsShapesAre()
+    {
+        var vector = InARoundedBox(DrawingMode.Vector);
+        var raster = InARoundedBox(DrawingMode.Raster);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(raster.At(140, 140), Is.EqualTo((255, 255, 255)), "past the box: nothing of it");
+            Assert.That(raster.At(33, 33), Is.EqualTo((255, 255, 255)), "in the box's rounded corner: nothing of it");
+            AssertTheSame(raster, vector, "against its shapes' picture");
+        });
+    }
+
+    // Faded, it is a layer, which a texture drawn as a clone does not open: drawn from its shapes, faded as they are -
+    // in the frame after too, not laid down unfaded.
+    [Test]
+    public void AFadedRaster_ShowsWhatItsShapesShow()
+    {
+        var vector = new Stand(new Picture { DrawingMode = DrawingMode.Vector, Opacity = 0.5 });
+        var wanted = vector.Render();
+        vector.Dispose();
+        using var stand = new Stand(new Picture { DrawingMode = DrawingMode.Raster, Opacity = 0.5 });
+        var first = stand.Render();
+        var again = stand.Render();
+
+        Assert.Multiple(() =>
+        {
+            AssertTheSame(first, wanted, "the first frame against its shapes' picture");
+            AssertTheSame(again, wanted, "the frame after against its shapes' picture");
+        });
+    }
+
+    // A part of it faded in place - its group not recorded again - is drawn faded: the texture holding it unfaded is
+    // not laid down.
+    [Test]
+    public void APartFadingInPlace_DrawsItsTileAnew()
+    {
+        var square = new Square(Colors.Blue);
+        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster };
+        Canvas.SetLeft(square, 20);
+        Canvas.SetTop(square, 20);
+        host.Children.Add(square);
+        using var stand = new Stand(host);
+        stand.Render();
+        square.Opacity = 0.25;
+        var faded = stand.Render();
+
+        var (r, g, b) = faded.At(40, 40);
+        Assert.That(r, Is.GreaterThan(150), $"a quarter of blue over white, not blue: {(r, g, b)}");
+    }
+
+    // A part of it put in place of one of the same shape is drawn: the texture of the one before is not laid down.
+    [Test]
+    public void APartReplacedByOneOfTheSameShape_DrawsItsTileAnew()
+    {
+        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster };
+        var red = new Square(Colors.Red);
+        Canvas.SetLeft(red, 20);
+        Canvas.SetTop(red, 20);
+        host.Children.Add(red);
+        using var stand = new Stand(host);
+        stand.Render();
+        host.Children.Remove(red);
+        var blue = new Square(Colors.Blue);
+        Canvas.SetLeft(blue, 20);
+        Canvas.SetTop(blue, 20);
+        host.Children.Add(blue);
+        var replaced = stand.Render();
+
+        Assert.That(replaced.At(40, 40), Is.EqualTo((0, 0, 255)), "the one put in its place");
     }
 
     // What is drawn after it is drawn where it is, over the whole window: closing a tile goes back to what the walk drew
