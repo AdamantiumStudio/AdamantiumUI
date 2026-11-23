@@ -712,9 +712,18 @@ public class NumericUpDown : RangeLimitsBase
 
     // --- Stepping ---------------------------------------------------------------------------------------------------
 
-    private void OnIncreaseClick(object sender, RoutedEventArgs e) => StepByButton(sender, +1);
+    // The step buttons are the box's own parts: their click ends here, not in whatever the box stands in.
+    private void OnIncreaseClick(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        StepByButton(sender, +1);
+    }
 
-    private void OnDecreaseClick(object sender, RoutedEventArgs e) => StepByButton(sender, -1);
+    private void OnDecreaseClick(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        StepByButton(sender, -1);
+    }
 
     // A button held repeats its step until let go; a click by the keyboard is one step, settled at once.
     private void StepByButton(object button, int direction)
