@@ -262,49 +262,71 @@ public class RasterDrawingRenderTests
         });
     }
 
-    // Faded, it is a layer, which a texture drawn as a clone does not open: drawn from its shapes, faded as they are -
-    // in the frame after too, not laid down unfaded.
+    // Two squares overlapping, faded as one: a layer.
+    private static Canvas FadedPair(DrawingMode mode)
+    {
+        var pair = new Canvas { Width = Dim, Height = Dim, Opacity = 0.5, DrawingMode = mode };
+        var under = new Square(Colors.Red);
+        var over = new Square(Colors.Blue);
+        Canvas.SetLeft(under, 20);
+        Canvas.SetTop(under, 20);
+        Canvas.SetLeft(over, 40);
+        Canvas.SetTop(over, 40);
+        pair.Children.Add(under);
+        pair.Children.Add(over);
+        return pair;
+    }
+
+    // Faded as one, it is a layer, which a texture drawn as a clone does not open: drawn from its shapes, faded as they
+    // are - in the frame after too, not laid down unfaded.
     [Test]
     public void AFadedRaster_ShowsWhatItsShapesShow()
     {
-        var vector = new Stand(new Picture { DrawingMode = DrawingMode.Vector, Opacity = 0.5 });
+        var vector = new Stand(FadedPair(DrawingMode.Vector));
         var wanted = vector.Render();
         vector.Dispose();
-        using var stand = new Stand(new Picture { DrawingMode = DrawingMode.Raster, Opacity = 0.5 });
+        using var stand = new Stand(FadedPair(DrawingMode.Raster));
         var first = stand.Render();
         var again = stand.Render();
 
         Assert.Multiple(() =>
         {
+            Assert.That(wanted.At(50, 50), Is.Not.EqualTo((0, 0, 255)), "drawn from its shapes it is faded");
             AssertTheSame(first, wanted, "the first frame against its shapes' picture");
             AssertTheSame(again, wanted, "the frame after against its shapes' picture");
         });
     }
 
-    // A part of it faded in place - its group not recorded again - is drawn faded: the texture holding it unfaded is
-    // not laid down.
-    [Test]
-    public void APartFadingInPlace_DrawsItsTileAnew()
+    private sealed class Painted(SolidColorBrush brush) : MeasurableUIComponent
     {
-        var square = new Square(Colors.Blue);
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => new(40, 40);
+
+        protected override void OnRender(IDrawingContext context) =>
+            context.ForControl(this).DrawRectangle(brush, new Rect(0, 0, 40, 40));
+    }
+
+    // A part of it repainted in place - its group not recorded again - is drawn in the new paint: the texture holding
+    // the old one is not laid down.
+    [Test]
+    public void APartRepaintedInPlace_DrawsItsTileAnew()
+    {
+        var brush = new SolidColorBrush(Colors.Blue);
+        var square = new Painted(brush);
         var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster };
         Canvas.SetLeft(square, 20);
         Canvas.SetTop(square, 20);
         host.Children.Add(square);
         using var stand = new Stand(host);
         stand.Render();
-        square.Opacity = 0.25;
-        var faded = stand.Render();
+        brush.Color = Colors.Red;
+        var repainted = stand.Render();
 
-        var (r, g, b) = faded.At(40, 40);
-        Assert.That(r, Is.GreaterThan(150), $"a quarter of blue over white, not blue: {(r, g, b)}");
+        Assert.That(repainted.At(40, 40), Is.EqualTo((255, 0, 0)), "the new paint");
     }
 
-    // A part of it put in place of one of the same shape is drawn: the texture of the one before is not laid down.
-    [Test]
-    public void APartReplacedByOneOfTheSameShape_DrawsItsTileAnew()
+    private static Frame Replaced(DrawingMode mode)
     {
-        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster };
+        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = mode };
         var red = new Square(Colors.Red);
         Canvas.SetLeft(red, 20);
         Canvas.SetTop(red, 20);
@@ -316,9 +338,21 @@ public class RasterDrawingRenderTests
         Canvas.SetLeft(blue, 20);
         Canvas.SetTop(blue, 20);
         host.Children.Add(blue);
-        var replaced = stand.Render();
+        return stand.Render();
+    }
 
-        Assert.That(replaced.At(40, 40), Is.EqualTo((0, 0, 255)), "the one put in its place");
+    // A part of it put in place of one of the same shape is drawn: the texture of the one before is not laid down.
+    [Test]
+    public void APartReplacedByOneOfTheSameShape_DrawsItsTileAnew()
+    {
+        var vector = Replaced(DrawingMode.Vector);
+        var raster = Replaced(DrawingMode.Raster);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(vector.At(40, 40), Is.EqualTo((0, 0, 255)), "drawn from its shapes, the one put in its place");
+            Assert.That(raster.At(40, 40), Is.EqualTo((0, 0, 255)), "as a raster, the one put in its place");
+        });
     }
 
     // What is drawn after it is drawn where it is, over the whole window: closing a tile goes back to what the walk drew
