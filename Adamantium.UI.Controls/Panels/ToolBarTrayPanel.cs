@@ -77,11 +77,13 @@ public class ToolBarTrayPanel : Panel
                 var bar = band.Bars[i];
                 var full = bar.FullLength;
                 var shortest = bar.ShortestLength;
+                var least = bar.LeastLength;
                 bar.GiveLength(band.Lengths[i]);
                 bar.Measure(horizontal
                     ? new Size<double>(band.Lengths[i], double.PositiveInfinity)
                     : new Size<double>(double.PositiveInfinity, band.Lengths[i]));
-                changed |= !full.Equals(bar.FullLength) || !shortest.Equals(bar.ShortestLength);
+                changed |= !full.Equals(bar.FullLength) || !shortest.Equals(bar.ShortestLength) ||
+                           !least.Equals(bar.LeastLength);
             }
 
             if (!changed)
