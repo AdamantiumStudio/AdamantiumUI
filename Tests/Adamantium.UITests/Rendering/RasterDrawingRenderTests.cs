@@ -289,9 +289,11 @@ public class RasterDrawingRenderTests
         var first = stand.Render();
         var again = stand.Render();
 
+        // Where the two overlap, faded as one shows the upper over white; each faded apart shows it over the lower.
         Assert.Multiple(() =>
         {
-            Assert.That(wanted.At(50, 50), Is.Not.EqualTo((0, 0, 255)), "drawn from its shapes it is faded");
+            Assert.That(first.At(50, 50), Is.EqualTo(wanted.At(50, 50)), "the first frame, where they overlap");
+            Assert.That(again.At(50, 50), Is.EqualTo(wanted.At(50, 50)), "the frame after, where they overlap");
             AssertTheSame(first, wanted, "the first frame against its shapes' picture");
             AssertTheSame(again, wanted, "the frame after against its shapes' picture");
         });
@@ -338,6 +340,7 @@ public class RasterDrawingRenderTests
         Canvas.SetLeft(blue, 20);
         Canvas.SetTop(blue, 20);
         host.Children.Add(blue);
+        host.InvalidateMeasure();
         return stand.Render();
     }
 
