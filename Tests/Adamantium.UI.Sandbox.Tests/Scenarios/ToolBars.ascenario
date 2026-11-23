@@ -10,13 +10,16 @@
   <Drag Target="id=ParagraphBar/id=PART_Grip" From="5,15" To="120,105" />
   <Wait Target="id=LowerTray/id=ParagraphBar" />
   <Absent Target="id=UpperTray/id=ParagraphBar" />
-  <!-- Narrowed, the Text bar keeps Bold and sends the rest under its chevron; Italic is pressed from there and the menu
-       goes away. -->
+  <!-- Narrowed, the Text bar keeps Bold and sends the rest under its chevron; Italic is pressed from there, the menu
+       stays open, and Escape puts it away. -->
   <Set Target="id=TrayWidth" Value="330" />
   <Wait Target="id=TextBar/id=PART_OverflowButton" Offscreen="False" />
   <Click Target="id=TextBar/id=PART_OverflowButton" />
   <Click Target="id=ItalicCommand" />
   <Expect Target="id=ToolBarsReport" Name="Pressed: Italic" />
+  <Expect Target="id=ItalicCommand" Offscreen="False" />
+  <Key Keys="Escape" Into="id=MainWindow" />
+  <Absent Target="id=ItalicCommand" Timeout="5s" />
   <Set Target="id=TrayWidth" Value="900" />
   <Wait Target="id=TextBar/id=PART_OverflowButton" Offscreen="True" Timeout="5s" />
   <Expect Target="id=TextBar/id=UnderlineCommand" Offscreen="False" />
@@ -32,6 +35,8 @@
   <Click Target="id=FormatBar/id=PART_OverflowButton" />
   <Click Target="id=SectionCenterCommand" />
   <Expect Target="id=ToolBarsReport" Name="Pressed: Center" />
+  <Key Keys="Escape" Into="id=MainWindow" />
+  <Absent Target="id=SectionCenterCommand" Timeout="5s" />
   <Set Target="id=SectionsWidth" Value="900" />
   <Wait Target="id=FormatBar/id=PART_OverflowButton" Offscreen="True" Timeout="5s" />
   <!-- Set to wrap and narrowed again: no menu - the Alignment section stands on a new line, and Center is pressed there. -->
@@ -78,8 +83,9 @@
   <Absent Target="id=PictureBar/type=Button,name=Author" />
   <Expand Target="id=SideOrientation" />
   <Select Target="id=SideOrientation/name=Vertical" />
-  <!-- The side tray shortened: the Arrange section goes to the bar's menu; set to wrap, it stands in a column beside. -->
-  <Set Target="id=SideLength" Value="420" />
+  <!-- The side tray shortened well below the bar - 420 was at the edge once the context's name cuts to a strip: its last
+       sections go to the bar's menu; set to wrap, they stand in a column beside. -->
+  <Set Target="id=SideLength" Value="300" />
   <Wait Target="id=PictureBar" HasOverflowItems="True" Timeout="5s" />
   <Absent Target="id=WrapCommand" />
   <Expand Target="id=SideWrapping" />
@@ -89,4 +95,15 @@
   <Set Target="id=SideLength" Value="900" />
   <Expand Target="id=SideWrapping" />
   <Select Target="id=SideWrapping/name=NoWrap" />
+  <!-- Shortest, the size section is in the menu too: its number box's + steps the width, and the menu stays open. -->
+  <Set Target="id=SideLength" Value="120" />
+  <Scroll Target="id=ToolBarsView>type=Pane" Vertical="100" />
+  <Click Target="id=PictureBar/id=PART_OverflowButton" />
+  <Wait Target="id=PictureWidth" Offscreen="False" Timeout="5s" />
+  <!-- The + is a part of the box, not in the automation tree: pressed and let go where it stands, at the box's right. -->
+  <Drag Target="id=PictureWidth" From="105,16" To="105,16" />
+  <Expect Target="id=PictureWidth" Offscreen="False" Value="5.18" />
+  <Key Keys="Escape" Into="id=MainWindow" />
+  <Absent Target="id=PictureWidth" Timeout="5s" />
+  <Set Target="id=SideLength" Value="900" />
 </Scenario>

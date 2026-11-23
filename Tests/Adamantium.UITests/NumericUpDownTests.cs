@@ -72,6 +72,25 @@ public class NumericUpDownTests
         }
     }
 
+    // A step button is the box's own part: its click steps the value and goes no further than the box.
+    [Test]
+    public void AStepButtonsClick_StepsTheValue_AndGoesNoFurtherThanTheBox()
+    {
+        var box = NewBox(value: 5);
+        var reachedAbove = 0;
+        ((Border)box.VisualParent).AddHandler(ButtonBase.ClickEvent, new RoutedEventHandler((_, _) => reachedAbove++));
+
+        Press(box, "PART_Increase");
+        Press(box, "PART_Decrease");
+        Press(box, "PART_Increase");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Value, Is.EqualTo(6));
+            Assert.That(reachedAbove, Is.Zero);
+        });
+    }
+
     // A width of 453.5433 shows as 453.54: leaving the box without typing must not put 453.54 in.
     [Test]
     public void LeavingTheBoxWithItsTextAsShown_PutsNothingIn_AndATypedNumberRunsTheCommand()

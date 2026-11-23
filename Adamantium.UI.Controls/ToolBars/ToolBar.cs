@@ -165,12 +165,6 @@ public class ToolBar : ItemsControl
 
     // The bar's chrome with the context's whole name, as last measured whole; NaN before.
     private double _chromeWithWholeHeader = double.NaN;
-    private readonly RoutedEventHandler _closeOverflow;
-
-    public ToolBar()
-    {
-        _closeOverflow = CloseOverflow;
-    }
 
     static ToolBar()
     {
@@ -389,7 +383,9 @@ public class ToolBar : ItemsControl
         base.OnApplyTemplate();
         _onBar = GetTemplateChild("PART_Items") as Panel;
 
-        HookOverflow(GetTemplateChild("PART_OverflowItems") as Panel);
+        // The menu stays open while it is worked in - a command run, a number stepped - and goes away by its chevron, a
+        // press outside it or Escape, as its popup closes.
+        _inOverflow = GetTemplateChild("PART_OverflowItems") as Panel;
 
         // The menu of what does not fit opens under its chevron.
         if (GetTemplateChild("PART_OverflowPopup") is Popup popup && popup.PlacementTarget == null &&
@@ -407,20 +403,10 @@ public class ToolBar : ItemsControl
     public override void OnRemoveTemplate()
     {
         TakeCommandsOut();
-        HookOverflow(null);
+        _inOverflow = null;
         _onBar = null;
         base.OnRemoveTemplate();
     }
-
-    // A command run from the overflow menu puts the menu away, as a menu's does.
-    private void HookOverflow(Panel overflow)
-    {
-        _inOverflow?.RemoveHandler(ButtonBase.ClickEvent, _closeOverflow);
-        _inOverflow = overflow;
-        _inOverflow?.AddHandler(ButtonBase.ClickEvent, _closeOverflow);
-    }
-
-    private void CloseOverflow(object sender, RoutedEventArgs e) => SetCurrentValue(IsOverflowOpenProperty, false);
 
     protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
     {

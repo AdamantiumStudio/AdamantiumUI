@@ -1236,27 +1236,23 @@ public class ToolBarTrayTests
         });
     }
 
+    // The menu stays open while it is worked in: a command run from it leaves it open.
     [TestCaseSource(nameof(StyleSets))]
-    public void ACommandRunFromTheOverflowMenu_PutsTheMenuAway(System.Type styleSet)
+    public void ACommandRunFromTheOverflowMenu_LeavesTheMenuOpen(System.Type styleSet)
     {
         Use(styleSet);
         var bar = Bar("Bar", 0, 0, commands: 4);
         var tray = Tray(bar);
-        var root = Shown(tray, 70);
+        Shown(tray, 70);
         var command = bar.Items.Cast<Button>().Last(button => IsInOverflow(bar, button));
 
         bar.IsOverflowOpen = true;
-        var opened = bar.IsOverflowOpen;
         command.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, command)
         {
             RoutedEvent = ButtonBase.ClickEvent
         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(opened, Is.True);
-            Assert.That(bar.IsOverflowOpen, Is.False);
-        });
+        Assert.That(bar.IsOverflowOpen, Is.True);
     }
 
     // The room between bars is the tray's, only between neighbours: a bar alone down the side stands in the middle of
