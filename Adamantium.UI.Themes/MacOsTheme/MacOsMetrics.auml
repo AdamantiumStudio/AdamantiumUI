@@ -54,6 +54,8 @@
     <!-- A Mac toolbar's buttons stand apart, not shoulder to shoulder. -->
     <sys:Double x:Key="ToolBarSpacing">6</sys:Double>
     <sys:Double x:Key="ToolBarGripLength">14</sys:Double>
+    <!-- Down the side, a context's name cut to a strip of its color when the commands need the room. -->
+    <sys:Double x:Key="ToolBarContextualStripLength">6</sys:Double>
     <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
     <sys:Double x:Key="ToolBarContextualWashOpacity">0.25</sys:Double>
     <!-- The frame round a section a shown context comes from, and round the chevron when it is in the menu. -->

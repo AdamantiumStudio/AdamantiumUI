@@ -150,7 +150,7 @@
                                         Visibility="Collapsed"
                                         Background="{TemplateBinding Accent}"
                                         CornerRadius="{ResourceReference CornerRadiusDefault}">
-                                    <RibbonContextualLabel Accent="Transparent"
+                                    <RibbonContextualLabel x:Name="ContextualHeaderLabelDown" Accent="Transparent"
                                                            Content="{TemplateBinding ContextualHeader}"
                                                            ContentTemplate="{TemplateBinding ContextualHeaderTemplate}">
                                         <RibbonContextualLabel.LayoutTransform>
@@ -227,6 +227,16 @@
                 <Condition Property="Orientation" Value="Vertical"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="ContextualHeaderPlateDown" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <!-- With no room for the commands beside the whole name: a strip of the context's color, the name its tooltip. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="HasContextualHeader" Value="true"/>
+                <Condition Property="IsContextualHeaderShort" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ContextualHeaderLabelDown" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="ContextualHeaderPlateDown" Property="Height" Value="{ResourceReference ToolBarContextualStripLength}"/>
+            <Setter TargetName="ContextualHeaderPlateDown" Property="ToolTip" Value="{TemplateBinding ContextualHeader}"/>
         </MultiTrigger>
     </Style>
 

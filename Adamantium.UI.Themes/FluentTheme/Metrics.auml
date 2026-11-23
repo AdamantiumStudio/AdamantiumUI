@@ -70,6 +70,8 @@
     <sys:Double x:Key="DragHandleHeight">20</sys:Double>
     <!-- A tool bar's grip and its overflow chevron, along the bar. -->
     <sys:Double x:Key="ToolBarGripLength">10</sys:Double>
+    <!-- Down the side, a context's name cut to a strip of its color when the commands need the room. -->
+    <sys:Double x:Key="ToolBarContextualStripLength">6</sys:Double>
     <sys:Double x:Key="ToolBarOverflowButtonLength">20</sys:Double>
     <!-- Between two commands of a bar. -->
     <sys:Double x:Key="ToolBarSpacing">4</sys:Double>
