@@ -75,6 +75,7 @@ public class HunspellWordPredictorTests
         // As typed: each beginning asked once, the next letter after the one before.
         var slowestHandBack = 0.0;
         var slowest = 0.0;
+        var keys = new System.Text.StringBuilder();
         foreach (var start in starts)
         {
             clock.Restart();
@@ -82,10 +83,11 @@ public class HunspellWordPredictorTests
             slowestHandBack = System.Math.Max(slowestHandBack, clock.Elapsed.TotalMilliseconds);
             await ask;
             slowest = System.Math.Max(slowest, clock.Elapsed.TotalMilliseconds);
+            keys.Append($" {start}={clock.Elapsed.TotalMilliseconds:F1}");
         }
 
         TestContext.Progress.WriteLine(
-            $"MEASURE {language}: read {reading:F0} ms, slowest hand-back {slowestHandBack:F2} ms, slowest key {slowest:F2} ms");
+            $"MEASURE {language}: read {reading:F0} ms, slowest hand-back {slowestHandBack:F2} ms, keys{keys}");
         Assert.Multiple(() =>
         {
             Assert.That(slowestHandBack, Is.LessThan(1), "the keyboard's thread is held under a millisecond");
