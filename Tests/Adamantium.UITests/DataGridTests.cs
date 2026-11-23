@@ -1120,6 +1120,125 @@ public class DataGridTests
         });
     }
 
+    // A table showing no headers - a value card's - still has its columns resized: the line between two columns is
+    // dragged in the rows, the resize cursor over it; with headers, the rows leave it to them and a press picks a cell.
+    [TestCase(Visibility.Collapsed, 140)]
+    [TestCase(Visibility.Visible, 100)]
+    public void NoHeaders_AColumnsLineIsDraggedInTheRows(Visibility headers, double width)
+    {
+        var grid = SelectableGrid(3);
+        grid.HeadersVisibility = headers;
+        // In a root: the pointer is placed in it.
+        var root = new PointerRoot { Width = 400, Height = 200, ClientWidth = 400, ClientHeight = 200 };
+        root.Children.Add(grid);
+        root.Measure(new Size<double>(400, 200));
+        root.Arrange(new Rect(0, 0, 400, 200));
+        Relayout(grid);
+        var row = (DataGridRow)grid.ItemContainerGenerator.ContainerFromIndex(0);
+
+        PointerDevice.Current.SetExternalMousePosition(row, new PixelPoint(100, 10));
+        ((IObservableComponent)row).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0)
+        {
+            RoutedEvent = PointerEvents.PointerMovedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.None)
+        });
+        var cursor = row.Cursor;
+        ((IObservableComponent)row).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
+            InputModifiers.LeftMouseButton, 0)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        });
+        PointerDevice.Current.SetExternalMousePosition(row, new PixelPoint(140, 10));
+        ((IObservableComponent)row).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.LeftMouseButton, 0)
+        {
+            RoutedEvent = PointerEvents.PointerMovedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        });
+        PointerInput.Release(row);
+        Relayout(grid);
+        PointerDevice.Current.SetExternalMousePosition(row, new PixelPoint(50, 10));
+        ((IObservableComponent)row).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0)
+        {
+            RoutedEvent = PointerEvents.PointerMovedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.None)
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Columns[0].ActualWidth, Is.EqualTo(width));
+            Assert.That(cursor == Cursors.SizeWE, Is.EqualTo(headers == Visibility.Collapsed), "the resize cursor");
+            Assert.That(row.Cursor == Cursors.SizeWE, Is.False, "off the line, the row's own");
+        });
+    }
+
+    // A press by the line, in the cell being edited, is its editor's - a caret placed at the start of a value, a word
+    // double-clicked - not a column's drag; a group's caption draws no lines and is not dragged either.
+    [Test]
+    public void NoHeaders_APressInTheCellBeingEdited_IsItsEditors()
+    {
+        var grid = SelectableGrid(3);
+        grid.HeadersVisibility = Visibility.Collapsed;
+        var root = new PointerRoot { Width = 400, Height = 200, ClientWidth = 400, ClientHeight = 200 };
+        root.Children.Add(grid);
+        root.Measure(new Size<double>(400, 200));
+        root.Arrange(new Rect(0, 0, 400, 200));
+        Relayout(grid);
+        var row = (DataGridRow)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        grid.BeginEditFromRow(row, 1);
+        Relayout(grid, row);
+
+        PointerDevice.Current.SetExternalMousePosition(row, new PixelPoint(101, 10));
+        ((IObservableComponent)row).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
+            InputModifiers.LeftMouseButton, 0)
+        {
+            RoutedEvent = PointerEvents.PointerPressedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(row.CellAt(1).IsEditing, Is.True, "being edited");
+            Assert.That(grid.ColumnResize.IsResizing, Is.False, "no drag begun");
+        });
+        PointerInput.Release(row);
+    }
+
+    // A visual root with a client viewport, as a window: the pointer's position is read against it.
+    private sealed class PointerRoot : Adamantium.UI.Controls.Panels.Grid, IRootVisualComponent
+    {
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
+        public PixelPoint Position { get; set; }
+        public void AttachContextAndInitialize(IUIContext context) { }
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public string Title { get; set; }
+        public double ClientWidth { get; set; }
+        public double ClientHeight { get; set; }
+        public IUIContext UIContext => null;
+    }
+
+    // A cell that cannot be edited is washed by the theme; a grid that does not mark such cells keeps them as the rest,
+    // still not editable.
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public void ReadOnlyCells_LookSo_OnlyWhereTheGridMarksThem(bool marks, bool looks)
+    {
+        var grid = SelectableGrid(2);
+        grid.Columns[0].IsReadOnly = true;
+        grid.MarksReadOnlyCells = marks;
+        Relayout(grid);
+
+        var cell = grid.CellFor(0, 0);
+        Assert.Multiple(() =>
+        {
+            Assert.That(cell.IsReadOnly, Is.True);
+            Assert.That(cell.LooksReadOnly, Is.EqualTo(looks));
+            Assert.That(grid.CellFor(0, 1).LooksReadOnly, Is.False, "an editable cell never does");
+        });
+    }
+
     // Both by default: a grid that draws nothing between its cells is not what anyone coming from another framework
     // expects to find.
     [Test]

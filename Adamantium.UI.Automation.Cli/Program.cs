@@ -51,6 +51,8 @@ public static class Program
           drag <selector> <x1,y1> <x2,y2>                     a left-button drag across it, in its own units
           touch <selector> tap | hold | drag <x1,y1> <x2,y2>  a finger on it, inside the application; hold is a
                                                               long press, the touch way of a right click
+          touch <selector> hold --to <selector>               held, the finger slides on to another element - one
+                                                              the hold opened - and lifts there
           pen <selector> tap | hold | drag <x1,y1> <x2,y2> [--pressure <0..1>] [--barrel] [--eraser]
                                                               a pen on it; --barrel holds its side button;
                                                               --pressure <a..b> presses from a to b along a drag

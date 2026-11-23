@@ -203,12 +203,34 @@ public static class ScenarioTranslator
     private static string Touch(XElement step)
     {
         var system = $"throughSystem: {Flag(step, "ThroughSystem").ToString().ToLowerInvariant()}";
+        if (SlideTo(step) is { } slideTo)
+        {
+            return $"{Target(step)}.HoldAndSlideToAsync({slideTo})";
+        }
+
         return Gesture(step) switch
         {
             "Tap" => $"{Target(step)}.TapAsync({system})",
             "Hold" => $"{Target(step)}.HoldAsync({system})",
             _ => $"{Target(step)}.TouchDragAsync({Pair(step, "From")}, {Pair(step, "To")}, {system})"
         };
+    }
+
+    // The element a held contact slides to: only a hold slides, and only by simulated input - the system's plays its
+    // frames whole, with nothing to find on the way.
+    private static string SlideTo(XElement step)
+    {
+        if (step.Attribute("SlideTo") is not { } slideTo)
+        {
+            return null;
+        }
+
+        if (Gesture(step) != "Hold" || Flag(step, "ThroughSystem"))
+        {
+            throw new ScenarioStepException("AUS005", MarkupMessages.ScenarioSlideOnlyForHold(step.Name.LocalName), slideTo);
+        }
+
+        return Find(slideTo);
     }
 
     private static string Pen(XElement step)
@@ -224,16 +246,21 @@ public static class ScenarioTranslator
         }
 
         var single = pressure == null ? "0.5f" : $"{Float(range[0])}";
+        if (gesture == "Hold" && (Flag(step, "Barrel") || Flag(step, "Eraser")))
+        {
+            throw new ScenarioStepException("AUS006", MarkupMessages.ScenarioHeldPenButtons(), step);
+        }
+
+        if (SlideTo(step) is { } slideTo)
+        {
+            return $"{Target(step)}.PenHoldAndSlideToAsync({slideTo}, {single})";
+        }
+
         switch (gesture)
         {
             case "Tap":
                 return $"{Target(step)}.PenTapAsync({single}, {buttons}, {system})";
             case "Hold":
-                if (Flag(step, "Barrel") || Flag(step, "Eraser"))
-                {
-                    throw new ScenarioStepException("AUS006", MarkupMessages.ScenarioHeldPenButtons(), step);
-                }
-
                 return $"{Target(step)}.PenHoldAsync({single}, {system})";
             default:
                 return range is { Length: 2 }

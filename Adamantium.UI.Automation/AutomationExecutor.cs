@@ -358,6 +358,13 @@ public sealed class AutomationExecutor
             }
 
             await _host.WaitForIdleAsync(timeout);
+            // Held, the finger slides, still down, to what the hold opened, and is lifted there.
+            if (request.Command != AutomationCommand.Touches && request.Targets is { Length: 1 } slideTo)
+            {
+                down = await _host.RunOnLoopAsync(
+                    () => InputSimulator.Slide(down, contacts, [TapPoint(Enabled(Resolve(slideTo[0])))]), timeout);
+                await _host.WaitForIdleAsync(timeout);
+            }
         }
         catch (Exception)
         {

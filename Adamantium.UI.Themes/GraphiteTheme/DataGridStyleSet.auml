@@ -447,7 +447,7 @@
                     <ControlTemplate.Triggers>
                         <!-- Read-only: a faint wash and disabled-weight text. Declared FIRST, so a selection, an error
                              or an edit still wins over it. -->
-                        <PropertyTrigger Property="IsReadOnly" Value="true">
+                        <PropertyTrigger Property="LooksReadOnly" Value="true">
                             <Setter TargetName="CellBorder" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
