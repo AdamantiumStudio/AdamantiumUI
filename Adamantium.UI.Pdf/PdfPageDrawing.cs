@@ -42,11 +42,11 @@ public sealed class PdfPageDrawing : Drawing
         _view = view;
     }
 
-    // What PrepareForDrawing works out, shared by every view of the page: the long lines' levels (PdfStrokeDetail) and
+    // What PrepareForDrawing works out, shared by every view of the page: the long paths' levels (PdfPathDetail) and
     // where each draw stands, for drawing only what meets a view.
     private sealed class Prepared
     {
-        public Dictionary<PdfDrawStep, PdfStrokeDetail> ByStep;
+        public Dictionary<PdfDrawStep, PdfPathDetail> ByStep;
 
         public PdfStepPlaces Places;
     }
@@ -88,13 +88,13 @@ public sealed class PdfPageDrawing : Drawing
 
     /// <summary>Makes on the calling thread, on all the processor's cores, what drawing the page's paths takes - their
     /// outlines and their fills' tiles - which its first draw would make on the loop thread, the window standing still
-    /// for as long, and how much each point of its long lines matters, for <see cref="AtDetail"/>. Stops when
+    /// for as long, and how much each point of its long paths matters, for <see cref="AtDetail"/>. Stops when
     /// <paramref name="cancellation"/> is cancelled; what is not made then, or fails to be made, is made when drawn, or
     /// drawn as given. Only running out of memory is let through.</summary>
     public void PrepareForDrawing(CancellationToken cancellation = default)
     {
         PrepareGeometries(cancellation);
-        WorkOutLineLevels(cancellation);
+        WorkOutPathLevels(cancellation);
         if (!cancellation.IsCancellationRequested)
         {
             // After the paths are prepared: that works out their bounds.
@@ -129,25 +129,25 @@ public sealed class PdfPageDrawing : Drawing
             cancellation);
     }
 
-    private void WorkOutLineLevels(CancellationToken cancellation)
+    private void WorkOutPathLevels(CancellationToken cancellation)
     {
-        var lines = new List<PdfGeometryStep>();
+        var paths = new List<PdfGeometryStep>();
         foreach (var step in _steps)
         {
-            if (step is PdfGeometryStep { Fill: null, Stroke: not null, Geometry: not null } line)
+            if (step is PdfGeometryStep { Geometry: not null } path && (path.Fill != null || path.Stroke != null))
             {
-                lines.Add(line);
+                paths.Add(path);
             }
         }
 
-        var details = new PdfStrokeDetail[lines.Count];
-        OnEveryCore(lines.Count, (next, _) => details[next] = PdfStrokeDetail.Of(lines[next]), cancellation);
-        var byStep = new Dictionary<PdfDrawStep, PdfStrokeDetail>(ReferenceEqualityComparer.Instance);
-        for (var i = 0; i < lines.Count; i++)
+        var details = new PdfPathDetail[paths.Count];
+        OnEveryCore(paths.Count, (next, _) => details[next] = PdfPathDetail.Of(paths[next]), cancellation);
+        var byStep = new Dictionary<PdfDrawStep, PdfPathDetail>(ReferenceEqualityComparer.Instance);
+        for (var i = 0; i < paths.Count; i++)
         {
             if (details[i] != null)
             {
-                byStep[lines[i]] = details[i];
+                byStep[paths[i]] = details[i];
             }
         }
 
@@ -234,12 +234,60 @@ public sealed class PdfPageDrawing : Drawing
             : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, pressable, _prepared, _level, _view);
     }
 
-    /// <summary>The page with its long lines drawn by as few of their points as a page shown at no more than
-    /// <paramref name="finestPixelsPerPoint"/> device pixels to its point takes - those left out within a quarter of a
-    /// pixel of the line - once <see cref="PrepareForDrawing"/> has made their copies; as given before.</summary>
+    /// <summary>Whether <see cref="AtDetail"/> at <paramref name="finestPixelsPerPoint"/> draws only copies of its long
+    /// paths already made - by <see cref="PrepareDetail"/> or an earlier draw - or the paths as given: its first draw
+    /// makes none on the loop thread.</summary>
+    public bool IsPreparedAt(double finestPixelsPerPoint)
+    {
+        var level = PdfPathDetail.LevelFor(finestPixelsPerPoint);
+        if (level == 0 || _prepared.ByStep is not { } details)
+        {
+            return true;
+        }
+
+        foreach (var detail in details.Values)
+        {
+            if (!detail.IsMadeAt(level))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Makes on the calling thread, on all the processor's cores, the copies of its long paths that
+    /// <see cref="AtDetail"/> at <paramref name="finestPixelsPerPoint"/> draws, with what drawing them takes - their
+    /// outlines and their fills' tiles - which their first draw would make on the loop thread, the window standing still
+    /// for as long. Nothing before <see cref="PrepareForDrawing"/>; stops when <paramref name="cancellation"/> is
+    /// cancelled, and what is not made then is made when drawn. Only running out of memory is let through.</summary>
+    public void PrepareDetail(double finestPixelsPerPoint, CancellationToken cancellation = default)
+    {
+        var level = PdfPathDetail.LevelFor(finestPixelsPerPoint);
+        if (level == 0 || _prepared.ByStep is not { } details)
+        {
+            return;
+        }
+
+        var work = new List<PdfPathDetail>(details.Count);
+        foreach (var detail in details.Values)
+        {
+            if (!detail.IsMadeAt(level))
+            {
+                work.Add(detail);
+            }
+        }
+
+        OnEveryCore(work.Count, (next, buffers) => work[next].PrepareAt(level, buffers), cancellation);
+    }
+
+    /// <summary>The page with its long paths - lines and areas - drawn by as few of their points as a page shown at no
+    /// more than <paramref name="finestPixelsPerPoint"/> device pixels to its point takes - those left out within a
+    /// quarter of a pixel of the path - once <see cref="PrepareForDrawing"/> has worked out how much each point matters;
+    /// as given before. The copies <see cref="PrepareDetail"/> has not made are made at the first draw.</summary>
     public PdfPageDrawing AtDetail(double finestPixelsPerPoint)
     {
-        var level = PdfStrokeDetail.LevelFor(finestPixelsPerPoint);
+        var level = PdfPathDetail.LevelFor(finestPixelsPerPoint);
         return level == _level
             ? this
             : new PdfPageDrawing(_steps, Bounds, Problems, _pressable, _pressed, _prepared, level, _view);
