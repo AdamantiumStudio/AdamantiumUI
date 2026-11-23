@@ -56,14 +56,26 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
 
     public bool CanCollapse => true;
 
-    // Open at Left/Top (below) rather than centered, to show explicit positioning.
-    public OverlayStartupLocation StartupLocation => OverlayStartupLocation.Manual;
+    // Open at Left/Top (below) rather than centered, to show explicit positioning - or, chosen on the page, at a corner
+    // of the window, Left/Top the room from its edges.
+    public OverlayStartupLocation StartupLocation { get; private set; } = OverlayStartupLocation.Manual;
 
     public Task OnOverlayOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default)
     {
         if (parameters != null && parameters.TryGetValue<string>("title", out var t))
         {
             Title = t;
+        }
+
+        // At a corner, the same room from its edges for each one, not the cascade.
+        if (parameters != null && parameters.TryGetValue<OverlayStartupLocation>("opensAt", out var opensAt))
+        {
+            StartupLocation = opensAt;
+            if (opensAt is not (OverlayStartupLocation.Manual or OverlayStartupLocation.CenterOwner))
+            {
+                Left = 24;
+                Top = 24;
+            }
         }
         return Task.CompletedTask;
     }

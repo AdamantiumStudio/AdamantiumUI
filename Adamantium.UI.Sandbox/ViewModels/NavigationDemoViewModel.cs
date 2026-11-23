@@ -15,6 +15,10 @@ public partial class NavigationDemoViewModel : TabPageViewModel
 {
     private int _cardCounter;
     private int _overlayCounter;
+
+    // Where the next overlay window opens.
+    [Bindable] private OverlayStartupLocation _overlayOpensAt = OverlayStartupLocation.Manual;
+
     private readonly IDialogService _dialogService;
     private readonly IOverlayService _overService;
     private readonly INavigationService _navigation;
@@ -61,8 +65,9 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     // button. Each click cascades a new one.
     [Command]
     private void ShowOverlayWindow() =>
-        _ = _overService.ShowOverlayAsync<OverlayDemoViewModel>(
-            new NavigationParameters().Add("title", NavigationStrings.OverlayWindowNumbered(++_overlayCounter)));
+        _ = _overService.ShowOverlayAsync<OverlayDemoViewModel>(new NavigationParameters()
+            .Add("title", NavigationStrings.OverlayWindowNumbered(++_overlayCounter))
+            .Add("opensAt", OverlayOpensAt));
 
     [Command]
     private void OpenClickThroughWindow() =>
