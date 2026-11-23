@@ -91,8 +91,17 @@ public static class ScenarioTranslator
         }
 
         var platforms = root.Attribute("Platforms")?.Value.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        // A Visible that is no yes or no is the schema's error already, and reads as no here. Asked for in the ordinary
+        // run it would do nothing - that run starts where nobody sees it - so it is the author's error there.
+        var asksToStartVisible = root.Attribute("Visible")?.Value.Trim() is "true" or "1";
+        if (asksToStartVisible && root.Attribute("Explicit") == null)
+        {
+            var (line, column) = Where(root.Attribute("Visible"));
+            problems.Add(new ScenarioProblem("AUS011", MarkupMessages.ScenarioVisibleOnlyByName(), line, column));
+        }
+
         return new ScenarioFile(path, name, nameLine, root.Attribute("Description")?.Value, root.Attribute("Explicit")?.Value, steps,
-            problems, platforms, root.Attribute("Arguments")?.Value, usesSystemInput);
+            problems, platforms, root.Attribute("Arguments")?.Value, usesSystemInput, asksToStartVisible);
     }
 
     private static string Step(XElement step, string path)

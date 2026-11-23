@@ -133,6 +133,12 @@
         <xs:annotation><xs:documentation>The command line the application is started with - a document to open, say; a
           relative path in it is taken from the folder the application is in.</xs:documentation></xs:annotation>
       </xs:attribute>
+      <xs:attribute name="Visible" type="xs:boolean">
+        <xs:annotation><xs:documentation>Whether the application starts on the desktop someone sees - for what the system
+          gives only there, such as Windows' typing suggestions. Only in a test run by name: it needs Explicit, and
+          without it is an error, since a run of all the scenarios starts where nobody sees it. Name the systems that
+          give it with Platforms, so no other system shows the application for nothing.</xs:documentation></xs:annotation>
+      </xs:attribute>
       <xs:attribute name="Platforms" type="PlatformList">
         <xs:annotation><xs:documentation>The systems the scenario runs on - one that reads what only they have, such as
           their folders; skipped elsewhere. Every system when left out.</xs:documentation></xs:annotation>
