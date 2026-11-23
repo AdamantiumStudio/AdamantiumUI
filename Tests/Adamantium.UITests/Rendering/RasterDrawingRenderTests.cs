@@ -26,8 +26,11 @@ public class RasterDrawingRenderTests
 
         protected override Size<double> MeasureOverride(Size<double> availableSize) => new(Dim, Dim);
 
+        public int Rendered;
+
         protected override void OnRender(IDrawingContext context)
         {
+            Rendered++;
             var session = context.ForControl(this);
             var ring = new StreamGeometry { FillRule = FillRule.EvenOdd };
             var figures = ring.Open();
@@ -179,7 +182,7 @@ public class RasterDrawingRenderTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(moved.TilesDrawn, Is.EqualTo(0), "the tiles it held, moved and scaled");
+            Assert.That(moved.TilesDrawn, Is.EqualTo(0), $"the tiles it held, moved and scaled (rendered {picture.Rendered})");
             AssertTheSame(moved, vector, "against its shapes' picture");
         });
     }
