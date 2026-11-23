@@ -37,6 +37,9 @@ public partial class InfiniteCanvas
     // The viewport the camera is kept against. Set by the arrange pass, which is the one that knows it first.
     private Size<double> _viewport;
 
+    // Where the ground was last asked to cover: the viewport's place and size.
+    private Rect _groundAt;
+
     // Where the hand has put the plane, edges ignored: what a hand past the edge is pulling against.
     private Vector2<double> _handOffset;
 

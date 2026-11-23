@@ -1883,7 +1883,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public event EventHandler PlaneChanged;
 
     /// <summary>Raised after the camera moves or zooms - for anything that draws a picture of WHERE the camera is, such
-    /// as a map of the plane. The canvas repaints itself for this; something standing beside it has to be told.</summary>
+    /// as a map of the plane. What is on the plane follows by itself, and the ground when its marks or axes move with the
+    /// camera; something standing beside the canvas has to be told.</summary>
     public event EventHandler CameraChanged;
 
     private static void OnCameraChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)

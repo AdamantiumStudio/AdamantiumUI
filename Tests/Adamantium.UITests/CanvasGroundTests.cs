@@ -44,4 +44,17 @@ public class CanvasGroundTests
             Assert.That(!zoomed.IsGeometryValid, Is.EqualTo(drawnAgain), "zoomed");
         });
     }
+
+    // A plain ground is drawn again where the viewport now is, as no camera move will draw it again: the room beside a
+    // panel folded away was left without ground.
+    [Test]
+    public void APlainGround_IsDrawnAgain_WhenTheViewportIsResized()
+    {
+        var canvas = Sized(CanvasGridStyle.None, null);
+
+        canvas.Measure(new Size<double>(1000, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 1000, 600));
+
+        Assert.That(canvas.IsGeometryValid, Is.False);
+    }
 }
