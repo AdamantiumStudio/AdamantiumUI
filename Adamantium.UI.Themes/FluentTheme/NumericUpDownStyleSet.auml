@@ -142,11 +142,11 @@
             <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
             <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="3"/>
-            <Setter TargetName="PART_Decrease" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Increase" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_Increase" Property="Grid.Column" Value="3"/>
             <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="3"/>
-            <Setter TargetName="PART_Increase" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
             <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
             <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
         </PropertyTrigger>
@@ -164,11 +164,11 @@
             <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="2"/>
             <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
             <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="3"/>
-            <Setter TargetName="PART_Decrease" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Increase" Property="Grid.Row" Value="2"/>
             <Setter TargetName="PART_Increase" Property="Grid.Column" Value="3"/>
             <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="3"/>
-            <Setter TargetName="PART_Increase" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
             <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
             <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
         </PropertyTrigger>
@@ -190,11 +190,11 @@
             <Setter TargetName="PART_Decrease" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_Decrease" Property="Grid.Column" Value="0"/>
             <Setter TargetName="PART_Decrease" Property="Grid.ColumnSpan" Value="6"/>
-            <Setter TargetName="PART_Decrease" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Decrease" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Increase" Property="Grid.Row" Value="2"/>
             <Setter TargetName="PART_Increase" Property="Grid.Column" Value="0"/>
             <Setter TargetName="PART_Increase" Property="Grid.ColumnSpan" Value="6"/>
-            <Setter TargetName="PART_Increase" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Increase" Property="Width" Value="Auto"/>
             <Setter TargetName="ValueArea" Property="Grid.Column" Value="0"/>
             <Setter TargetName="ValueArea" Property="Grid.ColumnSpan" Value="6"/>
         </MultiTrigger>

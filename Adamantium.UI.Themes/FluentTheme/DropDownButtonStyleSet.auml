@@ -193,7 +193,7 @@
             <Setter TargetName="Body" Property="CornerRadius" Value="{ResourceReference SplitButtonTopRadius}"/>
             <Setter TargetName="SplitRule" Property="Grid.Column" Value="0"/>
             <Setter TargetName="SplitRule" Property="Grid.Row" Value="1"/>
-            <Setter TargetName="SplitRule" Property="Width" Value="NaN"/>
+            <Setter TargetName="SplitRule" Property="Width" Value="Auto"/>
             <Setter TargetName="SplitRule" Property="Height" Value="{ResourceReference StrokeThinValue}"/>
             <Setter TargetName="SplitRule" Property="Margin" Value="5 0"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Column" Value="0"/>

@@ -46,7 +46,7 @@
     <Style Selector="DragHandle.ToolBarGrip">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
         <!-- As tall as the bar, not a row's handle size. -->
-        <Setter Property="Height" Value="NaN"/>
+        <Setter Property="Height" Value="Auto"/>
         <!-- Room between the grip and the first command; under it on a bar down the side. -->
         <Setter Property="Margin" Value="0,0,3,0"/>
         <Setter Property="Template">
@@ -190,11 +190,11 @@
         <!-- Down the side of a window: the grip on top, the chevron below. -->
         <PropertyTrigger Property="Orientation" Value="Vertical">
             <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
-            <Setter TargetName="PART_Grip" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Grip" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
             <Setter TargetName="PART_Grip" Property="Margin" Value="0,0,0,3"/>
             <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
-            <Setter TargetName="PART_OverflowButton" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_OverflowButton" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_OverflowButton" Property="Height" Value="{TemplateBinding OverflowButtonLength}"/>
             <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Stretch"/>
             <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Center"/>
