@@ -207,11 +207,11 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));
                 break;
 
-            // A live link to the ACTIVE THEME's accent/focus, established here against an element only. A named
-            // non-element part takes {ObservableResource}, which follows the tree it sits in - what an Aura's color uses.
-            case ThemeResource themeResource when element != null:
-                themeResource.Apply(element, setter.Property, ValuePriority.Trigger, setter);
-                _applied[setter] = (component, () => ThemeResource.Remove(element, setter.Property, ValuePriority.Trigger, setter));
+            // A live link to the ACTIVE THEME's accent/focus - on a named part outside the tree too (an Aura), which
+            // answers to the element it hangs under.
+            case ThemeResource themeResource:
+                themeResource.Apply(component, setter.Property, ValuePriority.Trigger, setter);
+                _applied[setter] = (component, () => ThemeResource.Remove(component, setter.Property, ValuePriority.Trigger, setter));
                 break;
 
             case ObservableResource observableResource:
