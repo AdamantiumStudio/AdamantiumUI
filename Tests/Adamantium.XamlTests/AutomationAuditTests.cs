@@ -120,6 +120,7 @@ public class AutomationAuditTests
         [typeof(ToolBarTray)] = (T.Pane, null),
         [typeof(MenuHeader)] = (T.Text, null),
         [typeof(ToolTip)] = (T.ToolTip, null),
+        [typeof(TrayMenuWindow)] = (T.Window, null),
         [typeof(TreeView)] = (T.Tree, null),
         [typeof(TreeViewItem)] = (T.TreeItem, null),
         [typeof(View)] = (T.Pane, null),

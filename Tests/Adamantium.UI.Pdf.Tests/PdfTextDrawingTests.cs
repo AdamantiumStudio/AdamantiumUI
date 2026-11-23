@@ -105,9 +105,9 @@ public class PdfTextDrawingTests
         var (_, session) = Draw(pdf, "1 0 0 rg BT /T 1 Tf 20 20 Td (aa) Tj ET");
         var glyphs = session.All<DrawnGeometry>().ToArray();
         Assert.That(glyphs, Has.Length.EqualTo(2));
-        Assert.That(At(glyphs[0].Transform, 0, 0), Is.EqualTo((20.0, 80.0)));
-        Assert.That(At(glyphs[0].Transform, 10, 10).Item1, Is.EqualTo(21).Within(1e-5));
-        Assert.That(At(glyphs[1].Transform, 0, 0).Item1, Is.EqualTo(30).Within(1e-5));
+        Assert.That(At(glyphs[0], 0, 0), Is.EqualTo((20.0, 80.0)));
+        Assert.That(At(glyphs[0], 10, 10).Item1, Is.EqualTo(21).Within(1e-5));
+        Assert.That(At(glyphs[1], 0, 0).Item1, Is.EqualTo(30).Within(1e-5));
         Assert.That(((Core.Media.SolidColorBrush)glyphs[1].Brush).Color.R, Is.EqualTo(255));
     }
 }

@@ -114,7 +114,10 @@ public static class ScenarioTestEmitter
                 .AppendLine("                global::System.IO.Path.Combine(global::System.AppContext.BaseDirectory,")
                 .AppendLine($"                    global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
                             $"{SymbolDisplay.FormatLiteral(application, true)}),")
-                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true, VirtualDisplay = true" +
+                // Where nobody sees it, unless a step goes through the system's own pointer, which reaches only the
+                // desktop someone sees - and only in a test run by name, so no ordinary run shows over someone's work.
+                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true, VirtualDisplay = " +
+                            (file.UsesSystemInput && file.ExplicitReason != null ? "false" : "true") +
                             (file.Arguments is { } arguments
                                 ? $", Arguments = {SymbolDisplay.FormatLiteral(arguments, true)}"
                                 : string.Empty) +

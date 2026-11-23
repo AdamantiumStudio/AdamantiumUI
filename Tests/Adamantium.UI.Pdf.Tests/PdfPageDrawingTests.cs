@@ -25,6 +25,26 @@ public class PdfPageDrawingTests
     internal static (double X, double Y) At(Matrix4x4<float> m, double x, double y) =>
         (x * m.M11 + y * m.M21 + m.M41, x * m.M12 + y * m.M22 + m.M42);
 
+    /// <summary>Where the point (<paramref name="x"/>, <paramref name="y"/>) of a path's user space lands on the page,
+    /// the path's own corner - a rectangle's, or where its first figure begins - having stood at
+    /// (<paramref name="cornerX"/>, <paramref name="cornerY"/>) in it: the interpreter places a path by a corner of a
+    /// grid and moves its points by the rest.</summary>
+    internal static (double X, double Y) At(Geometry geometry, Matrix4x4<float> m, double x, double y,
+        double cornerX = 0, double cornerY = 0)
+    {
+        var corner = geometry is RectangleGeometry box
+            ? new Vector2<double>(box.Rect.X, box.Rect.Y)
+            : ((StreamGeometry)geometry).Figures[0].StartPoint;
+        return At(m, x - cornerX + corner.X, y - cornerY + corner.Y);
+    }
+
+    internal static (double X, double Y) At(DrawnGeometry drawn, double x, double y, double cornerX = 0,
+        double cornerY = 0) => At(drawn.Geometry, drawn.Transform, x, y, cornerX, cornerY);
+
+    // A figure's points from where it begins.
+    private static Vector2<double>[] FromStart(Vector2<double> start, PathSegment segment) =>
+        ((PolylineSegment)segment).Points.Select(point => point - start).ToArray();
+
     [Test]
     public void ThePageIsInItsPointsYDownFromTheTopLeft()
     {
@@ -32,8 +52,8 @@ public class PdfPageDrawingTests
         Assert.That((page.Bounds.Width, page.Bounds.Height), Is.EqualTo((200.0, 100.0)));
         var drawn = session.All<DrawnGeometry>().Single();
         Assert.That(drawn.Geometry, Is.InstanceOf<RectangleGeometry>());
-        Assert.That(At(drawn.Transform, 0, 0), Is.EqualTo((0.0, 100.0)));
-        Assert.That(At(drawn.Transform, 10, 20), Is.EqualTo((10.0, 80.0)));
+        Assert.That(At(drawn, 0, 0), Is.EqualTo((0.0, 100.0)));
+        Assert.That(At(drawn, 10, 20), Is.EqualTo((10.0, 80.0)));
     }
 
     // The page's top left corner, (0, 100) in its own space: turned clockwise it goes to the top right, then the bottom
@@ -47,7 +67,7 @@ public class PdfPageDrawingTests
         var (page, session) = Draw(new TestPdf { PageExtra = $"/Rotate {rotate}" }, "0 0 1 1 re f");
         Assert.That((page.Bounds.Width, page.Bounds.Height), Is.EqualTo((width, height)));
         var drawn = session.All<DrawnGeometry>().Single();
-        var (ax, ay) = At(drawn.Transform, x, y);
+        var (ax, ay) = At(drawn, x, y);
         Assert.That(ax, Is.EqualTo(expectedX).Within(1e-4));
         Assert.That(ay, Is.EqualTo(expectedY).Within(1e-4));
     }
@@ -64,7 +84,8 @@ public class PdfPageDrawingTests
             Assert.That(paths, Has.Count.EqualTo(2));
             Assert.That(paths[0].IsFilled && !paths[0].IsStroked, Is.True, "the box is filled only");
             Assert.That(paths[1].IsStroked && !paths[1].IsFilled, Is.True, "the line is stroked only");
-            Assert.That(At(paths[0].Matrix, 0, 0), Is.EqualTo((0.0, 100.0)), "not in the page's points, y down");
+            Assert.That(At(paths[0].Geometry, paths[0].Matrix, 0, 0), Is.EqualTo((0.0, 100.0)),
+                "not in the page's points, y down");
         });
     }
 
@@ -73,7 +94,7 @@ public class PdfPageDrawingTests
     {
         var (page, session) = Draw(new TestPdf { PageExtra = "/CropBox [50 20 150 80]" }, "50 20 1 1 re f");
         Assert.That((page.Bounds.Width, page.Bounds.Height), Is.EqualTo((100.0, 60.0)));
-        Assert.That(At(session.All<DrawnGeometry>().Single().Transform, 50, 20), Is.EqualTo((0.0, 60.0)));
+        Assert.That(At(session.All<DrawnGeometry>().Single(), 50, 20, 50, 20), Is.EqualTo((0.0, 60.0)));
     }
 
     [Test]
@@ -124,9 +145,13 @@ public class PdfPageDrawingTests
     [Test]
     public void ARunOfStraightPieces_IsOnePolyline_InOrder()
     {
-        var (_, session) = Draw(new TestPdf(), "0 0 m 10 0 l 10 10 l 20 10 l 30 0 40 0 50 10 c 60 10 l S 0 50 m 5 50 l S");
+        // The lone piece in another color, so it stays a path of its own.
+        var (_, session) = Draw(new TestPdf(),
+            "0 0 m 10 0 l 10 10 l 20 10 l 30 0 40 0 50 10 c 60 10 l S 1 0 0 RG 0 50 m 5 50 l S");
         var paths = session.All<DrawnGeometry>().Select(d => (StreamGeometry)d.Geometry).ToArray();
-        var segments = paths[0].Figures.Single().Segments.ToArray();
+        var figure = paths[0].Figures.Single();
+        var start = figure.StartPoint;
+        var segments = figure.Segments.ToArray();
         var lone = paths[1].Figures.Single().Segments.Single();
         paths[0].RecalculateBounds();
 
@@ -134,13 +159,105 @@ public class PdfPageDrawingTests
         {
             Assert.That(segments.Select(segment => segment.GetType()),
                 Is.EqualTo(new[] { typeof(PolylineSegment), typeof(CubicBezierSegment), typeof(LineSegment) }));
-            Assert.That(((PolylineSegment)segments[0]).Points,
+            Assert.That(FromStart(start, segments[0]),
                 Is.EqualTo(new[] { new Vector2<double>(10, 0), new Vector2<double>(10, 10), new Vector2<double>(20, 10) }));
-            Assert.That(((CubicBezierSegment)segments[1]).Point, Is.EqualTo(new Vector2<double>(50, 10)));
-            Assert.That(((LineSegment)segments[2]).Point, Is.EqualTo(new Vector2<double>(60, 10)));
+            Assert.That(((CubicBezierSegment)segments[1]).Point - start, Is.EqualTo(new Vector2<double>(50, 10)));
+            Assert.That(((LineSegment)segments[2]).Point - start, Is.EqualTo(new Vector2<double>(60, 10)));
             Assert.That(lone, Is.InstanceOf<LineSegment>(), "a lone piece is a line");
-            Assert.That(paths[0].Bounds, Is.EqualTo(new Rect(0, 0, 60, 10)), "bounded by all its points");
+            Assert.That(paths[0].Bounds, Is.EqualTo(new Rect(start.X, start.Y, 60, 10)), "bounded by all its points");
         });
+    }
+
+    // Paths drawn one after another with the same opaque paint, in one part of the page, are one draw - as a map's tile
+    // draws its features of one style - each still where it stood.
+    [Test]
+    public void PathsOfOnePaintInARow_AreOneDraw_EachWhereItStood()
+    {
+        var (_, session) = Draw(new TestPdf(), "0 0 10 10 re f 20 0 m 30 0 l 30 10 l f 40 0 m 50 0 l 50 10 l f");
+        var drawn = session.All<DrawnGeometry>().ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(drawn, Has.Length.EqualTo(2), "the rectangle, a path apart, and the two paths after it as one");
+            var joined = (StreamGeometry)drawn[1].Geometry;
+            Assert.That(joined.Figures, Has.Count.EqualTo(2));
+            Assert.That(At(drawn[1].Transform, joined.Figures[0].StartPoint.X, joined.Figures[0].StartPoint.Y),
+                Is.EqualTo((20.0, 100.0)));
+            Assert.That(At(drawn[1].Transform, joined.Figures[1].StartPoint.X, joined.Figures[1].StartPoint.Y),
+                Is.EqualTo((40.0, 100.0)));
+        });
+    }
+
+    // What joining would change is not joined: paint that is seen through, another paint, the even-odd rule, a dash -
+    // or a part of the page far from the last.
+    [TestCase("0.5 0 0 rg /Half gs 0 0 m 10 0 l 10 10 l f 20 0 m 30 0 l 30 10 l f", 2)]
+    [TestCase("0 0 m 10 0 l 10 10 l f 1 0 0 rg 20 0 m 30 0 l 30 10 l f", 2)]
+    [TestCase("0 0 m 10 0 l 10 10 l f* 20 0 m 30 0 l 30 10 l f*", 2)]
+    [TestCase("[2 1] 0 d 0 0 m 10 0 l S 20 0 m 30 0 l S", 2)]
+    [TestCase("0 0 m 10 0 l S 20 0 m 30 0 l S", 1)]
+    // Two squares overlapping, turning apart: joined, the overlap's windings would cancel and leave a hole.
+    [TestCase("0 0 m 10 0 l 10 10 l 0 10 l f 5 5 m 5 15 l 15 15 l 15 5 l f", 2)]
+    [TestCase("0 0 m 10 0 l 10 10 l 0 10 l f 5 5 m 15 5 l 15 15 l 5 15 l f", 1)]
+    public void OnlyWhatLooksTheSameJoined_IsJoined(string content, int draws)
+    {
+        var pdf = new TestPdf { Resources = "<< /ExtGState << /Half << /ca 0.5 >> >> >>" };
+        var (_, session) = Draw(pdf, content);
+        Assert.That(session.All<DrawnGeometry>().Count(), Is.EqualTo(draws));
+    }
+
+    // A path that is filled and then cuts what follows (W f) cuts by where it stands, though its fill is placed on the
+    // grid: under a translation off the grid the cut was moved by what the fill's points were moved.
+    [Test]
+    public void APathFilledAndCuttingBy_CutsWhereItStands()
+    {
+        var (_, session) = Draw(new TestPdf(), "q 1 0 0 1 30.5 10.25 cm 0 0 m 50 0 l 50 50 l h W f 0 0 1 1 re f Q");
+        var fill = session.All<DrawnGeometry>().First();
+        var cut = session.All<OpenedGroup>().Single();
+        var corner = ((StreamGeometry)cut.Options.Clip).Figures[0].StartPoint;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(At(fill, 0, 0), Is.EqualTo((30.5, 89.75)));
+            Assert.That(At(cut.Options.ClipTransform, corner.X, corner.Y), Is.EqualTo((30.5, 89.75)));
+        });
+    }
+
+    // A page seen in part draws what meets the view and leaves out the rest - a group wholly outside with all it holds,
+    // every group it begins ended. Before it is prepared it draws all of it.
+    [Test]
+    public void APageSeenInPart_DrawsWhatMeetsTheView()
+    {
+        var document = new TestPdf().Open(
+            "1 0 0 rg 10 10 10 10 re f 0 0 1 rg 150 50 10 10 re f q 140 40 30 30 re W n 0 1 0 rg 145 45 5 5 re f Q");
+        var page = PdfPageDrawing.Build(document, document.Pages[0]);
+        var unprepared = new RecordingSession();
+        page.Seen(new Rect(0, 60, 40, 40)).Render(unprepared, Matrix4x4<float>.Identity, null);
+
+        page.PrepareForDrawing();
+        var left = new RecordingSession();
+        page.Seen(new Rect(0, 60, 40, 40)).Render(left, Matrix4x4<float>.Identity, null);
+        var right = new RecordingSession();
+        page.Seen(new Rect(130, 20, 50, 50)).Render(right, Matrix4x4<float>.Identity, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(unprepared.All<DrawnGeometry>().Count(), Is.EqualTo(3), "not prepared, all of it");
+            Assert.That(left.All<DrawnGeometry>().Count(), Is.EqualTo(1), "the red square alone, top left");
+            Assert.That(left.All<OpenedGroup>().Count(), Is.EqualTo(1), "only the page's own cut: the clip is far off");
+            Assert.That(left.Depth, Is.Zero);
+            Assert.That(right.All<DrawnGeometry>().Count(), Is.EqualTo(2), "the blue square and the green one in its cut");
+            Assert.That(right.Depth, Is.Zero, "every group begun is ended");
+        });
+    }
+
+    // Placed by one matrix, as most pages place every path, paths far apart are still drawn apart: a view leaves out
+    // the one it does not meet.
+    [Test]
+    public void PathsFarApartOnThePage_AreNotJoined()
+    {
+        var (_, session) = Draw(new TestPdf { MediaBox = "[0 0 1000 1000]" },
+            "0 0 m 10 0 l 10 10 l f 600 600 m 610 600 l 610 610 l f");
+        Assert.That(session.All<DrawnGeometry>().Count(), Is.EqualTo(2), "each in its own part of the page");
     }
 
     // A filled run that ends where it is closed keeps its last point, and the figure is closed.
@@ -149,13 +266,14 @@ public class PdfPageDrawingTests
     {
         var (_, session) = Draw(new TestPdf(), "0 0 m 10 0 l 10 10 l 0 10 l h 20 20 m 30 20 l 30 30 l h f");
         var figures = ((StreamGeometry)session.All<DrawnGeometry>().Single().Geometry).Figures;
+        var start = figures[0].StartPoint;
 
         Assert.Multiple(() =>
         {
             Assert.That(figures.Select(figure => figure.IsClosed), Is.EqualTo(new[] { true, true }));
-            Assert.That(((PolylineSegment)figures[0].Segments.Single()).Points,
+            Assert.That(FromStart(start, figures[0].Segments.Single()),
                 Is.EqualTo(new[] { new Vector2<double>(10, 0), new Vector2<double>(10, 10), new Vector2<double>(0, 10) }));
-            Assert.That(((PolylineSegment)figures[1].Segments.Single()).Points,
+            Assert.That(FromStart(start, figures[1].Segments.Single()),
                 Is.EqualTo(new[] { new Vector2<double>(30, 20), new Vector2<double>(30, 30) }));
         });
     }

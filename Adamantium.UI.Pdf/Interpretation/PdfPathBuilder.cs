@@ -132,11 +132,16 @@ internal sealed class PdfPathBuilder
 
     /// <summary>The path as a geometry filled by <paramref name="rule"/>; an open subpath is closed by a fill and left
     /// open by a stroke.</summary>
-    public Geometry ToGeometry(FillRule rule)
+    public Geometry ToGeometry(FillRule rule) => ToGeometry(rule, default);
+
+    /// <summary>The path as <see cref="ToGeometry(FillRule)"/> makes it, its every point moved by <paramref name="shift"/>
+    /// - in place: the path is cleared after it is painted.</summary>
+    public Geometry ToGeometry(FillRule rule, Vector2<double> shift)
     {
         if (_rectangle is { } rectangle)
         {
-            return new RectangleGeometry(rectangle);
+            return new RectangleGeometry(new Rect(rectangle.X + shift.X, rectangle.Y + shift.Y, rectangle.Width,
+                rectangle.Height));
         }
 
         var geometry = new StreamGeometry { FillRule = rule };
@@ -146,6 +151,11 @@ internal sealed class PdfPathBuilder
             if (subpath.Points.Count == 0)
             {
                 continue;
+            }
+
+            if (shift != default)
+            {
+                subpath.Move(shift);
             }
 
             var figure = context.BeginFigure(subpath.Start, true, subpath.Closed);

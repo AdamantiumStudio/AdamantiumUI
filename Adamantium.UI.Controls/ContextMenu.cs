@@ -45,6 +45,9 @@ public class ContextMenu : ItemsControl
         typeof(string), typeof(ContextMenu), new PropertyMetadata(null));
 
     private Popup _popup;
+
+    /// <summary>The popup the menu shows on, once its template is built.</summary>
+    internal Popup Popup => _popup;
     private TextBlock _rangeLine;
     private IInputComponent _clickRoot;   // the items presenter; leaf-row clicks bubble to it (it IS an input element)
     private ScrollViewer _scroll;         // wraps the items; capped to the window height so a long menu scrolls

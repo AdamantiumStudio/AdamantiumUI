@@ -72,6 +72,7 @@ public static class ScenarioTranslator
         }
 
         var steps = new List<string>();
+        var usesSystemInput = false;
         if (problems.Count == 0)
         {
             foreach (var step in root.Elements())
@@ -79,6 +80,7 @@ public static class ScenarioTranslator
                 try
                 {
                     steps.Add(Step(step, path));
+                    usesSystemInput |= Flag(step, "ThroughSystem");
                 }
                 catch (ScenarioStepException e)
                 {
@@ -90,7 +92,7 @@ public static class ScenarioTranslator
 
         var platforms = root.Attribute("Platforms")?.Value.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         return new ScenarioFile(path, name, nameLine, root.Attribute("Description")?.Value, root.Attribute("Explicit")?.Value, steps,
-            problems, platforms, root.Attribute("Arguments")?.Value);
+            problems, platforms, root.Attribute("Arguments")?.Value, usesSystemInput);
     }
 
     private static string Step(XElement step, string path)
