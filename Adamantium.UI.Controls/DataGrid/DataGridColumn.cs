@@ -690,6 +690,12 @@ public class DataGridCheckBoxColumn : DataGridColumn
 /// <summary>A column whose cells are whatever <see cref="DataGridColumn.CellTemplate"/> says.</summary>
 public class DataGridTemplateColumn : DataGridColumn
 {
+    // A text field its editor opens with comes up with its text selected, as a text column's does: what is typed then
+    // replaces the value rather than being put in front of it.
+    protected internal override void PrepareEditor(IUIComponent editor, object item, object value)
+    {
+        if (editor is TextBox box) box.SelectAll();
+    }
 }
 
 /// <summary>A column of choices. In VIEW it draws text, not a live DropDown: a hundred visible cells would otherwise be

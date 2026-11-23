@@ -2348,6 +2348,7 @@ public class DataGridTests
         grid.BeginEdit(0, 0);
         Relayout(grid, grid.CellFor(0, 0));
         var editor = Editor(grid.CellFor(0, 0));
+        var opened = (editor.Text, editor.SelectionStart, editor.SelectionLength);
         FocusManager.Focus(editor);
         editor.Text = "typed";
         var whileEditing = items[0].Name;
@@ -2357,6 +2358,7 @@ public class DataGridTests
 
         Assert.Multiple(() =>
         {
+            Assert.That(opened, Is.EqualTo(("one", 0, 3)), "the editor opens on the value, all of it selected");
             Assert.That(whileEditing, Is.EqualTo("one"), "typing writes nothing yet");
             Assert.That(items[0].Name, Is.EqualTo(commit ? "typed" : "one"));
         });
