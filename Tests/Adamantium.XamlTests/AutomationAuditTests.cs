@@ -60,6 +60,7 @@ public class AutomationAuditTests
         [typeof(ToggleSplitButton)] = (T.SplitButton, null),
         [typeof(Expander)] = (T.Group, null),
         [typeof(FlipTile)] = (T.Button, null),
+        [typeof(GroupHeader)] = (T.Group, null),
         [typeof(Image)] = (T.Image, null),
         [typeof(ItemsControl)] = (T.Group, null),
         [typeof(ItemsPresenter)] = (null, "presents another control's items"),

@@ -7,6 +7,7 @@ using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -137,17 +138,64 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         if (a is VirtualizingPanel panel) panel.InvalidateMeasure();
     }
 
+    /// <summary>The group the drop gap opens in, where the panel shows groups: <see cref="DropGapIndex"/> is the end of
+    /// one group and the start of the next alike, and this says which. Null without groups.</summary>
+    public static readonly AdamantiumProperty DropGapGroupProperty = AdamantiumProperty.Register(nameof(DropGapGroup),
+        typeof(CollectionViewGroup), typeof(VirtualizingPanel), new PropertyMetadata(null, OnDropGapChanged));
+
+    public CollectionViewGroup DropGapGroup
+    {
+        get => GetValue<CollectionViewGroup>(DropGapGroupProperty);
+        set => SetValue(DropGapGroupProperty, value);
+    }
+
     /// <summary>The slot a drop at <paramref name="point"/> would land in, or false. Must come from the grid, not from
     /// container positions, which the gap itself moves.</summary>
-    public virtual bool TryGetDropSlot(Vector2<double> point, out int index)
+    public virtual bool TryGetDropSlot(Vector2<double> point, out DropSlot slot)
     {
-        index = -1;
+        slot = DropSlot.None;
         return false;
     }
 
-    void IDropGapPanel.ShowDropGap(int index, IList lifted) => DropGapIndex = index;
+    void IDropGapPanel.ShowDropGap(DropSlot slot, IList lifted)
+    {
+        DropGapGroup = slot.Exists ? slot.Group : null;
+        DropGapIndex = slot.Index;
+    }
 
-    bool IDropGapPanel.TryGetDropSlot(Vector2<double> point, IList lifted, out int index) => TryGetDropSlot(point, out index);
+    bool IDropGapPanel.TryGetDropSlot(Vector2<double> point, IList lifted, out DropSlot slot) => TryGetDropSlot(point, out slot);
+
+    /// <summary>The header place of the group the drop gap is open in, and the gap's place among its items; -1 with no
+    /// gap in a group shown.</summary>
+    private protected int DropGapPlace(out int slotInGroup)
+    {
+        slotInGroup = 0;
+        var group = DropGapGroup;
+        if (DropGapIndex < 0 || group == null || Owner == null)
+        {
+            return -1;
+        }
+
+        var places = Owner.GroupHeaderPlaces;
+        for (var place = 0; place < places.Count; place++)
+        {
+            if (ReferenceEquals(places[place].Group, group))
+            {
+                slotInGroup = DropGapIndex - places[place].BeforeItem;
+                return place;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>The drop slot of <paramref name="slot"/> in the groups, in the owner's items.</summary>
+    private protected DropSlot DropSlotOf(GroupDropSlot slot)
+    {
+        var places = Owner.GroupHeaderPlaces;
+        var group = slot.Place >= 0 && slot.Place < places.Count ? places[slot.Place].Group : null;
+        return new DropSlot(slot.FirstItem + slot.Slot, group, slot.FirstItem, slot.FirstItem + slot.ItemCount);
+    }
 
     /// <summary>Whether this panel actually opens <see cref="DropGapIndex"/> in its layout. False (the default) means the
     /// drag shows its insertion caret instead - the two are alternatives, never both, since they mark the same place.</summary>
@@ -155,15 +203,15 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     /// <summary>The slot an item at <paramref name="index"/> occupies once the drop gap is accounted for: everything from
     /// the gap on shifts along by one, opening exactly one item-sized hole. Identical to the index when no drop is in
-    /// progress.</summary>
+    /// progress, and while the gap is in a group: the groups' lines take it in themselves.</summary>
     protected int SlotOf(int index)
     {
         var gap = DropGapIndex;
-        return gap >= 0 && index >= gap ? index + 1 : index;
+        return gap >= 0 && DropGapGroup == null && index >= gap ? index + 1 : index;
     }
 
     /// <summary>How many slots the panel lays out: one more than the item count while a drop gap is open.</summary>
-    protected int SlotCount(int itemCount) => DropGapIndex >= 0 ? itemCount + 1 : itemCount;
+    protected int SlotCount(int itemCount) => DropGapIndex >= 0 && DropGapGroup == null ? itemCount + 1 : itemCount;
 
     public override void InvalidateArrange()
     {
@@ -208,6 +256,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         }
 
         ResetSkeletons();
+        Owner?.GroupHeaderGenerator.Clear();
         ItemsOwner = null;
     }
 
@@ -220,7 +269,11 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             RemoveVisualChild(child);
             StopShowingChild(child);
         }
+        // Headers first: the items' generator ends by forgetting who holds the containers, and the headers are held there
+        // too - let go of after it, they would stay logical children of the list.
+        Owner?.GroupHeaderGenerator.Clear();
         Owner?.ItemContainerGenerator.Clear();
+        _headerExtents.Clear();   // the headers are made again, through what may be other templates now
         // The loop above also detached the skeleton cards - drop their now-dangling pool/active/set so the next fill
         // rebuilds fresh ones (else RentSkeleton hands back a card that is no longer a visual child and never renders,
         // which made skeletons vanish after an ItemTemplate switch / any regenerate).
@@ -408,6 +461,108 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         }
         Owner.ItemContainerGenerator.ShowInWindow(container);
         return container;
+    }
+
+    /// <summary>Whether the owner shows its source's groups: headers stand among the items as rows of their own.</summary>
+    protected bool ShowsGroups => Owner is { } owner && owner.GroupHeaderPlaces.Count > 0;
+
+    /// <summary>Attaches (if new) and shows the header of the group place <paramref name="place"/>.</summary>
+    protected GroupHeader RealizeHeaderInWindow(int place)
+    {
+        var header = Owner.GroupHeaderGenerator.Realize(place);
+        if (header.VisualParent != this)
+        {
+            AddVisualChild(header);
+            ShowChild(header);
+        }
+
+        header.Visibility = Visibility.Visible;
+        return header;
+    }
+
+    /// <summary>Keeps the headers of the group places from <paramref name="first"/> to <paramref name="last"/> and puts
+    /// the rest away, hidden with their bindings closed, for the next groups that come into the window.</summary>
+    protected void SetHeaderWindow(int first, int last)
+    {
+        foreach (var header in Owner.GroupHeaderGenerator.SetWindow(first, last))
+        {
+            header.Visibility = Visibility.Collapsed;
+            DeactivateSubtreeBindings(header);
+        }
+    }
+
+    // How long a header of each level is along the scroll axis; NaN until one of the level is measured.
+    private readonly List<double> _headerExtents = [];
+    private readonly List<double> _longestInWindow = [];   // reused each pass
+
+    /// <summary>How long a header of each level is along the scroll axis, the outermost first.</summary>
+    private protected IReadOnlyList<double> HeaderExtents => _headerExtents;
+
+    /// <summary>Measures the first header of every level whose length is not known yet. Once known, a level is told by
+    /// the headers in the window (<see cref="ShowHeadersInWindow"/>), so a scroll probes nothing out of view.</summary>
+    private protected void ProbeHeaderExtents(Size<double> constraint, bool alongHeight)
+    {
+        var places = Owner.GroupHeaderPlaces;
+        for (var place = 0; place < places.Count; place++)
+        {
+            var level = places[place].Level;
+            while (_headerExtents.Count <= level)
+            {
+                _headerExtents.Add(double.NaN);
+            }
+
+            if (!double.IsNaN(_headerExtents[level]))
+            {
+                continue;
+            }
+
+            var probe = RealizeHeaderInWindow(place);
+            probe.Measure(constraint);
+            _headerExtents[level] = alongHeight ? probe.DesiredSize.Height : probe.DesiredSize.Width;
+        }
+    }
+
+    /// <summary>Shows and measures the headers of <paramref name="window"/>, putting the rest away. A header not as long
+    /// as its level was known to be - a template, a font - tells the level, and the panel measures once more.</summary>
+    private protected void ShowHeadersInWindow(LinesWindow window, Size<double> constraint, bool alongHeight)
+    {
+        SetHeaderWindow(window.FirstPlace, window.LastPlace);
+        var places = Owner.GroupHeaderPlaces;
+
+        // A level is as long as its longest header in view: two of one level that differ - one name wrapping - would
+        // otherwise each set it in turn, and the panel measure again for ever.
+        _longestInWindow.Clear();
+        for (var place = window.FirstPlace; place <= window.LastPlace; place++)
+        {
+            var header = RealizeHeaderInWindow(place);
+            header.Measure(constraint);
+            var extent = alongHeight ? header.DesiredSize.Height : header.DesiredSize.Width;
+            var level = places[place].Level;
+            while (_longestInWindow.Count <= level)
+            {
+                _longestInWindow.Add(double.NaN);
+            }
+
+            if (double.IsNaN(_longestInWindow[level]) || extent > _longestInWindow[level])
+            {
+                _longestInWindow[level] = extent;
+            }
+        }
+
+        var changed = false;
+        for (var level = 0; level < _longestInWindow.Count && level < _headerExtents.Count; level++)
+        {
+            if (!double.IsNaN(_longestInWindow[level]) && Math.Abs(_longestInWindow[level] - _headerExtents[level]) > 0.5)
+            {
+                _headerExtents[level] = _longestInWindow[level];
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            LayoutManager.For(this).InvalidateMeasureNextPass(this);
+        }
     }
 
     /// <summary>Where item <paramref name="index"/> sits in this panel's coordinates, realized or not; false when the panel
@@ -637,6 +792,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     /// <summary>Whether the panel remembers where <paramref name="item"/> last stood.</summary>
     internal bool RemembersPlaceOf(object item) => _lastItemPos.ContainsKey(item);
     private int _animatedGap = -1;   // the gap the last animated pass ran for
+    private CollectionViewGroup _animatedGapGroup;
 
     // Rows promoted for the duration of an open gap. A promotion costs a transform slot, so it is not left behind: the
     // moment the gap closes they all go back to being ordinary children.
@@ -660,8 +816,9 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         // narrower window changes the column count - and sliding hundreds of tiles into place then is both expensive and
         // visually noisy. Those passes still record where everything ended up, so the next gap move measures from the
         // truth rather than from a position two layouts old.
-        var animate = DropGapIndex != _animatedGap;
+        var animate = DropGapIndex != _animatedGap || !ReferenceEquals(DropGapGroup, _animatedGapGroup);
         _animatedGap = DropGapIndex;
+        _animatedGapGroup = DropGapGroup;
         _shownItems.Clear();
         try
         {
@@ -754,11 +911,15 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     /// <summary>Puts the drop placeholder in the open gap. Not a loading skeleton and not counted in
     /// <c>IsLoadingItems</c>. Call from ArrangeVirtualized.</summary>
-    protected void ReconcileDropPlaceholder(Func<int, Rect> slotRect)
+    protected void ReconcileDropPlaceholder(Func<int, Rect> slotRect) =>
+        ShowDropPlaceholder(DropGapIndex >= 0 ? slotRect(DropGapIndex) : null);
+
+    /// <summary>Puts the drop placeholder at <paramref name="gapRect"/>, or takes it away at null - for a panel whose
+    /// gap is not a slot of its own, as in a group.</summary>
+    private protected void ShowDropPlaceholder(Rect? gapRect)
     {
-        var gap = DropGapIndex;
         var template = Owner?.DropPlaceholderTemplate;
-        if (gap < 0 || template == null)
+        if (gapRect is not { } gap || template == null)
         {
             if (_gapCard != null) _gapCard.Visibility = Visibility.Collapsed;
             return;
@@ -773,7 +934,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         }
 
         _gapCard.Visibility = Visibility.Visible;
-        var rect = slotRect(gap).Deflate(ItemMargin());
+        var rect = gap.Deflate(ItemMargin());
         var measurable = (IMeasurableComponent)_gapCard;
         measurable.Measure(new Size<double>(rect.Width, rect.Height));
         measurable.Arrange(rect);

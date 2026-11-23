@@ -46,7 +46,7 @@ renderer as the interface around it.
 | **Numbers and ranges** | `NumericUpDown` for integers or decimals, `Slider`, `RangeSlider` with two thumbs, `ScrollBar` |
 | **Date and time** | `Calendar` with month, year and decade views; `DatePicker`, `TimePicker`, `DateTimePicker`; `DateTimeField` and `DurationField` typed part by part; `Clock` with hands or in figures, `CountdownTimer`, `StopwatchTimer` with laps |
 | **Progress and status** | `ProgressBar`, `RingProgressBar`, `BusyIndicator`; `Badge` with a count or a dot; `StatusBar` |
-| **Lists and trees** | `ListBox` and a virtualized `TreeView`, each with single, multiple or extended selection; `DropDown`; `DataPager` with arrows, page numbers, a page-size picker and a page box |
+| **Lists and trees** | `ListBox` and a virtualized `TreeView`, each with single, multiple or extended selection; groups of a `CollectionView` shown by any list through a `GroupStyle`, each header a row of its own; `DropDown`; `DataPager` with arrows, page numbers, a page-size picker and a page box |
 | **Menus and pop-ups** | `MenuItem` with nested menus, `ContextMenu`, `ToolTip`, `Popup`, `Expander` |
 | **Color** | `ColorPicker` with RGB, alpha and hex, `ColorPickerButton`, `ColorWheel`, `ColorPalette` as in a font color menu |
 | **Images** | `Image`, nine-slice images; `IconPresenter` for an icon of path data, a glyph or an image |

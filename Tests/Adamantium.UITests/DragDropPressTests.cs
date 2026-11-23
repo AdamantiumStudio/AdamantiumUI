@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
@@ -85,6 +86,40 @@ public class DragDropPressTests
         Send(RawPointerEventType.Up, new Vector2<double>(50, 150), InputModifiers.None, MouseButtons.Left);
         Mouse.Pointer.Capture(null);
         Send(RawPointerEventType.Move, new Vector2<double>(50, 50), InputModifiers.None);
+    }
+
+    // Text on what is dragged is picked up with it: a double click selects no word there and takes no keyboard - on the
+    // pad beside it, which drags nothing, it does.
+    [Test]
+    public void TextOnADragSource_DoesNotSelect_OrTakeTheKeyboard()
+    {
+        var onSource = new TextBlock { Text = "Moon", VerticalAlignment = VerticalAlignment.Center };
+        var beside = new TextBlock { Text = "Mars", VerticalAlignment = VerticalAlignment.Center };
+        _pads[0].Child = onSource;
+        _pads[1].Child = beside;
+        for (var i = 0; i < 3; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        DoubleClick(new Vector2<double>(10, 50));
+        DoubleClick(new Vector2<double>(110, 50));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(onSource.SelectedText, Is.Empty);
+            Assert.That(onSource.IsKeyboardFocused, Is.False);
+            Assert.That(beside.SelectedText, Is.EqualTo("Mars"), "text where nothing drags still selects");
+        });
+    }
+
+    private void DoubleClick(Vector2<double> at)
+    {
+        for (var click = 0; click < 2; click++)
+        {
+            Send(RawPointerEventType.Down, at, InputModifiers.LeftMouseButton, MouseButtons.Left);
+            Send(RawPointerEventType.Up, at, InputModifiers.None, MouseButtons.Left);
+        }
     }
 
     private static Border Pad() =>

@@ -5,6 +5,8 @@
     <Phrase Key="MultipleSelect" Text="Multiple select"/>
     <Phrase Key="SelectedSingle" Text="Selected (single):"/>
 
+    <Phrase Key="GroupsTitle" Text="Tiles in groups"/>
+
     <Phrase Key="LargeTitle" Text="20 000 rows, filtered live and paged"/>
     <Phrase Key="Search" Text="Search"/>
     <Phrase Key="PartsToShow" Text="Parts to show"/>

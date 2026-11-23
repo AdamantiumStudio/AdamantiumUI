@@ -3023,7 +3023,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private void Pressed(PointerPressedEventArgs e)
     {
-        _pressPending = CanSelect && e.Pointer.Type != PointerType.Touch && IsAttachedToVisualTree;
+        // A press something above took for a drag picks that up: it neither selects here nor takes the keyboard.
+        _pressPending = CanSelect && !e.IsTakenForDrag && e.Pointer.Type != PointerType.Touch && IsAttachedToVisualTree;
         if (!_pressPending)
         {
             return;

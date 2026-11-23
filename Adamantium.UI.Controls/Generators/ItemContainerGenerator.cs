@@ -223,10 +223,58 @@ public class ItemContainerGenerator
         }
     }
 
+    // The next index from `index` one way, over any skipped run in one step.
+    private static int StepOver(IReadOnlyList<ItemRange> skipped, int index, int direction)
+    {
+        var next = index + direction;
+        if (skipped == null)
+        {
+            return next;
+        }
+
+        for (var moved = true; moved;)
+        {
+            moved = false;
+            foreach (var range in skipped)
+            {
+                if (range.Contains(next))
+                {
+                    next = direction > 0 ? range.Last + 1 : range.First - 1;
+                    moved = true;
+                }
+            }
+        }
+
+        return next;
+    }
+
+    private static bool IsSkipped(IReadOnlyList<ItemRange> skipped, int index)
+    {
+        if (skipped == null)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < skipped.Count && skipped[i].First <= index; i++)
+        {
+            if (skipped[i].Contains(index))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Reconciles the realized set to exactly [<paramref name="first"/>, <paramref name="last"/>], rebinding
     /// containers that left the window in place. Idempotent; returns the surplus containers when the window shrank.</summary>
     public IReadOnlyList<IUIComponent> SetWindow(int first, int last, double budgetMs = double.MaxValue, int minBinds = 0,
-        Action<IUIComponent> onBound = null)
+        Action<IUIComponent> onBound = null) => SetWindow(first, last, null, budgetMs, minBinds, onBound);
+
+    /// <summary>As <see cref="SetWindow(int, int, double, int, Action{IUIComponent})"/>, leaving out the items of
+    /// <paramref name="skipped"/> - folded groups' - as if they were outside the window; ascending, null for none.</summary>
+    internal IReadOnlyList<IUIComponent> SetWindow(int first, int last, IReadOnlyList<ItemRange> skipped,
+        double budgetMs = double.MaxValue, int minBinds = 0, Action<IUIComponent> onBound = null)
     {
         var budgetStart = System.Diagnostics.Stopwatch.GetTimestamp();
         Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*setwindow*");
@@ -238,7 +286,7 @@ public class ItemContainerGenerator
         donors.Clear();
         _outKeysBuf.Clear();
         foreach (var (idx, realized) in _byIndex)
-            if ((idx < first || idx > last) && !ReferenceEquals(realized, _held)) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
+            if ((idx < first || idx > last || IsSkipped(skipped, idx)) && !ReferenceEquals(realized, _held)) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
         foreach (var idx in _outKeysBuf)
         {
             Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*unmapped*");
@@ -267,10 +315,18 @@ public class ItemContainerGenerator
             _waveBuf.Clear();
             foreach (var idx in _byIndex.Keys)
                 if (idx >= first && idx <= last) { _reachedBuf[idx - first] = true; _waveBuf.Add(idx); }
+            // The steps go over the skipped items in one: a folded group of thousands costs no more than one item.
             if (_waveBuf.Count == 0)
             {
                 var reverse = first < _lastWindowFirst;   // far jump: realize from the edge the content enters
-                for (var k = 0; k < winSize; k++) _bindOrderBuf.Add(reverse ? last - k : first + k);
+                if (reverse)
+                {
+                    for (var at = StepOver(skipped, last + 1, -1); at >= first; at = StepOver(skipped, at, -1)) _bindOrderBuf.Add(at);
+                }
+                else
+                {
+                    for (var at = StepOver(skipped, first - 1, 1); at <= last; at = StepOver(skipped, at, 1)) _bindOrderBuf.Add(at);
+                }
             }
             else
             {
@@ -279,8 +335,8 @@ public class ItemContainerGenerator
                     _nextWaveBuf.Clear();
                     foreach (var idx in _waveBuf)
                     {
-                        var up = idx - 1;
-                        var down = idx + 1;
+                        var up = StepOver(skipped, idx, -1);
+                        var down = StepOver(skipped, idx, 1);
                         if (up >= first && !_reachedBuf[up - first]) { _reachedBuf[up - first] = true; _bindOrderBuf.Add(up); _nextWaveBuf.Add(up); }
                         if (down <= last && !_reachedBuf[down - first]) { _reachedBuf[down - first] = true; _bindOrderBuf.Add(down); _nextWaveBuf.Add(down); }
                     }
@@ -292,6 +348,7 @@ public class ItemContainerGenerator
         foreach (var i in _bindOrderBuf)
         {
             if (_byIndex.ContainsKey(i)) continue;   // stayed in the window - keep its container + binding
+            if (IsSkipped(skipped, i)) continue;     // a folded group's: in the window's span, not in what it shows
             var item = _owner.Items[i];
             IUIComponent container;
             if (!_owner.TryTake(item))

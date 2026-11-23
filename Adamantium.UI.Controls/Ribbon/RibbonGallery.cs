@@ -79,103 +79,27 @@ public class RibbonGallery : Selector
             return;
         }
 
-        // The old grouping goes before anything new listens, or on the same source the gallery's handler would come
-        // first - ahead of the order it asks and the view it sorts.
+        // The view groups by the gallery's path: groups where each first appears in the source, each in the source's
+        // order - and keeps that through every change of the source itself.
         LetGoOfGrouping();
-        var order = new GroupOrder(newValue, GroupOf);
-        var view = new CollectionView { CustomSort = order };
-        // The order hears of a change before the view places it, and the gallery after, to sort anew if the groups moved.
-        Follow(nameof(GroupOrder), newValue as INotifyCollectionChanged, order.OnSourceChanged);
+        var view = new CollectionView();
+        view.GroupDescriptions.Add(new GalleryGroups(this));
         view.Source = newValue;
         base.ApplyItemsSource(view);
         Follow(nameof(_grouped), view.LetGoOfSource);
-        Follow(nameof(OnGroupedSourceChanged), newValue as INotifyCollectionChanged, OnGroupedSourceChanged);
         _grouped = view;
-        _groupOrder = order;
-        order.Moved();
     }
-
-    private GroupOrder _groupOrder;
 
     private void LetGoOfGrouping()
     {
-        Follow(nameof(GroupOrder), null);
         Follow(nameof(_grouped), null);
-        Follow(nameof(OnGroupedSourceChanged), null);
         _grouped = null;
-        _groupOrder = null;
     }
 
-    private void OnGroupedSourceChanged(object sender, NotifyCollectionChangedEventArgs e)
+    // The gallery's groups: an item's is what GroupMemberPath reads of it.
+    private sealed class GalleryGroups(RibbonGallery gallery) : GroupDescription
     {
-        // Only a change the view placed in place can leave it out of order; on the rest it was rebuilt whole.
-        if (_groupOrder?.Moved() == true && e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove
-                or NotifyCollectionChangedAction.Replace)
-        {
-            _grouped.Refresh();
-        }
-    }
-
-    // Groups by where each first appears in the source; a group that comes later goes after the rest.
-    private sealed class GroupOrder(IEnumerable source, Func<object, object> groupOf) : IComparer
-    {
-        private static readonly object NoGroup = new();
-        private readonly Dictionary<object, int> _ranks = new();
-        private readonly List<object> _laidOut = [];
-        private bool _stale = true;
-
-        public void OnSourceChanged(object sender, NotifyCollectionChangedEventArgs e) => _stale = true;
-
-        public int Compare(object left, object right) => RankOf(left).CompareTo(RankOf(right));
-
-        /// <summary>Whether the groups that were there stand in another order now - the view placed only what changed,
-        /// and has to be sorted anew. A group that came or went moves no other.</summary>
-        public bool Moved()
-        {
-            Rank();
-            var now = new List<object>(_ranks.Count);
-            foreach (var (key, _) in _ranks)
-            {
-                now.Add(key);
-            }
-
-            now.Sort((a, b) => _ranks[a].CompareTo(_ranks[b]));
-            var kept = now.FindAll(_laidOut.Contains);
-            var before = _laidOut.FindAll(_ranks.ContainsKey);
-            _laidOut.Clear();
-            _laidOut.AddRange(now);
-
-            for (var i = 0; i < kept.Count; i++)
-            {
-                if (!Equals(kept[i], before[i]))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private int RankOf(object item)
-        {
-            Rank();
-            return _ranks.TryGetValue(groupOf(item) ?? NoGroup, out var rank) ? rank : int.MaxValue;
-        }
-
-        private void Rank()
-        {
-            if (!_stale)
-            {
-                return;
-            }
-
-            _stale = false;
-            _ranks.Clear();
-            foreach (var item in source)
-            {
-                _ranks.TryAdd(groupOf(item) ?? NoGroup, _ranks.Count);
-            }
-        }
+        public override object GroupNameOf(object item) => gallery.GroupOf(item);
     }
 
     private object GroupOf(object item)

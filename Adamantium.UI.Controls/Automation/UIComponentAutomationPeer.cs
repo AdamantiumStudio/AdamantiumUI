@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -223,21 +224,65 @@ public class UIComponentAutomationPeer : AutomationPeer
     /// <summary>Adds the peers of the nearest elements below <paramref name="element"/> that have one.</summary>
     protected static void Collect(IUIComponent element, List<AutomationPeer> into)
     {
+        if (element is Panel { ItemsOwner: { GroupHeaderPlaces.Count: > 0 } owner })
+        {
+            CollectInReadingOrder(owner, into);
+            return;
+        }
+
         foreach (var child in element.VisualChildren)
         {
-            if (child is not UIComponent component)
+            if (child is UIComponent component)
             {
-                continue;
+                CollectOne(component, into);
+            }
+        }
+    }
+
+    private static void CollectOne(UIComponent component, List<AutomationPeer> into)
+    {
+        if (component.GetAutomationPeer() is { } peer)
+        {
+            into.Add(peer);
+        }
+        else
+        {
+            Collect(component, into);
+        }
+    }
+
+    // A list showing groups: its headers and items as they read, each header before its group's first item - not in the
+    // order the panel happened to make them.
+    private static void CollectInReadingOrder(ItemsControl owner, List<AutomationPeer> into)
+    {
+        var shown = new List<int>(owner.ItemContainerGenerator.RealizedIndices);
+        shown.Sort();
+        var places = owner.GroupHeaderPlaces;
+        var place = 0;
+        foreach (var index in shown)
+        {
+            for (; place < places.Count && places[place].BeforeItem <= index; place++)
+            {
+                CollectHeader(owner, place, into);
             }
 
-            if (component.GetAutomationPeer() is { } peer)
+            if (owner.ItemContainerGenerator.ContainerFromIndex(index) is UIComponent { Visibility: Visibility.Visible } item)
             {
-                into.Add(peer);
+                CollectOne(item, into);
             }
-            else
-            {
-                Collect(component, into);
-            }
+        }
+
+        for (; place < places.Count; place++)
+        {
+            CollectHeader(owner, place, into);
+        }
+    }
+
+    private static void CollectHeader(ItemsControl owner, int place, List<AutomationPeer> into)
+    {
+        if (owner.GroupHeaderGenerator.HeaderAt(place) is { Visibility: Visibility.Visible } header)
+        {
+            CollectOne(header, into);
         }
     }
 }

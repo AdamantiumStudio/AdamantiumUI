@@ -53,8 +53,25 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
     {
         var owner = (ItemsControl)Owner;
         var children = new List<AutomationPeer>(owner.Items.Count);
+        var places = owner.GroupHeaderPlaces;
+        var place = 0;
         for (var index = 0; index < owner.Items.Count; index++)
         {
+            // A group's header, made, before the group's first item: the list reads as it shows.
+            for (; place < places.Count && places[place].BeforeItem <= index; place++)
+            {
+                if (owner.GroupHeaderGenerator.HeaderAt(place)?.GetAutomationPeer() is { } header)
+                {
+                    children.Add(header);
+                }
+            }
+
+            // ...and nothing of a folded group but its header.
+            if (place > 0 && !places[place - 1].IsExpanded)
+            {
+                continue;
+            }
+
             var item = owner.Items[index];
             var container = ContainerAt(index) ?? item as UIComponent;
             if (container?.GetAutomationPeer() is { } peer)

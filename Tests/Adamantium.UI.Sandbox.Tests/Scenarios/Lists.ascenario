@@ -39,6 +39,29 @@
   <Set Target="id=LargePager/id=PART_PageBox" Value="1" />
   <Expect Target="id=LargeList/type=ListItem" Name="Item 00001" />
   <Select Target="id=LargePager/id=PART_PageSizeSelector/name=30" />
+  <!-- Tiles in groups, read as they show: each group's header before its tiles. A tile dragged into another group joins
+       it where it lands; dropped on a header, at the group's start; on a folded one, at its end - the group folded and
+       opened by a click on its header. Every tile goes back where it was. -->
+  <Scroll Target="id=ListsView>type=Pane" Vertical="100" />
+  <Expect Target="id=GroupedBodies>type=Group[0]" Name="Stars" />
+  <Expect Target="id=GroupedBodies>type=Group[2]" Name="Planets" />
+  <Drop Target="id=GroupedBodies/name=Moon" Onto="id=GroupedBodies/name=Mercury" Side="Before" />
+  <Expect Target="id=GroupedBodies>type=Group[3]" Name="Moon" />
+  <Expect Target="id=GroupedBodies>type=Group[4]" Name="Mercury" />
+  <Drop Target="id=GroupedBodies/name=Moon" Onto="id=GroupedBodies/class=GroupHeader,name=Moons" />
+  <Expect Target="id=GroupedBodies/class=GroupHeader,name=Moons/next" Name="Moon" />
+  <Click Target="id=GroupedBodies/class=GroupHeader,name=Planets" />
+  <Expect Target="id=GroupedBodies/class=GroupHeader,name=Planets" Expanded="Collapsed" />
+  <Absent Target="id=GroupedBodies/name=Mercury" />
+  <Drop Target="id=GroupedBodies/name=Phobos" Onto="id=GroupedBodies/class=GroupHeader,name=Planets" />
+  <Click Target="id=GroupedBodies/class=GroupHeader,name=Planets" />
+  <Expect Target="id=GroupedBodies/class=GroupHeader,name=Planets" Expanded="Expanded" />
+  <Expect Target="id=GroupedBodies/name=Neptune/next" Name="Phobos" />
+  <!-- The planets a line longer, the page is too: to its end again. -->
+  <Scroll Target="id=ListsView>type=Pane" Vertical="100" />
+  <Drop Target="id=GroupedBodies/name=Phobos" Onto="id=GroupedBodies/name=Deimos" Side="Before" />
+  <Expect Target="id=GroupedBodies/name=Moon/next" Name="Phobos" />
+  <Scroll Target="id=ListsView>type=Pane" Vertical="0" />
   <!-- Back as the page opens. -->
   <Select Target="id=SingleList/name=Earth" />
 </Scenario>
