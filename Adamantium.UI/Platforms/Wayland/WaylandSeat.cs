@@ -187,6 +187,8 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     // The seat says repeats a second; a rate of 0 is the user's "keys do not repeat".
     public uint KeyRepeatInterval => repeatRate > 0 ? (uint)RepeatStep : 0;
 
+    public IReadOnlyList<string> UserLanguages => LinuxPlatform.UserLanguages;
+
     private int RepeatStep => Math.Max(1, 1000 / repeatRate);
 
     #endregion
