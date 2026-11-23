@@ -278,6 +278,61 @@ public class ToolBarVerticalFormTests
         });
     }
 
+    // A bar down the side set to wrap, in a tray shorter than its sections: the section that does not fit stands in a
+    // column beside, not past the tray's end and not in the menu.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ABarDownTheSideThatWraps_PutsASectionThatDoesNotFitInANewColumn(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var second = new ToolBarGroup
+        {
+            Header = "More",
+            Items =
+            {
+                new Button { Width = 30, Height = 24, Content = "1" }, new Button { Width = 30, Height = 24, Content = "2" },
+                new Button { Width = 30, Height = 24, Content = "3" }
+            }
+        };
+        side.Bar.Items.Add(second);
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        Show(side);
+        var first = side.Group.RenderSize.Height;
+        side.Tray.MaxHeight = first + 40;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.LessThanOrEqualTo(side.Tray.MaxHeight + 0.01), "within the tray");
+            Assert.That(side.Bar.HasOverflowItems, Is.False, "wrapped, not in the menu");
+            Assert.That(second.TranslatePoint(new Adamantium.Mathematics.Vector2<double>(0, 0), side.Bar).X,
+                Is.GreaterThan(side.Group.TranslatePoint(new Adamantium.Mathematics.Vector2<double>(0, 0), side.Bar).X),
+                "in a column beside");
+        });
+    }
+
+    // A bar that wraps, a section of it longer than the whole tray: no column holds it, so it goes to the menu, and the
+    // bar stays within the tray.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ABarThatWraps_SendsASectionLongerThanTheTrayToTheMenu(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var small = new ToolBarGroup { Header = "Small", Items = { new Button { Width = 30, Height = 24, Content = "1" } } };
+        side.Bar.Items.Insert(0, small);
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        Show(side);
+        side.Tray.MaxHeight = side.Group.RenderSize.Height;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.LessThanOrEqualTo(side.Tray.MaxHeight + 0.01), "within the tray");
+            Assert.That(side.Group.IsInOverflow, Is.True, "the long section is in the menu");
+            Assert.That(small.IsInOverflow, Is.False, "what fits stays on the bar");
+        });
+    }
+
     // Down the side, along, down again: folded again, the command stands as a live button, not the one let go of.
     [TestCaseSource(nameof(StyleSets))]
     public void AFoldAfterAnUnfold_StandsAsALiveButton(System.Type styleSet)

@@ -114,14 +114,26 @@
                        Margin="0,0,10,0"/>
             <DropDown x:Name="SideOrientation" Width="120" EnumType="{x:Type Orientation}"
                       AutomationProperties.LabeledBy="{Binding ElementName=SideOrientationLabel}"
-                      SelectedItem="{Binding SideOrientation, Mode=TwoWay}"/>
+                      SelectedItem="{Binding SideOrientation, Mode=TwoWay}" Margin="0,0,24,0"/>
+            <TextBlock x:Name="SideLengthLabel" Text="{Localize ToolBarsStrings.SideLength}" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <Slider x:Name="SideLength" Width="240" Minimum="120" Maximum="900"
+                    AutomationProperties.LabeledBy="{Binding ElementName=SideLengthLabel}"
+                    Value="{Binding SideLength, Mode=TwoWay}" Margin="0,0,24,0"/>
+            <TextBlock x:Name="SideWrappingLabel" Text="{Localize ToolBarsStrings.SideWrapping}" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <DropDown x:Name="SideWrapping" Width="120" EnumType="{x:Type CommandWrapping}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=SideWrappingLabel}"
+                      SelectedItem="{Binding SideWrapping, Mode=TwoWay}"/>
         </StackPanel>
+        <!-- Its length limits the bar down the side: what does not fit goes to the menu, or, set to wrap, to a column. -->
         <ToolBarTray x:Name="SideTray" SharesBars="False" Orientation="{Binding SideOrientation}" HorizontalAlignment="Left"
-                     MarginBottom="16">
+                     VerticalAlignment="Top" MaxHeight="{Binding SideLength}" MarginBottom="16">
             <ToolBarTray.Behaviors>
                 <ToolBarDragBehavior/>
             </ToolBarTray.Behaviors>
             <ToolBar x:Name="PictureBar" Header="{Localize ToolBarsStrings.Picture}" IsContextual="True" Accent="#3F7CBF"
+                     CommandWrapping="{Binding SideWrapping}"
                      ContextualHeader="{Localize ToolBarsStrings.PictureTools}">
                 <ToolBarGroup x:Name="PictureSizeGroup" Header="{Localize ToolBarsStrings.PictureSize}">
                     <Button x:Name="CropCommand" Content="⌗" ToolTip="{Localize ToolBarsStrings.Crop}"

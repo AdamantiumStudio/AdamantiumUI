@@ -635,7 +635,12 @@ public class ToolBar : ItemsControl
     {
         var chrome = double.IsNaN(_chrome) ? 0 : _chrome;
         var overflowing = Overflowing(mode => mode == ToolBarOverflowMode.Always);
-        if (Wraps || chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
+        if (Wraps)
+        {
+            return OverflowingTooLong(room, lengths, overflowing, chrome);
+        }
+
+        if (chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
             room + Tolerance)
         {
             return overflowing;
@@ -649,6 +654,27 @@ public class ToolBar : ItemsControl
             }
 
             if (!overflowing[i] && OverflowModeOf(_commands[i]) == ToolBarOverflowMode.AsNeeded)
+            {
+                overflowing[i] = true;
+            }
+        }
+
+        return overflowing;
+    }
+
+    // On a bar that wraps every command finds a line, unless it is longer than a whole line: no line holds it, so it goes
+    // to the menu, as the bar does not wrap - and the menu's chevron takes its own room on the line.
+    private bool[] OverflowingTooLong(double room, double[] lengths, bool[] overflowing, double chrome)
+    {
+        if (double.IsInfinity(room))
+        {
+            return overflowing;
+        }
+
+        var line = room - chrome - OverflowButtonLength;
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            if (!overflowing[i] && lengths[i] > line + Tolerance && OverflowModeOf(_commands[i]) == ToolBarOverflowMode.AsNeeded)
             {
                 overflowing[i] = true;
             }
