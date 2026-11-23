@@ -53,6 +53,7 @@ public static class LinuxPlatform
             Trash.Platform = new FreedesktopTrash();
         }
         container.RegisterSingleton<ISpellChecker, EnchantSpellChecker>();
+        container.RegisterSingleton<IWordPredictor, Hunspell.HunspellWordPredictor>();
         container.RegisterSingleton<IGamepadBackend, EvdevGamepadBackend>();
         container.RegisterSingleton<ISystemStartup, AutostartFolderStartup>();
         WaylandPlatform.Initialize(container);
