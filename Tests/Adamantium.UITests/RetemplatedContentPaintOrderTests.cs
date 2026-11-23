@@ -93,6 +93,40 @@ public class RetemplatedContentPaintOrderTests
         });
     }
 
+    // A branch carried from one panel to a later one, and then a part of it that was hidden shown: the part is drawn over
+    // the branch's background - as a tool bar's checked mark, its bar dragged to a slot, came out under the bar. A hidden
+    // part keeps its rank to come back in place; carried with its branch, that place is gone.
+    [Test]
+    public void APartShownInABranchCarriedToAnotherPanel_IsDrawnOverTheBranch()
+    {
+        var mark = new Border { Background = new SolidColorBrush(Colors.Red), Height = 2, Visibility = Visibility.Hidden };
+        var face = new Border { Background = new SolidColorBrush(Colors.Green), Width = 20, Height = 20 };
+        var button = new Grid { Children = { face, mark } };
+        var bar = new Border { Background = new SolidColorBrush(Colors.Gray), Padding = new Thickness(2), Child = button };
+        var first = new StackPanel { Children = { bar } };
+        var second = new StackPanel();
+        var root = new Root { ClientWidth = 400, ClientHeight = 300 };
+        root.Children.Add(new Border { Background = new SolidColorBrush(Colors.Blue), Child = first });
+        root.Children.Add(new Border { Background = new SolidColorBrush(Colors.Yellow), Child = second });
+        var cache = new RenderCache(new DrawingContext(), new FakeRenderUnitFactory());
+        Frame(root, cache);
+
+        first.Children.Remove(bar);
+        second.Children.Add(bar);
+        Frame(root, cache);
+        mark.Visibility = Visibility.Visible;
+        Frame(root, cache);
+        var shownBy = cache.LastBuildKind;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shownBy, Is.Not.EqualTo(RenderBuildKind.Full), "shown in place, not by a walk of the whole tree");
+            Assert.That(cache.PaintRankOf(face), Is.GreaterThan(cache.PaintRankOf(bar)), "the button over the bar");
+            Assert.That(cache.PaintRankOf(mark), Is.GreaterThan(cache.PaintRankOf(bar)), "the mark over the bar");
+            Assert.That(cache.PaintRankOf(mark), Is.GreaterThan(cache.PaintRankOf(face)), "the mark over the button");
+        });
+    }
+
     [Test]
     public void ContentCarriedIntoANewTemplate_IsDrawnOverItsNewBackground()
     {

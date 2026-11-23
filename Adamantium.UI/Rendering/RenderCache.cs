@@ -409,7 +409,8 @@ public partial class RenderCache
         _localChildBuf.Clear();
         _subtreeBuf.Clear();
         _subtreeStack.Clear();
-        _collectStack.Clear();
+        _collectHiddenStack.Clear();
+        _plannedHidden.Clear();
         _plannedRanks.Clear();
         _plannedList.Clear();
         _plannedSet.Clear();
