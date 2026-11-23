@@ -814,6 +814,14 @@ public partial class RenderCache
             return ResolveBakeCore(device, component, world, out slot);
         }
 
+        // In a raster tile the matrix to the tile comes after the world, not before it as a copy's offset does: the whole
+        // of it is baked, on the identity slot.
+        if (_rasterRun != null)
+        {
+            slot = 0;
+            return World(component) * _cloneMatrix.Value;
+        }
+
         return ResolveBakeCore(device, component, World(component), out slot) * _cloneMatrix.Value;
     }
 
