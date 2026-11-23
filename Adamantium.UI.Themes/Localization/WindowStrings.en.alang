@@ -5,4 +5,5 @@
     <Phrase Key="Close" Text="Close"/>
     <Phrase Key="MoreCommands" Text="More commands"/>
     <Phrase Key="Pin" Text="Pin"/>
+    <Phrase Key="Collapse" Text="Collapse to title"/>
 </Language>

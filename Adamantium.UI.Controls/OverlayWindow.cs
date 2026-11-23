@@ -59,12 +59,26 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     public static readonly AdamantiumProperty CloseByEscapeProperty = AdamantiumProperty.Register(nameof(CloseByEscape),
         typeof(bool), typeof(OverlayWindow), new PropertyMetadata(true));
 
+    public static readonly AdamantiumProperty ShowActivatedProperty = AdamantiumProperty.Register(nameof(ShowActivated),
+        typeof(bool), typeof(OverlayWindow), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty CanCollapseProperty = AdamantiumProperty.Register(nameof(CanCollapse),
+        typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty IsCollapsedProperty = AdamantiumProperty.Register(nameof(IsCollapsed),
+        typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false, OnIsCollapsedChanged));
+
     static OverlayWindow()
     {
         // A card stands off its content; the chrome property itself is Control's, only the default differs.
         PaddingProperty.OverrideMetadata(typeof(OverlayWindow),
             new PropertyMetadata(new Thickness(16),
                 PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
+        // The smallest a card is laid out and resized to; collapsed to its title bar, no height is kept.
+        MinWidthProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(300.0));
+        MinHeightProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(120.0,
+            PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender,
+            (a, value) => ((OverlayWindow)a).IsCollapsed ? 0.0 : value));
     }
 
     public static readonly AdamantiumProperty OverlayBrushProperty = AdamantiumProperty.Register(nameof(OverlayBrush),
@@ -160,6 +174,29 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         set => SetValue(IsPinnedProperty, value);
     }
 
+    /// <summary>When true (default) the window takes the keyboard and becomes the active one as it is shown. When false
+    /// the keyboard stays where it was - a card shown under the pointer - until the window is pressed.</summary>
+    public bool ShowActivated
+    {
+        get => GetValue<bool>(ShowActivatedProperty);
+        set => SetValue(ShowActivatedProperty, value);
+    }
+
+    /// <summary>When true, a collapse button appears on the title bar; clicking it toggles <see cref="IsCollapsed"/>.
+    /// Default false.</summary>
+    public bool CanCollapse
+    {
+        get => GetValue<bool>(CanCollapseProperty);
+        set => SetValue(CanCollapseProperty, value);
+    }
+
+    /// <summary>When true, only the title bar shows. Expanding gives the window back the height it had.</summary>
+    public bool IsCollapsed
+    {
+        get => GetValue<bool>(IsCollapsedProperty);
+        set => SetValue(IsCollapsedProperty, value);
+    }
+
     /// <summary>When true (default) the title bar can be dragged to move the window within the parent.</summary>
     public bool AllowMove
     {
@@ -251,6 +288,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private OverlayWindowManager _manager;
     private Button _closeButton;
     private Button _pinButton;
+    private Button _collapseButton;
+    private double _expandedHeight = double.NaN;   // the Height it had before it collapsed
     private InputUIComponent _dragArea;   // the transparent title-bar strip that starts the drag
     private InputUIComponent _resizeGrip;
     private bool _dragging;
@@ -258,8 +297,6 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private double _dragBaseLeft, _dragBaseTop;   // the card's top-left at press (the anchor the delta is added to)
     private double _dragParentW, _dragParentH;    // parent window size at press (to clamp the card inside)
     private double _dragCardW, _dragCardH;        // card size at press
-    private const double MinCardWidth = 300;    // matches PART_Window MinWidth in the theme
-    private const double MinCardHeight = 120;
     private bool _resizing;
     private Vector2<double> _resizeStart;
     private double _resizeBaseW, _resizeBaseH;
@@ -269,6 +306,23 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private static void OnIsPinnedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is OverlayWindow w) w._manager?.OnPinnedChanged(w);
+    }
+
+    // Collapsed, a height of its own would keep the room the content took: let go of, and given back on expanding.
+    private static void OnIsCollapsedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var window = (OverlayWindow)a;
+        if ((bool)e.NewValue)
+        {
+            window._expandedHeight = window.Height;
+            window.Height = double.NaN;
+        }
+        else
+        {
+            window.Height = window._expandedHeight;
+        }
+
+        window.CoerceValue(MinHeightProperty);
     }
 
     // Left/Top are the card's absolute top-left; a change (from a drag write, an assignment, or a two-way binding to the
@@ -364,6 +418,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
         if (_closeButton != null) _closeButton.Click -= OnCloseClick;
         if (_pinButton != null) _pinButton.Click -= OnPinClick;
+        if (_collapseButton != null) _collapseButton.Click -= OnCollapseClick;
         if (_dragArea != null)
         {
             _dragArea.PointerPressed -= OnDragPress;
@@ -380,10 +435,12 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         _dragArea = GetTemplateChild("PART_TitleThumb") as InputUIComponent;
         _closeButton = GetTemplateChild("PART_CloseButton") as Button;
         _pinButton = GetTemplateChild("PART_PinButton") as Button;
+        _collapseButton = GetTemplateChild("PART_CollapseButton") as Button;
         _resizeGrip = GetTemplateChild("PART_ResizeGrip") as InputUIComponent;
 
         if (_closeButton != null) _closeButton.Click += OnCloseClick;
         if (_pinButton != null) _pinButton.Click += OnPinClick;
+        if (_collapseButton != null) _collapseButton.Click += OnCollapseClick;
         if (_dragArea != null)
         {
             _dragArea.PointerPressed += OnDragPress;
@@ -406,6 +463,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         base.OnRemoveTemplate();
         if (_closeButton != null) _closeButton.Click -= OnCloseClick;
         if (_pinButton != null) _pinButton.Click -= OnPinClick;
+        if (_collapseButton != null) _collapseButton.Click -= OnCollapseClick;
         if (_dragArea != null)
         {
             _dragArea.PointerPressed -= OnDragPress;
@@ -420,6 +478,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         }
         _closeButton = null;
         _pinButton = null;
+        _collapseButton = null;
         _dragArea = null;
         _resizeGrip = null;
     }
@@ -462,8 +521,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         }
 
         // An opening window takes focus, so Tab and Escape reach it. Content may not be built yet, so retry over the next
-        // few layout passes.
-        _focusTries = FocusAttempts;
+        // few layout passes. One shown not activated leaves the keyboard where it is.
+        _focusTries = ShowActivated ? FocusAttempts : 0;
 
         Opened?.Invoke(this, EventArgs.Empty);
     }
@@ -559,6 +618,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
     private void OnPinClick(object sender, RoutedEventArgs e) => IsPinned = !IsPinned;
 
+    private void OnCollapseClick(object sender, RoutedEventArgs e) => IsCollapsed = !IsCollapsed;
+
     // Resize drags the bottom-right grip. Because the card is CENTERED by the popup, growing it by (dw,dh) moves both edges
     // out by half; shift the popup offset by half the applied change so the top-left corner stays put under the grip.
     private void OnResizePress(object sender, PointerPressedEventArgs e)
@@ -592,10 +653,10 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         // Grow from the fixed top-left; clamp the bottom-right so it can't leave the parent window (the grip stops at the
         // edge instead of the opposite side stretching), and not below the minimum.
-        var maxW = Math.Max(MinCardWidth, parentWidth - left);
-        var maxH = Math.Max(MinCardHeight, parentHeight - top);
-        var newW = Math.Clamp(width, MinCardWidth, maxW);
-        var newH = Math.Clamp(height, MinCardHeight, maxH);
+        var maxW = Math.Max(MinWidth, parentWidth - left);
+        var maxH = Math.Max(MinHeight, parentHeight - top);
+        var newW = Math.Clamp(width, MinWidth, maxW);
+        var newH = Math.Clamp(height, MinHeight, maxH);
         Width = newW;
         Height = newH;
 

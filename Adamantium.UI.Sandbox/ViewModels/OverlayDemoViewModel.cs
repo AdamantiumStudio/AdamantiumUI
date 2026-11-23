@@ -54,6 +54,8 @@ public partial class OverlayDemoViewModel : AdamantiumViewModel, IOverlayAware
         }
     };
 
+    public bool CanCollapse => true;
+
     // Open at Left/Top (below) rather than centered, to show explicit positioning.
     public OverlayStartupLocation StartupLocation => OverlayStartupLocation.Manual;
 

@@ -86,13 +86,18 @@ public sealed class OverlayWindowManager
         _host.PopupLayer.Add(window.HostPopup);
         Normalize();
         KeepPinnedOnTop(window);
-        SetActive(window);
+        if (window.ShowActivated)
+        {
+            SetActive(window);
+        }
+
         EnsureHostHooks();
 
         var tcs = new TaskCompletionSource<object>();
         void OnClosed(object sender, EventArgs e)
         {
             window.Closed -= OnClosed;
+            var wasActive = window.IsActive;
             _host.PopupLayer.Remove(window.HostPopup);
             (_host as IFundamentalUIComponent)?.RemoveLogicalChild(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
@@ -106,14 +111,19 @@ public sealed class OverlayWindowManager
             window.ScrimPopup = null;
             _windows.Remove(window);
             var next = _windows.Count > 0 ? _windows[^1] : null;
-            SetActive(next);   // the next front-most becomes active
-            // ...and focus goes to it; the captured return point is used only when no overlay is left open.
+            // The next front-most becomes active and takes the keyboard - only from an active one: one never activated
+            // leaves both where they are. The captured return point is used only when no overlay is left open.
             if (next != null)
             {
-                next.TakeKeyboardBack();
+                if (wasActive)
+                {
+                    SetActive(next);
+                    next.TakeKeyboardBack();
+                }
             }
             else
             {
+                SetActive(null);
                 focusReturn.Restore(window);
             }
             if (_windows.Count == 0) RemoveHostHooks();
