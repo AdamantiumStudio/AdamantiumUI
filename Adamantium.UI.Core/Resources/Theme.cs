@@ -603,6 +603,22 @@ public class Theme : AdamantiumComponent, ITheme
         }
     }
 
+    /// <summary>The sibling showing <paramref name="variant"/> if one was made; never makes one.</summary>
+    internal Theme ExistingSiblingFor(ThemeVariant variant)
+    {
+        if (variant.IsUnspecified || variant.FollowsSystem) return null;
+
+        var root = VariantRoot;
+        lock (root._siblings) return root._siblings.TryGetValue(variant, out var sibling) ? sibling : null;
+    }
+
+    /// <summary>The original and every sibling made from it so far: what a swap away from this theme leaves.</summary>
+    internal Theme[] WithItsSiblings()
+    {
+        var root = VariantRoot;
+        lock (root._siblings) return [root, .. root._siblings.Values];
+    }
+
     /// <summary>The theme this one is a variant sibling of - itself when it is the original.</summary>
     public Theme VariantRoot => _variantRoot ?? this;
 
