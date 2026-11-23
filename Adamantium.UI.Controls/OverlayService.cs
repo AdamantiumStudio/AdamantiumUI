@@ -71,6 +71,7 @@ public sealed class OverlayService : IOverlayService
             AllowMove = aware?.AllowMove ?? true,
             CanResize = aware?.CanResize ?? true,
             CanPin = aware?.CanPin ?? true,
+            CanCollapse = aware?.CanCollapse ?? false,
             CanClose = aware?.CanClose ?? true,
             StartupLocation = aware?.StartupLocation ?? OverlayStartupLocation.CenterOwner,
             Content = _viewLocator.ResolveView(viewModel)

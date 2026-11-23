@@ -23,16 +23,17 @@ public sealed class OverlayWindowManager
 
     private readonly IPopupHost _host;
     private readonly List<OverlayWindow> _windows = [];   // order = back-to-front; pinned windows always sort to the end (top)
-    private OverlayWindow _active;   // the front-most / last-interacted window (drives IsActive + the Escape target)
+    private OverlayWindow _active;   // the last-interacted window (drives IsActive + the Escape target)
     private bool _hostHooked;
     private PointerPressedEventHandler _previewDown;
 
     private OverlayWindowManager(IPopupHost host) => _host = host;
 
-    /// <summary>Open windows, back-to-front. The last one is the active (front-most) window.</summary>
+    /// <summary>Open windows, back-to-front. The last one is the front-most; it is the active one unless it was shown not
+    /// activated.</summary>
     public IReadOnlyList<OverlayWindow> Windows => _windows;
 
-    /// <summary>The front-most (last-interacted) window, or null when none are open.</summary>
+    /// <summary>The last-interacted window, or null when none is active.</summary>
     public OverlayWindow ActiveWindow => _active;
 
     /// <summary>Shows a window on the overlay and completes when it closes, with its <see cref="OverlayWindow.Result"/>.</summary>
@@ -86,13 +87,19 @@ public sealed class OverlayWindowManager
         _host.PopupLayer.Add(window.HostPopup);
         Normalize();
         KeepPinnedOnTop(window);
-        SetActive(window);
+        if (window.ShowActivated)
+        {
+            SetActive(window);
+        }
+
         EnsureHostHooks();
 
         var tcs = new TaskCompletionSource<object>();
         void OnClosed(object sender, EventArgs e)
         {
             window.Closed -= OnClosed;
+            var wasActive = window.IsActive;
+            window.SetActive(false);   // shown again later, it starts inactive
             _host.PopupLayer.Remove(window.HostPopup);
             (_host as IFundamentalUIComponent)?.RemoveLogicalChild(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
@@ -105,16 +112,21 @@ public sealed class OverlayWindowManager
             window.HostPopup = null;
             window.ScrimPopup = null;
             _windows.Remove(window);
-            var next = _windows.Count > 0 ? _windows[^1] : null;
-            SetActive(next);   // the next front-most becomes active
-            // ...and focus goes to it; the captured return point is used only when no overlay is left open.
-            if (next != null)
+            // Only an active one hands on: one never activated leaves the active window and the keyboard where they are.
+            // The front-most of those shown activated becomes active and takes the keyboard; with none, the captured
+            // return point gets it.
+            if (wasActive || _windows.Count == 0)
             {
-                next.TakeKeyboardBack();
-            }
-            else
-            {
-                focusReturn.Restore(window);
+                var next = _windows.LastOrDefault(w => w.ShowActivated);
+                SetActive(next);
+                if (next != null)
+                {
+                    next.TakeKeyboardBack();
+                }
+                else
+                {
+                    focusReturn.Restore(window);
+                }
             }
             if (_windows.Count == 0) RemoveHostHooks();
             tcs.TrySetResult(window.Result);
