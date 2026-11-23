@@ -44,6 +44,9 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty PlacementAlignmentProperty = AdamantiumProperty.Register(nameof(PlacementAlignment),
         typeof(PlacementAlignment), typeof(Popup), new PropertyMetadata(PlacementAlignment.Center));
 
+    public static readonly AdamantiumProperty RelativeCornerProperty = AdamantiumProperty.Register(nameof(RelativeCorner),
+        typeof(PlacementCorner), typeof(Popup), new PropertyMetadata(PlacementCorner.TopLeft));
+
     public static readonly AdamantiumProperty HorizontalOffsetProperty = AdamantiumProperty.Register(nameof(HorizontalOffset),
         typeof(double), typeof(Popup), new PropertyMetadata(0.0));
 
@@ -154,6 +157,14 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         get => GetValue<PlacementAlignment>(PlacementAlignmentProperty);
         set => SetValue(PlacementAlignmentProperty, value);
+    }
+
+    /// <summary>Placed <see cref="PlacementMode.Relative"/>, the corner of the target its offsets are from - the popup's
+    /// same corner stands there. The top-left by default.</summary>
+    public PlacementCorner RelativeCorner
+    {
+        get => GetValue<PlacementCorner>(RelativeCornerProperty);
+        set => SetValue(RelativeCornerProperty, value);
     }
 
     public double HorizontalOffset

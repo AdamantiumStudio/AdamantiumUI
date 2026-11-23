@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
@@ -208,35 +209,142 @@ public class OverlayWindowShowActivatedTests
         Assert.That(overlay.Height, Is.EqualTo(260));
     }
 
-    // Opened at the top-right, its Left and Top the room from the window's right and top edges; moved, it stands at its
-    // top-left as any other.
-    [Test]
-    public void OpenedAtTheTopRight_StandsThatFarFromTheRightEdge_AndMovedStandsAtItsTopLeft()
+    // Opened at a corner, its Left and Top the room from that corner's edges of the 800x600 window, for a 320x140 card;
+    // dragged, it stands where it was taken to, Left and Top its top-left as for any other.
+    [TestCase(OverlayStartupLocation.TopLeft, 16, 40)]
+    [TestCase(OverlayStartupLocation.TopRight, 800 - 16 - 320, 40)]
+    [TestCase(OverlayStartupLocation.BottomLeft, 16, 600 - 40 - 140)]
+    [TestCase(OverlayStartupLocation.BottomRight, 800 - 16 - 320, 600 - 40 - 140)]
+    public void OpenedAtACorner_StandsThatFarFromItsEdges_AndDraggedStandsWhereItWasTaken(OverlayStartupLocation corner,
+        double left, double top)
     {
-        var (window, _) = WindowWithAButton();
-        var (overlay, _) = Overlay(showActivated: false);
-        overlay.Width = 320;
-        overlay.Height = 140;
-        overlay.StartupLocation = Adamantium.Navigation.OverlayStartupLocation.TopRight;
-        overlay.Left = 16;
-        overlay.Top = 40;
-
-        window.ShowOverlayWindow(overlay);
-        Settle(window);
+        var (window, overlay) = ShownAt(corner);
         var opened = overlay.WorldTransform.TranslationVector;
-        overlay.Left = 100;
-        overlay.Top = 50;
+        overlay.MoveCard(new Vector2<double>(-10, -20));
         Settle(window);
         var moved = overlay.WorldTransform.TranslationVector;
 
         Assert.Multiple(() =>
         {
-            Assert.That(opened.X, Is.EqualTo(800 - 16 - 320).Within(0.5), "its right edge 16 from the window's");
-            Assert.That(opened.Y, Is.EqualTo(40).Within(0.5));
-            Assert.That(moved.X, Is.EqualTo(100).Within(0.5), "its top-left, once moved");
-            Assert.That(moved.Y, Is.EqualTo(50).Within(0.5));
+            Assert.That(opened.X, Is.EqualTo(left).Within(0.5));
+            Assert.That(opened.Y, Is.EqualTo(top).Within(0.5));
+            Assert.That(moved.X, Is.EqualTo(left - 10).Within(0.5), "where it was dragged to");
+            Assert.That(moved.Y, Is.EqualTo(top - 20).Within(0.5));
+            Assert.That(overlay.Left, Is.EqualTo(left - 10).Within(0.5), "Left is its top-left now");
+            Assert.That(overlay.Top, Is.EqualTo(top - 20).Within(0.5));
         });
         overlay.Close();
+    }
+
+    // Still at its corner, a new Left and Top from the view model move it from that corner, not to the window's top-left.
+    [Test]
+    public void AtTheBottomRight_ANewLeftAndTopMoveItFromThatCorner()
+    {
+        var (window, overlay) = ShownAt(OverlayStartupLocation.BottomRight);
+
+        overlay.Left = 56;
+        overlay.Top = 70;
+        Settle(window);
+        var at = overlay.WorldTransform.TranslationVector;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(at.X, Is.EqualTo(800 - 56 - 320).Within(0.5));
+            Assert.That(at.Y, Is.EqualTo(600 - 70 - 140).Within(0.5));
+        });
+        overlay.Close();
+    }
+
+    // Kept to the bottom-right, its grip grows it from its top-left, as anywhere else - not from the corner it opened at.
+    [Test]
+    public void ResizedAtTheBottomRight_ItsTopLeftStaysPut()
+    {
+        var (window, overlay) = ShownAt(OverlayStartupLocation.BottomRight);
+        var before = overlay.WorldTransform.TranslationVector;
+
+        overlay.ResizeCard(360, 120);
+        Settle(window);
+        var after = overlay.WorldTransform.TranslationVector;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(after.X, Is.EqualTo(before.X).Within(0.5));
+            Assert.That(after.Y, Is.EqualTo(before.Y).Within(0.5));
+        });
+        overlay.Close();
+    }
+
+    // Collapsed at the bottom-left, its title bar stays where it was instead of dropping to the window's bottom edge.
+    [Test]
+    public void CollapsedAtTheBottomLeft_KeepsItsTitleBarWhereItWas()
+    {
+        var (window, overlay) = ShownAt(OverlayStartupLocation.BottomLeft);
+        var top = overlay.WorldTransform.TranslationVector.Y;
+
+        overlay.IsCollapsed = true;
+        Settle(window);
+
+        Assert.That(overlay.WorldTransform.TranslationVector.Y, Is.EqualTo(top).Within(0.5));
+        overlay.Close();
+    }
+
+    // Collapsed at the top-right, its title bar does not move, so it keeps to that corner - and follows it as the window
+    // resizes - where at the bottom-right it is placed by its top-left.
+    [TestCase(OverlayStartupLocation.TopRight, PlacementCorner.TopRight)]
+    [TestCase(OverlayStartupLocation.BottomRight, PlacementCorner.TopLeft)]
+    public void Collapsed_KeepsToATopCorner_AndLeavesABottomOne(OverlayStartupLocation opensAt, PlacementCorner keptTo)
+    {
+        var (window, overlay) = ShownAt(opensAt);
+        var left = overlay.WorldTransform.TranslationVector.X;
+
+        overlay.IsCollapsed = true;
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(overlay.HostPopup.RelativeCorner, Is.EqualTo(keptTo));
+            Assert.That(overlay.WorldTransform.TranslationVector.X, Is.EqualTo(left).Within(0.5));
+        });
+        overlay.Close();
+    }
+
+    // Collapsed before it is first laid out, a card at the bottom-right has no place yet to keep: it stays at its corner
+    // instead of jumping to the window's top-left.
+    [Test]
+    public void CollapsedBeforeItsFirstLayout_StaysAtItsCorner()
+    {
+        var (window, _) = WindowWithAButton();
+        var (overlay, _) = Overlay(showActivated: false);
+        overlay.Width = 320;
+        overlay.StartupLocation = OverlayStartupLocation.BottomRight;
+        overlay.Left = 16;
+        overlay.Top = 40;
+        window.ShowOverlayWindow(overlay);
+
+        overlay.IsCollapsed = true;
+        Settle(window);
+        var at = overlay.WorldTransform.TranslationVector;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(at.X, Is.EqualTo(800 - 16 - 320).Within(0.5));
+            Assert.That(at.Y + overlay.RenderSize.Height, Is.EqualTo(600 - 40).Within(0.5));
+        });
+        overlay.Close();
+    }
+
+    private static (Window Window, OverlayWindow Overlay) ShownAt(OverlayStartupLocation corner)
+    {
+        var (window, _) = WindowWithAButton();
+        var (overlay, _) = Overlay(showActivated: false);
+        overlay.Width = 320;
+        overlay.Height = 140;
+        overlay.StartupLocation = corner;
+        overlay.Left = 16;
+        overlay.Top = 40;
+        window.ShowOverlayWindow(overlay);
+        Settle(window);
+        return (window, overlay);
     }
 
     private static (Window Window, Button Outside) WindowWithAButton()

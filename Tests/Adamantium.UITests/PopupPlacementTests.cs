@@ -112,6 +112,21 @@ public class PopupPlacementTests
         Assert.That(card.Bounds.Y, Is.EqualTo(160));
     }
 
+    // From the bottom-right corner of a zoomed target, the offset is drawn zoomed and the card's own corner stands there.
+    [Test]
+    public void AtABottomRightOffsetOfAScaledTarget_TheCardsCornerStandsWhereTheOffsetIsDrawn()
+    {
+        var card = OpenedAtScaledTarget(new Popup
+        {
+            Placement = PlacementMode.Relative, RelativeCorner = PlacementCorner.BottomRight,
+            HorizontalOffset = 10, VerticalOffset = 5
+        });
+
+        // The target is drawn over 200..400 x 150..190: its corner less the offset twice over is at (380, 180).
+        Assert.That(card.Bounds.X + card.Bounds.Width, Is.EqualTo(380));
+        Assert.That(card.Bounds.Y + card.Bounds.Height, Is.EqualTo(180));
+    }
+
     // A 100 x 20 target at (200, 150) drawn at twice its size; the card is 60 x 80.
     private static Border OpenedAtScaledTarget(Popup popup)
     {

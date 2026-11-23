@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="An overlay window opens at the place chosen on the Navigation page - each corner of the window, named in words - shows there whole, is moved from its corner by its view model, collapses to its title and closes.">
+  <Select Target="id=GalleryTabs/id=Navigation" />
+  <Expand Target="id=OverlayOpensAt" />
+  <Select Target="id=OverlayOpensAt/name=Top left" />
+  <Invoke Target="id=ShowOverlayWindow" />
+  <Wait Target="type=Window,name=Overlay window 1" Offscreen="False" Timeout="5s" />
+  <Invoke Target="type=Window,name=Overlay window 1/id=Close" />
+  <Absent Target="type=Window,name=Overlay window 1" Timeout="5s" />
+  <Expand Target="id=OverlayOpensAt" />
+  <Select Target="id=OverlayOpensAt/name=Top right" />
+  <Invoke Target="id=ShowOverlayWindow" />
+  <Wait Target="type=Window,name=Overlay window 2" Offscreen="False" Timeout="5s" />
+  <Invoke Target="type=Window,name=Overlay window 2/id=Close" />
+  <Absent Target="type=Window,name=Overlay window 2" Timeout="5s" />
+  <Expand Target="id=OverlayOpensAt" />
+  <Select Target="id=OverlayOpensAt/name=Bottom left" />
+  <Invoke Target="id=ShowOverlayWindow" />
+  <Wait Target="type=Window,name=Overlay window 3" Offscreen="False" Timeout="5s" />
+  <Invoke Target="type=Window,name=Overlay window 3/id=Close" />
+  <Absent Target="type=Window,name=Overlay window 3" Timeout="5s" />
+  <!-- At the bottom-right, its view model moves it from that corner; collapsed, it keeps its title bar in the window. -->
+  <Expand Target="id=OverlayOpensAt" />
+  <Select Target="id=OverlayOpensAt/name=Bottom right" />
+  <Invoke Target="id=ShowOverlayWindow" />
+  <Wait Target="type=Window,name=Overlay window 4" Offscreen="False" Timeout="5s" />
+  <Invoke Target="type=Window,name=Overlay window 4/type=Button,name=Move (VM)" />
+  <Expect Target="type=Window,name=Overlay window 4" Offscreen="False" />
+  <Invoke Target="type=Window,name=Overlay window 4/id=Collapse" />
+  <Expect Target="type=Window,name=Overlay window 4" Offscreen="False" />
+  <Invoke Target="type=Window,name=Overlay window 4/id=Close" />
+  <Absent Target="type=Window,name=Overlay window 4" Timeout="5s" />
+</Scenario>

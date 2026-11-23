@@ -1,6 +1,7 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls">
+      xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
+      xmlns:navigation="clr-namespace:Adamantium.Navigation;assembly=Adamantium.Navigation">
     <!-- DataContext is NavigationDemoViewModel (adopted by the tab's content presenter). No navigation code lives here:
          the buttons run VM commands, and the single ContentControl below is bound to the VM-owned region - the region's
          adapter renders the current page's view and animates the swap. The ContentControl fills the '*' row, so its size
@@ -27,7 +28,20 @@
 
             <!-- In-window draggable windows (OverlayWindow + OverlayWindowManager). Each click cascades a new one. -->
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                <Button Content="{Localize NavigationStrings.ShowOverlayWindow}" Command="{Binding ShowOverlayWindowCommand}" Height="32" Margin="0,0,8,0"/>
+                <Button AutomationProperties.AutomationId="ShowOverlayWindow"
+                        Content="{Localize NavigationStrings.ShowOverlayWindow}" Command="{Binding ShowOverlayWindowCommand}" Height="32" Margin="0,0,8,0"/>
+                <!-- Where the next one opens: its Left/Top the room from that place's edges. -->
+                <TextBlock x:Name="OverlayOpensAtLabel" Text="{Localize NavigationStrings.OverlayOpensAt}"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <DropDown x:Name="OverlayOpensAt" Width="140" EnumType="{x:Type navigation:OverlayStartupLocation}"
+                          Margin="0,0,8,0" AutomationProperties.LabeledBy="{Binding ElementName=OverlayOpensAtLabel}"
+                          SelectedItem="{Binding OverlayOpensAt, Mode=TwoWay}">
+                    <DropDown.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize NavigationStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </DropDown.ItemTemplate>
+                </DropDown>
                 <Button Content="{Localize NavigationStrings.ShowModalOverlay}"  Command="{Binding ShowOverlayModalCommand}"  Height="32" Margin="0,0,8,0"/>
                 <Button AutomationProperties.AutomationId="ShowModalWindow"
                         Content="{Localize NavigationStrings.ShowModalWindow}"

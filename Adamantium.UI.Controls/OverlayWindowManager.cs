@@ -42,13 +42,17 @@ public sealed class OverlayWindowManager
         // Where the window opens: Manual -> its explicit Left/Top (Relative anchors the card's top-left at the offset);
         // CenterOwner (default) -> centered, cascaded so several don't stack exactly. After opening, any Left/Top change
         // (a drag or a bound view model) re-places the card via OverlayWindow.OnPositionChanged.
-        // TopRight -> its Left/Top the room from the parent's right and top edges, the card's top-right corner anchored there.
-        var manual = window.StartupLocation is OverlayStartupLocation.Manual or OverlayStartupLocation.TopRight;
+        // A corner -> its Left/Top the room from that corner's edges, the card's same corner anchored there.
+        var corner = window.StartupLocation switch
+        {
+            OverlayStartupLocation.TopRight => PlacementCorner.TopRight,
+            OverlayStartupLocation.BottomLeft => PlacementCorner.BottomLeft,
+            OverlayStartupLocation.BottomRight => PlacementCorner.BottomRight,
+            _ => PlacementCorner.TopLeft
+        };
+        var manual = window.StartupLocation != OverlayStartupLocation.CenterOwner;
         var placement = manual ? PlacementMode.Relative : PlacementMode.Center;
         var offset = manual ? new Vector2<double>((float)window.Left, (float)window.Top) : CascadeOffset(_windows.Count);
-        var alignment = window.StartupLocation == OverlayStartupLocation.TopRight
-            ? PlacementAlignment.End
-            : PlacementAlignment.Start;
 
         // A modal window gets a full-window dim scrim BENEATH it (which absorbs + dims the content behind); a normal window
         // gets none, so the window behind stays usable.
@@ -72,7 +76,7 @@ public sealed class OverlayWindowManager
         {
             PlacementTarget = (UIComponent)_host,
             Placement = placement,
-            PlacementAlignment = alignment,
+            RelativeCorner = corner,
             HorizontalOffset = offset.X,
             VerticalOffset = offset.Y,
             Child = window

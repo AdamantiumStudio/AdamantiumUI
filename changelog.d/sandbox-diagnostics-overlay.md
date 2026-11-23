@@ -1,7 +1,8 @@
 ### Added
 
 - `OverlayStartupLocation.TopRight`: an overlay window opens at its parent window's top-right corner, its `Left` and
-  `Top` the room from the right and top edges; once open, they are its place as for any other.
+  `Top` the room from the right and top edges (its siblings and how it keeps to its corner: see
+  overlay-startup-corners).
 
 ### Changed
 

@@ -8,6 +8,13 @@
     <Phrase Key="AllowDuplicateWindows" Text="Allow duplicate windows"/>
     <Phrase Key="DialogsAsWindows" Text="Show dialogs as separate windows"/>
     <Phrase Key="ShowOverlayWindow" Text="Show overlay window"/>
+    <Phrase Key="OverlayOpensAt" Text="Opens at"/>
+    <Phrase Key="CenterOwner" Text="Center"/>
+    <Phrase Key="Manual" Text="Where it says"/>
+    <Phrase Key="TopLeft" Text="Top left"/>
+    <Phrase Key="TopRight" Text="Top right"/>
+    <Phrase Key="BottomLeft" Text="Bottom left"/>
+    <Phrase Key="BottomRight" Text="Bottom right"/>
     <Phrase Key="ShowModalOverlay" Text="Show modal overlay"/>
     <Phrase Key="ShowModalWindow" Text="Show modal window"/>
     <Phrase Key="ItemsControlRegion" Text="ItemsControl region"/>

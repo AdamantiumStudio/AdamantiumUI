@@ -8,6 +8,13 @@
     <Phrase Key="AllowDuplicateWindows" Text="Разрешить повторные окна"/>
     <Phrase Key="DialogsAsWindows" Text="Показывать диалоги отдельными окнами"/>
     <Phrase Key="ShowOverlayWindow" Text="Показать окно-оверлей"/>
+    <Phrase Key="OverlayOpensAt" Text="Открывается"/>
+    <Phrase Key="CenterOwner" Text="По центру"/>
+    <Phrase Key="Manual" Text="Где указано"/>
+    <Phrase Key="TopLeft" Text="Слева сверху"/>
+    <Phrase Key="TopRight" Text="Справа сверху"/>
+    <Phrase Key="BottomLeft" Text="Слева снизу"/>
+    <Phrase Key="BottomRight" Text="Справа снизу"/>
     <Phrase Key="ShowModalOverlay" Text="Показать модальный оверлей"/>
     <Phrase Key="ShowModalWindow" Text="Показать модальное окно"/>
     <Phrase Key="ItemsControlRegion" Text="Регион ItemsControl"/>
