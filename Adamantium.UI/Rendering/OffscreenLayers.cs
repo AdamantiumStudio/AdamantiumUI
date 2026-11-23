@@ -98,6 +98,7 @@ internal sealed class OffscreenLayers : IDisposable
         }
 
         _idle.Clear();
+        ResetGroupTargets(gd);
     }
 
     /// <summary>The space drawing lands in, inside an open layer; outside one it is the caller's own.</summary>
@@ -271,13 +272,133 @@ internal sealed class OffscreenLayers : IDisposable
         bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused) =>
         Open(gd, owner, region, print, reusable, allowReuse, projection, bounds, whole, Colors.Transparent, out reused);
 
-    /// <summary>Opens a target of <paramref name="owner"/>'s own over <paramref name="region"/> (window device pixels),
-    /// cleared to <paramref name="clear"/>: what a group of draws, or one of its masks, is drawn into, in the space it was
-    /// opened in - its <paramref name="projection"/> and <paramref name="bounds"/>. Drawn afresh every frame;
-    /// <see cref="EndGroupTarget"/> closes it and keeps what it holds for <see cref="LayDownGroup"/>.</summary>
-    public DrawSpace BeginGroupTarget(IGraphicsDevice gd, object owner, Rect2D region, Color clear, Matrix4x4F projection,
-        Rect2D bounds) =>
-        Open(gd, owner, region, 0, false, false, projection, bounds, false, clear, out _);
+    /// <summary>Opens a target over <paramref name="region"/> (window device pixels), cleared to <paramref name="clear"/>:
+    /// what a group of draws, or one of its masks, is drawn into, in the space it was opened in - its
+    /// <paramref name="projection"/> and <paramref name="bounds"/>. Drawn afresh every frame; <see cref="EndGroupTarget"/>
+    /// closes it and keeps what it holds for <see cref="LayDownGroup"/>, which gives it back.</summary>
+    public DrawSpace BeginGroupTarget(IGraphicsDevice gd, Rect2D region, Color clear, Matrix4x4F projection, Rect2D bounds)
+    {
+        if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
+        {
+            _open.Push(default);
+            return EnterSpace(gd, region, projection, bounds, false);
+        }
+
+        var target = TakeGroupTarget(gd, region.Extent.Width, region.Extent.Height);
+        OpenOver(gd, target.Texture, target.Width, target.Height, region, null, 0, 0, false, clear);
+        return EnterSpace(gd, region, projection, bounds, false);
+    }
+
+    // ---- GROUP TARGETS: drawn and laid down within one frame, so they are shared - taken from one store as a group
+    // opens and given back when it is laid down. Kept per group, each held a ring of its own the size of what it covers,
+    // and a page of hundreds of cut groups drawn as a raster held gigabytes.
+
+    private sealed class PooledTarget
+    {
+        public IRenderTarget Texture;
+        public uint Width;
+        public uint Height;
+        public long LastUsed;
+    }
+
+    private readonly List<PooledTarget> _freeGroupTargets = [];
+    private readonly List<PooledTarget> _takenGroupTargets = [];
+
+    // Sizes are taken up to a step, so a group a few pixels larger than the last does not make a texture of its own.
+    private const uint GroupTargetStep = 256;
+
+    private PooledTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
+    {
+        var pick = -1;
+        var largest = -1;
+        for (var i = 0; i < _freeGroupTargets.Count; i++)
+        {
+            var free = _freeGroupTargets[i];
+            var area = (ulong)free.Width * free.Height;
+            if (free.Width >= width && free.Height >= height
+                && (pick < 0 || area < (ulong)_freeGroupTargets[pick].Width * _freeGroupTargets[pick].Height))
+            {
+                pick = i;
+            }
+
+            if (largest < 0 || area > (ulong)_freeGroupTargets[largest].Width * _freeGroupTargets[largest].Height)
+            {
+                largest = i;
+            }
+        }
+
+        PooledTarget target;
+        if (pick >= 0)
+        {
+            target = _freeGroupTargets[pick];
+            _freeGroupTargets.RemoveAt(pick);
+        }
+        else
+        {
+            // None holds it: the largest free one is made over to hold both, so the store does not gather every size.
+            target = new PooledTarget { Width = StepUp(width), Height = StepUp(height) };
+            if (largest >= 0)
+            {
+                var grown = _freeGroupTargets[largest];
+                _freeGroupTargets.RemoveAt(largest);
+                target.Width = Math.Max(target.Width, grown.Width);
+                target.Height = Math.Max(target.Height, grown.Height);
+                if (grown.Texture is IDisposable old)
+                {
+                    gd.AddToDeferDisposeQueue(old);
+                }
+            }
+
+            target.Texture = gd.CreateRenderTarget(target.Width, target.Height, MSAALevel.None,
+                gd.CurrentRenderTarget.SurfaceFormat, ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit,
+                ImageLayout.ShaderReadOnlyOptimal, "GroupTarget");
+        }
+
+        target.LastUsed = _frame;
+        _takenGroupTargets.Add(target);
+        return target;
+    }
+
+    private static uint StepUp(uint size) => (size + GroupTargetStep - 1) / GroupTargetStep * GroupTargetStep;
+
+    // Back to the store: a later group of this frame may draw into it, the device keeping the order of the two.
+    private void GiveBack(IRenderTarget texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _takenGroupTargets.Count; i++)
+        {
+            if (ReferenceEquals(_takenGroupTargets[i].Texture, texture))
+            {
+                _freeGroupTargets.Add(_takenGroupTargets[i]);
+                _takenGroupTargets.RemoveAt(i);
+                return;
+            }
+        }
+    }
+
+    // A frame starts: what was never laid down - a mask whose group drew nothing - goes back, and what has not been
+    // taken for a while is let go.
+    private void ResetGroupTargets(IGraphicsDevice gd)
+    {
+        _freeGroupTargets.AddRange(_takenGroupTargets);
+        _takenGroupTargets.Clear();
+        for (var i = _freeGroupTargets.Count - 1; i >= 0; i--)
+        {
+            if (_frame - _freeGroupTargets[i].LastUsed > IdleFrames)
+            {
+                if (_freeGroupTargets[i].Texture is IDisposable idle)
+                {
+                    gd.AddToDeferDisposeQueue(idle);
+                }
+
+                _freeGroupTargets.RemoveAt(i);
+            }
+        }
+    }
 
     private DrawSpace Open(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
         bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, Color clear, out bool reused)
@@ -308,12 +429,19 @@ internal sealed class OffscreenLayers : IDisposable
 
         EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
         var slot = (entry.Latest + 1) % entry.Ring.Length;
-        var color = entry.Ring[slot];
-        var level = LevelAt(gd, _open.Count, entry.TextureWidth, entry.TextureHeight);
+        OpenOver(gd, entry.Ring[slot], entry.TextureWidth, entry.TextureHeight, region, entry, slot, print, reusable, clear);
+        return EnterSpace(gd, region, projection, bounds, whole);
+    }
+
+    // Draws from here into color - textureWidth by textureHeight, holding region at its corner - cleared to clear.
+    private void OpenOver(IGraphicsDevice gd, IRenderTarget color, uint textureWidth, uint textureHeight, Rect2D region,
+        CachedLayer entry, int slot, ulong print, bool reusable, Color clear)
+    {
+        var level = LevelAt(gd, _open.Count, textureWidth, textureHeight);
         var depth = level.Depth.Length > 0 ? level.Depth[(int)(gd.CurrentFrame % (uint)level.Depth.Length)] : null;
 
         _open.Push(new OpenOffscreenLayer(gd.CurrentRenderTarget, gd.CurrentDepthStencilBuffer, gd.TargetOrigin, gd.ClearColor,
-            gd.MSAALevel, color, entry.TextureWidth, entry.TextureHeight, region, entry, slot, print, reusable, false));
+            gd.MSAALevel, color, textureWidth, textureHeight, region, entry, slot, print, reusable, false));
 
         gd.SuspendRendering();
         var commandBuffer = gd.CurrentCommandBuffer;
@@ -337,7 +465,6 @@ internal sealed class OffscreenLayers : IDisposable
         gd.BeginRendering(commandBuffer);
         gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
         Redrawn++;
-        return EnterSpace(gd, region, projection, bounds, whole);
     }
 
     /// <summary>Closes the target <see cref="BeginGroupTarget"/> opened and goes back to the one, and the space, it was
@@ -362,12 +489,6 @@ internal sealed class OffscreenLayers : IDisposable
         gd.MSAALevel = open.Samples;
         gd.TargetOrigin = open.Origin;
         gd.ResumeRendering();
-
-        var entry = open.Entry;
-        entry.Latest = open.Slot;
-        entry.Valid = false;
-        entry.Width = open.Region.Extent.Width;
-        entry.Height = open.Region.Extent.Height;
         LeaveSpace(gd);
         return new GroupTarget(open.Color, open.Region, open.TextureWidth, open.TextureHeight);
     }
@@ -379,6 +500,17 @@ internal sealed class OffscreenLayers : IDisposable
     /// and takes its place where the masks let it through.</summary>
     public void LayDownGroup(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
         GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor, bool replaces = false)
+    {
+        Composite(gd, content, masks, backdrop, blendMode, alpha, scissor, replaces);
+        GiveBack(content.Texture);
+        foreach (var (mask, _) in masks)
+        {
+            GiveBack(mask.Texture);
+        }
+    }
+
+    private void Composite(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
+        GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor, bool replaces)
     {
         if (gd == null || !content.Drawn || gd.CurrentViewports.Length == 0 || scissor.Extent.Width == 0
             || scissor.Extent.Height == 0)
@@ -966,6 +1098,14 @@ internal sealed class OffscreenLayers : IDisposable
             (entry.SoftScratch as IDisposable)?.Dispose();
         }
 
+        _freeGroupTargets.AddRange(_takenGroupTargets);
+        foreach (var target in _freeGroupTargets)
+        {
+            (target.Texture as IDisposable)?.Dispose();
+        }
+
+        _freeGroupTargets.Clear();
+        _takenGroupTargets.Clear();
         _levels.Clear();
         _cached.Clear();
         _composite?.Dispose();
