@@ -179,6 +179,20 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         RenderDirty.MarkStructural(component);
     }
 
+    public static readonly AdamantiumProperty DrawingModeProperty = AdamantiumProperty.Register(nameof(DrawingMode),
+        typeof(DrawingMode), typeof(UIComponent), new PropertyMetadata(DrawingMode.Vector, OnDrawingModeChanged));
+
+    private static void OnDrawingModeChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        component._drawingMode = component.GetValue<DrawingMode>(DrawingModeProperty);
+        RenderDirty.MarkStructural(component);
+    }
+
     public static readonly AdamantiumProperty OpacityMaskProperty = AdamantiumProperty.Register(nameof(OpacityMask),
         typeof(Brush), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnOpacityMaskChanged));
@@ -1070,6 +1084,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     private bool _clipToBounds;
     private bool _isLayer;
+    private DrawingMode _drawingMode;
     private Brush _opacityMask;
     private double _softEdge;
     private Reflection _reflection;
@@ -1088,6 +1103,14 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get => _isLayer;
         set => SetValue(IsLayerProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.DrawingMode"/>. The getter reads a mirror, so the draw walk pays no lookup.
+    /// </summary>
+    public DrawingMode DrawingMode
+    {
+        get => _drawingMode;
+        set => SetValue(DrawingModeProperty, value);
     }
 
     /// <summary>See <see cref="IUIComponent.OpacityMask"/>.</summary>

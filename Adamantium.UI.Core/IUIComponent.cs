@@ -32,6 +32,10 @@ public interface IUIComponent : IFundamentalUIComponent
     /// element as a layer, as <see cref="IsLayer"/> does.</summary>
     Media.Reflection Reflection { get; }
 
+    /// <summary>Whether this element and its subtree are drawn from their shapes every frame, or from tiles of a texture
+    /// the camera moves and scales - see <see cref="Core.DrawingMode"/>.</summary>
+    DrawingMode DrawingMode { get; }
+
     /// <summary>How this clip's corners are rounded (TL, TR, BR, BL). A scissor is square, so rounding is applied by the
     /// shaders; zero means the plain rectangular clip. Unset falls back to the container's own CornerRadius, where it
     /// has one - see UIComponent.ClipCornerRadius.</summary>
