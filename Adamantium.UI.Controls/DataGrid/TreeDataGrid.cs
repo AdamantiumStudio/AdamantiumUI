@@ -2642,10 +2642,48 @@ public partial class TreeDataGrid : Selector
     /// counts.</summary>
     internal void ReportAutoWidth(DataGridColumn column, double desired)
     {
-        if (DataGridColumnLayout.RecordMeasured(column, desired)) _autoWidthGrew = true;
+        if (!DataGridColumnLayout.RecordMeasured(column, desired)) return;
+
+        // Measuring its rows, the grid lays the widths out again in this pass; a cell measured on its own later - its
+        // text bound a frame after it was built - has the next pass take the new width.
+        if (_measuringRows)
+        {
+            _autoWidthGrew = true;
+            return;
+        }
+
+        InvalidateMeasure();
+    }
+
+    // The rows and strips place their cells by the widths, and a star column taking up what an Auto one gained leaves
+    // them as wide as they were: measured again - text is trimmed where it is measured - when the widths moved since
+    // they were laid out.
+    private void RelayRowsAndStripsIfWidthsMoved()
+    {
+        if (_laidOutWidths.Length != Columns.Count)
+        {
+            _laidOutWidths = new double[Columns.Count];
+        }
+
+        var moved = false;
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            moved |= !_laidOutWidths[i].Equals(Columns[i].ActualWidth);
+            _laidOutWidths[i] = Columns[i].ActualWidth;
+        }
+
+        if (!moved)
+        {
+            return;
+        }
+
+        InvalidateRealizedRows();
+        RefreshStrips();
     }
 
     private bool _autoWidthGrew;
+    private bool _measuringRows;
+    private double[] _laidOutWidths = [];
 
     /// <summary>Total width of the columns as the last pass sized them.</summary>
     public double ColumnsWidth { get; private set; }
@@ -2668,6 +2706,18 @@ public partial class TreeDataGrid : Selector
             var travel = (_scroll?.ExtentSize.Width ?? ColumnsWidth) - (_scroll?.ViewportSize.Width ?? _viewportWidth);
             return travel <= 0 || double.IsInfinity(travel) ? 0 : Math.Min(0, HorizontalOffset - travel);
         }
+    }
+
+    /// <summary>Whether the row of column headers shows. Collapsed, the rows start at the top - a tree with columns
+    /// whose meaning is plain without titles. The left strip is <see cref="ShowRowNumbers"/>.</summary>
+    public static readonly AdamantiumProperty HeadersVisibilityProperty = AdamantiumProperty.Register(
+        nameof(HeadersVisibility), typeof(Visibility), typeof(TreeDataGrid),
+        new PropertyMetadata(Visibility.Visible, PropertyMetadataOptions.AffectsMeasure));
+
+    public Visibility HeadersVisibility
+    {
+        get => GetValue<Visibility>(HeadersVisibilityProperty);
+        set => SetValue(HeadersVisibilityProperty, value);
     }
 
     /// <summary>The left strip with the row's ordinal - and the handle for the row as a whole: pressing a number takes
@@ -3908,8 +3958,18 @@ public partial class TreeDataGrid : Selector
         FrozenWidth = frozen;
         RightFrozenWidth = pinnedRight;
         UpdateColumnWindow(availableSize.Width);
+        RelayRowsAndStripsIfWidthsMoved();
 
-        var desired = base.MeasureOverride(availableSize);
+        _measuringRows = true;
+        Size<double> desired;
+        try
+        {
+            desired = base.MeasureOverride(availableSize);
+        }
+        finally
+        {
+            _measuringRows = false;
+        }
 
         // A cell may have reported a wider Auto column than the pass assumed, and the rows have already been laid out
         // against the old number. Re-run the widths so this pass ends consistent instead of showing a torn frame.
@@ -3921,6 +3981,7 @@ public partial class TreeDataGrid : Selector
             FrozenWidth = regrown;
             RightFrozenWidth = regrownRight;
             UpdateColumnWindow(availableSize.Width);
+            RelayRowsAndStripsIfWidthsMoved();
             desired = base.MeasureOverride(availableSize);
         }
 

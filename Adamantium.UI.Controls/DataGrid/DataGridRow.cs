@@ -840,7 +840,8 @@ public class DataGridRow : Panel
         }
 
         // Each cell is measured AT its column's width - that is what gives a text cell an edge to trim against instead
-        // of asking for the length it would like. What each cell WOULD have liked is reported back for the Auto columns.
+        // of asking for the length it would like. A cell of an Auto column reports what it WOULD have liked itself (see
+        // DataGridCell.MeasureOverride), also when it alone is measured again.
         double height = 0;
         foreach (var pair in _cells)
         {
@@ -850,14 +851,6 @@ public class DataGridRow : Panel
             var cell = pair.Value;
             cell.Measure(new Size<double>(column.ActualWidth, availableSize.Height));
             height = Math.Max(height, cell.DesiredSize.Height);
-
-            if (column.Width.IsAuto)
-            {
-                // Auto asks the cell what it would take unbounded; that answer is what the width pass settles on.
-                cell.Measure(new Size<double>(double.PositiveInfinity, availableSize.Height));
-                Owner?.ReportAutoWidth(column, cell.DesiredSize.Width);
-                cell.Measure(new Size<double>(column.ActualWidth, availableSize.Height));
-            }
         }
 
         // At the settled width, and only at it: one constant available size across passes is what lets the measure

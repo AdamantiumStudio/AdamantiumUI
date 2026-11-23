@@ -45,6 +45,7 @@
                                  purpose: it stays put while the rows move under it, which is the whole of what a header
                                  is for. -->
                             <Border Grid.Row="3" Grid.Column="0"
+                                    Visibility="{TemplateBinding HeadersVisibility}"
                                     Background="{ObservableResource SolidBackgroundFillColorTertiary}"
                                     BorderBrush="{ObservableResource DataGridLineColor}"
                                     BorderThickness="0 0 0 1">
@@ -585,6 +586,13 @@
                              nothing, silently - which is how a selection can end up drawing no selection at all. -->
                         <!-- The selection is a WASH of the accent, not a plate: a cell holds controls and meanings - a
                              check box, a state painted red - and a solid accent swallows both. -->
+                        <!-- CHANGED since the step before - a debugger's value from one stop to the next: the lighter
+                             accent wash across the cell, so the row reads as changed and never as selected. Declared
+                             before the search and the selection, which win over it. -->
+                        <PropertyTrigger Property="State" Value="Changed">
+                            <Setter TargetName="CellBorder" Property="Background"
+                                    Value="{ThemeResource AccentFillColorChanged}"/>
+                        </PropertyTrigger>
                         <!-- FOUND by the search. A wash of its own, so a hit reads as a hit and not as a selection,
                              and the cell the search is ON takes the solid color - the way a browser marks the hit you
                              are standing on apart from the rest it found. Declared BEFORE the selection so a cell that

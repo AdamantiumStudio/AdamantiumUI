@@ -26,6 +26,10 @@ public interface ITheme: IInitializable, IAdamantiumComponent
     /// darkening it, the way the solid ramp does, barely reads at this alpha.</summary>
     Brush AccentFillColorSelectionStrong { get; set; }
 
+    /// <summary>The accent as a lighter wash - what marks a value changed since the step before, such as a debugger's.
+    /// Lighter than the selection's, so a changed row never reads as a selected one.</summary>
+    Brush AccentFillColorChanged { get; set; }
+
     Brush AccentFillColorDisabled { get; set; }
 
     Brush AccentForegroundColor { get; set; }
