@@ -76,8 +76,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
                 PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
         // The smallest a card is laid out and resized to; collapsed to its title bar, no height is kept.
         MinWidthProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(300.0));
-        MinHeightProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(120.0,
-            PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender,
+        MinHeightProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(120.0, null,
             (a, value) => ((OverlayWindow)a).IsCollapsed ? 0.0 : value));
     }
 
@@ -314,6 +313,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private static void OnIsCollapsedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var window = (OverlayWindow)a;
+        window.KeepTopLeft();
         if ((bool)e.NewValue)
         {
             window._expandedHeight = window.Height;
@@ -338,6 +338,21 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private static void OnPositionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is OverlayWindow w) w.ApplyPositionToPopup();
+    }
+
+    // A centered card would re-center on its new size, its title bar jumping from under the pointer: placed where it is
+    // instead, as its first drag places it.
+    private void KeepTopLeft()
+    {
+        if (HostPopup is not { Placement: PlacementMode.Center })
+        {
+            return;
+        }
+
+        var at = WorldTransform.TranslationVector;
+        SetCurrentValue(LeftProperty, (double)at.X);
+        SetCurrentValue(TopProperty, (double)at.Y);
+        ApplyPositionToPopup();   // also when Left/Top already held these and raised no change
     }
 
     private void ApplyPositionToPopup()

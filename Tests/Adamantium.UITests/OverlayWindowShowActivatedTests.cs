@@ -73,6 +73,65 @@ public class OverlayWindowShowActivatedTests
     }
 
     [Test]
+    public void ClosingTheActiveWindowDoesNotActivateACardShownNotActivated()
+    {
+        var (window, _) = WindowWithAButton();
+        var (dialog, _) = Overlay(showActivated: true);
+        window.ShowOverlayWindow(dialog);
+        Settle(window);
+        var (card, inCard) = Overlay(showActivated: false);
+        window.ShowOverlayWindow(card);
+        Settle(window);
+
+        dialog.Close();
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(card.IsActive, Is.False);
+            Assert.That(FocusManager.Focused, Is.Not.SameAs(inCard));
+        });
+        card.Close();
+    }
+
+    [Test]
+    public void AWindowClosedWhileActiveIsShownAgainInactive()
+    {
+        var (window, _) = WindowWithAButton();
+        var (behind, _) = Overlay(showActivated: true);
+        window.ShowOverlayWindow(behind);
+        var (reused, _) = Overlay(showActivated: true);
+        window.ShowOverlayWindow(reused);
+        Settle(window);
+        reused.Close();
+
+        reused.ShowActivated = false;
+        window.ShowOverlayWindow(reused);
+        Settle(window);
+
+        Assert.That(reused.IsActive, Is.False);
+        reused.Close();
+        behind.Close();
+    }
+
+    [Test]
+    public void CollapsingACenteredWindowKeepsItsTitleBarWhereItWas()
+    {
+        var (window, _) = WindowWithAButton();
+        var (overlay, _) = Overlay(showActivated: true);
+        overlay.Height = 300;
+        window.ShowOverlayWindow(overlay);
+        Settle(window);
+        var top = overlay.WorldTransform.TranslationVector.Y;
+
+        overlay.IsCollapsed = true;
+        Settle(window);
+
+        Assert.That(overlay.WorldTransform.TranslationVector.Y, Is.EqualTo(top).Within(0.5));
+        overlay.Close();
+    }
+
+    [Test]
     public void TheGripStopsAtTheWindowsMinWidthAndMinHeight()
     {
         var (window, _) = WindowWithAButton();
