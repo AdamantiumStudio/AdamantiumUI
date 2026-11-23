@@ -200,6 +200,8 @@ public class ScenarioGeneratorTests
             ["Scenarios/Shown.ascenario"] = $"{Header} Visible=\"true\" Explicit=\"Typing suggestions.\">\n{steps}\n</Scenario>",
             ["Scenarios/NotShown.ascenario"] = $"{Header} Visible=\"false\" Explicit=\"By name.\">\n{steps}\n</Scenario>",
             ["Scenarios/WithTheRest.ascenario"] = $"{Header} Visible=\"true\">\n{steps}\n</Scenario>",
+            ["Scenarios/NotShownWithTheRest.ascenario"] = $"{Header} Visible=\"false\">\n{steps}\n</Scenario>",
+            ["Scenarios/WithTheRestAndABadStep.ascenario"] = $"{Header} Visible=\"1\">\n  <Expect Target=\"id=Save\" />\n</Scenario>",
             ["Scenarios/Wrong.ascenario"] = $"{Header} Visible=\"maybe\" Explicit=\"By name.\">\n{steps}\n</Scenario>"
         });
         string FileOf(Microsoft.CodeAnalysis.Diagnostic error) => System.IO.Path.GetFileName(error.Location.GetMappedLineSpan().Path);
@@ -207,10 +209,15 @@ public class ScenarioGeneratorTests
         Assert.Multiple(() =>
         {
             Assert.That(project.Errors.Select(error => $"{error.Id} {FileOf(error)}"),
-                Is.EquivalentTo(new[] { "AUS011 WithTheRest.ascenario", "AUS002 Wrong.ascenario" }),
-                "asked for in the ordinary run it would do nothing; no yes or no is the schema's error");
+                Is.EquivalentTo(new[]
+                {
+                    "AUS011 WithTheRest.ascenario", "AUS011 WithTheRestAndABadStep.ascenario",
+                    "AUS007 WithTheRestAndABadStep.ascenario", "AUS002 Wrong.ascenario",
+                }),
+                "asked for in the ordinary run it would do nothing, said beside a step's error too; no yes or no is the schema's error");
             Assert.That(Launch(project, "Shown"), Does.Contain("VirtualDisplay = false"));
             Assert.That(Launch(project, "NotShown"), Does.Contain("VirtualDisplay = true"));
+            Assert.That(Launch(project, "NotShownWithTheRest"), Does.Contain("VirtualDisplay = true"));
         });
     }
 
