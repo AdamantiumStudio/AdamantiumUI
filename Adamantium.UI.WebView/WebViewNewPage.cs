@@ -25,6 +25,9 @@ public sealed class WebViewNewPage : IDisposable
 
     private string reachedAddress;
 
+    /// <summary>Whether the page closed itself before a view took it up: there is nothing to show.</summary>
+    internal bool ClosedItself { get; private set; }
+
     /// <summary>Where a page that could not be shown as it was had gone meanwhile, for the view to make it there - once;
     /// null when there is none.</summary>
     internal string TakeReachedAddress()
@@ -43,12 +46,13 @@ public sealed class WebViewNewPage : IDisposable
         waited = waitingView;
         waiting = null;
         waitingView = null;
-        if (waited is not { IsLost: true })
+        if (waited is not ({ IsLost: true } or { IsClosed: true }))
         {
             return taken;
         }
 
-        reachedAddress = waited.Address;
+        ClosedItself = waited.IsClosed;
+        reachedAddress = ClosedItself ? null : waited.Address;
         waited.Discard();
         waited = null;
         taken?.Dispose();

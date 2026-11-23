@@ -1861,6 +1861,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         browser = null;
         CefRefCounting.ReleaseCef(own);
         engine.BrowserClosed(this);
+        // Not let go of here: the page closed itself. Told after CEF's callback, which the view's answer would re-enter.
+        if (!closing)
+        {
+            LoopSignal.Post(() => view.PageClosed(this));
+        }
     }
 
     public void Dispose()
