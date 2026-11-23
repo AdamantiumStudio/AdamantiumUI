@@ -78,6 +78,14 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         MinWidthProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(300.0));
         MinHeightProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(120.0, null,
             (a, value) => ((OverlayWindow)a).IsCollapsed ? 0.0 : value));
+        // Collapsing coerces the size rather than writing it: a binding, a style or a size set meanwhile stays, and
+        // expanding shows it. Collapsed, no height; the width it was shown at, if it had none of its own.
+        HeightProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(double.NaN, null,
+            (a, value) => ((OverlayWindow)a).IsCollapsed ? double.NaN : value));
+        WidthProperty.OverrideMetadata(typeof(OverlayWindow), new PropertyMetadata(double.NaN, null,
+            (a, value) => a is OverlayWindow { IsCollapsed: true, _collapsedWidth: > 0 } window && double.IsNaN((double)value)
+                ? window._collapsedWidth
+                : value));
     }
 
     public static readonly AdamantiumProperty OverlayBrushProperty = AdamantiumProperty.Register(nameof(OverlayBrush),
@@ -288,8 +296,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private Button _closeButton;
     private Button _pinButton;
     private Button _collapseButton;
-    private double _expandedHeight = double.NaN;   // the Height and Width it had before it collapsed
-    private double _expandedWidth = double.NaN;
+    private double _collapsedWidth;   // the width it was shown at as it collapsed
     private InputUIComponent _dragArea;   // the transparent title-bar strip that starts the drag
     private InputUIComponent _resizeGrip;
     private bool _dragging;
@@ -308,28 +315,15 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         if (a is OverlayWindow w) w._manager?.OnPinnedChanged(w);
     }
 
-    // Collapsed, a height of its own would keep the room the content took: let go of, and given back on expanding. The
-    // width stays as it is shown - sized to its content, the title bar alone would narrow it.
+    // Collapsed, a height of its own would keep the room the content took; the width stays as it is shown - sized to
+    // its content, the title bar alone would narrow it. Both by coercion, see the static constructor.
     private static void OnIsCollapsedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var window = (OverlayWindow)a;
         window.KeepTopLeft();
-        if ((bool)e.NewValue)
-        {
-            window._expandedHeight = window.Height;
-            window._expandedWidth = window.Width;
-            window.Height = double.NaN;
-            if (double.IsNaN(window.Width) && window.ActualWidth > 0)
-            {
-                window.Width = window.ActualWidth;
-            }
-        }
-        else
-        {
-            window.Height = window._expandedHeight;
-            window.Width = window._expandedWidth;
-        }
-
+        window._collapsedWidth = (bool)e.NewValue ? window.ActualWidth : 0;
+        window.CoerceValue(HeightProperty);
+        window.CoerceValue(WidthProperty);
         window.CoerceValue(MinHeightProperty);
     }
 

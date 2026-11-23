@@ -2,6 +2,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
@@ -171,6 +172,40 @@ public class OverlayWindowShowActivatedTests
             Assert.That(overlay.Height, Is.EqualTo(240));
             Assert.That(overlay.MinHeight, Is.EqualTo(120));
         });
+    }
+
+    [Test]
+    public void ASizeSetWhileCollapsedIsTheSizeItExpandsTo()
+    {
+        var (overlay, _) = Overlay(showActivated: true);
+        overlay.Height = 240;
+        overlay.IsCollapsed = true;
+
+        overlay.Height = 320;
+        overlay.Width = 500;
+        overlay.IsCollapsed = false;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(overlay.Height, Is.EqualTo(320));
+            Assert.That(overlay.Width, Is.EqualTo(500));
+        });
+    }
+
+    [Test]
+    public void CollapsingLeavesABoundHeightBound()
+    {
+        var panel = new StackPanel { Width = 200 };
+        var (overlay, _) = Overlay(showActivated: true);
+        panel.AddLogicalChild(overlay);
+        overlay.SetBinding("Height", new Ancestor { AncestorType = typeof(StackPanel), Path = "Width", Logical = true });
+
+        overlay.IsCollapsed = true;
+        overlay.IsCollapsed = false;
+        panel.Width = 260;
+        BindingUpdateQueue.Flush();
+
+        Assert.That(overlay.Height, Is.EqualTo(260));
     }
 
     private static (Window Window, Button Outside) WindowWithAButton()
