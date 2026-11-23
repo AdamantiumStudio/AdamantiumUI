@@ -533,6 +533,8 @@ public partial class RenderCache
                     NoteBandedText(units[i]);
                     NoteEffects(units[i]);
                 }
+
+                group.Recorded++;
                 return;
             }
         }
