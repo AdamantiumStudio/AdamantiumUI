@@ -542,7 +542,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- Read-only: a faint wash and disabled-weight text - see the macOS set. -->
-                        <PropertyTrigger Property="IsReadOnly" Value="true">
+                        <PropertyTrigger Property="LooksReadOnly" Value="true">
                             <Setter TargetName="CellBorder" Property="Background"
                                     Value="{ObservableResource SubtleFillColorSecondary}"/>
                             <Setter TargetName="PART_ContentPresenter" Property="Foreground"
