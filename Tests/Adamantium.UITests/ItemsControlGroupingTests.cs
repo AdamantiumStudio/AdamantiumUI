@@ -638,18 +638,34 @@ public class ItemsControlGroupingTests
         Assert.That(withFolded, Is.LessThan(without * 3 + 0.5), "the folded rows cost next to nothing");
     }
 
+    // The least a pass took over a few runs of passes: a collection or the scheduler stopping one run (seen on a shared
+    // CI machine, 1.8 ms a pass against 0.01) does not count, and what every pass costs still does.
     private static double PerPass(ItemsControl list)
     {
-        const int passes = 50;
+        const int runs = 5;
+        const int passes = 20;
         var panel = list.ItemsHostPanel;
-        var watch = Stopwatch.StartNew();
-        for (var pass = 0; pass < passes; pass++)
+        Measure(panel);
+
+        var least = double.MaxValue;
+        for (var run = 0; run < runs; run++)
+        {
+            var watch = Stopwatch.StartNew();
+            for (var pass = 0; pass < passes; pass++)
+            {
+                Measure(panel);
+            }
+
+            least = System.Math.Min(least, watch.Elapsed.TotalMilliseconds / passes);
+        }
+
+        return least;
+
+        static void Measure(Panel panel)
         {
             panel.InvalidateMeasure();
             panel.Measure(new Size<double>(300, 2000));
         }
-
-        return watch.Elapsed.TotalMilliseconds / passes;
     }
 
     // A folded header the drag rests on opens.
