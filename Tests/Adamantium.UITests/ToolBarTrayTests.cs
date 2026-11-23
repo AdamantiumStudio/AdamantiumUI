@@ -1127,6 +1127,36 @@ public class ToolBarTrayTests
         });
     }
 
+    // Down the side the grip's drawing lies across the bar, inside the grip, clear of the first command.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AGripDownTheSide_DrawsInsideItself(System.Type styleSet)
+    {
+        Use(styleSet);
+        var bar = Bar("Side", 0, 0);
+        var tray = Tray(bar);
+        tray.Orientation = Orientation.Vertical;
+        var root = Shown(tray, 200);
+        var grip = Grip(bar);
+        Style(grip);
+        Show(root);
+        var dots = grip.GetVisualDescendants().OfType<Adamantium.UI.Controls.Shapes.Path>().Single();
+        var first = (IUIComponent)bar.Items[0];
+        var corner = dots.TranslatePoint(new Vector2<double>(0, 0), bar);
+        var opposite = dots.TranslatePoint(new Vector2<double>(dots.RenderSize.Width, dots.RenderSize.Height), bar);
+        var top = System.Math.Min(corner.Y, opposite.Y);
+        var bottom = System.Math.Max(corner.Y, opposite.Y);
+        var across = System.Math.Abs(opposite.X - corner.X);
+        var gripTop = At(grip, bar).Y;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(across, Is.GreaterThan(bottom - top), "lying across");
+            Assert.That(top, Is.GreaterThanOrEqualTo(gripTop - 0.01));
+            Assert.That(bottom, Is.LessThanOrEqualTo(gripTop + grip.RenderSize.Height + 0.01));
+            Assert.That(bottom, Is.LessThan(At(first, bar).Y));
+        });
+    }
+
     private sealed class PickyTray(ToolBar takes) : ToolBarTray
     {
         protected override bool CanTake(ToolBar bar) =>

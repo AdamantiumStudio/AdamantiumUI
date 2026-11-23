@@ -55,7 +55,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="DragHandle">
                     <Border Background="Transparent">
-                        <Path HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <Path x:Name="Dots" HorizontalAlignment="Center" VerticalAlignment="Center"
                               Fill="{TemplateBinding Foreground}"
                               Data="M0,0 L1,0 L1,12 L0,12 Z M3,0 L4,0 L4,12 L3,12 Z"/>
                     </Border>
@@ -67,6 +67,14 @@
     <Style Selector="DragHandle.ToolBarGrip">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        </PropertyTrigger>
+        <!-- On a bar down the side the rules lie across it, in the grip's length. -->
+        <PropertyTrigger Property="ToolBar.CommandOrientation" Value="Vertical">
+            <Setter TargetName="Dots" Property="LayoutTransform">
+                <Setter.Value>
+                    <Transform RotationAngle="90"/>
+                </Setter.Value>
+            </Setter>
         </PropertyTrigger>
     </Style>
 
@@ -189,6 +197,7 @@
             <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
             <Setter TargetName="PART_Grip" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
+            <Setter TargetName="PART_Grip" Property="ToolBar.CommandOrientation" Value="Vertical"/>
             <Setter TargetName="PART_Grip" Property="Margin" Value="0,0,0,3"/>
             <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
             <Setter TargetName="PART_OverflowButton" Property="Width" Value="Auto"/>
