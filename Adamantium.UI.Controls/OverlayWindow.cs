@@ -261,19 +261,22 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         set => SetValue(OpenDurationProperty, value);
     }
 
-    /// <summary>Where the window first appears - centered+cascaded, or a manual top-left. Set before it is shown.</summary>
+    /// <summary>Where the window first appears - centered+cascaded, a manual top-left, or a corner of the parent window
+    /// (see <see cref="OverlayStartupLocation"/>). Set before it is shown.</summary>
     public OverlayStartupLocation StartupLocation { get; set; } = OverlayStartupLocation.CenterOwner;
 
-    /// <summary>The window's absolute left in the parent window's coordinates (like <c>Window.Left</c>). Two-way bindable:
-    /// dragging updates it, and assigning it (or the bound view-model property) moves the window. Used as the opening X
-    /// when <see cref="StartupLocation"/> is Manual.</summary>
+    /// <summary>The window's left in the parent window's coordinates (like <c>Window.Left</c>) - opened at a right corner,
+    /// the room from the parent's right edge until it is dragged, resized or collapsed. Two-way bindable: dragging updates
+    /// it, and assigning it (or the bound view-model property) moves the window. Used as the opening X unless
+    /// <see cref="StartupLocation"/> centers it.</summary>
     public double Left
     {
         get => GetValue<double>(LeftProperty);
         set => SetValue(LeftProperty, value);
     }
 
-    /// <summary>The window's absolute top in the parent window's coordinates (like <c>Window.Top</c>). See <see cref="Left"/>.</summary>
+    /// <summary>The window's top in the parent window's coordinates (like <c>Window.Top</c>) - opened at a bottom corner,
+    /// the room from the parent's bottom edge until it is dragged, resized or collapsed. See <see cref="Left"/>.</summary>
     public double Top
     {
         get => GetValue<double>(TopProperty);
@@ -320,30 +323,40 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private static void OnIsCollapsedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var window = (OverlayWindow)a;
-        window.KeepTopLeft();
+        // Only where the new height would move the title bar - centered, or kept to a bottom corner.
+        if (window.HostPopup is { Placement: PlacementMode.Center }
+            or { RelativeCorner: PlacementCorner.BottomLeft or PlacementCorner.BottomRight })
+        {
+            window.KeepTopLeft();
+        }
+
         window._collapsedWidth = (bool)e.NewValue ? window.ActualWidth : 0;
         window.CoerceValue(HeightProperty);
         window.CoerceValue(WidthProperty);
         window.CoerceValue(MinHeightProperty);
     }
 
-    // Left/Top are the card's absolute top-left; a change (from a drag write, an assignment, or a two-way binding to the
+    // Left/Top are the card's place: the room from the corner it opened at, until it is dragged, resized or collapsed, and
+    // its top-left from then on (KeepTopLeft). A change (from a drag write, an assignment, or a two-way binding to the
     // view model) moves the popup there. Skipped before the popup exists - the manager applies the initial placement.
     private static void OnPositionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is OverlayWindow w) w.ApplyPositionToPopup();
     }
 
-    // A centered card would re-center on its new size, its title bar jumping from under the pointer: placed where it is
-    // instead, as its first drag places it.
+    // A centered card would re-center on its new size, its title bar jumping from under the pointer, and one kept to a
+    // right or bottom corner would grow or shrink from that corner: placed by its top-left where it is instead, once it
+    // is dragged, resized or collapsed. Not yet arranged, it is drawn nowhere and has no place to keep.
     private void KeepTopLeft()
     {
-        if (HostPopup is not { Placement: PlacementMode.Center })
+        if (HostPopup is not ({ Placement: PlacementMode.Center } or { RelativeCorner: not PlacementCorner.TopLeft })
+            || RenderSize.Width <= 0)
         {
             return;
         }
 
         var at = WorldTransform.TranslationVector;
+        HostPopup.RelativeCorner = PlacementCorner.TopLeft;
         SetCurrentValue(LeftProperty, (double)at.X);
         SetCurrentValue(TopProperty, (double)at.Y);
         ApplyPositionToPopup();   // also when Left/Top already held these and raised no change
@@ -352,7 +365,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private void ApplyPositionToPopup()
     {
         if (HostPopup == null) return;
-        HostPopup.Placement = PlacementMode.Relative;   // Relative anchors the card's top-left at (offset), not centered
+        HostPopup.Placement = PlacementMode.Relative;   // Relative anchors the card's corner at (offset), not centered
         HostPopup.HorizontalOffset = Left;
         HostPopup.VerticalOffset = Top;
     }
@@ -610,6 +623,9 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         if (!_dragging || HostPopup?.PlacementTarget is not IInputComponent frame) return;
         var delta = e.GetPosition(frame) - _dragStart;
+        if (delta.X == 0 && delta.Y == 0) return;   // a press alone keeps a card at its corner
+
+        KeepTopLeft();
         // SetCurrentValue (not the CLR setter) so a two-way binding forwards Left/Top to the view model instead of being
         // masked by a Local write; OnPositionChanged then moves the popup. Clamp the top-left inside the parent window.
         var x = Math.Clamp(_dragBaseLeft + delta.X, 0, Math.Max(0, _dragParentW - _dragCardW));
@@ -637,8 +653,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
     private void OnCollapseClick(object sender, RoutedEventArgs e) => IsCollapsed = !IsCollapsed;
 
-    // Resize drags the bottom-right grip. Because the card is CENTERED by the popup, growing it by (dw,dh) moves both edges
-    // out by half; shift the popup offset by half the applied change so the top-left corner stays put under the grip.
+    // Resize drags the bottom-right grip, the top-left staying put: a card centered or kept to another corner is placed by
+    // its top-left on the first move, or growing it would move that corner too.
     private void OnResizePress(object sender, PointerPressedEventArgs e)
     {
         if (e.ChangedButton != MouseButtons.Left || !CanResize || HostPopup?.PlacementTarget is not IInputComponent frame)
@@ -663,6 +679,9 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         if (!_resizing || HostPopup?.PlacementTarget is not IInputComponent frame) return;
         var delta = e.GetPosition(frame) - _resizeStart;
+        if (delta.X == 0 && delta.Y == 0) return;   // a press alone keeps a card at its corner
+
+        KeepTopLeft();
         SizeCard(_resizeBaseW + delta.X, _resizeBaseH + delta.Y, _resizeLeft, _resizeTop, _resizeParentW, _resizeParentH);
     }
 
@@ -677,18 +696,9 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         Width = newW;
         Height = newH;
 
-        // Keep the top-left anchored: Center placement centers the card, so hold left = _resizeLeft by shifting the offset
-        // back half the (parent - size) change; a manually-placed (Relative) card's offset already IS its top-left.
-        if (HostPopup.Placement == PlacementMode.Center)
-        {
-            HostPopup.HorizontalOffset = left - (parentWidth - newW) / 2;
-            HostPopup.VerticalOffset = top - (parentHeight - newH) / 2;
-        }
-        else
-        {
-            HostPopup.HorizontalOffset = left;
-            HostPopup.VerticalOffset = top;
-        }
+        // Placed by its top-left before the resize (KeepTopLeft), the card's offset IS its top-left.
+        HostPopup.HorizontalOffset = left;
+        HostPopup.VerticalOffset = top;
     }
 
     /// <summary>Moves the card by an offset of the window it is shown over, kept inside it - what a drag by its title bar
@@ -698,6 +708,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
 
         // From where the card IS, as a drag starts: a centered card's Left is not its place until it has been moved once.
+        KeepTopLeft();
         var at = WorldTransform.TranslationVector;
         SetCurrentValue(LeftProperty, Math.Clamp(at.X + offset.X, 0, Math.Max(0, frame.RenderSize.Width - RenderSize.Width)));
         SetCurrentValue(TopProperty, Math.Clamp(at.Y + offset.Y, 0, Math.Max(0, frame.RenderSize.Height - RenderSize.Height)));
@@ -708,6 +719,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
 
+        KeepTopLeft();
         var at = WorldTransform.TranslationVector;
         SizeCard(width, height, at.X, at.Y, frame.RenderSize.Width, frame.RenderSize.Height);
     }

@@ -20,7 +20,8 @@ public partial class RenderCache
 
     private readonly List<IUIComponent> _childBuf2 = new();      // TryLastRankOfSubtree / SuccessorRank (never nest with _childBuf)
     private readonly List<IUIComponent> _localChildBuf = new();  // CollectSubtreeInPaintOrder scratch
-    private readonly Stack<IUIComponent> _collectStack = new();
+    private readonly HashSet<IUIComponent> _plannedHidden = new();   // planned, but hidden: ranked, drawing nothing
+    private readonly Stack<(IUIComponent Component, bool Hidden)> _collectHiddenStack = new();
 
     // The pre-validated record decision for each entry of _geometryDirtyBuffer, by INDEX (see RecordStructuralFrame).
     private readonly List<PartialRecord> _dirtyDecisions = new();
@@ -176,6 +177,7 @@ public partial class RenderCache
         _plannedList.Clear();
         _plannedSet.Clear();
         _plannedRanks.Clear();
+        _plannedHidden.Clear();
         _removedList.Clear();
         _undrawnList.Clear();
         _removedSet.Clear();
@@ -402,8 +404,17 @@ public partial class RenderCache
         var wasGeometryValid = component.IsGeometryValid;
         var renderStart = System.Diagnostics.Stopwatch.GetTimestamp();
         _drawingContextInternal.Clear();
-        component.Render(_drawingContext);
+        component.Render(_drawingContext);   // rendered even when hidden: that is what consumes its dirty flag
         Core.Diagnostics.RuntimeStats.LastRecordRenderMs += System.Diagnostics.Stopwatch.GetElapsedTime(renderStart).TotalMilliseconds;
+
+        // Hidden holds its place and draws nothing, as in the full walk.
+        if (_plannedHidden.Contains(component))
+        {
+            packet.Draws.Add(new ComponentDraw(component, CopyCommands(System.Array.Empty<Core.Graphics.IDrawCommand>()), false, rank, true));
+            MirrorUnits(component, 0, false);
+            return;
+        }
+
         var copyStart = System.Diagnostics.Stopwatch.GetTimestamp();
         var commands = CopyCommands(_drawingContextInternal.GetDrawCommands());
         Core.Diagnostics.RuntimeStats.LastRecordCopyMs += System.Diagnostics.Stopwatch.GetElapsedTime(copyStart).TotalMilliseconds;
@@ -516,23 +527,26 @@ public partial class RenderCache
     private IUIComponent NextSibling(IUIComponent component) =>
         _nextSibling.TryGetValue(component, out var next) ? next : null;
 
-    // A component's visible subtree, in paint order. Iterative with a reused stack (the recursive version allocated an
-    // array per node per structural frame, and a fill collects thousands of subtrees).
+    // A component's subtree in paint order, as the full walk orders it: COLLAPSED leaves, HIDDEN stays - inherited by
+    // what is under it, and marked in _plannedHidden so it is ranked but draws nothing. A hidden part keeps its rank to
+    // come back in place, and that place is among the neighbours of the subtree it is placed with now. Iterative with a
+    // reused stack (the recursive version allocated an array per node per structural frame).
     private void CollectSubtreeInPaintOrder(IUIComponent root, List<IUIComponent> into)
     {
-        if (root.Visibility != Visibility.Visible) return;
-
-        _collectStack.Clear();
-        _collectStack.Push(root);
-        while (_collectStack.Count > 0)
+        _collectHiddenStack.Clear();
+        _collectHiddenStack.Push((root, false));
+        while (_collectHiddenStack.Count > 0)
         {
-            var component = _collectStack.Pop();
-            if (component.Visibility != Visibility.Visible) continue;
+            var (component, hiddenByAncestor) = _collectHiddenStack.Pop();
+            if (component.Visibility == Visibility.Collapsed) continue;
+
+            var hidden = hiddenByAncestor || component.Visibility != Visibility.Visible;
             into.Add(component);
+            if (hidden) _plannedHidden.Add(component);
 
             // Push reversed, so they pop in paint order.
             ChildrenInPaintOrder(component, _localChildBuf); Core.Diagnostics.RuntimeStats.ScansCollect += _localChildBuf.Count;
-            for (var i = _localChildBuf.Count - 1; i >= 0; i--) _collectStack.Push(_localChildBuf[i]);
+            for (var i = _localChildBuf.Count - 1; i >= 0; i--) _collectHiddenStack.Push((_localChildBuf[i], hidden));
         }
     }
 

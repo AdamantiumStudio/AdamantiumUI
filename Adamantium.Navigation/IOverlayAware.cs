@@ -27,12 +27,14 @@ public interface IOverlayAware
     bool IsModal => false;
 
     /// <summary>Where the window first appears. Default <see cref="OverlayStartupLocation.CenterOwner"/>; use
-    /// <see cref="OverlayStartupLocation.Manual"/> to open it at <see cref="Left"/>/<see cref="Top"/>.</summary>
+    /// <see cref="OverlayStartupLocation.Manual"/> to open it at <see cref="Left"/>/<see cref="Top"/>, or a corner such as
+    /// <see cref="OverlayStartupLocation.BottomRight"/> to open it that far from the corner's edges.</summary>
     OverlayStartupLocation StartupLocation => OverlayStartupLocation.CenterOwner;
 
-    /// <summary>The window's absolute left/top, in the parent window's coordinates (like <c>Window.Left</c>/<c>Window.Top</c>).
+    /// <summary>The window's left/top, in the parent window's coordinates (like <c>Window.Left</c>/<c>Window.Top</c>) -
+    /// opened at a right or bottom corner, the room from that edge until the window is dragged, resized or collapsed.
     /// TWO-WAY bound to the window: assign it (raise PropertyChanged) and the window moves; drag the window and it updates.
-    /// Used as the opening position when <see cref="StartupLocation"/> is Manual. Override with settable, notifying
+    /// Used as the opening position unless <see cref="StartupLocation"/> centers it. Override with settable, notifying
     /// properties to use them (the defaults here are inert).</summary>
     double Left { get => 0; set { } }
     double Top { get => 0; set { } }

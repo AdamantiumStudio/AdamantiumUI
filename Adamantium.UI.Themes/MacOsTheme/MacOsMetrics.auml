@@ -54,14 +54,17 @@
     <!-- A Mac toolbar's buttons stand apart, not shoulder to shoulder. -->
     <sys:Double x:Key="ToolBarSpacing">6</sys:Double>
     <sys:Double x:Key="ToolBarGripLength">14</sys:Double>
+    <!-- Down the side, a context's name cut to a strip of its color when the commands need the room. -->
+    <sys:Double x:Key="ToolBarContextualStripLength">6</sys:Double>
     <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
     <sys:Double x:Key="ToolBarContextualWashOpacity">0.25</sys:Double>
     <!-- The frame round a section a shown context comes from, and round the chevron when it is in the menu. -->
     <Thickness x:Key="ToolBarContextFrameThickness">1.5</Thickness>
     <!-- Its rounding: the commands' (CornerRadiusDefault) plus the 2 it stands past them, so the two curves run alike. -->
     <CornerRadius x:Key="ToolBarContextFrameRadius">8</CornerRadius>
-    <!-- Down the side: the widest a command stands on the bar's column - a number's narrow form fits, a list is folded. -->
-    <sys:Double x:Key="ToolBarColumnWidth">40</sys:Double>
+    <!-- Down the side: the widest a command stands on the bar's column - an icon's button (42) and a number's narrow form
+         fit, a list is folded. -->
+    <sys:Double x:Key="ToolBarColumnWidth">44</sys:Double>
     <!-- The card a folded command opens beside the column. -->
     <Thickness x:Key="ToolBarCardPadding">10</Thickness>
     <sys:Double x:Key="ToolBarCardSpacing">6</sys:Double>

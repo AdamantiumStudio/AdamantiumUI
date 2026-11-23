@@ -258,6 +258,8 @@
     <sys:Double x:Key="DragHandleWidth">12</sys:Double>
     <sys:Double x:Key="DragHandleHeight">16</sys:Double>
     <sys:Double x:Key="ToolBarGripLength">8</sys:Double>
+    <!-- Down the side, a context's name cut to a strip of its color when the commands need the room. -->
+    <sys:Double x:Key="ToolBarContextualStripLength">5</sys:Double>
     <sys:Double x:Key="ToolBarOverflowButtonLength">16</sys:Double>
     <sys:Double x:Key="ToolBarSpacing">2</sys:Double>
     <!-- A contextual bar's wash: how much of its context's accent shows behind it. -->
@@ -266,7 +268,8 @@
     <Thickness x:Key="ToolBarContextFrameThickness">1.5</Thickness>
     <!-- Its rounding: the commands' (CornerRadiusDefault) plus the 2 it stands past them, so the two curves run alike. -->
     <CornerRadius x:Key="ToolBarContextFrameRadius">5</CornerRadius>
-    <!-- Down the side: the widest a command stands on the bar's column - a number's narrow form fits, a list is folded. -->
+    <!-- Down the side: the widest a command stands on the bar's column - an icon's button (34) and a number's narrow form
+         fit, a list is folded. -->
     <sys:Double x:Key="ToolBarColumnWidth">36</sys:Double>
     <!-- The card a folded command opens beside the column. -->
     <Thickness x:Key="ToolBarCardPadding">8</Thickness>

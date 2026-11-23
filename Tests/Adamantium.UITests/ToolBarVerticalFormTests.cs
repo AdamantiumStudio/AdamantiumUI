@@ -74,7 +74,7 @@ public class ToolBarVerticalFormTests
     }
 
     // A section of a bold button, an author field under its label and a narrow size button under its own, down the side.
-    private Side Build(double height = 600)
+    private Side Build(double height = 600, bool collapsed = false)
     {
         var side = new Side { Data = new Form() };
         side.Bold = new Button { Width = 30, Height = 24, Content = "B" };
@@ -90,7 +90,10 @@ public class ToolBarVerticalFormTests
             Header = "Review",
             Items = { side.Bold, side.AuthorLabel, side.Author, side.SizeLabel, side.Size }
         };
-        side.Bar = new ToolBar { Header = "Review", Items = { side.Group } };
+        side.Bar = new ToolBar
+        {
+            Header = "Review", Items = { side.Group }, Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible
+        };
         side.Tray = new ToolBarTray { Orientation = Orientation.Vertical, Items = { side.Bar } };
         side.Window = new Window
         {
@@ -248,6 +251,104 @@ public class ToolBarVerticalFormTests
             Assert.That(authorLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(sizeLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(ToolTipService.GetToolTip(size), Is.Null, "along a bar the label stands beside it");
+        });
+    }
+
+    // A label tied to its command only after the bar stands down the side - a binding by element name that resolves once
+    // the bar is in its tree - leaves the column with the command all the same.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ALabelTiedAfterTheBarStands_LeavesTheColumnWithItsCommand(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build(collapsed: true);
+        AutomationProperties.SetLabeledBy(side.Size, null);
+        side.Bar.Visibility = Visibility.Visible;
+        Show(side);
+
+        AutomationProperties.SetLabeledBy(side.Size, side.SizeLabel);
+        Show(side);
+        var sizeLabel = ItemHolding(side.Group, side.SizeLabel);
+        var size = ItemHolding(side.Group, side.Size);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sizeLabel.Visibility, Is.EqualTo(Visibility.Collapsed), "the label leaves with its command");
+            Assert.That(size.Form, Is.EqualTo(ToolBarItemForm.Shown));
+            Assert.That(size.RenderSize.Width, Is.LessThanOrEqualTo(side.Bar.ColumnWidth + 0.01), "as wide as the column");
+        });
+    }
+
+    // A bar down the side set to wrap, in a tray shorter than its sections: the section that does not fit stands in a
+    // column beside, not past the tray's end and not in the menu.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ABarDownTheSideThatWraps_PutsASectionThatDoesNotFitInANewColumn(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var second = new ToolBarGroup
+        {
+            Header = "More",
+            Items =
+            {
+                new Button { Width = 30, Height = 24, Content = "1" }, new Button { Width = 30, Height = 24, Content = "2" },
+                new Button { Width = 30, Height = 24, Content = "3" }
+            }
+        };
+        side.Bar.Items.Add(second);
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        Show(side);
+        var first = side.Group.RenderSize.Height;
+        side.Tray.MaxHeight = first + 40;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.LessThanOrEqualTo(side.Tray.MaxHeight + 0.01), "within the tray");
+            Assert.That(side.Bar.HasOverflowItems, Is.False, "wrapped, not in the menu");
+            Assert.That(second.TranslatePoint(new Adamantium.Mathematics.Vector2<double>(0, 0), side.Bar).X,
+                Is.GreaterThan(side.Group.TranslatePoint(new Adamantium.Mathematics.Vector2<double>(0, 0), side.Bar).X),
+                "in a column beside");
+        });
+    }
+
+    // A bar that wraps, a section of it longer than the whole tray: no column holds it, so it goes to the menu, and the
+    // bar stays within the tray.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ABarThatWraps_SendsASectionLongerThanTheTrayToTheMenu(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var small = new ToolBarGroup { Header = "Small", Items = { new Button { Width = 30, Height = 24, Content = "1" } } };
+        side.Bar.Items.Insert(0, small);
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        Show(side);
+        // Room for the small section and the bar's chrome, less than the long section with it.
+        side.Tray.MaxHeight = small.RenderSize.Height + 50;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.LessThanOrEqualTo(side.Tray.MaxHeight + 0.01), "within the tray");
+            Assert.That(side.Group.IsInOverflow, Is.True, "the long section is in the menu");
+            Assert.That(small.IsInOverflow, Is.False, "what fits stays on the bar");
+        });
+    }
+
+    // A tray shorter than its bar can shrink to - its grip and one command: the bar is cut at the tray's edge, not drawn
+    // over what stands below it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ATrayShorterThanItsBarCanShrink_CutsTheBarAtItsEdge(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        side.Tray.MaxHeight = 20;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.GreaterThan(side.Tray.RenderSize.Height), "or nothing sticks out");
+            Assert.That(side.Tray.ClipToBounds, Is.True);
         });
     }
 

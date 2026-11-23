@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -270,6 +272,34 @@ public class DataGridCell : ContentControl
     /// <summary>What the editor currently holds, for the commit to write. Null when nothing has been typed, in which case
     /// the commit falls back to the value the cell already showed.</summary>
     public object EditedValue { get; set; }
+
+    /// <summary>Writes what the editor's own bindings hold back to the row - those that wait for it, bound with
+    /// <see cref="UpdateSourceTrigger.Explicit"/>: the commit writes them, a cancel leaves them unwritten. A template
+    /// column's editor binds the row's members itself, and only so can Escape take back what was typed.</summary>
+    internal void WriteExplicitBindings()
+    {
+        var pending = new Stack<IUIComponent>();
+        pending.Push(this);
+        while (pending.Count > 0)
+        {
+            var node = pending.Pop();
+            foreach (var expression in BindingEngine.GetBindings(node))
+            {
+                if (expression is BindingExpression
+                    {
+                        Binding: { UpdateSourceTrigger: UpdateSourceTrigger.Explicit, Mode: BindingMode.TwoWay or BindingMode.OneWayToSource }
+                    })
+                {
+                    expression.UpdateSource();
+                }
+            }
+
+            foreach (var child in node.VisualChildren)
+            {
+                pending.Push(child);
+            }
+        }
+    }
 
     internal object ValueForCommit()
     {

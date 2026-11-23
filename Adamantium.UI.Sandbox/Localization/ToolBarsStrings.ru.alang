@@ -37,6 +37,8 @@
     <Phrase Key="Side" Text="Полоска сбоку"/>
     <Phrase Key="SideHint" Text="Сбоку полоска — колонка шириной с команду. Поле с числом стоит в узкой форме, его подпись становится подсказкой; поле автора и список шрифтов слишком широки, и каждое свёрнуто в кнопку, которая открывает его рядом с колонкой. Поверните трей вдоль — всё станет как было."/>
     <Phrase Key="SideOrientation" Text="Трей идёт"/>
+    <Phrase Key="SideLength" Text="Длина трея"/>
+    <Phrase Key="SideWrapping" Text="Разделы, которым не хватило места"/>
     <Phrase Key="Picture" Text="Формат рисунка"/>
     <Phrase Key="PictureTools" Text="Работа с рисунками"/>
     <Phrase Key="PictureSize" Text="Размер"/>

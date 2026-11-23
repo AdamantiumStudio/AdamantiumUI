@@ -350,7 +350,7 @@ public class PopupLayer
             case PlacementMode.Left:     x = Side(tx - size.Width + dx, tx + tw - dx); y = cy + dy; break;
             case PlacementMode.Right:    x = Side(tx + tw + dx, tx - size.Width - dx); y = cy + dy; break;
             case PlacementMode.Center:   x = tx + (tw - size.Width) / 2 + dx; y = ty + (th - size.Height) / 2 + dy; break;
-            case PlacementMode.Relative: (x, y) = AtTargetPoint(dx, dy); break;
+            case PlacementMode.Relative: (x, y) = AtCorner(dx, dy); break;
             default:                     x = cx + dx; y = Pick(ty + th + dy, ty - size.Height - dy, size.Height, windowSize.Height, out _); break;   // Bottom
         }
 
@@ -374,6 +374,19 @@ public class PopupLayer
         }
 
         static double Overrun(double at, double extent, double room) => Math.Max(0, -at) + Math.Max(0, at + extent - room);
+
+        // The popup's corner the offsets in from the target's same corner - in the target's own units, as the point is
+        // drawn - its top-left back from there by its size.
+        (double X, double Y) AtCorner(double ox, double oy)
+        {
+            var corner = popup.RelativeCorner;
+            var fromRight = corner is PlacementCorner.TopRight or PlacementCorner.BottomRight;
+            var fromBottom = corner is PlacementCorner.BottomLeft or PlacementCorner.BottomRight;
+            var width = popup.EffectiveTarget?.RenderSize.Width ?? tw;
+            var height = popup.EffectiveTarget?.RenderSize.Height ?? th;
+            var (px, py) = AtTargetPoint(fromRight ? width - ox : ox, fromBottom ? height - oy : oy);
+            return (fromRight ? px - size.Width : px, fromBottom ? py - size.Height : py);
+        }
 
         (double X, double Y) AtTargetPoint(double ox, double oy)
         {

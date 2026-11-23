@@ -949,6 +949,44 @@ public class ToolBarTrayTests
         });
     }
 
+    // Down the side, a contextual bar whose commands want the room its context's name takes: the name is cut to a strip
+    // of its color, its text the tooltip, and the commands stand; given room again, the whole name comes back.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AContextsNameDownTheSide_IsCutToAStrip_WhenTheCommandsNeedTheRoom(System.Type styleSet)
+    {
+        Use(styleSet);
+        var table = Bar("Table", 0, 0, commands: 6);
+        table.IsContextual = true;
+        table.ContextualHeader = "Table Tools";
+        var tray = Tray(table);
+        tray.Orientation = Orientation.Vertical;
+        var side = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { tray } } };
+        Show(side);
+        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlateDown");
+        var whole = table.RenderSize.Height;
+        var plateWhole = plate.RenderSize.Height;
+
+        tray.MaxHeight = whole - plateWhole / 2;
+        Show(side);
+        var cutShort = table.IsContextualHeaderShort;
+        var cutOverflow = table.HasOverflowItems;
+        var cutPlate = plate.RenderSize.Height;
+        var cutTip = ToolTipService.GetToolTip(plate);
+        tray.MaxHeight = whole + 20;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plateWhole, Is.GreaterThan(30), "the whole name, turned");
+            Assert.That(cutShort, Is.True);
+            Assert.That(cutOverflow, Is.False, "the commands stand in the room the name gave");
+            Assert.That(cutPlate, Is.LessThan(10), "a strip");
+            Assert.That(cutTip, Is.EqualTo("Table Tools"));
+            Assert.That(table.IsContextualHeaderShort, Is.False, "room again: the whole name");
+            Assert.That(plate.RenderSize.Height, Is.EqualTo(plateWhole).Within(0.5));
+        });
+    }
+
     // The section a shown context comes from is framed and washed in the context's color, and nothing moves for it; a
     // section in no context has neither.
     [TestCaseSource(nameof(StyleSets))]
@@ -1089,6 +1127,80 @@ public class ToolBarTrayTests
         });
     }
 
+    // A tray that takes only some bars refuses the rest where it would have taken them: no mark, nothing moved.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ATrayThatTakesSomeBars_RefusesTheRest(System.Type styleSet)
+    {
+        Use(styleSet);
+        var taken = Bar("Taken", 0, 0);
+        var refused = Bar("Refused", 0, 1);
+        var top = Tray(taken, refused);
+        var bottom = new PickyTray(taken);
+        Style(bottom);
+        bottom.Items.Add(Bar("Own", 0, 0));
+        foreach (var bar in bottom.Items.OfType<ToolBar>())
+        {
+            Style(bar);
+        }
+
+        var root = new Border
+        {
+            Width = 1000, Height = 400,
+            Child = new StackPanel { Children = { top, new Border { Height = 100 }, bottom } }
+        };
+        Show(root);
+        var own = bottom.Items.OfType<ToolBar>().Single();
+        var into = At(own, root) + new Vector2<double>(own.RenderSize.Width - 2, own.RenderSize.Height / 2);
+
+        var marked = bottom.ShowDropPlace(refused, root.TranslatePoint(into, bottom));
+        bottom.HideDropPlace();
+        Drag(refused, root, into);
+        Drag(taken, root, into);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(marked, Is.False);
+            Assert.That(top.Items, Does.Contain(refused));
+            Assert.That(bottom.Items, Does.Contain(taken));
+        });
+    }
+
+    // Down the side the grip's drawing lies across the bar, inside the grip, clear of the first command.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AGripDownTheSide_DrawsInsideItself(System.Type styleSet)
+    {
+        Use(styleSet);
+        var bar = Bar("Side", 0, 0);
+        var tray = Tray(bar);
+        tray.Orientation = Orientation.Vertical;
+        var root = Shown(tray, 200);
+        var grip = Grip(bar);
+        Style(grip);
+        Show(root);
+        var dots = grip.GetVisualDescendants().OfType<Adamantium.UI.Controls.Shapes.Path>().Single();
+        var first = (IUIComponent)bar.Items[0];
+        var corner = dots.TranslatePoint(new Vector2<double>(0, 0), bar);
+        var opposite = dots.TranslatePoint(new Vector2<double>(dots.RenderSize.Width, dots.RenderSize.Height), bar);
+        var top = System.Math.Min(corner.Y, opposite.Y);
+        var bottom = System.Math.Max(corner.Y, opposite.Y);
+        var across = System.Math.Abs(opposite.X - corner.X);
+        var gripTop = At(grip, bar).Y;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(across, Is.GreaterThan(bottom - top), "lying across");
+            Assert.That(top, Is.GreaterThanOrEqualTo(gripTop - 0.01));
+            Assert.That(bottom, Is.LessThanOrEqualTo(gripTop + grip.RenderSize.Height + 0.01));
+            Assert.That(bottom, Is.LessThan(At(first, bar).Y));
+        });
+    }
+
+    private sealed class PickyTray(ToolBar takes) : ToolBarTray
+    {
+        protected override bool CanTake(ToolBar bar) =>
+            (ReferenceEquals(bar, takes) || ReferenceEquals(bar.Tray, this)) && base.CanTake(bar);
+    }
+
     private sealed class BarModel(string name)
     {
         public string Name { get; } = name;
@@ -1124,27 +1236,23 @@ public class ToolBarTrayTests
         });
     }
 
+    // The menu stays open while it is worked in: a command run from it leaves it open.
     [TestCaseSource(nameof(StyleSets))]
-    public void ACommandRunFromTheOverflowMenu_PutsTheMenuAway(System.Type styleSet)
+    public void ACommandRunFromTheOverflowMenu_LeavesTheMenuOpen(System.Type styleSet)
     {
         Use(styleSet);
         var bar = Bar("Bar", 0, 0, commands: 4);
         var tray = Tray(bar);
-        var root = Shown(tray, 70);
+        Shown(tray, 70);
         var command = bar.Items.Cast<Button>().Last(button => IsInOverflow(bar, button));
 
         bar.IsOverflowOpen = true;
-        var opened = bar.IsOverflowOpen;
         command.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, command)
         {
             RoutedEvent = ButtonBase.ClickEvent
         });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(opened, Is.True);
-            Assert.That(bar.IsOverflowOpen, Is.False);
-        });
+        Assert.That(bar.IsOverflowOpen, Is.True);
     }
 
     // The room between bars is the tray's, only between neighbours: a bar alone down the side stands in the middle of

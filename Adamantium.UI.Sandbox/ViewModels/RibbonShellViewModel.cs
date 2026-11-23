@@ -229,8 +229,49 @@ public partial class RibbonShellViewModel : IWindowAware
 
     private ObservableCollection<ShellCommand> _quickAccess;
 
-    public RibbonShellViewModel()
+    private readonly IOverlayService _overlays;
+    private System.Threading.CancellationTokenSource _diagnosticsWindow;
+
+    /// <summary>Whether the live diagnostics are shown, in an overlay window of this one that also chooses its
+    /// presentation; the window's close button turns this off.</summary>
+    [Bindable] private bool _diagnosticsOpen;
+
+    partial void OnDiagnosticsOpenChanged(bool value)
     {
+        if (!value)
+        {
+            _diagnosticsWindow?.Cancel();
+            return;
+        }
+
+        if (_diagnosticsWindow == null && _overlays != null)
+        {
+            _ = ShowDiagnosticsWindow();
+        }
+    }
+
+    // Open until the switch closes it - cancelling the token it was shown with - or its own close button does.
+    private async System.Threading.Tasks.Task ShowDiagnosticsWindow()
+    {
+        using var shown = new System.Threading.CancellationTokenSource();
+        _diagnosticsWindow = shown;
+        try
+        {
+            // Under the switch, which stands at the document's top-right, below the band.
+            await _overlays.ShowOverlayAsync<DiagnosticsOverlayViewModel>(
+                new NavigationParameters().Add("presentation", this).Add("top", 260.0), shown.Token);
+        }
+        finally
+        {
+            _diagnosticsWindow = null;
+            DiagnosticsOpen = false;
+        }
+    }
+
+    // With no overlay service - a test that makes the view model alone - the Diagnostics switch shows nothing.
+    public RibbonShellViewModel(IOverlayService overlays = null)
+    {
+        _overlays = overlays;
         foreach (var module in Modules)
         {
             Take(module);
