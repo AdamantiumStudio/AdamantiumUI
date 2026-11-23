@@ -24,6 +24,8 @@
 
 ### Fixed
 
+- The chip a context's name sits on - a ribbon's contextual group, a contextual tool bar's plate - was dark in the light
+  variants too, a dark hole in a light window; it is light there now.
 - A `Grid` child spanning several columns or rows counted for nothing when none of them took a size of its own - Auto
   tracks, or stars measured with no limit - and only in part when some did: the excess was shared among every track
   left, the Auto ones too, which take none of it. A child across Auto tracks alone now sizes them, and the excess goes
