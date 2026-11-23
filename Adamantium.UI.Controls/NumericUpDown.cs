@@ -864,8 +864,10 @@ public class NumericUpDown : RangeLimitsBase
     protected override void OnPointerCaptureLost(PointerEventArgs e)
     {
         base.OnPointerCaptureLost(e);
-        // Only its own capture: a part's, let go as the drag takes the pointer, bubbles here too.
-        if (!_scrubbing || !ReferenceEquals(e.Source, this))
+        // Only the dragging pointer's capture gone from it: a part's, taken over as the drag begins, bubbles here too -
+        // told as its own, the source set to this control as the event leaves the template - and so does another
+        // pointer's.
+        if (!_scrubbing || !ReferenceEquals(e.Pointer, _scrubPointer) || ReferenceEquals(_scrubPointer.Captured, this))
             return;
 
         _scrubArmed = false;
@@ -920,6 +922,7 @@ public class NumericUpDown : RangeLimitsBase
     private double _scrubOriginX;  // in the ROOT's space - the one frame that cannot move under the drag
     private double _scrubFrom;
     private int _scrubDirection;   // -1 / +1: which side of the press the drag is on, so the pointer only changes on a real turn
+    private Pointer _scrubPointer; // the pointer dragging: only its capture going elsewhere ends the drag
 
     private void OnScrubPressed(object sender, PointerPressedEventArgs e)
     {
@@ -986,9 +989,12 @@ public class NumericUpDown : RangeLimitsBase
     private void BeginScrub(Pointer pointer)
     {
         Interact(Interaction.Drag);
-        _scrubbing = true;
+        // The text's selection let go first: it gives up the pointer, which a drag already under way would take for
+        // its own end.
         _text?.CancelPointerSelection();
         _text?.SuppressCaret(true);
+        _scrubbing = true;
+        _scrubPointer = pointer;
         pointer.Capture(this);
         _scrubDirection = 0;
     }
