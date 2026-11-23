@@ -78,4 +78,15 @@
   <Absent Target="id=PictureBar/type=Button,name=Author" />
   <Expand Target="id=SideOrientation" />
   <Select Target="id=SideOrientation/name=Vertical" />
+  <!-- The side tray shortened: the Arrange section goes to the bar's menu; set to wrap, it stands in a column beside. -->
+  <Set Target="id=SideLength" Value="420" />
+  <Wait Target="id=PictureBar" HasOverflowItems="True" Timeout="5s" />
+  <Absent Target="id=WrapCommand" />
+  <Expand Target="id=SideWrapping" />
+  <Select Target="id=SideWrapping/name=Wrap" />
+  <Wait Target="id=WrapCommand" Timeout="5s" />
+  <Expect Target="id=PictureBar" HasOverflowItems="False" />
+  <Set Target="id=SideLength" Value="900" />
+  <Expand Target="id=SideWrapping" />
+  <Select Target="id=SideWrapping/name=NoWrap" />
 </Scenario>

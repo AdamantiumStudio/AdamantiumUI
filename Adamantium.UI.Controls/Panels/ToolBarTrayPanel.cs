@@ -77,10 +77,13 @@ public class ToolBarTrayPanel : Panel
                 var bar = band.Bars[i];
                 var full = bar.FullLength;
                 var shortest = bar.ShortestLength;
+                var least = bar.LeastLength;
+                bar.GiveLength(band.Lengths[i]);
                 bar.Measure(horizontal
                     ? new Size<double>(band.Lengths[i], double.PositiveInfinity)
                     : new Size<double>(double.PositiveInfinity, band.Lengths[i]));
-                changed |= !full.Equals(bar.FullLength) || !shortest.Equals(bar.ShortestLength);
+                changed |= !full.Equals(bar.FullLength) || !shortest.Equals(bar.ShortestLength) ||
+                           !least.Equals(bar.LeastLength);
             }
 
             if (!changed)
@@ -116,6 +119,16 @@ public class ToolBarTrayPanel : Panel
             }
 
             band.Lengths[i] = length;
+        }
+
+        // Still lacking with every bar at its shortest: a bar that wraps gives up its longest line too, down to the least
+        // it can be - its sections longer than the line it gets go to its menu - rather than stand past the tray's end.
+        for (var i = band.Bars.Count - 1; i >= 0 && lacking > 0; i--)
+        {
+            var bar = band.Bars[i];
+            var given = Math.Min(lacking, Math.Max(0, band.Lengths[i] - bar.LeastLength));
+            band.Lengths[i] -= given;
+            lacking -= given;
         }
     }
 

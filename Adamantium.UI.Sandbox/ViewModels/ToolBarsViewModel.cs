@@ -25,6 +25,13 @@ public partial class ToolBarsViewModel : TabPageViewModel
     /// <summary>Which way the picture's tray runs: down the side, its commands in their narrow forms or folded; or along.</summary>
     [Bindable] private Adamantium.UI.Controls.Panels.Orientation _sideOrientation = Adamantium.UI.Controls.Panels.Orientation.Vertical;
 
+    /// <summary>How long the picture's tray may be: shortened, its bar sends its last sections to its menu, or onto a new
+    /// column when set to wrap.</summary>
+    [Bindable] private double _sideLength = 900;
+
+    /// <summary>Where the sections that do not fit on the picture's bar go: to its menu, or onto a new column.</summary>
+    [Bindable] private Adamantium.UI.Controls.CommandWrapping _sideWrapping;
+
     /// <summary>The picture's size, in centimetres, as its two number boxes show it.</summary>
     [Bindable] private double? _pictureWidth = 5.08;
 

@@ -82,6 +82,12 @@ public class ToolBar : ItemsControl
 
     public static readonly AdamantiumProperty HasContextualHeaderProperty = HasContextualHeaderPropertyKey.Property;
 
+    private static readonly AdamantiumPropertyKey IsContextualHeaderShortPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsContextualHeaderShort), typeof(bool), typeof(ToolBar),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty IsContextualHeaderShortProperty = IsContextualHeaderShortPropertyKey.Property;
+
     private static readonly AdamantiumPropertyKey HasContextInOverflowPropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(HasContextInOverflow), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
@@ -156,6 +162,9 @@ public class ToolBar : ItemsControl
     private Panel _onBar;
     private Panel _inOverflow;
     private double _chrome = double.NaN;
+
+    // The bar's chrome with the context's whole name, as last measured whole; NaN before.
+    private double _chromeWithWholeHeader = double.NaN;
     private readonly RoutedEventHandler _closeOverflow;
 
     public ToolBar()
@@ -302,6 +311,14 @@ public class ToolBar : ItemsControl
         private set => SetValue(HasContextualHeaderPropertyKey, value);
     }
 
+    /// <summary>Whether the context's name down the side stands short - a strip of its color, the name its tooltip -
+    /// as the bar has no room for its commands beside the whole name. Along a bar, never.</summary>
+    public bool IsContextualHeaderShort
+    {
+        get => GetValue<bool>(IsContextualHeaderShortProperty);
+        private set => SetValue(IsContextualHeaderShortPropertyKey, value);
+    }
+
     /// <summary>Whether a section a shown context comes from (<see cref="ToolBarGroup.IsInContext"/>) is in the overflow
     /// menu, so the chevron is marked in its color (<see cref="OverflowContextAccent"/>).</summary>
     public bool HasContextInOverflow
@@ -351,9 +368,13 @@ public class ToolBar : ItemsControl
     /// <summary>How long the bar is with every command it can show on it.</summary>
     internal double FullLength { get; private set; } = double.NaN;
 
-    /// <summary>How short the bar can be: its grip, the commands that never overflow and the overflow button - and on a
+    /// <summary>How short the bar would be: its grip, the commands that never overflow and the overflow button - and on a
     /// bar whose commands wrap, its longest command, since each goes onto a line whole.</summary>
     internal double ShortestLength { get; private set; } = double.NaN;
+
+    /// <summary>How short the bar can be at all: its grip, the commands that never overflow and the overflow button. A bar
+    /// that wraps is given less than its <see cref="ShortestLength"/> only when its tray has no more room.</summary>
+    internal double LeastLength { get; private set; } = double.NaN;
 
     internal ToolBarTray Tray => this.GetVisualAncestors().OfType<ToolBarTray>().FirstOrDefault();
 
@@ -377,6 +398,9 @@ public class ToolBar : ItemsControl
             popup.PlacementTarget = chevron;
         }
         _chrome = double.NaN;
+        // A new template draws the name anew: whole, until its own measure says otherwise.
+        _chromeWithWholeHeader = double.NaN;
+        IsContextualHeaderShort = false;
         Realize();
     }
 
@@ -566,19 +590,45 @@ public class ToolBar : ItemsControl
             }
         }
 
-        // In the tray's terms: with the bar's margin, as the length it is given is.
+        if (!IsContextualHeaderShort)
+        {
+            _chromeWithWholeHeader = _chrome;
+        }
+
+        // In the tray's terms: with the bar's margin, as the length it is given is - and the whole name, as it would
+        // stand with room enough.
         var margin = horizontal ? Margin.Left + Margin.Right : Margin.Top + Margin.Bottom;
-        FullLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode == ToolBarOverflowMode.Always)) +
+        FullLength = margin + ChromeWithWholeHeader + OnBar(lengths, Overflowing(mode => mode == ToolBarOverflowMode.Always)) +
                      (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0);
-        // A bar that wraps is as short as its longest command: the rest go onto new lines.
+        // The least it can be: its chrome, what never goes to the menu, and the menu's chevron.
+        LeastLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
+                      (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
+        // A bar that wraps would rather be as short as its longest command, the rest on new lines; given less, its sections
+        // longer than a line go to the menu.
         ShortestLength = Wraps
             ? margin + _chrome + Longest(lengths) + (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0)
-            : margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
-              (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
+            : LeastLength;
         return size;
     }
 
     private static double Along(Size<double> size, bool horizontal) => horizontal ? size.Width : size.Height;
+
+    // The chrome as it is with the context's whole name: as last measured whole, while it stands cut.
+    private double ChromeWithWholeHeader =>
+        IsContextualHeaderShort && !double.IsNaN(_chromeWithWholeHeader) ? _chromeWithWholeHeader : _chrome;
+
+    /// <summary>Told by its tray, before it is measured, the length it is given: down the side, the context's name is cut
+    /// to a strip when that is less than the bar's whole length with the whole name, so the commands keep its room. Told
+    /// from without, by a length that does not move when the name is cut, so cutting it never undoes it.</summary>
+    internal void GiveLength(double length)
+    {
+        var cut = Orientation == Orientation.Vertical && HasContextualHeader && !double.IsNaN(FullLength) &&
+                  length < FullLength - Tolerance;
+        if (cut != IsContextualHeaderShort)
+        {
+            IsContextualHeaderShort = cut;
+        }
+    }
 
     private readonly List<ToolBarItem> _onColumn = [];
     private readonly List<ToolBarItem> _offColumn = [];
@@ -631,11 +681,18 @@ public class ToolBar : ItemsControl
         return lengths;
     }
 
-    private bool[] Overflowing(double room, double[] lengths)
+    private bool[] Overflowing(double room, double[] lengths) =>
+        Overflowing(room, lengths, double.IsNaN(_chrome) ? 0 : _chrome);
+
+    private bool[] Overflowing(double room, double[] lengths, double chrome)
     {
-        var chrome = double.IsNaN(_chrome) ? 0 : _chrome;
         var overflowing = Overflowing(mode => mode == ToolBarOverflowMode.Always);
-        if (Wraps || chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
+        if (Wraps)
+        {
+            return OverflowingTooLong(room, lengths, overflowing, chrome);
+        }
+
+        if (chrome + OnBar(lengths, overflowing) + (overflowing.Contains(true) ? OverflowButtonLength : 0) <=
             room + Tolerance)
         {
             return overflowing;
@@ -649,6 +706,27 @@ public class ToolBar : ItemsControl
             }
 
             if (!overflowing[i] && OverflowModeOf(_commands[i]) == ToolBarOverflowMode.AsNeeded)
+            {
+                overflowing[i] = true;
+            }
+        }
+
+        return overflowing;
+    }
+
+    // On a bar that wraps every command finds a line, unless it is longer than a whole line: no line holds it, so it goes
+    // to the menu, as the bar does not wrap - and the menu's chevron takes its own room on the line.
+    private bool[] OverflowingTooLong(double room, double[] lengths, bool[] overflowing, double chrome)
+    {
+        if (double.IsInfinity(room))
+        {
+            return overflowing;
+        }
+
+        var line = room - chrome - OverflowButtonLength;
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            if (!overflowing[i] && lengths[i] > line + Tolerance && OverflowModeOf(_commands[i]) == ToolBarOverflowMode.AsNeeded)
             {
                 overflowing[i] = true;
             }
