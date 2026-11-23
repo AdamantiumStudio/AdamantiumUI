@@ -221,10 +221,12 @@
         </PropertyTrigger>
         <PropertyTrigger Property="Orientation" Value="Vertical">
             <Setter Property="MinWidth" Value="0"/>
-            <Setter TargetName="PART_TextBox" Property="HorizontalTextAlignment" Value="Center"/>
+            <!-- The entry as wide as its number, in the middle. -->
+            <Setter TargetName="PART_TextBox" Property="HorizontalAlignment" Value="Center"/>
             <Setter TargetName="UnitText" Property="DockPanel.Dock" Value="Bottom"/>
             <Setter TargetName="UnitText" Property="HorizontalAlignment" Value="Center"/>
             <Setter TargetName="UnitText" Property="Margin" Value="0"/>
+            <Setter TargetName="ValueArea" Property="Margin" Value="{ResourceReference NumericNarrowPadding}"/>
         </PropertyTrigger>
     </Style>
 

@@ -24,6 +24,10 @@
 
 ### Fixed
 
+- A `Grid` child spanning several columns or rows counted for nothing when none of them took a size of its own - Auto
+  tracks, or stars measured with no limit - and only in part when some did: the excess was shared among every track
+  left, the Auto ones too, which take none of it. A child across Auto tracks alone now sizes them, and the excess goes
+  whole to the tracks that take it.
 - A `{ResourceReference}` written before there was an application - a template built ahead of it - threw when its
   element joined the visual tree, or never resolved: it looked in the resources there were when it was written. It looks
   among the application's resources as they are when the element arrives.

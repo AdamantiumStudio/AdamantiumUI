@@ -273,6 +273,8 @@
     <sys:Double x:Key="ToolBarCardSpacing">4</sys:Double>
     <!-- A number's unit, after it along the box. -->
     <Thickness x:Key="NumericUnitInset">4,0,0,0</Thickness>
+    <!-- Round a number standing vertically: as narrow as the number, so it fits the column of a bar down the side. -->
+    <Thickness x:Key="NumericNarrowPadding">1,0</Thickness>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- The tab strip's own furniture. The close and pin buttons are SQUARE and sized to this theme's row rather than

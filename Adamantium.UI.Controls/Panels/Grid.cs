@@ -886,18 +886,44 @@ public class Grid: Panel
 
          if (kvp.Value > cumulativeMinRangeSize)
          {
+            // Tracks with a size of their own take the excess; a span over Auto tracks alone - stars too, measured with
+            // no limit - shares it among them, or the spanning child would count for nothing. Shared among the takers
+            // only: counting the others in the share left part of it with nobody.
+            var allAuto = true;
+            for (int i = span.Start; i < span.End && allAuto; ++i)
+            {
+               allAuto = span.Segments[i].IsAuto;
+            }
+
             double controlSize = kvp.Value;
+            var takers = 0;
             for (int i = span.Start; i < span.End; ++i)
             {
-               if (!span.Segments[i].IsAuto)
+               if (allAuto || !span.Segments[i].IsAuto)
                {
-                  double size = Math.Min(controlSize/(span.End-i), span.Segments[i].Max);
-                  if (size > span.Segments[i].Min)
-                  {
-                     span.Segments[i].Min = size;
-                  }
+                  takers++;
                }
+               else
+               {
+                  controlSize -= span.Segments[i].Min;
+               }
+            }
+
+            for (int i = span.Start; i < span.End && takers > 0; ++i)
+            {
+               if (!allAuto && span.Segments[i].IsAuto)
+               {
+                  continue;
+               }
+
+               double size = Math.Min(controlSize / takers, span.Segments[i].Max);
+               if (size > span.Segments[i].Min)
+               {
+                  span.Segments[i].Min = size;
+               }
+
                controlSize -= span.Segments[i].Min;
+               takers--;
             }
          }
       }

@@ -163,8 +163,7 @@ public class NumericUpDownPlacementThemeTests
             Assert.That(Side(alongUnit, alongText, along), Is.EqualTo("R"), "after the number along");
             Assert.That(Side(downUnit, downText, down), Is.EqualTo("B"), "under it down");
             Assert.That(((TextBlock)none.GetTemplateChild("UnitText")).Visibility, Is.EqualTo(Visibility.Collapsed));
-            Assert.That(down.RenderSize.Width, Is.LessThan(along.RenderSize.Width), "down, as narrow as its number");
-        });
+            Assert.That(down.RenderSize.Width, Is.LessThan(along.RenderSize.Width), "down, as narrow as its number");        });
     }
 
     // Down the side of a bar the box stands vertically, as narrow as the column; set to stand along, it stays so, and is

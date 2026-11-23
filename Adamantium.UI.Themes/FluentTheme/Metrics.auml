@@ -86,6 +86,8 @@
     <sys:Double x:Key="ToolBarCardSpacing">6</sys:Double>
     <!-- A number's unit, after it along the box. -->
     <Thickness x:Key="NumericUnitInset">4,0,0,0</Thickness>
+    <!-- Round a number standing vertically: as narrow as the number, so it fits the column of a bar down the side. -->
+    <Thickness x:Key="NumericNarrowPadding">2,0</Thickness>
     <sys:Double x:Key="TabStripHeight">26</sys:Double>
 
     <!-- ── Insets ─────────────────────────────────────────────────────────────────────────────────────────────────

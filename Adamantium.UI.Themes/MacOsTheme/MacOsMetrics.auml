@@ -67,6 +67,8 @@
     <sys:Double x:Key="ToolBarCardSpacing">6</sys:Double>
     <!-- A number's unit, after it along the box. -->
     <Thickness x:Key="NumericUnitInset">4,0,0,0</Thickness>
+    <!-- Round a number standing vertically: as narrow as the number, so it fits the column of a bar down the side. -->
+    <Thickness x:Key="NumericNarrowPadding">2,0</Thickness>
 
     <!-- A HAIRLINE, not a stroke. Fluent draws control borders 2 wide; a Mac's are one device pixel and are there to
          seat the control on its surface rather than to outline it. -->
