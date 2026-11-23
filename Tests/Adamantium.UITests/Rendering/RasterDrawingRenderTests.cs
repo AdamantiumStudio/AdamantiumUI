@@ -24,6 +24,9 @@ public class RasterDrawingRenderTests
     {
         public Color Paint = Colors.Red;
 
+        // A group cut by a path, drawn apart into targets of its own - inside the tile's.
+        public bool Cut;
+
         protected override Size<double> MeasureOverride(Size<double> availableSize) => new(Dim, Dim);
 
         protected override void OnRender(IDrawingContext context)
@@ -36,8 +39,22 @@ public class RasterDrawingRenderTests
             figures.BeginFigure(new Vector2<double>(60, 60), true, true).LineTo(new Vector2<double>(100, 62))
                 .LineTo(new Vector2<double>(95, 100)).LineTo(new Vector2<double>(58, 96)).CloseFigure();
             ring.RecalculateBounds();
+            if (Cut)
+            {
+                var triangle = new StreamGeometry { FillRule = FillRule.NonZero };
+                triangle.Open().BeginFigure(new Vector2<double>(0, 0), true, true).LineTo(new Vector2<double>(Dim, 0))
+                    .LineTo(new Vector2<double>(0, Dim)).CloseFigure();
+                triangle.RecalculateBounds();
+                session.PushGroup(new DrawingGroupOptions { Clip = triangle });
+            }
+
             session.DrawGeometry(new SolidColorBrush(Paint), ring, new Pen(new SolidColorBrush(Colors.Blue), 3),
                 Matrix4x4F.Identity);
+            if (Cut)
+            {
+                session.PopGroup();
+            }
+
             session.DrawRectangle(new SolidColorBrush(Colors.Green), new Rect(110, 110, 40, 40));
         }
     }
@@ -107,9 +124,9 @@ public class RasterDrawingRenderTests
         Assert.That(far, Is.LessThanOrEqualTo(Dim / 8), $"{what}: pixels more than half apart");
     }
 
-    private static Frame Once(DrawingMode mode, double scale = 1, double moveX = 0, double moveY = 0)
+    private static Frame Once(DrawingMode mode, double scale = 1, double moveX = 0, double moveY = 0, bool cut = false)
     {
-        var picture = new Picture { DrawingMode = mode };
+        var picture = new Picture { DrawingMode = mode, Cut = cut };
         var host = new Canvas
         {
             Width = Dim, Height = Dim,
@@ -133,6 +150,17 @@ public class RasterDrawingRenderTests
             Assert.That(raster.TilesDrawn, Is.GreaterThan(0), "drawn into tiles");
             AssertTheSame(raster, vector, "against its shapes' picture");
         });
+    }
+
+    // A group drawn apart inside it opens its targets inside the tile's, in the tile's space.
+    [TestCase(1.0, 0.0, 0.0)]
+    [TestCase(1.6, -40.0, -30.0)]
+    public void ARaster_HoldingAGroupCutByAPath_ShowsWhatItsShapesShow(double scale, double moveX, double moveY)
+    {
+        var vector = Once(DrawingMode.Vector, scale, moveX, moveY, true);
+        var raster = Once(DrawingMode.Raster, scale, moveX, moveY, true);
+
+        AssertTheSame(raster, vector, "against its shapes' picture");
     }
 
     [Test]
