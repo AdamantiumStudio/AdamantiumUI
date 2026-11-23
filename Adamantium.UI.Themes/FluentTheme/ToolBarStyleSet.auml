@@ -74,6 +74,7 @@
         <Setter Property="Margin" Value="0,0,4,3"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
         <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
+        <Setter Property="ColumnWidth" Value="{ResourceReference ToolBarColumnWidth}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolBar">
@@ -131,6 +132,22 @@
                                                            Accent="Transparent"
                                                            Content="{TemplateBinding ContextualHeader}"
                                                            ContentTemplate="{TemplateBinding ContextualHeaderTemplate}"/>
+                                </Border>
+                                <!-- Down the side, the same name under the grip, turned to read top to bottom as a
+                                     folded pane's tab does: a layout turn, so the plate is as tall as the name is long. -->
+                                <Border x:Name="ContextualHeaderPlateDown"
+                                        DockPanel.Dock="Top"
+                                        Margin="0,0,0,4"
+                                        Visibility="Collapsed"
+                                        Background="{TemplateBinding Accent}"
+                                        CornerRadius="{ResourceReference CornerRadiusDefault}">
+                                    <RibbonContextualLabel Accent="Transparent"
+                                                           Content="{TemplateBinding ContextualHeader}"
+                                                           ContentTemplate="{TemplateBinding ContextualHeaderTemplate}">
+                                        <RibbonContextualLabel.LayoutTransform>
+                                            <Transform RotationAngle="90"/>
+                                        </RibbonContextualLabel.LayoutTransform>
+                                    </RibbonContextualLabel>
                                 </Border>
                                 <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                             Orientation="{TemplateBinding Orientation}"
@@ -191,14 +208,21 @@
         <PropertyTrigger Property="HasContextInOverflow" Value="true">
             <Setter TargetName="OverflowContextFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
-        <!-- And named, on the ribbon's label for the context, at its start - along a bar; down the side only its color
-             says it, until bars there get a form of their own. -->
+        <!-- And named, on the ribbon's label for the context: at its start along a bar, turned under the grip down the
+             side. -->
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="HasContextualHeader" Value="true"/>
                 <Condition Property="Orientation" Value="Horizontal"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="ContextualHeaderPlate" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="HasContextualHeader" Value="true"/>
+                <Condition Property="Orientation" Value="Vertical"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ContextualHeaderPlateDown" Property="Visibility" Value="Visible"/>
         </MultiTrigger>
     </Style>
 
@@ -253,6 +277,44 @@
             <Setter TargetName="ContextWash" Property="Visibility" Value="Visible"/>
             <Setter TargetName="ContextFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+    </Style>
+
+    <!-- A command's place on a bar: the command itself, or - folded on a column down the side - its button, the card
+         beside the column holding the command under its label. The item puts the command into one presenter or the
+         other, so neither binds the content. -->
+    <Style Selector="ToolBarItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBarItem">
+                    <Grid>
+                        <ContentPresenter x:Name="PART_ContentPresenter"/>
+                        <Popup x:Name="PART_Card"
+                               Placement="Right"
+                               KeepOpen="False"
+                               IgnoreTargetPress="True">
+                            <Popup.ChildTemplate>
+                                <ControlTemplate TargetType="Popup">
+                                    <!-- Along a bar on the card: the command stands there as it does on a bar. -->
+                                    <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="1"
+                                            CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
+                                            Padding="{ResourceReference ToolBarCardPadding}"
+                                            ToolBar.CommandOrientation="Horizontal">
+                                        <StackPanel Spacing="{ResourceReference ToolBarCardSpacing}">
+                                            <ContentPresenter x:Name="PART_CardHeader"
+                                                              Foreground="{ObservableResource TextFillColorSecondary}"
+                                                              FontSize="{ResourceReference FontSizeCaption}"/>
+                                            <ContentPresenter x:Name="PART_CardPresenter" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Border>
+                                </ControlTemplate>
+                            </Popup.ChildTemplate>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </StyleSet>

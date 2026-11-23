@@ -34,6 +34,25 @@
     <Phrase Key="InsertTable" Text="Вставить таблицу"/>
     <Phrase Key="InsertRow" Text="Вставить строку"/>
     <Phrase Key="DeleteRow" Text="Удалить строку"/>
+    <Phrase Key="Side" Text="Полоска сбоку"/>
+    <Phrase Key="SideHint" Text="Сбоку полоска — колонка шириной с команду. Поле с числом стоит в узкой форме, его подпись становится подсказкой; поле автора и список шрифтов слишком широки, и каждое свёрнуто в кнопку, которая открывает его рядом с колонкой. Поверните трей вдоль — всё станет как было."/>
+    <Phrase Key="SideOrientation" Text="Трей идёт"/>
+    <Phrase Key="Picture" Text="Формат рисунка"/>
+    <Phrase Key="PictureTools" Text="Работа с рисунками"/>
+    <Phrase Key="PictureSize" Text="Размер"/>
+    <Phrase Key="Crop" Text="Обрезать"/>
+    <Phrase Key="PictureWidth" Text="Ширина"/>
+    <Phrase Key="PictureHeight" Text="Высота"/>
+    <Phrase Key="Author" Text="Автор"/>
+    <Phrase Key="Arrange" Text="Упорядочить"/>
+    <Phrase Key="Wrap" Text="Обтекание текстом"/>
+    <Phrase Key="Rotate" Text="Повернуть"/>
+    <Phrase Key="CaptionFont" Text="Шрифт подписи"/>
+    <Phrase Key="InLine" Text="В тексте"/>
+    <Phrase Key="Square" Text="Вокруг рамки"/>
+    <Phrase Key="InFront" Text="Перед текстом"/>
+    <Phrase Key="RotateRight" Text="Повернуть вправо"/>
+    <Phrase Key="RotateLeft" Text="Повернуть влево"/>
     <Phrase Key="Nothing" Text="пока ничего"/>
     <Phrase Key="Report" Text="Нажато: {command}"/>
 </Language>

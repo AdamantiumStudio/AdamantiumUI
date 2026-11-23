@@ -106,8 +106,9 @@ public class ToolBarTrayTests
         Show(root);
     }
 
+    // In the menu itself or, a bar's own command, in its item there.
     private static bool IsInOverflow(ToolBar bar, IUIComponent command) =>
-        ReferenceEquals(command.VisualParent, bar.GetTemplateChild("PART_OverflowItems"));
+        command.GetVisualAncestors().Contains(bar.GetTemplateChild("PART_OverflowItems"));
 
     [SetUp]
     public void Reset() => _styleSet = null;
@@ -912,10 +913,11 @@ public class ToolBarTrayTests
         });
     }
 
-    // Down the side a contextual bar shows no label - its color alone says it there - while automation reads its
-    // context as the bar's help text either way, and the application's own help text before it.
+    // Down the side a contextual bar shows its label under the grip, turned to read top to bottom - the plate as tall as
+    // the name is long - while automation reads its context as the bar's help text either way, and the application's
+    // own help text before it.
     [TestCaseSource(nameof(StyleSets))]
-    public void AContextualBarDownTheSide_ShowsNoLabel_ButAutomationReadsItsContext(System.Type styleSet)
+    public void AContextualBarDownTheSide_ShowsItsLabelTurned_AndAutomationReadsItsContext(System.Type styleSet)
     {
         Use(styleSet);
         var table = Bar("Table", 0, 0);
@@ -923,8 +925,10 @@ public class ToolBarTrayTests
         table.ContextualHeader = "Table Tools";
         var tray = Tray(table);
         tray.Orientation = Orientation.Vertical;
-        Shown(tray, 1000);
-        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
+        var side = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { tray } } };
+        Show(side);
+        var along = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
+        var down = (UIComponent)table.GetTemplateChild("ContextualHeaderPlateDown");
         var peer = table.GetAutomationPeer();
 
         var context = peer.HelpText;
@@ -933,7 +937,10 @@ public class ToolBarTrayTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(along.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(down.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(down.RenderSize.Height, Is.GreaterThan(down.RenderSize.Width), "turned, it runs down");
+            Assert.That(At(down, side).Y, Is.LessThan(At((IUIComponent)table.Items[0], side).Y), "before the commands");
             Assert.That(context, Is.EqualTo("Table Tools"));
             Assert.That(own, Is.EqualTo("Rows and columns"));
         });

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
@@ -61,6 +63,60 @@ public class ToolBarGroup : ItemsControl
 
     /// <summary>The bar the section is a command of, set by it, so it hears when the section's context changes.</summary>
     internal ToolBar Bar { get; set; }
+
+    private bool _isInOverflow;
+    private readonly List<ToolBarItem> _items = [];
+
+    /// <summary>Whether the section is in its bar's overflow menu, set by the bar: its commands stand there as they are,
+    /// not as on the bar's column.</summary>
+    internal bool IsInOverflow
+    {
+        get => _isInOverflow;
+        set
+        {
+            if (_isInOverflow == value)
+            {
+                return;
+            }
+
+            _isInOverflow = value;
+            // At once: a closed menu does not measure what it holds, and a command folded on the column stays folded.
+            PlaceItems();
+            InvalidateMeasure();
+        }
+    }
+
+    protected internal override bool IsItemItsOwnContainer(object item) => ToolBarItem.IsOwnContainer(item);
+
+    protected internal override IUIComponent GetContainerForItem(object item) => ToolBarItem.Create(ItemContainerStyle);
+
+    protected internal override void PrepareContainer(IUIComponent container, object item) =>
+        ToolBarItem.Prepare(container, item, ItemTemplate);
+
+    // Its commands are told where they stand before they are measured; its panel makes the items of new ones as it
+    // measures, so those are told after it, and measured again.
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
+    {
+        PlaceItems();
+        var size = base.MeasureOverride(availableSize);
+        return PlaceItems() ? base.MeasureOverride(availableSize) : size;
+    }
+
+    private bool PlaceItems()
+    {
+        _items.Clear();
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (ItemContainerGenerator.ContainerFromIndex(i) is ToolBarItem item)
+            {
+                _items.Add(item);
+            }
+        }
+
+        var bar = Bar;
+        return ToolBarItem.Place(_items, bar != null && Orientation == Orientation.Vertical && !IsInOverflow,
+            bar?.ColumnWidth ?? 0);
+    }
 
     private static void OnContextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
         ((ToolBarGroup)a).Bar?.MarkContextInOverflow();

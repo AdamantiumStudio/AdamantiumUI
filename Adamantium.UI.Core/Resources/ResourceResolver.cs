@@ -62,7 +62,7 @@ public static class ResourceResolver
 
             visual.AttachedToVisualTreeEvent += (_, _) =>
             {
-                var scoped = resourceManager.FindResource(visual, key);
+                var scoped = resourceManager?.FindResource(visual, key);
                 if (scoped != null)
                     visual.SetValue(property, scoped, priority);
             };

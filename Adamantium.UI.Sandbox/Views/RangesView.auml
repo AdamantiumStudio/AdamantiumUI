@@ -91,9 +91,9 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- Section 2: the same value typed rather than dragged. All three placements stand side by side rather than
-             hiding behind a dropdown - the point is to compare them - and ONE switch swaps the pair in every one of
-             them at once, which is exactly why placement and order are two knobs and not one enum of six. -->
+        <!-- Section 2: the same value typed rather than dragged. Every placement stands side by side rather than hiding
+             behind a dropdown - the point is to compare them - along and down, and ONE switch swaps the pair in every
+             one of them at once, which is exactly why placement and order are two knobs and not one enum of ten. -->
         <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,28,0,0"/>
         <TextBlock Text="{Localize RangesStrings.NumericTitle}" FontSize="18" Margin="0,24,0,10"/>
         <StackPanel Orientation="Horizontal">
@@ -113,7 +113,7 @@
                         Minimum="0" Maximum="{Binding Maximum}"
                         AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
             </StackPanel>
-            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+            <StackPanel Orientation="Vertical" Margin="0,0,20,0">
                 <TextBlock x:Name="RightLabel" Text="{Localize RangesStrings.Right}" Margin="0,0,0,4"/>
                 <NumericUpDown AutomationProperties.AutomationId="NumericRight" AutomationProperties.LabeledBy="{Binding ElementName=RightLabel}"
                         Width="150" ButtonsPlacement="Right"
@@ -121,8 +121,44 @@
                         Minimum="0" Maximum="{Binding Maximum}"
                         AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
             </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,20,0">
+                <TextBlock x:Name="TopLabel" Text="{Localize RangesStrings.Top}" Margin="0,0,0,4"/>
+                <NumericUpDown AutomationProperties.AutomationId="NumericTop" AutomationProperties.LabeledBy="{Binding ElementName=TopLabel}"
+                        Width="150" ButtonsPlacement="Top"
+                        Value="{Binding Value, Mode=TwoWay}"
+                        Minimum="0" Maximum="{Binding Maximum}"
+                        AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+                <TextBlock x:Name="BottomLabel" Text="{Localize RangesStrings.Bottom}" Margin="0,0,0,4"/>
+                <NumericUpDown AutomationProperties.AutomationId="NumericBottom" AutomationProperties.LabeledBy="{Binding ElementName=BottomLabel}"
+                        Width="150" ButtonsPlacement="Bottom"
+                        Value="{Binding Value, Mode=TwoWay}"
+                        Minimum="0" Maximum="{Binding Maximum}"
+                        AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
+            </StackPanel>
             <CheckBox AutomationProperties.AutomationId="SwapButtons" Content="{Localize RangesStrings.SwapButtons}" VerticalAlignment="Bottom"
                       IsChecked="{Binding AreNumericButtonsSwapped, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <!-- Down: as narrow as the number, the unit under it - the form a box takes on the column of a bar down the side. -->
+        <TextBlock x:Name="DownLabel" Text="{Localize RangesStrings.Down}" Margin="0,16,0,4"/>
+        <StackPanel Orientation="Horizontal">
+            <NumericUpDown AutomationProperties.AutomationId="NumericDownSplit" AutomationProperties.LabeledBy="{Binding ElementName=DownLabel}"
+                    Orientation="Vertical" ButtonsPlacement="Split" Unit="cm" Margin="0,0,20,0"
+                    Value="{Binding Value, Mode=TwoWay}"
+                    Minimum="0" Maximum="{Binding Maximum}"
+                    AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
+            <NumericUpDown AutomationProperties.AutomationId="NumericDownTop" AutomationProperties.LabeledBy="{Binding ElementName=DownLabel}"
+                    Orientation="Vertical" ButtonsPlacement="Top" Unit="cm" Margin="0,0,20,0"
+                    Value="{Binding Value, Mode=TwoWay}"
+                    Minimum="0" Maximum="{Binding Maximum}"
+                    AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
+            <NumericUpDown AutomationProperties.AutomationId="NumericDownBottom" AutomationProperties.LabeledBy="{Binding ElementName=DownLabel}"
+                    Orientation="Vertical" ButtonsPlacement="Bottom" Unit="cm"
+                    Value="{Binding Value, Mode=TwoWay}"
+                    Minimum="0" Maximum="{Binding Maximum}"
+                    AreButtonsSwapped="{Binding AreNumericButtonsSwapped}"/>
         </StackPanel>
 
         <!-- The rest of the knobs, one box each, so what every one of them does is visible on its own. -->
