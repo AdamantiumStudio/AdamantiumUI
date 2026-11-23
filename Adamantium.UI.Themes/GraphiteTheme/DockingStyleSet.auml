@@ -521,6 +521,19 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- What covers a busy area: the panes shaded, a busy indicator over their middle. -->
+    <Style Selector="DockingBusyOverlay">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DockingBusyOverlay">
+                    <Border Background="{ObservableResource SmokeFillColorDefault}">
+                        <BusyIndicator x:Name="PART_BusyIndicator"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- The compass shown while a pane is being dragged. Its brushes live here rather than in the control: which of the
          five targets is armed is said with COLOR, and color is the theme's business. -->
     <Style Selector="DockCompass">

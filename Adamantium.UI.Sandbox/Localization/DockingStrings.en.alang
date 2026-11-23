@@ -11,6 +11,7 @@
     <Phrase Key="Forget" Text="Forget"/>
     <Phrase Key="ResetLayout" Text="Reset"/>
     <Phrase Key="PinnedRow" Text="Pinned tabs in a separate row"/>
+    <Phrase Key="Busy" Text="Busy"/>
 
     <Phrase Key="Scene" Text="Scene"/>
     <Phrase Key="Game" Text="Game"/>

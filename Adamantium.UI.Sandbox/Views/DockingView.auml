@@ -57,6 +57,10 @@
                  every panel it holds - see DockingArea.PinnedTabsPlacement. -->
             <CheckBox Content="{Localize DockingStrings.PinnedRow}" IsChecked="True"
                       Command="{Binding TogglePinnedRowCommand}" VerticalAlignment="Center"/>
+
+            <!-- Busy: the area and every window torn out of it under an overlay, nothing in them reachable. -->
+            <CheckBox AutomationProperties.AutomationId="BusyToggle" Content="{Localize DockingStrings.Busy}"
+                      IsChecked="{Binding IsBusy, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="16"/>
         </StackPanel>
 
         <TextBlock Grid.Row="3" Text="{Localize DockingStrings.Layout, report={Binding LayoutState}, file={Binding LayoutFile}}" MarginBottom="12" MaxWidth="900"
@@ -68,7 +72,7 @@
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                 Background="{ResourceReference CardBackgroundFillColorDefault}">
             <docking:DockingArea DividerThickness="6" nav:RegionManager.RegionName="docking"
-                    Workspace="{Binding Workspace}" StretchSingleDocumentTab="false"
+                    Workspace="{Binding Workspace}" StretchSingleDocumentTab="false" IsBusy="{Binding IsBusy}"
                     SelectionIndicatorPlacement="Outer" SelectionIndicatorThickness="2">
                 <docking:DockingArea.Behaviors>
                     <behaviors:DockingPolicyBehavior/>
