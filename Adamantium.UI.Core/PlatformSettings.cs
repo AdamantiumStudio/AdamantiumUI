@@ -36,6 +36,11 @@ public static class PlatformSettings
    /// 33 - thirty a second - while no platform is registered.</summary>
    public static UInt32 KeyRepeatInterval => Platform?.KeyRepeatInterval ?? 33;
 
+   /// <summary>The languages the user set up in the OS, in the user's order, as language tags ("ru-RU"); followed as the
+   /// user adds and removes them, and cheap to ask on every use. None while no platform is registered or it does not
+   /// say.</summary>
+   public static IReadOnlyList<string> UserLanguages => Platform?.UserLanguages ?? [];
+
    /// <summary>Whether a <paramref name="delta"/> measured in <paramref name="measuredIn"/>'s space exceeds the OS drag
    /// threshold per axis, after converting to physical pixels.</summary>
    public static bool ExceedsDragThreshold(Vector2<double> delta, IUIComponent measuredIn)

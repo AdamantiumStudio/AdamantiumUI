@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.DBus;
 using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Platforms.Linux;
 
-/// <summary>The desktop's own settings through the Settings portal: its light or dark appearance, followed as it
-/// changes, and its interface and monospace fonts.</summary>
+/// <summary>The desktop's own settings through the Settings portal: its light or dark appearance and the languages of
+/// the user's input sources, followed as they change, and its interface and monospace fonts.</summary>
 internal sealed class DesktopPortalSettings : IDisposable
 {
     private const string Portal = "org.freedesktop.portal.Desktop";
@@ -20,6 +22,8 @@ internal sealed class DesktopPortalSettings : IDisposable
     private const string GnomeInterface = "org.gnome.desktop.interface";
     private const string FontName = "font-name";
     private const string MonospaceFontName = "monospace-font-name";
+    private const string InputSources = "org.gnome.desktop.input-sources";
+    private const string Sources = "sources";
 
     private static readonly string[] StyleWords =
     [
@@ -31,6 +35,8 @@ internal sealed class DesktopPortalSettings : IDisposable
 
     private readonly DBusConnection bus;
     private readonly IDisposable changes;
+    private volatile IReadOnlyList<string> userLanguages = [];
+    private volatile bool userLanguagesChanged;
 
     private DesktopPortalSettings(DBusConnection bus, bool? prefersDark, string fontFamily, string monospaceFontFamily)
     {
@@ -39,7 +45,13 @@ internal sealed class DesktopPortalSettings : IDisposable
         FontFamily = fontFamily;
         MonospaceFontFamily = monospaceFontFamily;
         changes = bus.Subscribe(Portal, PortalPath, Settings, "SettingChanged", OnSettingChanged);
+        // Apart from the appearance, which the first window waits for: the languages are not wanted that early.
+        Task.Run(ReadUserLanguages);
     }
+
+    /// <summary>The languages of the user's input sources, followed as the user changes them; none where the desktop
+    /// does not say.</summary>
+    public IReadOnlyList<string> UserLanguages => userLanguages;
 
     /// <summary>Whether the desktop asked for a dark appearance when opened; null where it does not say.</summary>
     public bool? PrefersDark { get; }
@@ -115,6 +127,22 @@ internal sealed class DesktopPortalSettings : IDisposable
         }
     }
 
+    private void ReadUserLanguages()
+    {
+        try
+        {
+            var read = LinuxUserLanguages.FromInputSources(Read(bus, InputSources, Sources));
+            // A change heard while reading is newer than what was read.
+            if (!userLanguagesChanged)
+            {
+                userLanguages = read;
+            }
+        }
+        catch (Exception e) when (e is SocketException or IOException or ObjectDisposedException)
+        {
+        }
+    }
+
     private void OnSettingChanged(DBusMessage message)
     {
         var reader = message.Reader();
@@ -124,6 +152,11 @@ internal sealed class DesktopPortalSettings : IDisposable
         if (group == Appearance && key == ColorScheme && value is uint scheme)
         {
             Threading.Dispatcher.CurrentDispatcher?.InvokeAsync(() => SystemAppearance.PrefersDark = scheme == 1);
+        }
+        else if (group == InputSources && key == Sources)
+        {
+            userLanguagesChanged = true;
+            userLanguages = LinuxUserLanguages.FromInputSources(value);
         }
     }
 }

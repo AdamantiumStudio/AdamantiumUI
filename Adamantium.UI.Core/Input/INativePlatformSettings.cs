@@ -35,4 +35,9 @@ public interface INativePlatformSettings
     /// <summary>How long between two repeats of a held key, in milliseconds (Win32 <c>SPI_GETKEYBOARDSPEED</c>, the
     /// Wayland seat's repeat rate); 0 when the user turned repeating off.</summary>
     uint KeyRepeatInterval { get; }
+
+    /// <summary>The languages the user set up in the OS, in the user's order, as language tags ("ru-RU") - Windows'
+    /// language list, most wanted first; the desktop's input sources on Linux, the session's own language first. Read anew as the user changes them, cheaply enough to ask on
+    /// every use; none where the platform does not say.</summary>
+    IReadOnlyList<string> UserLanguages => [];
 }

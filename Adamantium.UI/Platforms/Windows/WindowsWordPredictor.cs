@@ -19,7 +19,6 @@ namespace Adamantium.UI.Platforms.Windows;
 internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
 {
     private const string GeneratorClass = "Windows.Data.Text.TextPredictionGenerator";
-    private const string PreferencesClass = "Windows.System.UserProfile.GlobalizationPreferences";
 
     private readonly object _gate = new();
     private readonly Dictionary<string, ITextPredictionGenerator2> _generators = new(StringComparer.OrdinalIgnoreCase);
@@ -193,7 +192,7 @@ internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
     private static bool IsUserLanguage(string language)
     {
         var wanted = WindowsSpellChecker.Primary(language);
-        foreach (var userLanguage in ReadUserLanguages())
+        foreach (var userLanguage in WindowsUserLanguages.Read())
         {
             if (WindowsSpellChecker.Primary(userLanguage) == wanted)
             {
@@ -202,52 +201,5 @@ internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
         }
 
         return false;
-    }
-
-    private static List<string> ReadUserLanguages()
-    {
-        List<string> found = [];
-        var preferences = WinRTInterop.GetActivationFactory<IGlobalizationPreferencesStatics>(PreferencesClass);
-        if (preferences == null)
-        {
-            return found;
-        }
-
-        IStringVectorView languages = null;
-        try
-        {
-            if (preferences.GetLanguages(out languages) != 0 || languages == null || languages.GetSize(out var size) != 0)
-            {
-                return found;
-            }
-
-            for (uint index = 0; index < size; index++)
-            {
-                if (languages.GetAt(index, out var item) != 0)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    found.Add(WinRTInterop.ReadString(item));
-                }
-                finally
-                {
-                    WinRTInterop.DeleteString(item);
-                }
-            }
-
-            return found;
-        }
-        finally
-        {
-            if (languages != null)
-            {
-                Marshal.ReleaseComObject(languages);
-            }
-
-            Marshal.ReleaseComObject(preferences);
-        }
     }
 }
