@@ -19,6 +19,11 @@
 
 ### Changed
 
+- A `ToolBarTray` moves no bar itself any more: its grip is a `DragHandle`, and an application lets the user carry bars
+  with `DragDrop` - its ghost, drops over any tray of the window - by putting a `ToolBarTrayDragBehavior` on the tray.
+  The tray says where a bar would land and puts it there (`ShowDropPlace`, `HideDropPlace`, `DropBar`).
+- The room between bars and between rows is the tray's (`ToolBarTray.BarSpacing`, `BandSpacing`, theme metrics), only
+  between neighbours; bars have no margin of their own, so a bar alone down the side stands in the middle of its tray.
 - A contextual bar down the side shows its `ContextualHeader` under its grip, turned to read top to bottom, as a folded
   pane's tab reads; it showed only its color there before.
 

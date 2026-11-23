@@ -43,13 +43,13 @@
 
     <!-- A bar's grip: square dots in two columns, quiet at rest and coming up to the primary ink under the pointer, as a
          row's drag handle does. -->
-    <Style Selector="Thumb.ToolBarGrip">
+    <Style Selector="DragHandle.ToolBarGrip">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
         <!-- Room between the grip and the first command; under it on a bar down the side. -->
         <Setter Property="Margin" Value="0,0,3,0"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Thumb">
+                <ControlTemplate TargetType="DragHandle">
                     <Border Background="Transparent">
                         <Path HorizontalAlignment="Center" VerticalAlignment="Center"
                               Fill="{TemplateBinding Foreground}"
@@ -60,7 +60,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="Thumb.ToolBarGrip">
+    <Style Selector="DragHandle.ToolBarGrip">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         </PropertyTrigger>
@@ -90,13 +90,13 @@
                                     CornerRadius="{ResourceReference CornerRadiusDefault}"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">
-                                <!-- The grip moves the bar; drawn by Thumb.ToolBarGrip below. -->
-                                <Thumb x:Name="PART_Grip"
-                                       Classes="ToolBarGrip"
-                                       DockPanel.Dock="Left"
-                                       Width="{ResourceReference ToolBarGripLength}"
-                                       Cursor="SizeAll"
-                                       AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
+                                <!-- The grip a drag carries the bar by, where the application lets bars be dragged
+                                     (ToolBarTrayDragBehavior); drawn by DragHandle.ToolBarGrip above. -->
+                                <DragHandle x:Name="PART_Grip"
+                                            Classes="ToolBarGrip"
+                                            DockPanel.Dock="Left"
+                                            Width="{ResourceReference ToolBarGripLength}"
+                                            AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
                                 <ToggleButton x:Name="PART_OverflowButton"
                                               DockPanel.Dock="Right"
                                               Width="{TemplateBinding OverflowButtonLength}"

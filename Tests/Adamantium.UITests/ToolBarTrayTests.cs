@@ -92,17 +92,20 @@ public class ToolBarTrayTests
     private static Vector2<double> Middle(IUIComponent element, IUIComponent root) =>
         element.TranslatePoint(new Vector2<double>(element.RenderSize.Width / 2, element.RenderSize.Height / 2), root);
 
-    private static Thumb Grip(ToolBar bar) => (Thumb)bar.GetTemplateChild("PART_Grip");
+    private static DragHandle Grip(ToolBar bar) => (DragHandle)bar.GetTemplateChild("PART_Grip");
 
-    // Dragged from the middle of its grip to a point of the window, as the grip reports a drag: from where it was
-    // pressed, in the window.
+    // Let go of at a point of the window, as a drag drops it: on the first tray there that takes it - the tray says where
+    // it lands; the drag itself is DragDrop's (ToolBarTrayDragBehavior).
     private static void Drag(ToolBar bar, IUIComponent root, Vector2<double> to)
     {
-        var grip = Grip(bar);
-        var from = Middle(grip, root);
-        grip.RaiseEvent(new DragStartedEventArgs(from) { RoutedEvent = Thumb.DragStartedEvent });
-        grip.RaiseEvent(new DragEventArgs(to - from) { RoutedEvent = Thumb.DragDeltaEvent });
-        grip.RaiseEvent(new DragCompletedEventArgs(to - from, false) { RoutedEvent = Thumb.DragCompletedEvent });
+        foreach (var tray in root.GetVisualDescendants().OfType<ToolBarTray>())
+        {
+            if (tray.DropBar(bar, root.TranslatePoint(to, tray)))
+            {
+                break;
+            }
+        }
+
         Show(root);
     }
 

@@ -155,10 +155,8 @@ public class ToolBar : ItemsControl
     private readonly Dictionary<IMeasurableComponent, double> _lengths = new();
     private Panel _onBar;
     private Panel _inOverflow;
-    private Thumb _grip;
     private double _chrome = double.NaN;
     private readonly RoutedEventHandler _closeOverflow;
-    private ToolBarTray _movedIn;
 
     public ToolBar()
     {
@@ -258,7 +256,8 @@ public class ToolBar : ItemsControl
         private set => SetValue(HasOverflowItemsPropertyKey, value);
     }
 
-    /// <summary>Whether the bar is being dragged by its grip.</summary>
+    /// <summary>Whether the bar is being carried by its grip - it stays put while its ghost moves; set through
+    /// <see cref="ToolBarTray.SetIsMoving"/> by whoever lets the user drag bars.</summary>
     public bool IsMoving
     {
         get => GetValue<bool>(IsMovingProperty);
@@ -370,7 +369,6 @@ public class ToolBar : ItemsControl
         _onBar = GetTemplateChild("PART_Items") as Panel;
 
         HookOverflow(GetTemplateChild("PART_OverflowItems") as Panel);
-        HookGrip(GetTemplateChild("PART_Grip") as Thumb);
 
         // The menu of what does not fit opens under its chevron.
         if (GetTemplateChild("PART_OverflowPopup") is Popup popup && popup.PlacementTarget == null &&
@@ -385,7 +383,6 @@ public class ToolBar : ItemsControl
     public override void OnRemoveTemplate()
     {
         TakeCommandsOut();
-        HookGrip(null);
         HookOverflow(null);
         _onBar = null;
         base.OnRemoveTemplate();
@@ -518,46 +515,6 @@ public class ToolBar : ItemsControl
     {
         _onBar?.Children.Clear();
         _inOverflow?.Children.Clear();
-    }
-
-    private void HookGrip(Thumb grip)
-    {
-        if (_grip != null)
-        {
-            _grip.DragStarted -= OnGripDragStarted;
-            _grip.DragDelta -= OnGripDragDelta;
-            _grip.DragCompleted -= OnGripDragCompleted;
-        }
-
-        _grip = grip;
-        if (_grip != null)
-        {
-            _grip.DragStarted += OnGripDragStarted;
-            _grip.DragDelta += OnGripDragDelta;
-            _grip.DragCompleted += OnGripDragCompleted;
-        }
-    }
-
-    // The tray the bar is moved in is found once, when the grip is pressed.
-    private void OnGripDragStarted(object sender, DragStartedEventArgs e)
-    {
-        e.Handled = true;
-        _movedIn = Tray;
-        _movedIn?.StartMoving(this, e.Offset);
-    }
-
-    private void OnGripDragDelta(object sender, DragEventArgs e)
-    {
-        e.Handled = true;
-        _movedIn?.Move(this, e.Change);
-    }
-
-    private void OnGripDragCompleted(object sender, DragCompletedEventArgs e)
-    {
-        e.Handled = true;
-        var tray = _movedIn;
-        _movedIn = null;
-        tray?.FinishMoving(this, e.IsCanceled);
     }
 
     // The commands that do not fit go to the overflow menu, the last first. What decides it is each command's length as

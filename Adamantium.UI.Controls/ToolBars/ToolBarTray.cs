@@ -55,7 +55,7 @@ public class ToolBarTray : ItemsControl
 
     // What the tray put in its menu when it last opened: its bars, the headers over them and the rule after them.
     private readonly List<IUIComponent> _menuMade = [];
-    private Moving _moving;
+    private ToolBar _placing;   // the bar whose place is marked: its own place in its row is not counted
 
     static ToolBarTray()
     {
@@ -315,110 +315,73 @@ public class ToolBarTray : ItemsControl
         _menuMade.Add(made);
     }
 
-    // --- Moving a bar by its grip ---------------------------------------------------------------------------------
+    // --- Taking a bar dropped on the tray -------------------------------------------------------------------------
+    // The tray moves no bar itself: whoever lets the user drag bars - with DragDrop, ToolBarTrayDragBehavior - asks it
+    // where a bar would land and puts it there.
 
-    internal void StartMoving(ToolBar bar, Vector2<double> pressedAt)
+    /// <summary>Whether <paramref name="bar"/>, let go of at <paramref name="point"/> of the tray, would land in it - a bar
+    /// of its own, or one of another tray it may take - and if so marks where.</summary>
+    public bool ShowDropPlace(ToolBar bar, Vector2<double> point)
     {
-        if (IsLocked || _moving != null)
+        var slot = CanTake(bar) ? SlotAt(point, bar) : null;
+        if (slot == null)
         {
-            return;
+            HideCue();
+            return false;
         }
 
-        var root = RootOf(this);
-        var trays = new List<ToolBarTray>();
-        root.TraverseVisualTree(component =>
-        {
-            if (component is ToolBarTray tray && !tray.IsLocked && (ReferenceEquals(tray, this) || CanTakeFrom(tray)))
-            {
-                trays.Add(tray);
-            }
-        });
-
-        // Over the rows while it is moved; what its author gave it comes back when it is let go of.
-        _moving = new Moving(bar, root, pressedAt, trays);
-        bar.IsMoving = true;
-        bar.ZIndex = int.MaxValue;
-        bar.RenderTransform = _moving.Shift;
+        _placing = bar;
+        ShowCue(slot);
+        return true;
     }
 
-    internal void Move(ToolBar bar, Vector2<double> change)
+    /// <summary>Takes the mark of where a bar would land away.</summary>
+    public void HideDropPlace()
     {
-        if (_moving == null || !ReferenceEquals(_moving.Bar, bar))
-        {
-            return;
-        }
-
-        _moving.Shift.TranslateX = change.X;
-        _moving.Shift.TranslateY = change.Y;
-        var pointer = _moving.PressedAt + change;
-        var slot = _moving.Trays.Select(tray => tray.SlotAt(_moving.Root.TranslatePoint(pointer, tray), bar))
-            .FirstOrDefault(found => found != null);
-        if (!ReferenceEquals(slot?.Tray, _moving.Slot?.Tray))
-        {
-            _moving.Slot?.Tray.HideCue();
-        }
-
-        _moving.Slot = slot;
-        slot?.Tray.ShowCue(slot);
+        HideCue();
+        _placing = null;
     }
 
-    internal void FinishMoving(ToolBar bar, bool canceled)
+    /// <summary>Puts <paramref name="bar"/>, let go of at <paramref name="point"/> of the tray, where it lands: in its row
+    /// of this tray, or out of its own tray into this one. False when it does not land here.</summary>
+    public bool DropBar(ToolBar bar, Vector2<double> point)
     {
-        if (_moving == null || !ReferenceEquals(_moving.Bar, bar))
+        HideDropPlace();
+        var slot = CanTake(bar) ? SlotAt(point, bar) : null;
+        if (slot == null)
         {
-            return;
+            return false;
         }
 
-        var moving = _moving;
-        var slot = moving.Slot;
-        slot?.Tray.HideCue();
-        _moving = null;
-        bar.RenderTransform = moving.Transform;
-        if (moving.HadZIndex)
-        {
-            bar.ZIndex = moving.ZIndex;
-        }
-        else
-        {
-            bar.ClearValue(ZIndexProperty);
-        }
-
-        bar.IsMoving = false;
-        if (canceled || slot == null)
-        {
-            return;
-        }
-
-        if (ReferenceEquals(slot.Tray, this))
+        if (ReferenceEquals(bar.Tray, this))
         {
             PutInRow(bar, slot);
-            return;
+            return true;
         }
 
-        var item = ItemFor(bar);
-        Items.Remove(item);
-        Number(RowsOf(null));
-        slot.Tray.Items.Add(item);
-        if (slot.Tray.ItemContainerGenerator.ContainerFromIndex(slot.Tray.Items.Count - 1) is ToolBar moved)
+        var from = bar.Tray;
+        var item = from.ItemFor(bar);
+        from.Items.Remove(item);
+        Number(from.RowsOf(null));
+        Items.Add(item);
+        if (ItemContainerGenerator.ContainerFromIndex(Items.Count - 1) is ToolBar moved)
         {
-            slot.Tray.PutInRow(moved, slot);
+            PutInRow(moved, slot);
         }
+
+        return true;
     }
+
+    /// <summary>Whether a bar is being carried: it stands where it was, dimmed by its theme, while its ghost moves.</summary>
+    public static void SetIsMoving(ToolBar bar, bool moving) => bar.IsMoving = moving;
+
+    private bool CanTake(ToolBar bar) =>
+        !IsLocked && bar.Tray is { IsLocked: false } from && (ReferenceEquals(from, this) || CanTakeFrom(from));
 
     // A bar goes from one tray to another only as an item each holds of its own, and only where both share their bars;
     // bars made for a source stay in theirs.
     private bool CanTakeFrom(ToolBarTray tray) =>
         SharesBars && tray.SharesBars && ItemsSource == null && tray.ItemsSource == null;
-
-    private static IUIComponent RootOf(IUIComponent component)
-    {
-        while (component.VisualParent is { } parent)
-        {
-            component = parent;
-        }
-
-        return component;
-    }
 
     // Where a bar let go of at this point of the tray lands: before the first bar of a row whose middle is past it, or in
     // a new row just above the first or below the last. Null when the point is not over the tray.
@@ -604,15 +567,15 @@ public class ToolBarTray : ItemsControl
         _cueLayer.Add(_cue);
     }
 
-    // Where the bar would stand in the row: after the bars before its place, the one being moved not counted.
+    // Where the bar would stand in the row: after the bars before its place, the one being placed not counted.
     private double SeamOf(ToolBarBand band, int place)
     {
         double along = 0;
         var counted = 0;
         for (var i = 0; i < band.Bars.Count && counted < place; i++)
         {
-            along += band.Lengths[i];
-            if (_moving == null || !ReferenceEquals(band.Bars[i], _moving.Bar))
+            along += band.Lengths[i] + (i > 0 ? BarSpacing : 0);
+            if (!ReferenceEquals(band.Bars[i], _placing))
             {
                 counted++;
             }
@@ -630,29 +593,6 @@ public class ToolBarTray : ItemsControl
 
         _cue = null;
         _cueLayer = null;
-    }
-
-    /// <summary>A bar being moved: where the grip was pressed, in the window, the trays it may land in, and the layer and
-    /// transform its author gave it.</summary>
-    private sealed class Moving(ToolBar bar, IUIComponent root, Vector2<double> pressedAt, List<ToolBarTray> trays)
-    {
-        public ToolBar Bar { get; } = bar;
-
-        public Transform Shift { get; } = new();
-
-        public Transform Transform { get; } = bar.RenderTransform;
-
-        public bool HadZIndex { get; } = bar.GetValueSource(ZIndexProperty) == ValuePriority.Local;
-
-        public int ZIndex { get; } = bar.ZIndex;
-
-        public IUIComponent Root { get; } = root;
-
-        public Vector2<double> PressedAt { get; } = pressedAt;
-
-        public List<ToolBarTray> Trays { get; } = trays;
-
-        public ToolBarSlot Slot { get; set; }
     }
 }
 
