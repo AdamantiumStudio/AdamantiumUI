@@ -1089,6 +1089,50 @@ public class ToolBarTrayTests
         });
     }
 
+    // A tray that takes only some bars refuses the rest where it would have taken them: no mark, nothing moved.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ATrayThatTakesSomeBars_RefusesTheRest(System.Type styleSet)
+    {
+        Use(styleSet);
+        var taken = Bar("Taken", 0, 0);
+        var refused = Bar("Refused", 0, 1);
+        var top = Tray(taken, refused);
+        var bottom = new PickyTray(taken);
+        Style(bottom);
+        bottom.Items.Add(Bar("Own", 0, 0));
+        foreach (var bar in bottom.Items.OfType<ToolBar>())
+        {
+            Style(bar);
+        }
+
+        var root = new Border
+        {
+            Width = 1000, Height = 400,
+            Child = new StackPanel { Children = { top, new Border { Height = 100 }, bottom } }
+        };
+        Show(root);
+        var own = bottom.Items.OfType<ToolBar>().Single();
+        var into = At(own, root) + new Vector2<double>(own.RenderSize.Width - 2, own.RenderSize.Height / 2);
+
+        var marked = bottom.ShowDropPlace(refused, root.TranslatePoint(into, bottom));
+        bottom.HideDropPlace();
+        Drag(refused, root, into);
+        Drag(taken, root, into);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(marked, Is.False);
+            Assert.That(top.Items, Does.Contain(refused));
+            Assert.That(bottom.Items, Does.Contain(taken));
+        });
+    }
+
+    private sealed class PickyTray(ToolBar takes) : ToolBarTray
+    {
+        protected override bool CanTake(ToolBar bar) =>
+            (ReferenceEquals(bar, takes) || ReferenceEquals(bar.Tray, this)) && base.CanTake(bar);
+    }
+
     private sealed class BarModel(string name)
     {
         public string Name { get; } = name;

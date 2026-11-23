@@ -375,7 +375,9 @@ public class ToolBarTray : ItemsControl
     /// <summary>Whether a bar is being carried: it stands where it was, dimmed by its theme, while its ghost moves.</summary>
     public static void SetIsMoving(ToolBar bar, bool moving) => bar.IsMoving = moving;
 
-    private bool CanTake(ToolBar bar) =>
+    /// <summary>Whether a bar dropped here may land: neither tray locked, and the bar this tray's own or one of a tray both
+    /// share their bars with. A tray that takes only some bars - those of one control - says so here.</summary>
+    protected virtual bool CanTake(ToolBar bar) =>
         !IsLocked && bar.Tray is { IsLocked: false } from && (ReferenceEquals(from, this) || CanTakeFrom(from));
 
     // A bar goes from one tray to another only as an item each holds of its own, and only where both share their bars;
