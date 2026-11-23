@@ -548,7 +548,18 @@ public class DataGridCell : ContentControl
     /// <summary>Content is PUSHED RIGHT by <see cref="Indent"/> - that shift is the whole of what depth looks like in a
     /// tree table. The cell keeps its column's width whatever its content wants: the grid decided the widths once for
     /// everyone.</summary>
-    protected override Size<double> MeasureOverride(Size<double> availableSize) => base.MeasureOverride(availableSize);
+    // An Auto column's cell tells its grid what it would take unbounded - that is what the width pass settles on -
+    // however it comes to be measured: in its row's pass, or alone, as content built or bound after it re-measures it.
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
+    {
+        if (Column is { Width.IsAuto: true } && !double.IsPositiveInfinity(availableSize.Width) && OwningGrid() is { } grid)
+        {
+            var wanted = base.MeasureOverride(new Size<double>(double.PositiveInfinity, availableSize.Height));
+            grid.ReportAutoWidth(Column, wanted.Width + Margin.Left + Margin.Right);
+        }
+
+        return base.MeasureOverride(availableSize);
+    }
 
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {

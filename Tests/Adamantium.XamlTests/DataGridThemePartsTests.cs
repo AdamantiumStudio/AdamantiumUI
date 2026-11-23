@@ -1,3 +1,4 @@
+using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -450,12 +451,13 @@ public class DataGridThemePartsTests
         Settle(window);
         var before = grid.Columns[0].ActualWidth;
 
-        // Its cell's text grows after the grid was laid out - a binding applied a frame later - and the row alone is
-        // measured again, as the layout manager measures the topmost invalid element, not the grid.
+        // Its cell's text grows after the grid was laid out - a binding applied a frame later - and the cell alone is
+        // measured again, at its column's width: its desired size clipped to it, nothing above it is.
         item.Name = "a much longer name";
         BindingUpdateQueue.Flush();
-        var row = (IMeasurableComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
-        row.Measure(row.RenderSize, force: true);
+        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        var cell = row.VisualChildren.OfType<DataGridCell>().Single(candidate => candidate.ColumnIndex == 0);
+        ((IMeasurableComponent)cell).Measure(cell.RenderSize, force: true);
         Settle(window);
 
         TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}");
