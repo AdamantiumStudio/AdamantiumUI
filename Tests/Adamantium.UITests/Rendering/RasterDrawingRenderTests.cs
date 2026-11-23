@@ -75,16 +75,8 @@ public class RasterDrawingRenderTests
             using var image = _renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)image.TotalSizeInBytes];
             Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
-            if (Environment.GetEnvironmentVariable("ADAM_TEMP_RASTER_SHOTS") is { Length: > 0 } shots)   // TEMP
-            {
-                _renderer.Save(System.IO.Path.Combine(shots, $"{TestContext.CurrentContext.Test.Name.Replace('"', '_')}-{++_shot}.png"),
-                    Adamantium.Imaging.ImageFileType.Png);
-            }
-
             return new Frame(bytes, drawn);
         }
-
-        private static int _shot;
 
         public void Dispose() => _renderer.Dispose();
     }
@@ -133,7 +125,8 @@ public class RasterDrawingRenderTests
         Assert.Multiple(() =>
         {
             Assert.That(raster.TilesDrawn, Is.GreaterThan(0), "drawn into tiles");
-            Assert.That(Apart(vector, raster), Is.LessThanOrEqualTo(Dim * 2), "pixels apart from its shapes' picture");
+            // Its tiles are drawn at the next power of two and laid down smaller, which softens an edge by a pixel.
+            Assert.That(Apart(vector, raster), Is.LessThanOrEqualTo(Dim * 3), "pixels apart from its shapes' picture");
         });
     }
 
@@ -150,6 +143,26 @@ public class RasterDrawingRenderTests
             Assert.That(first.TilesDrawn, Is.GreaterThan(0));
             Assert.That(again.TilesDrawn, Is.EqualTo(0), "laid down from the tiles it holds");
             Assert.That(Apart(first, again), Is.EqualTo(0));
+        });
+    }
+
+    // The camera moving and zooming within a step of scale moves and scales the tiles it holds.
+    [Test]
+    public void AMoveWithinAStepOfScale_DrawsNoTile_AndShowsWhatItsShapesShow()
+    {
+        var picture = new Picture { DrawingMode = DrawingMode.Raster };
+        var host = new Canvas { Width = Dim, Height = Dim, RenderTransform = new Transform { ScaleX = 0.6, ScaleY = 0.6 } };
+        host.Children.Add(picture);
+        using var stand = new Stand(host);
+        stand.Render();
+        host.RenderTransform = new Transform { ScaleX = 0.9, ScaleY = 0.9, TranslateX = 12, TranslateY = 7 };
+        var moved = stand.Render();
+        var vector = Once(DrawingMode.Vector, 0.9, 12, 7);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(moved.TilesDrawn, Is.EqualTo(0), "the tiles it held, moved and scaled");
+            Assert.That(Apart(vector, moved), Is.LessThanOrEqualTo(Dim * 3), "pixels apart from its shapes' picture");
         });
     }
 
