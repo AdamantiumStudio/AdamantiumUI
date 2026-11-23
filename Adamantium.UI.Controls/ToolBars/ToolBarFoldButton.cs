@@ -1,5 +1,6 @@
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -24,6 +25,10 @@ public class ToolBarFoldButton : ToggleButton
         internal set => SetValue(HeaderPropertyKey, value);
     }
 
-    private static void OnHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+    // Named by it to automation as well - not by the two letters it shows.
+    private static void OnHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
         a.SetCurrentValue(ToolTipService.ToolTipProperty, e.NewValue);
+        a.SetCurrentValue(AutomationProperties.NameProperty, e.NewValue as string);
+    }
 }

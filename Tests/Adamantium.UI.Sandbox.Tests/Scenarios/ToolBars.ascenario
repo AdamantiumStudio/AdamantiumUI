@@ -61,16 +61,18 @@
   <!-- Down the side: the narrow number boxes stand on the column; the author field is folded into a button named for
        it, which opens the field itself beside the column, where it is typed into. Turned along, the field stands on the
        bar again, holding what was typed. -->
+  <Scroll Target="id=ToolBarsView>type=Pane" Vertical="100" />
   <Expect Target="id=PictureWidth" Offscreen="False" Value="5.08" />
   <Expect Target="id=PictureHeight" Offscreen="False" />
-  <Expect Target="id=Author" Offscreen="True" />
+  <Absent Target="id=Author" />
   <Click Target="id=PictureBar/type=Button,name=Author" />
   <Wait Target="id=Author" Offscreen="False" Timeout="5s" />
   <Set Target="id=Author" Value="Margo" />
   <Click Target="id=PictureBar/type=Button,name=Author" />
-  <Wait Target="id=Author" Offscreen="True" Timeout="5s" />
+  <Absent Target="id=Author" Timeout="5s" />
   <Expand Target="id=SideOrientation" />
   <Select Target="id=SideOrientation/name=Horizontal" />
+  <Scroll Target="id=ToolBarsView>type=Pane" Vertical="100" />
   <Wait Target="id=Author" Offscreen="False" Timeout="5s" />
   <Expect Target="id=Author" Value="Margo" />
   <Absent Target="id=PictureBar/type=Button,name=Author" />

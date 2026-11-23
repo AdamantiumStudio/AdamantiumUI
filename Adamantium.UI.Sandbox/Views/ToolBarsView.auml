@@ -1,5 +1,7 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Scrolled: the page is taller than the window once the bar down the side is on it. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Orientation="Vertical" Margin="24" MaxWidth="1000">
 
         <TextBlock Text="ToolBarTray + ToolBar" FontSize="20" MarginBottom="4"/>
@@ -153,4 +155,5 @@
         <TextBlock x:Name="ToolBarsReport"
                    Text="{Localize ToolBarsStrings.Report, command={Localize ToolBarsStrings, Key={Binding Pressed}}}"/>
     </StackPanel>
+    </ScrollViewer>
 </View>

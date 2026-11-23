@@ -486,6 +486,13 @@ public class ToolBarItem : ContentControl
             presenter.ContentTemplate = ContentTemplate;
             presenter.Content = Content;
         }
+
+        // The presenter discards the button it lets go of - a discard is one way - so the next fold makes a new one.
+        if (_foldButton != null)
+        {
+            _foldButton.Click -= OnFoldButtonClick;
+            _foldButton = null;
+        }
     }
 
     // Its label, else what automation would call it.

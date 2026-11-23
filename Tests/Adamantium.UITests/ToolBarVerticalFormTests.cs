@@ -155,6 +155,7 @@ public class ToolBarVerticalFormTests
             Assert.That(button, Is.Not.Null, "a button stands in its place");
             Assert.That(button?.Content, Is.EqualTo("Au"), "the first two letters of its label");
             Assert.That(button?.Header, Is.EqualTo("Author"));
+            Assert.That(button?.GetAutomationPeer()?.Name, Is.EqualTo("Author"), "named by the label, not its letters");
             Assert.That(columnWidth, Is.LessThan(side.Author.Width), "the column is not as wide as the field");
             Assert.That(author.Form, Is.EqualTo(ToolBarItemForm.Shown));
             Assert.That(Inline(author).Content, Is.SameAs(side.Author), "along a bar the field is itself again");
@@ -247,6 +248,30 @@ public class ToolBarVerticalFormTests
             Assert.That(authorLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(sizeLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(ToolTipService.GetToolTip(size), Is.Null, "along a bar the label stands beside it");
+        });
+    }
+
+    // Down the side, along, down again: folded again, the command stands as a live button, not the one let go of.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AFoldAfterAnUnfold_StandsAsALiveButton(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var author = ItemHolding(side.Group, side.Author);
+        var first = (ToolBarFoldButton)Inline(author).Content;
+
+        side.Tray.Orientation = Orientation.Horizontal;
+        Show(side);
+        side.Tray.Orientation = Orientation.Vertical;
+        Show(side);
+        var again = Inline(author).Content as ToolBarFoldButton;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(again, Is.Not.Null);
+            Assert.That(again?.IsDiscarded, Is.False, "a discarded button would be drawn in the window");
+            Assert.That(again?.Content, Is.EqualTo("Au"));
+            Assert.That(first.IsDiscarded, Is.True, "or this proves nothing: the presenter let it go");
         });
     }
 
