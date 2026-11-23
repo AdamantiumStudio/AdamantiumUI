@@ -22,10 +22,13 @@ public partial class MainViewModel
     private readonly IUIApplication _application;
     private readonly IGraphicsDeviceService _graphics;
     private readonly IApplicationDiagnostics _diagnostics;
+    private readonly IOverlayService _overlays;
+    private System.Threading.CancellationTokenSource _diagnosticsWindow;
     private bool _followsThemes;
 
     public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs,
-        IUIApplication application, IGraphicsDeviceService graphics, IApplicationDiagnostics diagnostics)
+        IUIApplication application, IGraphicsDeviceService graphics, IApplicationDiagnostics diagnostics,
+        IOverlayService overlays)
     {
         _navigation = navigation;
         _settings = settings;
@@ -33,6 +36,7 @@ public partial class MainViewModel
         _application = application;
         _graphics = graphics;
         _diagnostics = diagnostics;
+        _overlays = overlays;
         _updateRate = application.UpdateRate;
     }
 
@@ -71,10 +75,41 @@ public partial class MainViewModel
     [Bindable]
     private double _width = 150;
 
-    // Shows the permanent diagnostics PLATE (top-right overlay). Driven by the right-side Diagnostics ToggleSwitch.
+    // Shows the live diagnostics in an overlay window - moved and collapsed to its title by its own bar. Driven by the
+    // right-side Diagnostics ToggleSwitch; the window's close button turns the switch off.
     [Bindable] private bool _diagnosticsOpen;
 
     [Command] private void ToggleDiagnostics() => DiagnosticsOpen = !DiagnosticsOpen;
+
+    partial void OnDiagnosticsOpenChanged(bool value)
+    {
+        if (!value)
+        {
+            _diagnosticsWindow?.Cancel();
+            return;
+        }
+
+        if (_diagnosticsWindow == null)
+        {
+            _ = ShowDiagnosticsWindow();
+        }
+    }
+
+    // Open until the switch closes it - cancelling the token it was shown with - or its own close button does.
+    private async Task ShowDiagnosticsWindow()
+    {
+        using var shown = new System.Threading.CancellationTokenSource();
+        _diagnosticsWindow = shown;
+        try
+        {
+            await _overlays.ShowOverlayAsync<DiagnosticsOverlayViewModel>(cancellationToken: shown.Token);
+        }
+        finally
+        {
+            _diagnosticsWindow = null;
+            DiagnosticsOpen = false;
+        }
+    }
 
     // Opens the diagnostics SLIDEPANEL (slides in from the right). Driven by the LEFT caption "Diagnostics" command -
     // kept separate from the plate so the two diagnostics surfaces are toggled independently.

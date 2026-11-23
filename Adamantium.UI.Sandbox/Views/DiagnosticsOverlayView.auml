@@ -1,0 +1,10 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
+    <!-- DataContext is DiagnosticsOverlayViewModel. The live RuntimeStats, refreshed by DiagnosticsOverlayBehavior: how
+         scroll, layout and render perf is watched at runtime. The window's bar moves it and collapses it to its title. -->
+    <TextBlock Width="264" FontSize="13" TextWrapping="WrapBySymbols" Text="diagnostics…">
+        <TextBlock.Behaviors>
+            <behaviors:DiagnosticsOverlayBehavior/>
+        </TextBlock.Behaviors>
+    </TextBlock>
+</View>

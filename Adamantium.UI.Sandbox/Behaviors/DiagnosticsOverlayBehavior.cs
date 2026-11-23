@@ -203,8 +203,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
     private void OnRefresh(object sender, EventArgs e)
     {
-        if (!_running || !Shown(_target)
-            || !System.Linq.Enumerable.Contains(_application.Windows, (Adamantium.UI.Core.IWindow)_target.RootVisual))
+        if (!_running || !Shown(_target) || !IsOpen(_target.RootVisual))
         {
             StopTicking();
             return;
@@ -213,9 +212,17 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         Publish(_target);
     }
 
+    // Shown in a window of the application, or in an overlay window open over one.
+    private bool IsOpen(Adamantium.UI.Core.IRootVisualComponent root) => root switch
+    {
+        Adamantium.UI.Core.IWindow window => System.Linq.Enumerable.Contains(_application.Windows, window),
+        Adamantium.UI.Controls.OverlayWindow overlay => overlay.IsOpen,
+        _ => false
+    };
+
     private static bool Shown(Adamantium.UI.Core.IUIComponent element)
     {
-        if (element?.RootVisual is not Adamantium.UI.Core.IWindow)
+        if (element?.RootVisual is not (Adamantium.UI.Core.IWindow or Adamantium.UI.Controls.OverlayWindow))
         {
             return false;
         }
