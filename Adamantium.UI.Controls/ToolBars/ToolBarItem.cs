@@ -274,13 +274,26 @@ public class ToolBarItem : ContentControl
     /// <summary>Its command's folded icon changed: the button shows it.</summary>
     internal void ShowFoldedIcon() => ShowLabel();
 
-    // Whether the item moved - to or from the column, or to a column of another width - or changed its form.
+    private bool _placed;
+
+    // Whether the item moved - to or from the column, or to a column of another width - or changed its form. Along a bar
+    // as it was, nothing: a bar lays its commands out on every pass, most of them along it.
     private bool Stand(bool onColumn, double columnWidth, bool reform = false)
     {
-        var moved = _onColumn != onColumn || !_columnWidth.Equals(columnWidth);
+        if (_placed && !onColumn && !_onColumn && !reform)
+        {
+            return false;
+        }
+
+        var moved = _onColumn != onColumn || onColumn && !_columnWidth.Equals(columnWidth);
+        if (!_placed || _onColumn != onColumn)
+        {
+            SetValue(ToolBar.CommandOrientationProperty, onColumn ? Orientation.Vertical : Orientation.Horizontal);
+        }
+
+        _placed = true;
         _onColumn = onColumn;
         _columnWidth = columnWidth;
-        SetValue(ToolBar.CommandOrientationProperty, onColumn ? Orientation.Vertical : Orientation.Horizontal);
         FollowLabel(onColumn ? _labelSource : null);
 
         // What does not hang on the command's width is decided now: a hidden item is never measured to decide it. A
