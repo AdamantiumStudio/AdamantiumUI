@@ -12,19 +12,35 @@ namespace Adamantium.UI.Platforms.Windows;
 /// <summary>Windows' own text prediction (Windows.Data.Text.TextPredictionGenerator, Windows 10 1803 and later): the
 /// typing suggestions that come with the languages the user added to Windows. One generator per language, made on first
 /// use. A generator takes any tag and answers nothing for a language it has no suggestions for, so a language is
-/// supported when the user has it, matched by its first subtag (ru-RU to the user's ru-UA). Its objects can be called
-/// from any thread.</summary>
-internal sealed class WindowsWordPredictor : IWordPredictor
+/// supported when the user has it, matched by its first subtag (ru-RU to the user's ru-UA). The user adding or removing
+/// a language (their list in the registry changing) is seen on the next ask. Its objects can be called from any
+/// thread; a generator is called and released only under one lock, so none is released during a call on it (an
+/// operation it started holds its own reference).</summary>
+internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
 {
     private const string GeneratorClass = "Windows.Data.Text.TextPredictionGenerator";
     private const string PreferencesClass = "Windows.System.UserProfile.GlobalizationPreferences";
+    private const string UserLanguagesKey = @"Control Panel\International\User Profile";
 
     private readonly object _gate = new();
     private readonly Dictionary<string, ITextPredictionGenerator2> _generators = new(StringComparer.OrdinalIgnoreCase);
+    private readonly RegistryKeyWatch _userLanguages;
     private ITextPredictionGeneratorFactory _factory;
     private bool _factoryTried;
 
-    public bool Supports(string language) => FindGenerator(language) != null;
+    public WindowsWordPredictor() : this(UserLanguagesKey)
+    {
+    }
+
+    /// <summary>A predictor that takes a change of <paramref name="userLanguagesKey"/> (of the current user) for the
+    /// user's languages changing.</summary>
+    internal WindowsWordPredictor(string userLanguagesKey) => _userLanguages = new RegistryKeyWatch(userLanguagesKey);
+
+    public bool Supports(string language)
+    {
+        lock (_gate)
+            return FindGenerator(language) != null;
+    }
 
     public Task<IReadOnlyList<string>> CompleteAsync(string language, string start,
         IReadOnlyList<string> previousWords, int count, CancellationToken cancellation) =>
@@ -37,38 +53,72 @@ internal sealed class WindowsWordPredictor : IWordPredictor
     public Task<IReadOnlyList<string>> PredictNextAsync(string language, IReadOnlyList<string> previousWords,
         int count, CancellationToken cancellation)
     {
-        if (count <= 0 || previousWords.Count == 0 || FindGenerator(language) is not { } generator)
+        if (count <= 0 || previousWords.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<string>>([]);
         }
 
-        return generator.GetNextWordCandidatesAsync((uint)count, new StringIterable([.. previousWords]), out var operation) == 0
-               && operation != null
-            ? StringListOperations.ReadAsync(operation, cancellation)
-            : Task.FromResult<IReadOnlyList<string>>([]);
+        IStringListOperation operation = null;
+        lock (_gate)
+        {
+            if (FindGenerator(language) is { } generator
+                && generator.GetNextWordCandidatesAsync((uint)count, new StringIterable([.. previousWords]), out operation) != 0)
+            {
+                operation = null;
+            }
+        }
+
+        return Read(operation, cancellation);
     }
 
     private Task<IReadOnlyList<string>> RequestCandidatesAsync(string language, string text,
         TextPredictionOptions options, IReadOnlyList<string> previousWords, int count, CancellationToken cancellation)
     {
-        if (count <= 0 || string.IsNullOrEmpty(text) || FindGenerator(language) is not { } generator)
+        if (count <= 0 || string.IsNullOrEmpty(text))
         {
             return Task.FromResult<IReadOnlyList<string>>([]);
         }
 
+        IStringListOperation operation = null;
         var input = WinRTInterop.CreateString(text);
         try
         {
-            return generator.GetCandidatesWithParametersAsync(input, (uint)count, options,
-                       new StringIterable([.. previousWords]), out var operation) == 0 && operation != null
-                ? StringListOperations.ReadAsync(operation, cancellation)
-                : Task.FromResult<IReadOnlyList<string>>([]);
+            lock (_gate)
+            {
+                if (FindGenerator(language) is { } generator
+                    && generator.GetCandidatesWithParametersAsync(input, (uint)count, options,
+                        new StringIterable([.. previousWords]), out operation) != 0)
+                {
+                    operation = null;
+                }
+            }
         }
         finally
         {
             WinRTInterop.DeleteString(input);
         }
+
+        return Read(operation, cancellation);
     }
+
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            ForgetGenerators();
+            _userLanguages.Dispose();
+            if (_factory != null)
+            {
+                Marshal.ReleaseComObject(_factory);
+                _factory = null;
+            }
+        }
+    }
+
+    private static Task<IReadOnlyList<string>> Read(IStringListOperation operation, CancellationToken cancellation) =>
+        operation != null
+            ? StringListOperations.ReadAsync(operation, cancellation)
+            : Task.FromResult<IReadOnlyList<string>>([]);
 
     private ITextPredictionGenerator2 FindGenerator(string language)
     {
@@ -77,17 +127,32 @@ internal sealed class WindowsWordPredictor : IWordPredictor
             return null;
         }
 
-        lock (_gate)
+        if (_userLanguages.TakeChange())
         {
-            if (_generators.TryGetValue(language, out var known))
-            {
-                return known;
-            }
-
-            var made = CreateGenerator(language);
-            _generators[language] = made;
-            return made;
+            ForgetGenerators();
         }
+
+        if (_generators.TryGetValue(language, out var known))
+        {
+            return known;
+        }
+
+        var made = CreateGenerator(language);
+        _generators[language] = made;
+        return made;
+    }
+
+    private void ForgetGenerators()
+    {
+        foreach (var generator in _generators.Values)
+        {
+            if (generator != null)
+            {
+                Marshal.ReleaseComObject(generator);
+            }
+        }
+
+        _generators.Clear();
     }
 
     private ITextPredictionGenerator2 CreateGenerator(string language)
