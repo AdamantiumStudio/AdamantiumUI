@@ -334,6 +334,24 @@ public class ToolBarVerticalFormTests
         });
     }
 
+    // A tray shorter than its bar can shrink to - its grip and one command: the bar is cut at the tray's edge, not drawn
+    // over what stands below it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ATrayShorterThanItsBarCanShrink_CutsTheBarAtItsEdge(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        side.Bar.CommandWrapping = CommandWrapping.Wrap;
+        side.Tray.MaxHeight = 20;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.RenderSize.Height, Is.GreaterThan(side.Tray.RenderSize.Height), "or nothing sticks out");
+            Assert.That(side.Tray.ClipToBounds, Is.True);
+        });
+    }
+
     // Down the side, along, down again: folded again, the command stands as a live button, not the one let go of.
     [TestCaseSource(nameof(StyleSets))]
     public void AFoldAfterAnUnfold_StandsAsALiveButton(System.Type styleSet)

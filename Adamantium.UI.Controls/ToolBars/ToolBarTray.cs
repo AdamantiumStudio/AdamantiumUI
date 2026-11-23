@@ -59,6 +59,8 @@ public class ToolBarTray : ItemsControl
 
     static ToolBarTray()
     {
+        // A bar that cannot shrink to the tray's room is cut at its edge, not drawn over what stands beside it.
+        ClipToBoundsProperty.OverrideMetadata(typeof(ToolBarTray), new PropertyMetadata(true));
         CommandManager.RegisterClassCommandBinding(typeof(ToolBarTray), new CommandBinding(LockCommand,
             static (sender, _) =>
             {
