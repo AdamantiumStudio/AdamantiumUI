@@ -1,8 +1,8 @@
 ### Added
 
 - Groups in an `ItemsControl`, as in WPF: a `GroupStyle` in `ItemsControl.GroupStyle` (one per level, its
-  `HeaderTemplate` given the `CollectionViewGroup`) shows the groups of a grouped `CollectionView` source. The items stay
-  one list - their indices, the selection and the keyboard count no header - and each group's header (`GroupHeader`,
+  `HeaderTemplate` given the `CollectionViewGroup`) shows the groups of a grouped `CollectionView` source. The items
+  stay one list - their indices, the selection and the keyboard count no header - and each group's header (`GroupHeader`,
   made by `ItemsControl.GroupHeaderGenerator` at the places of `ItemsControl.GroupHeaderPlaces`) is a row of the panel
   before the group's items: a line across a `WrapPanel`, a row of a `StackPanel`, virtualized or not. Only the headers
   of the lines in view are made, as only those items are; the arrows pass a header by. Each level's headers are as tall
