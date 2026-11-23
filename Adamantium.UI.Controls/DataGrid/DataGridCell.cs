@@ -548,17 +548,19 @@ public class DataGridCell : ContentControl
     /// <summary>Content is PUSHED RIGHT by <see cref="Indent"/> - that shift is the whole of what depth looks like in a
     /// tree table. The cell keeps its column's width whatever its content wants: the grid decided the widths once for
     /// everyone.</summary>
-    // An Auto column's cell tells its grid what it would take unbounded - that is what the width pass settles on -
-    // however it comes to be measured: in its row's pass, or alone, as content built or bound after it re-measures it.
+    // An Auto column's cell measures its content unbounded - the column grows to its widest cell, so there is nothing to
+    // trim - and tells its grid what that came to. Measured unbounded, content built or bound later changes its desired
+    // size and so re-measures the cell; measured at the column's width it stayed clipped there, and nothing asked again.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Column is { Width.IsAuto: true } && !double.IsPositiveInfinity(availableSize.Width) && OwningGrid() is { } grid)
+        if (Column is not { Width.IsAuto: true })
         {
-            var wanted = base.MeasureOverride(new Size<double>(double.PositiveInfinity, availableSize.Height));
-            grid.ReportAutoWidth(Column, wanted.Width + Margin.Left + Margin.Right);
+            return base.MeasureOverride(availableSize);
         }
 
-        return base.MeasureOverride(availableSize);
+        var wanted = base.MeasureOverride(new Size<double>(double.PositiveInfinity, availableSize.Height));
+        OwningGrid()?.ReportAutoWidth(Column, wanted.Width + Margin.Left + Margin.Right);
+        return new Size<double>(Math.Min(wanted.Width, availableSize.Width), wanted.Height);
     }
 
     protected override Size<double> ArrangeOverride(Size<double> finalSize)

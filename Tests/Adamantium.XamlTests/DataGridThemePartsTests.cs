@@ -451,14 +451,12 @@ public class DataGridThemePartsTests
         Settle(window);
         var before = grid.Columns[0].ActualWidth;
 
-        // Its cell's text grows after the grid was laid out - a binding applied a frame later - and the cell alone is
-        // measured again, at its column's width: its desired size clipped to it, nothing above it is.
+        // Its cell's text grows after the grid was laid out - a binding applied a frame later - and the layout manager
+        // re-measures only the text, with what it was given last, going up only as far as desired sizes change.
         item.Name = "a much longer name";
         BindingUpdateQueue.Flush();
-        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
-        var cell = row.VisualChildren.OfType<DataGridCell>().Single(candidate => candidate.ColumnIndex == 0);
-        ((IMeasurableComponent)cell).Measure(cell.RenderSize, force: true);
-        Settle(window);
+        for (var pass = 0; pass < 4; pass++)
+            Adamantium.UI.Core.LayoutManager.For(window).ExecuteLayoutPass();
 
         TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}");
         Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(before + 40), "the Auto column takes its widest cell");
