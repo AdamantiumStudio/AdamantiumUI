@@ -67,10 +67,13 @@ public class HunspellWordPredictorTests
     [TestCase("en-US", "h", "he", "hel", "hell", "hello")]
     public async Task EachKey_HandsBackAtOnce_AndItsWordsComeSoon(string language, params string[] starts)
     {
-        Assume.That(_predictor.Supports(language), Is.True, $"no hunspell dictionary for {language} here");
+        var memoryBefore = System.GC.GetTotalMemory(forceFullCollection: true);
         var clock = Stopwatch.StartNew();
+        Assume.That(_predictor.Supports(language), Is.True, $"no hunspell dictionary for {language} here");
         await _predictor.CompleteAsync(language, starts[0], [], 3, CancellationToken.None);
         var reading = clock.Elapsed.TotalMilliseconds;
+        var held = (System.GC.GetTotalMemory(forceFullCollection: true) - memoryBefore) / (1024.0 * 1024.0);
+        TestContext.Progress.WriteLine($"MEASURE {language}: the dictionary holds {held:F1} MB");
 
         // As typed: each beginning asked once, the next letter after the one before.
         var slowestHandBack = 0.0;
