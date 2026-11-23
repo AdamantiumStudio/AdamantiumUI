@@ -20,7 +20,6 @@ internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
 {
     private const string GeneratorClass = "Windows.Data.Text.TextPredictionGenerator";
     private const string PreferencesClass = "Windows.System.UserProfile.GlobalizationPreferences";
-    private const string UserLanguagesKey = @"Control Panel\International\User Profile";
 
     private readonly object _gate = new();
     private readonly Dictionary<string, ITextPredictionGenerator2> _generators = new(StringComparer.OrdinalIgnoreCase);
@@ -28,7 +27,7 @@ internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
     private ITextPredictionGeneratorFactory _factory;
     private bool _factoryTried;
 
-    public WindowsWordPredictor() : this(UserLanguagesKey)
+    public WindowsWordPredictor() : this(RegistryKeyWatch.UserLanguagesKey)
     {
     }
 

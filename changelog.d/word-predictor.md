@@ -6,3 +6,8 @@
   suggestions (`Windows.Data.Text.TextPredictionGenerator`, Windows 10 1803 and later), called through
   `Adamantium.Win32.WinRT`; a language is supported when the user has added it to Windows, matched by its first subtag,
   and the user adding or removing a language is seen on the next ask. Not on Linux and macOS yet.
+
+### Changed
+
+- Windows spell checking sees the user adding or removing a language on its next call, where it kept the languages it
+  found until the application restarted.

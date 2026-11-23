@@ -11,6 +11,9 @@ namespace Adamantium.UI.Platforms.Windows;
 /// thread that asked for the notice ending is no change. A key that does not exist never changes.</summary>
 internal sealed partial class RegistryKeyWatch : IDisposable
 {
+    /// <summary>The current user's languages: <c>Languages</c> lists them, a key under it per language.</summary>
+    public const string UserLanguagesKey = @"Control Panel\International\User Profile";
+
     private const uint NotifyChangeName = 0x1;
     private const uint NotifyChangeLastSet = 0x4;
     private const uint NotifyThreadAgnostic = 0x10000000;
