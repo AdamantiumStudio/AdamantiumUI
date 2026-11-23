@@ -7,6 +7,9 @@
     <Style Selector="ToolBarTray">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
         <Setter Property="Padding" Value="6,4"/>
+        <!-- Room between bars and between rows - only between them, so the tray's padding is the same on every side. -->
+        <Setter Property="BarSpacing" Value="8"/>
+        <Setter Property="BandSpacing" Value="4"/>
         <Setter Property="BarsHeader" Value="{Localize ToolBarStrings.Bars}"/>
         <Setter Property="ContextualBarsHeader" Value="{Localize ToolBarStrings.ContextualBars}"/>
         <Setter Property="ItemsPanel">
@@ -68,7 +71,6 @@
         <Setter Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
         <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="Padding" Value="3"/>
-        <Setter Property="Margin" Value="0,0,8,4"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
         <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
         <Setter Property="ColumnWidth" Value="{ResourceReference ToolBarColumnWidth}"/>

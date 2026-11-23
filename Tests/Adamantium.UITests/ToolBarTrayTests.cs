@@ -1144,6 +1144,38 @@ public class ToolBarTrayTests
         });
     }
 
+    // The room between bars is the tray's, only between neighbours: a bar alone down the side stands in the middle of
+    // its tray, and along a row the last bar ends where the tray's padding begins.
+    [TestCaseSource(nameof(StyleSets))]
+    public void TheRoomBetweenBars_IsOnlyBetweenThem(System.Type styleSet)
+    {
+        Use(styleSet);
+        var down = Bar("Down", 0, 0);
+        var side = Tray(down);
+        side.BarSpacing = 8;
+        side.Orientation = Orientation.Vertical;
+        var column = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { side } } };
+        Show(column);
+        var leftRoom = At(down, side).X;
+        var rightRoom = side.RenderSize.Width - leftRoom - down.RenderSize.Width;
+
+        var first = Bar("First", 0, 0);
+        var second = Bar("Second", 0, 1);
+        var along = Tray(first, second);
+        along.BarSpacing = 8;
+        var row = new Border { Width = 1000, Height = 300, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { along } } };
+        Show(row);
+        var gap = At(second, along).X - At(first, along).X - first.RenderSize.Width;
+        var tail = along.RenderSize.Width - At(second, along).X - second.RenderSize.Width;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rightRoom, Is.EqualTo(leftRoom).Within(0.5), "a bar alone stands in the middle of its tray");
+            Assert.That(gap, Is.EqualTo(8).Within(0.5), "the room between two bars of a row");
+            Assert.That(tail, Is.EqualTo(At(first, along).X).Within(0.5), "after the last, only the tray's padding");
+        });
+    }
+
     [TestCaseSource(nameof(StyleSets))]
     public void TheBars_AreNamedByTheirHeaders_ToAutomation(System.Type styleSet)
     {

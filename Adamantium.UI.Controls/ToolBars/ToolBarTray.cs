@@ -90,6 +90,32 @@ public class ToolBarTray : ItemsControl
         set => SetValue(IsLockedProperty, value);
     }
 
+    /// <summary>The room between two bars of a row - only between them, none after the last - a theme metric.</summary>
+    public static readonly AdamantiumProperty BarSpacingProperty = AdamantiumProperty.Register(nameof(BarSpacing),
+        typeof(double), typeof(ToolBarTray),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsMeasure, OnSpacingChanged));
+
+    /// <summary>The room between two rows - across the tray, so between columns down the side - a theme metric.</summary>
+    public static readonly AdamantiumProperty BandSpacingProperty = AdamantiumProperty.Register(nameof(BandSpacing),
+        typeof(double), typeof(ToolBarTray),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsMeasure, OnSpacingChanged));
+
+    // The rows' panel reads it from the tray: told nothing, it would keep its old layout.
+    private static void OnSpacingChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+        ((ToolBarTray)a).ItemsHostPanel?.InvalidateMeasure();
+
+    public double BarSpacing
+    {
+        get => GetValue<double>(BarSpacingProperty);
+        set => SetValue(BarSpacingProperty, value);
+    }
+
+    public double BandSpacing
+    {
+        get => GetValue<double>(BandSpacingProperty);
+        set => SetValue(BandSpacingProperty, value);
+    }
+
     public bool SharesBars
     {
         get => GetValue<bool>(SharesBarsProperty);

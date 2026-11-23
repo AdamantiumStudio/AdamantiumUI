@@ -9,6 +9,9 @@
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="Padding" Value="2,1"/>
+        <!-- Room between bars and between rows - only between them, so the tray's padding is the same on every side. -->
+        <Setter Property="BarSpacing" Value="3"/>
+        <Setter Property="BandSpacing" Value="1"/>
         <Setter Property="BarsHeader" Value="{Localize ToolBarStrings.Bars}"/>
         <Setter Property="ContextualBarsHeader" Value="{Localize ToolBarStrings.ContextualBars}"/>
         <Setter Property="ItemsPanel">
@@ -72,7 +75,6 @@
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="0,0,1,0"/>
         <Setter Property="Padding" Value="1,1,3,1"/>
-        <Setter Property="Margin" Value="0,0,3,1"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
         <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
         <Setter Property="ColumnWidth" Value="{ResourceReference ToolBarColumnWidth}"/>
