@@ -64,8 +64,9 @@ public class OverlayWindowCollapseTests
         window.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+        // As its popup lays it out: at the size it asks for.
         window.Measure(new Size<double>(600, 400));
-        window.Arrange(new Rect(0, 0, 600, 400));
+        window.Arrange(new Rect(0, 0, window.DesiredSize.Width, window.DesiredSize.Height));
     }
 
     // The macOS caption hides the light's cell, glyph and all; the others hide the button itself.
@@ -120,6 +121,35 @@ public class OverlayWindowCollapseTests
             Assert.That(grip.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(window.Height, Is.EqualTo(240), "expanded, it has the height it had");
             Assert.That(window.MinHeight, Is.EqualTo(120), "and its smallest height again");
+        });
+    }
+
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void CollapsedItKeepsTheWidthItWasShownAt(string theme)
+    {
+        Use(theme);
+        var window = new OverlayWindow
+        {
+            Title = "probe",
+            CanCollapse = true,
+            Content = new TextBlock { Text = "A content much wider than the smallest width an overlay window has" }
+        };
+        Settle(window);
+        var shown = window.DesiredSize.Width;
+
+        window.IsCollapsed = true;
+        Settle(window);
+        var collapsed = window.DesiredSize.Width;
+        window.IsCollapsed = false;
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.GreaterThan(window.MinWidth), "the content is wider than the smallest width");
+            Assert.That(collapsed, Is.EqualTo(shown), "collapsed, the title bar does not narrow it");
+            Assert.That(window.Width, Is.NaN, "expanded, it is sized to its content again");
         });
     }
 
