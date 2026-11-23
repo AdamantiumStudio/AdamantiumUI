@@ -40,8 +40,10 @@ public partial class RenderCache
         // What its subtree draws, relative to it: its tiles hold it while this stays.
         public ulong Print;
 
-        // What cuts it in the window, in device pixels.
+        // What cuts it in the window, in device pixels; and the bounds the walk drew within when it began, which closing a
+        // tile goes back to.
         public Rect2D Scissor;
+        public Rect2D Bounds;
 
         // Every tile it shows now, and those of them drawn this frame.
         public readonly List<RasterTileKey> Tiles = [];
@@ -81,6 +83,7 @@ public partial class RenderCache
             Scale = MathF.Pow(2f, MathF.Ceiling(MathF.Log2(shown))),
         };
         run.Side = OffscreenLayers.TileTexels / run.Scale;
+        run.Bounds = fullScissor;
         // Its tiles hold it cut by its own clip only; what cuts it above is where they are laid down.
         run.Scissor = LaidDownClip(element) is { } laidDown ? ToClipScissor(laidDown, fullScissor) : fullScissor;
         if (run.Scissor.Extent.Width == 0 || run.Scissor.Extent.Height == 0 || !PrintRaster(run))
@@ -152,10 +155,11 @@ public partial class RenderCache
             }
         }
 
+        // Glyphs still on their way are drawn missing: the tiles are drawn again until none is. Not the atlas's version,
+        // which any text anywhere moves - and drawing the tiles asks for glyphs of their own, so it never stood still.
         if (hasText)
         {
             still &= !FontAtlasStore.HasPendingGlyphs;
-            Mix(ref print, FontAtlasStore.LandedVersion);
         }
 
         // Not to be told apart: a print of its own each frame, which no tile holds.
@@ -239,7 +243,7 @@ public partial class RenderCache
         toTile.M41 = (float)(-key.Column * run.Side * toTexels);
         toTile.M42 = (float)(-key.Row * run.Side * toTexels);
         _cloneMatrix = run.FromWindow * toTile;
-        return DrawIn(_offscreenLayers.BeginTile(device, key, run.Print, _projectionMatrix));
+        return DrawIn(_offscreenLayers.BeginTile(device, key, run.Print, _projectionMatrix, run.Bounds));
     }
 
     private Rect2D CloseRasterTile(IGraphicsDevice device) => DrawIn(_offscreenLayers.EndTile(device));

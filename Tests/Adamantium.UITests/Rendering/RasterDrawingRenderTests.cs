@@ -220,4 +220,39 @@ public class RasterDrawingRenderTests
             Assert.That(changed.At(40, 40), Is.EqualTo((255, 255, 0)).Or.EqualTo((255, 255, 1)), "the new paint");
         });
     }
+
+    private sealed class Square(Color color) : MeasurableUIComponent
+    {
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => new(40, 40);
+
+        protected override void OnRender(IDrawingContext context) =>
+            context.ForControl(this).DrawRectangle(new SolidColorBrush(color), new Rect(0, 0, 40, 40));
+    }
+
+    // What is drawn after it is drawn where it is, over the whole window: closing a tile goes back to what the walk drew
+    // within, not to the tile's 512 pixels - which had a viewer's panels past them vanish.
+    [Test]
+    public void WhatIsDrawnAfterIt_IsDrawnOverTheWholeWindow()
+    {
+        const int size = 700;
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
+        using var renderer = new OffscreenTestRenderer(device, factory, size, size) { ClearColor = Colors.White };
+        var host = new Canvas { Width = size, Height = size };
+        host.Children.Add(new Picture { DrawingMode = DrawingMode.Raster });
+        var after = new Square(Colors.Green);
+        Canvas.SetLeft(after, 640);
+        Canvas.SetTop(after, 640);
+        host.Children.Add(after);
+        var root = new VisualRoot(host, size, size);
+        ((IMeasurableComponent)root).Measure(new Size<double>(size, size));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, size, size));
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        using var image = renderer.RenderTarget.ResolveTexture.ToImage();
+        var bytes = new byte[(int)image.TotalSizeInBytes];
+        Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
+        var at = (660 * size + 660) * 4;
+        Assert.That((bytes[at + 2], bytes[at + 1], bytes[at]), Is.EqualTo((0, 128, 0)), "the square past 512 pixels");
+    }
 }

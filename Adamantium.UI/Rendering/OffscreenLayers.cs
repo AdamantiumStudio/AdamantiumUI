@@ -453,11 +453,12 @@ internal sealed class OffscreenLayers : IDisposable
 
     /// <summary>Opens a fresh texture for the tile kept under <paramref name="key"/>, drawn in its own space: a window
     /// pixel lands on the texel it names, 0 to <see cref="TileTexels"/> each way, whatever lies past the window. Kept
-    /// with <paramref name="print"/> by <see cref="EndTile"/>.</summary>
-    public DrawSpace BeginTile(IGraphicsDevice gd, object key, ulong print, Matrix4x4F projection)
+    /// with <paramref name="print"/> by <see cref="EndTile"/>, which goes back to the space it was opened in - its
+    /// <paramref name="projection"/> and <paramref name="bounds"/>.</summary>
+    public DrawSpace BeginTile(IGraphicsDevice gd, object key, ulong print, Matrix4x4F projection, Rect2D bounds)
     {
         var region = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = TileTexels, Height = TileTexels } };
-        return Open(gd, key, region, print, true, false, projection, region, true, Colors.Transparent, out _);
+        return Open(gd, key, region, print, true, false, projection, bounds, true, Colors.Transparent, out _);
     }
 
     /// <summary>Closes the tile <see cref="BeginTile"/> opened, keeping what it holds for <see cref="LayDownTile"/> in this
