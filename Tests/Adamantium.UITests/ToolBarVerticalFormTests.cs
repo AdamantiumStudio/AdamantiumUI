@@ -74,7 +74,7 @@ public class ToolBarVerticalFormTests
     }
 
     // A section of a bold button, an author field under its label and a narrow size button under its own, down the side.
-    private Side Build(double height = 600)
+    private Side Build(double height = 600, bool collapsed = false)
     {
         var side = new Side { Data = new Form() };
         side.Bold = new Button { Width = 30, Height = 24, Content = "B" };
@@ -90,7 +90,10 @@ public class ToolBarVerticalFormTests
             Header = "Review",
             Items = { side.Bold, side.AuthorLabel, side.Author, side.SizeLabel, side.Size }
         };
-        side.Bar = new ToolBar { Header = "Review", Items = { side.Group } };
+        side.Bar = new ToolBar
+        {
+            Header = "Review", Items = { side.Group }, Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible
+        };
         side.Tray = new ToolBarTray { Orientation = Orientation.Vertical, Items = { side.Bar } };
         side.Window = new Window
         {
@@ -248,6 +251,30 @@ public class ToolBarVerticalFormTests
             Assert.That(authorLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(sizeLabel.Visibility, Is.EqualTo(Visibility.Visible));
             Assert.That(ToolTipService.GetToolTip(size), Is.Null, "along a bar the label stands beside it");
+        });
+    }
+
+    // A label tied to its command only after the bar stands down the side - a binding by element name that resolves once
+    // the bar is in its tree - leaves the column with the command all the same.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ALabelTiedAfterTheBarStands_LeavesTheColumnWithItsCommand(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build(collapsed: true);
+        AutomationProperties.SetLabeledBy(side.Size, null);
+        side.Bar.Visibility = Visibility.Visible;
+        Show(side);
+
+        AutomationProperties.SetLabeledBy(side.Size, side.SizeLabel);
+        Show(side);
+        var sizeLabel = ItemHolding(side.Group, side.SizeLabel);
+        var size = ItemHolding(side.Group, side.Size);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sizeLabel.Visibility, Is.EqualTo(Visibility.Collapsed), "the label leaves with its command");
+            Assert.That(size.Form, Is.EqualTo(ToolBarItemForm.Shown));
+            Assert.That(size.RenderSize.Width, Is.LessThanOrEqualTo(side.Bar.ColumnWidth + 0.01), "as wide as the column");
         });
     }
 

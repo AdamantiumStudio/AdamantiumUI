@@ -214,7 +214,16 @@ public class ToolBarItem : ContentControl
         VisibilityProperty.OverrideMetadata(typeof(ToolBarItem),
             new PropertyMetadata(Visibility.Visible, null, static (a, value) =>
                 ((ToolBarItem)a).Form == ToolBarItemForm.Hidden ? Visibility.Collapsed : value));
+
+        // A label tied to a command after its bar was laid out - a binding by element name, resolved once the bar is in
+        // its tree - is a label all the same: the commands are placed again.
+        AutomationProperties.LabeledByProperty.Changed += static (sender, _) =>
+            ((sender as UIComponent)?.ContentOwner as ToolBarItem)?.PlaceAgain();
     }
+
+    // The bar or section that placed it places its commands again, on its next measure.
+    private void PlaceAgain() =>
+        this.GetVisualAncestors().OfType<ItemsControl>().FirstOrDefault()?.InvalidateMeasure();
 
     private bool _onColumn;
     private double _columnWidth;
