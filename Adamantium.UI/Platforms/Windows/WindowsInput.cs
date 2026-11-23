@@ -64,6 +64,8 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
 
     public bool SendsToOtherApplications => true;
 
+    public nint ForegroundWindowId => Win32Interop.GetForegroundWindow();
+
     public string ForegroundWindowTitle
     {
         get

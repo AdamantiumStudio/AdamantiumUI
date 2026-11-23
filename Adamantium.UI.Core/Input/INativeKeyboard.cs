@@ -22,6 +22,11 @@ public interface INativeKeyboard
     /// the system does not say.</summary>
     string ForegroundWindowTitle => null;
 
+    /// <summary>Which window the system gives keys to now: the same number while it is the same window, whatever its
+    /// title says - an editor marking its document unsaved is still the window it was; 0 when the system does not say.
+    /// A window closed may leave its number to one opened later.</summary>
+    nint ForegroundWindowId => 0;
+
     /// <summary>Puts a key that types no text - Backspace, Enter, an arrow, a modifier, the C of Ctrl+C - into the
     /// system's input, going down or coming up, for the window the system gives keys to. False when it did not get
     /// in: a window of a process with more rights takes none, nor does a platform that cannot send. A key sent down
