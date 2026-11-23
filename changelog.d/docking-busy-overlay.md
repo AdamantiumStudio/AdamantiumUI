@@ -5,3 +5,8 @@
   it, a window opened meanwhile too. It takes the pointer, and the keyboard focus from a field being typed in, so
   nothing in the panes under it can be changed - one switch in place of disabling each control. The sandbox's Docking
   page has a Busy check box.
+
+### Fixed
+
+- A disabled `RibbonGallery` looked enabled: its cells kept their full color. A disabled cell is faded now, picture
+  and name, as a ribbon button's icon is, in Fluent, Graphite and macOS.
