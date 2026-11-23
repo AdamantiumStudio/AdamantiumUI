@@ -45,6 +45,8 @@
          the primary ink under the pointer, as a row's drag handle does. -->
     <Style Selector="DragHandle.ToolBarGrip">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <!-- As tall as the bar, not a row's handle size. -->
+        <Setter Property="Height" Value="NaN"/>
         <!-- Room between the grip and the first command; under it on a bar down the side. -->
         <Setter Property="Margin" Value="0,0,3,0"/>
         <Setter Property="Template">
