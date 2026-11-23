@@ -2642,10 +2642,21 @@ public partial class TreeDataGrid : Selector
     /// counts.</summary>
     internal void ReportAutoWidth(DataGridColumn column, double desired)
     {
-        if (DataGridColumnLayout.RecordMeasured(column, desired)) _autoWidthGrew = true;
+        if (!DataGridColumnLayout.RecordMeasured(column, desired)) return;
+
+        _autoWidthGrew = true;
+        // The in-pass re-run catches a cell measured while this grid measures its rows; a row measured on its own later -
+        // its text bound a frame after it was built - needs the widths laid out again, and the header and the other
+        // strips placed by them.
+        if (!_measuringRows)
+        {
+            InvalidateMeasure();
+            RefreshStrips();
+        }
     }
 
     private bool _autoWidthGrew;
+    private bool _measuringRows;
 
     /// <summary>Total width of the columns as the last pass sized them.</summary>
     public double ColumnsWidth { get; private set; }
@@ -3921,7 +3932,16 @@ public partial class TreeDataGrid : Selector
         RightFrozenWidth = pinnedRight;
         UpdateColumnWindow(availableSize.Width);
 
-        var desired = base.MeasureOverride(availableSize);
+        _measuringRows = true;
+        Size<double> desired;
+        try
+        {
+            desired = base.MeasureOverride(availableSize);
+        }
+        finally
+        {
+            _measuringRows = false;
+        }
 
         // A cell may have reported a wider Auto column than the pass assumed, and the rows have already been laid out
         // against the old number. Re-run the widths so this pass ends consistent instead of showing a torn frame.

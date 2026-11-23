@@ -425,6 +425,69 @@ public class DataGridThemePartsTests
         });
     }
 
+    // A template column sized to its cells, beside one taking the rest: the second starts where the first's widest cell
+    // ends.
+    [Test]
+    public void AnAutoTemplateColumnIsAsWideAsItsCells()
+    {
+        Use(Fluent());
+        var grid = new TreeDataGrid { HeadersVisibility = Visibility.Collapsed };
+        grid.Columns.Add(new DataGridTemplateColumn
+        {
+            Width = GridLength.Auto,
+            CellTemplate = new Adamantium.UI.Core.Templates.DataTemplate(() =>
+            {
+                var text = new Adamantium.UI.Controls.Text.TextBlock { MarginRight = 16 };
+                text.SetBinding("Text", new Binding("Name"));
+                return new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = text };
+            })
+        });
+        grid.Columns.Add(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star) });
+        var item = new NamedItem { Name = "a" };
+        grid.ItemsSource = new[] { item };
+        var window = new Window { Width = 400, Height = 300, Content = grid };
+        grid.ApplyCurrentTheme();
+        Settle(window);
+        var before = grid.Columns[0].ActualWidth;
+
+        // Its cell's text grows after the grid was laid out - a binding applied a frame later - and the row alone is
+        // measured again, as the layout manager measures the topmost invalid element, not the grid.
+        item.Name = "a much longer name";
+        BindingUpdateQueue.Flush();
+        var row = (IMeasurableComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        row.Measure(row.RenderSize, force: true);
+        Settle(window);
+
+        TestContext.WriteLine($"auto column {before} -> {grid.Columns[0].ActualWidth}");
+        Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(before + 40), "the Auto column takes its widest cell");
+    }
+
+    private static void Settle(Window window)
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            BindingUpdateQueue.Flush();
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        }
+    }
+
+    private sealed class NamedItem : System.ComponentModel.INotifyPropertyChanged
+    {
+        private string _name;
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                _name = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Name)));
+            }
+        }
+    }
+
     [Test]
     public void AReadOnlyCellLooksReadOnlyUnderMacOs() => ReadOnlyLooksIt(MacOs());
 
