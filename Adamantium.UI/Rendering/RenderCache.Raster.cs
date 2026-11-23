@@ -80,7 +80,8 @@ public partial class RenderCache
             Scale = MathF.Pow(2f, MathF.Ceiling(MathF.Log2(shown))),
         };
         run.Side = OffscreenLayers.TileTexels / run.Scale;
-        run.Scissor = ResolveScissor(element, world, fullScissor, out _, out _);
+        // Its tiles hold it cut by its own clip only; what cuts it above is where they are laid down.
+        run.Scissor = LaidDownClip(element) is { } laidDown ? ToClipScissor(laidDown, fullScissor) : fullScissor;
         if (run.Scissor.Extent.Width == 0 || run.Scissor.Extent.Height == 0 || !PrintRaster(run))
         {
             return null;

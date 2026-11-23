@@ -489,6 +489,12 @@ public partial class RenderCache
             return fullScissor;
         }
 
+        // Inside a raster tile its clip lies where its draws do: in the tile, by the matrix from the window to it.
+        if (_rasterRun != null && _cloneMatrix is { } toTile)
+        {
+            logical = logical.TransformToAABB(toTile);
+        }
+
         // A PERSPECTIVE world (a 3D-rotated tile: M34/M14/M24 carry the w term) can't be AABB-tested by the affine box
         // below (TransformToAABB does no w-divide -> garbage box -> the tilted tile VANISHED mid-flip). Rare and
         // pixel-clipped by the scissor anyway: skip the cull.
