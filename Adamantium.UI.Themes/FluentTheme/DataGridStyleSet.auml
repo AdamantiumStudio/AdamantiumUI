@@ -36,6 +36,7 @@
                                                Visibility="Collapsed"/>
 
                             <Border Grid.Row="3" Grid.Column="0"
+                                    Visibility="{TemplateBinding HeadersVisibility}"
                                     Background="{ObservableResource SolidBackgroundFillColorTertiary}"
                                     BorderBrush="{ObservableResource DataGridLineColor}"
                                     BorderThickness="0 0 0 1">

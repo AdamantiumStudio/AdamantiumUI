@@ -395,6 +395,37 @@ public class DataGridThemePartsTests
     }
 
     [Test]
+    public void HeadersCollapsedTheRowsStartAtTheTopUnderMacOs() => NoHeaders(MacOs());
+
+    [Test]
+    public void HeadersCollapsedTheRowsStartAtTheTopUnderFluent() => NoHeaders(Fluent());
+
+    [Test]
+    public void HeadersCollapsedTheRowsStartAtTheTopUnderGraphite() =>
+        NoHeaders(new Adamantium.UI.Themes.GraphiteTheme.Graphite());
+
+    private void NoHeaders(Theme theme)
+    {
+        Use(theme);
+        var grid = new TreeDataGrid { HeadersVisibility = Visibility.Collapsed };
+        grid.Columns.Add(new DataGridTextColumn { Header = "Name", Binding = new Binding("Name") });
+        grid.ItemsSource = new[] { new Item { Name = "one" } };
+        Built(grid);
+
+        var strip = (IUIComponent)grid.GetTemplateChild("PART_Headers");
+        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        var gridTop = ((IUIComponent)grid).WorldTransform.TranslationVector.Y;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((IUIComponent)strip.VisualParent).Visibility, Is.EqualTo(Visibility.Collapsed),
+                "the header band goes");
+            Assert.That(row.WorldTransform.TranslationVector.Y - gridTop, Is.LessThan(4),
+                "and the first row stands where it stood");
+        });
+    }
+
+    [Test]
     public void AReadOnlyCellLooksReadOnlyUnderMacOs() => ReadOnlyLooksIt(MacOs());
 
     [Test]

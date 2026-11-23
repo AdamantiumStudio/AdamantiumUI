@@ -2670,6 +2670,18 @@ public partial class TreeDataGrid : Selector
         }
     }
 
+    /// <summary>Whether the row of column headers shows. Collapsed, the rows start at the top - a tree with columns
+    /// whose meaning is plain without titles. The left strip is <see cref="ShowRowNumbers"/>.</summary>
+    public static readonly AdamantiumProperty HeadersVisibilityProperty = AdamantiumProperty.Register(
+        nameof(HeadersVisibility), typeof(Visibility), typeof(TreeDataGrid),
+        new PropertyMetadata(Visibility.Visible, PropertyMetadataOptions.AffectsMeasure));
+
+    public Visibility HeadersVisibility
+    {
+        get => GetValue<Visibility>(HeadersVisibilityProperty);
+        set => SetValue(HeadersVisibilityProperty, value);
+    }
+
     /// <summary>The left strip with the row's ordinal - and the handle for the row as a whole: pressing a number takes
     /// the row, pressing the corner takes the table. Off by default: a strip that costs a column of width is a choice,
     /// not a default.</summary>
