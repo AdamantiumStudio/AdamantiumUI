@@ -394,6 +394,16 @@ internal sealed class PdfPathDetail
                 kept.Insert(after, at);
             }
 
+            // Its points all one - a dot a round cap draws - it is kept as given.
+            if (kept.Count < 2)
+            {
+                kept.Clear();
+                for (var i = 0; i < points.Count; i++)
+                {
+                    kept.Add(i);
+                }
+            }
+
             return kept.ToArray();
         }
     }

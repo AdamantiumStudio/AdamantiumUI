@@ -231,6 +231,26 @@ public class PdfPathDetailTests
         });
     }
 
+    // A map's point symbols: a round cap on a line of no length draws a dot.
+    [Test]
+    public void ADotARoundCapDraws_IsStillDrawn()
+    {
+        var text = new StringBuilder("1 J 2 w ");
+        for (var dot = 0; dot < 300; dot++)
+        {
+            text.Append(string.Create(CultureInfo.InvariantCulture, $"{10 + dot * 0.5} 50 m {10 + dot * 0.5} 50 l h "));
+        }
+
+        var page = Prepared(text.Append('S').ToString());
+
+        var figures = Session(page.AtDetail(0.01)).All<DrawnGeometry>().Single().Geometry.GetFigures();
+        Assert.Multiple(() =>
+        {
+            Assert.That(figures, Has.Count.EqualTo(300));
+            Assert.That(figures.All(figure => figure.Points.Length >= 2), Is.True);
+        });
+    }
+
     [Test]
     public void AnAreaFilledAndStroked_KeepsBoth_AtALevel()
     {
