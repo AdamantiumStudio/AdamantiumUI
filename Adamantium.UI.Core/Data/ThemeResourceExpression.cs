@@ -29,15 +29,21 @@ public class ThemeResourceExpression : BindingExpressionBase
     public override void EstablishConnection()
     {
         CloseConnection();
-        // The theme in force AT THE TARGET, not the application's: an element inside a ThemeContext scope resolves its
-        // {ThemeResource} against that scope's theme, or the whole point of a scope would stop at the styles.
-        _theme = (Target is IFundamentalUIComponent element
-            ? Resources.ThemeContext.For(element)
-            : UIAppContext.Current?.ThemeManager?.CurrentTheme) as AdamantiumComponent;
-        if (_theme == null || TargetProperty == null || string.IsNullOrEmpty(_key)) return;
+        if (_released) return;
+
+        _theme = ThemeAtTarget();
+        if (_theme == null || TargetProperty == null || string.IsNullOrEmpty(_key))
+        {
+            _theme = null;
+            return;
+        }
 
         _sourceProperty = AdamantiumPropertyMap.FindRegistered(_theme.GetType(), _key);
-        if (_sourceProperty == null) return;
+        if (_sourceProperty == null)
+        {
+            _theme = null;   // a theme without the key is not one this reads
+            return;
+        }
 
         UpdateTarget();
         Subscribe(_theme, _sourceProperty, this);
@@ -79,6 +85,56 @@ public class ThemeResourceExpression : BindingExpressionBase
     }
 
     private void OnReturned(object sender, Core.RoutedEvents.VisualTreeAttachmentEventArgs e) => EstablishConnection();
+
+    // Set by ThemeResource once it lets this go: nothing connects it again, not even a Retarget already walking.
+    private bool _released;
+
+    internal void Release()
+    {
+        _released = true;
+        CloseConnection();
+    }
+
+    // The theme in force AT THE TARGET: a scope's for an element in one, and for a component outside the tree (a drawing
+    // of an icon) that of the element it hangs under - the Image showing it.
+    private AdamantiumComponent ThemeAtTarget() =>
+        (DataContextSource is { } element
+            ? Resources.ThemeContext.For(element)
+            : UIAppContext.Current?.ThemeManager?.CurrentTheme) as AdamantiumComponent;
+
+    /// <summary>Connects again if the theme in force at the target is another one now - for a component outside the
+    /// tree, which no restyle reaches, when a scope's values reach it.</summary>
+    internal void FollowScope()
+    {
+        if (_released || ReferenceEquals(ThemeAtTarget(), _theme)) return;
+        EstablishConnection();
+    }
+
+    /// <summary>Moves every component outside the tree reading <paramref name="left"/> to the theme in force for it now,
+    /// for what replaces a theme: a swap, a scope following the system to its other variant.</summary>
+    internal static void Retarget(Resources.ITheme left)
+    {
+        if (left is not AdamantiumComponent theme) return;
+
+        List<ThemeResourceExpression> moving = null;
+        lock (RoutersLock)
+        {
+            if (!Routers.TryGetValue(theme, out var router)) return;
+
+            foreach (var consumers in router.ByProperty.Values)
+            {
+                foreach (var handle in consumers)
+                {
+                    if (handle.TryGetTarget(out var expression) && expression.Target is not IFundamentalUIComponent)
+                        (moving ??= []).Add(expression);
+                }
+            }
+        }
+
+        // Outside the lock, as OnThemeChanged: connecting again subscribes again.
+        if (moving == null) return;
+        foreach (var expression in moving) expression.FollowScope();
+    }
 
     // ---- Routing ---------------------------------------------------------------------------------------------------
     // One subscription per theme; each consumer is woken only for the property it reads.

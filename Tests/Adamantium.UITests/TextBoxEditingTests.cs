@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
@@ -454,7 +455,7 @@ public class TextBoxEditingTests
     [Platform("Win")]
     public void TheWindowsChecker_FindsAMisspelledWord_AndWhatItMayBe()
     {
-        var checker = new WindowsSpellChecker();
+        using var checker = new WindowsSpellChecker();
 
         Assert.Multiple(() =>
         {
@@ -472,7 +473,7 @@ public class TextBoxEditingTests
     [Platform("Win")]
     public void TheWindowsChecker_ChecksWordsJoinedByASymbol_EachOnItsOwn()
     {
-        var checker = new WindowsSpellChecker();
+        using var checker = new WindowsSpellChecker();
 
         Assert.Multiple(() =>
         {
@@ -489,11 +490,39 @@ public class TextBoxEditingTests
     [Platform("Win")]
     public void TheWindowsChecker_IgnoresAWordForEveryTagOfTheSameDictionary()
     {
-        var checker = new WindowsSpellChecker();
+        using var checker = new WindowsSpellChecker();
         Assume.That(checker.Check("qzxwv", "en"), Has.Count.EqualTo(1));
 
         checker.IgnoreAll("qzxwv", "en-US");
 
         Assert.That(checker.Check("qzxwv", "en"), Is.Empty);
+    }
+
+    // The user's languages changing makes the checker find its languages again: words go on being checked, from
+    // threads at once, and a word ignored stays ignored.
+    [Test]
+    [SupportedOSPlatform("windows")]
+    [Platform("Win")]
+    public async Task TheWindowsChecker_WhileTheUsersLanguagesChange_GoesOnChecking()
+    {
+        using var languages = new TestRegistryKey();
+        using var checker = new WindowsSpellChecker(languages.Path);
+        checker.IgnoreAll("qzxwv", "en-US");
+
+        var checks = new Task<IReadOnlyList<TextRange>>[20];
+        for (var index = 0; index < checks.Length; index++)
+        {
+            languages.SetValue("Languages", $"en-US {index}");
+            checks[index] = Task.Run(() => checker.Check("a teh cat qzxwv", "en-US"));
+            await Task.Delay(5);
+        }
+
+        var all = await Task.WhenAll(checks).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(all, Has.All.EqualTo(new[] { new TextRange(2, 3) }));
+            Assert.That(checker.Supports("en"), Is.True);
+        });
     }
 }

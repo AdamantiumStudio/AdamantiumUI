@@ -12,9 +12,10 @@
     </PropertyGroup>
 
     <!-- What Adamantium.UI packs as its analyzers: the generator and the assemblies it loads - Markup, Core.Shared
-         (font weights, stretches and feature lists are checked at build) and the engine's localization, whose
-         generator makes the string tables and whose parser tells {Localize} a table's keys - whether they come from the
-         engine's source or from its packages. The same set a project reference hands the compiler. -->
+         (font weights, stretches and feature lists are checked at build) and the engine's localization, whose parser
+         tells {Localize} a table's keys - whether they come from the engine's source or from its packages. The same set
+         a project reference hands the compiler. The table generator is not in it: it goes with the UI as a package of
+         its own. -->
     <Target Name="GetAumlAnalyzerAssemblies" DependsOnTargets="ResolveReferences" Returns="@(_AumlAnalyzer->Distinct())">
         <ItemGroup>
             <_AumlAnalyzer Include="$(TargetPath)" />
@@ -50,7 +51,7 @@
 
     <ItemGroup>
       <AdamantiumEngineReference Include="Adamantium.Core.Shared" PrivateAssets="all" />
-      <AdamantiumEngineReference Include="Adamantium.Localization.Generators" PrivateAssets="all" />
+      <AdamantiumEngineReference Include="Adamantium.Localization" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>

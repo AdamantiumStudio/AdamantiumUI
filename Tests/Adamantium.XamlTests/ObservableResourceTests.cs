@@ -7,6 +7,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -165,9 +166,7 @@ public class ObservableResourceTests
     {
         var owner = new Border();
         _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
-        var changed = typeof(ResourceManager).GetField(nameof(ResourceManager.ResourcesChanged),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        int Listeners() => (changed.GetValue(_rm) as Delegate)?.GetInvocationList().Length ?? 0;
+        int Listeners() => ObservableResourceExpression.ListenerCount(_rm);
 
         var before = Listeners();
         var button = new Button();
@@ -186,9 +185,7 @@ public class ObservableResourceTests
     {
         var owner = new Border();
         _rm.AddSource(owner, typeof(ResourcesV1), ResourceScope.Global);
-        var changed = typeof(ResourceManager).GetField(nameof(ResourceManager.ResourcesChanged),
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        int Listeners() => (changed.GetValue(_rm) as Delegate)?.GetInvocationList().Length ?? 0;
+        int Listeners() => ObservableResourceExpression.ListenerCount(_rm);
 
         var before = Listeners();
         var button = new Button();
@@ -316,6 +313,45 @@ public class ObservableResourceTests
             Assert.That(first, Is.EqualTo("CUT"));
             Assert.That(button.Content, Is.EqualTo("COPY"));
         });
+    }
+
+    // A drawing of an icon is outside the tree: no Unloaded ever closes its marker, so listening must not keep it alive -
+    // the resource manager lives as long as the application.
+    [Test]
+    public void ADrawingListeningForResourcesIsNotKeptAlive()
+    {
+        _rm.AddSource(new Border(), typeof(DarkPalette), ResourceScope.Global);
+        var drawing = Listening();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(drawing.TryGetTarget(out _), Is.False);
+    }
+
+    [Test]
+    public void ADrawingStillFollowsTheResourcesWhileItLives()
+    {
+        var owner = new Border();
+        _rm.AddSource(owner, typeof(DarkPalette), ResourceScope.Global);
+        var drawing = new GeometryDrawing();
+        new ObservableResource("IconColor").Apply(drawing, nameof(GeometryDrawing.Brush));
+        Assert.That(drawing.Brush, Is.SameAs(DarkPalette.Ink));
+
+        _rm.RemoveSources(owner);
+        _rm.AddSource(owner, typeof(LightPalette), ResourceScope.Global);
+        _rm.FlushResourceChanges();
+
+        Assert.That(drawing.Brush, Is.SameAs(LightPalette.Ink));
+    }
+
+    private static WeakReference<GeometryDrawing> Listening()
+    {
+        var drawing = new GeometryDrawing();
+        new ObservableResource("IconColor").Apply(drawing, nameof(GeometryDrawing.Brush));
+        Assert.That(drawing.Brush, Is.SameAs(DarkPalette.Ink), "it resolved, so it listens");
+        return new WeakReference<GeometryDrawing>(drawing);
     }
 
     private sealed class Named : System.ComponentModel.INotifyPropertyChanged

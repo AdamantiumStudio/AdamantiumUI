@@ -48,7 +48,7 @@ public class ObservableResourceExpression : BindingExpressionBase
         }
 
         UpdateTarget();
-        _resources.ResourcesChanged += OnResourcesChanged;
+        Listen(_resources, this);
 
         if (_element is IUIComponent visual) visual.AttachedToVisualTreeEvent += OnVisualAttached;
         else if (_element != null) _element.AttachedToLogicalTree += OnLogicalAttached;
@@ -83,7 +83,7 @@ public class ObservableResourceExpression : BindingExpressionBase
 
         if (_resources != null)
         {
-            _resources.ResourcesChanged -= OnResourcesChanged;
+            Unlisten(_resources, this);
             _resources = null;
         }
 
@@ -141,7 +141,71 @@ public class ObservableResourceExpression : BindingExpressionBase
         UpdateTarget();
     }
 
-    private void OnResourcesChanged(object sender, EventArgs e) => UpdateTarget();
+    // ---- Listening ----------------------------------------------------------------------------------------------------
+    // One subscription per resource manager, listeners held WEAKLY (no Unloaded closes a drawing's), in the order they came.
+    private sealed class Listeners
+    {
+        public readonly LinkedList<WeakReference<ObservableResourceExpression>> All = new();
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IResourceManager, Listeners> ListenersOf = new();
+    private static readonly object ListenersLock = new();
+
+    // This expression's place in its manager's list, so it leaves in O(1).
+    private LinkedListNode<WeakReference<ObservableResourceExpression>> _listening;
+
+    private static void Listen(IResourceManager resources, ObservableResourceExpression expression)
+    {
+        lock (ListenersLock)
+        {
+            if (!ListenersOf.TryGetValue(resources, out var listeners))
+            {
+                ListenersOf.Add(resources, listeners = new Listeners());
+                resources.ResourcesChanged += OnResourcesChanged;
+            }
+
+            // One node for the expression's whole life: connecting again allocates nothing.
+            expression._listening ??= new LinkedListNode<WeakReference<ObservableResourceExpression>>(new(expression));
+            if (expression._listening.List == null) listeners.All.AddLast(expression._listening);
+        }
+    }
+
+    /// <summary>How many expressions listen to <paramref name="resources"/>, those collected but not yet swept included.</summary>
+    internal static int ListenerCount(IResourceManager resources)
+    {
+        lock (ListenersLock) return ListenersOf.TryGetValue(resources, out var listeners) ? listeners.All.Count : 0;
+    }
+
+    private static void Unlisten(IResourceManager resources, ObservableResourceExpression expression)
+    {
+        lock (ListenersLock)
+        {
+            if (expression._listening?.List != null) expression._listening.List.Remove(expression._listening);
+        }
+    }
+
+    private static void OnResourcesChanged(object sender, EventArgs e)
+    {
+        ObservableResourceExpression[] woken;
+        lock (ListenersLock)
+        {
+            if (sender is not IResourceManager resources || !ListenersOf.TryGetValue(resources, out var listeners)) return;
+
+            // A SNAPSHOT, since updating can connect again; and the sweep of listeners collected meanwhile.
+            var alive = new List<ObservableResourceExpression>(listeners.All.Count);
+            for (var node = listeners.All.First; node != null;)
+            {
+                var next = node.Next;
+                if (node.Value.TryGetTarget(out var expression)) alive.Add(expression);
+                else listeners.All.Remove(node);
+                node = next;
+            }
+
+            woken = alive.ToArray();
+        }
+
+        foreach (var expression in woken) expression.UpdateTarget();
+    }
 
     private void OnKeyChanged(BindingExpressionBase key) => UpdateTarget();
 
