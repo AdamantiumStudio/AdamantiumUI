@@ -60,14 +60,15 @@
     <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'Generator')->HasMetadata('PrivateAssets')->'%(Identity)')"
                       Version="$(AdamantiumEngineVersion)" />
     <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'%(Identity)')" Version="$(AdamantiumEngineVersion)" />
-    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'HostedGenerator')->'%(Identity)')"
-                      Version="$(AdamantiumEngineVersion)" ExcludeAssets="all" PrivateAssets="all" />
+    <!-- Downloaded, not referenced: a reference would run the generator on the project, whatever its ExcludeAssets. -->
+    <PackageDownload Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'HostedGenerator')->'%(Identity)')"
+                     Version="[$(AdamantiumEngineVersion)]" />
   </ItemGroup>
 
   <!-- A hosted generator's assembly from its package: NuGet keeps a package in its id and version in lower case. -->
   <Target Name="AdamantiumHostedGeneratorReferences" BeforeTargets="ResolveAssemblyReferences" Condition="'$(UseEngineSource)' != 'true'">
     <ItemGroup>
-      <Reference Include="$(NuGetPackageRoot)$([System.String]::Copy('%(AdamantiumEngineReference.Identity)').ToLowerInvariant())/$(AdamantiumEngineVersion.ToLowerInvariant())/analyzers/dotnet/cs/%(AdamantiumEngineReference.Identity).dll"
+      <Reference Include="$([MSBuild]::EnsureTrailingSlash('$(NuGetPackageRoot)'))$([System.String]::Copy('%(AdamantiumEngineReference.Identity)').ToLowerInvariant())/$(AdamantiumEngineVersion.ToLowerInvariant())/analyzers/dotnet/cs/%(AdamantiumEngineReference.Identity).dll"
                  Condition="'%(AdamantiumEngineReference.Role)' == 'HostedGenerator'" />
     </ItemGroup>
   </Target>
