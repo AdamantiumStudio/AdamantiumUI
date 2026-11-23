@@ -482,6 +482,51 @@ public class DataGridThemePartsTests
         });
     }
 
+    // Rows come after the grid was laid out - a debugger's members, read as the card shows - and the layout manager
+    // measures them on their own, at the widths the grid had: once the grid takes the wider Auto column, they are
+    // measured again and seated at it.
+    [Test]
+    public void RowsArrivingLaterAreSeatedAtTheWidthsTheyGrewTheColumnTo()
+    {
+        Use(Fluent());
+        var grid = new TreeDataGrid { Width = 400, HeadersVisibility = Visibility.Collapsed };
+        grid.Columns.Add(new DataGridTemplateColumn
+        {
+            Width = GridLength.Auto,
+            CellTemplate = new Adamantium.UI.Core.Templates.DataTemplate(() =>
+            {
+                var text = new Adamantium.UI.Controls.Text.TextBlock { MarginRight = 16 };
+                text.SetBinding("Text", new Binding("Name"));
+                return new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = text };
+            })
+        });
+        grid.Columns.Add(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star) });
+        var items = new Adamantium.Core.Collections.TrackingCollection<Item>();
+        grid.ItemsSource = items;
+        var window = new Window { Width = 400, Height = 300, Content = grid };
+        grid.ApplyCurrentTheme();
+        Settle(window);
+
+        foreach (var name in new[] { "_radius", "_period", "a much longer name", "uid" })
+            items.Add(new Item { Name = name });
+        for (var pass = 0; pass < 6; pass++)
+        {
+            BindingUpdateQueue.Flush();
+            Adamantium.UI.Core.LayoutManager.For(window).ExecuteLayoutPass();
+        }
+
+        var row = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
+        var cells = row.VisualChildren.OfType<DataGridCell>().OrderBy(cell => cell.ColumnIndex).ToList();
+        TestContext.WriteLine($"auto column {grid.Columns[0].ActualWidth}, cells {cells[0].RenderSize.Width} at " +
+                              $"{cells[0].Bounds.X}, {cells[1].RenderSize.Width} at {cells[1].Bounds.X}");
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Columns[0].ActualWidth, Is.GreaterThan(100), "the Auto column takes its widest cell");
+            Assert.That(cells[0].RenderSize.Width, Is.EqualTo(grid.Columns[0].ActualWidth).Within(0.5));
+            Assert.That(cells[1].Bounds.X, Is.EqualTo(grid.Columns[0].ActualWidth).Within(0.5));
+        });
+    }
+
     // The strip for a new record shows a hint in its first cell: no record's value, so no width for an Auto column.
     [Test]
     public void TheNewRecordHintDoesNotWidenAnAutoColumn()
@@ -548,6 +593,36 @@ public class DataGridThemePartsTests
                 PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Name)));
             }
         }
+    }
+
+    [Test]
+    public void AChangedCellIsWashedLighterThanASelectedOneUnderMacOs() => ChangedWash(MacOs());
+
+    [Test]
+    public void AChangedCellIsWashedLighterThanASelectedOneUnderFluent() => ChangedWash(Fluent());
+
+    [Test]
+    public void AChangedCellIsWashedLighterThanASelectedOneUnderGraphite() =>
+        ChangedWash(new Adamantium.UI.Themes.GraphiteTheme.Graphite());
+
+    // A value changed since the step before - a debugger's - washes its whole cell in the accent, lighter than the
+    // selection, so it never reads as selected; selected as well, it reads as selected.
+    private void ChangedWash(Theme theme)
+    {
+        Use(theme);
+        var changed = Built(new DataGridCell { Content = "value", State = "Changed" });
+        var border = (Adamantium.UI.Controls.Decorators.Border)changed.GetTemplateChild("CellBorder");
+        var wash = border.Background as Adamantium.UI.Core.Media.SolidColorBrush;
+        var both = Built(new DataGridCell { Content = "value", State = "Changed", IsSelected = true });
+        var selected = ((Adamantium.UI.Controls.Decorators.Border)both.GetTemplateChild("CellBorder")).Background
+            as Adamantium.UI.Core.Media.SolidColorBrush;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(wash, Is.SameAs(_themes.CurrentTheme.AccentFillColorChanged), "the theme's changed wash");
+            Assert.That(wash.Color.A, Is.LessThan(selected.Color.A), "lighter than the selection");
+            Assert.That(selected, Is.SameAs(_themes.CurrentTheme.AccentFillColorSelection), "the selection wins over it");
+        });
     }
 
     [Test]

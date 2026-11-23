@@ -468,6 +468,11 @@
                         </PropertyTrigger>
                         <!-- A WASH, and the content keeps its own colors: a cell holds controls and meanings, and a
                              plate of accent swallows both. -->
+                        <!-- CHANGED since the step before - see the macOS set. -->
+                        <PropertyTrigger Property="State" Value="Changed">
+                            <Setter TargetName="CellBorder" Property="Background"
+                                    Value="{ThemeResource AccentFillColorChanged}"/>
+                        </PropertyTrigger>
                         <!-- FOUND by the search - see the macOS set. -->
                         <PropertyTrigger Property="IsSearchMatch" Value="true">
                             <Setter TargetName="CellBorder" Property="Background"

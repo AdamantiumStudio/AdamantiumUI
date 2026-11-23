@@ -2644,9 +2644,8 @@ public partial class TreeDataGrid : Selector
     {
         if (!DataGridColumnLayout.RecordMeasured(column, desired)) return;
 
-        // Measuring its rows, the grid lays the widths out again in this pass. A cell measured on its own later - its
-        // text bound a frame after it was built - has the next pass take the new width from the start, and the rows
-        // and strips placed by the old one laid out again.
+        // Measuring its rows, the grid lays the widths out again in this pass; a cell measured on its own later - its
+        // text bound a frame after it was built - has the next pass take the new width.
         if (_measuringRows)
         {
             _autoWidthGrew = true;
@@ -2654,20 +2653,33 @@ public partial class TreeDataGrid : Selector
         }
 
         InvalidateMeasure();
-        RelayRowsAndStrips();
     }
 
-    // The rows and strips place their cells by the widths: a star column taking up what an Auto one gained leaves them as
-    // wide as they were, and not laid out again they kept their cells where they stood - measured, as text is trimmed
-    // there, at the widths they had.
-    private void RelayRowsAndStrips()
+    // The rows and strips place their cells by the widths, and a star column taking up what an Auto one gained leaves
+    // them as wide as they were: measured again - text is trimmed where it is measured - when the widths moved since
+    // they were laid out.
+    private void RelayRowsAndStripsIfWidthsMoved()
     {
+        if (_laidOutWidths.Length != Columns.Count)
+        {
+            _laidOutWidths = new double[Columns.Count];
+        }
+
+        var moved = false;
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            moved |= !_laidOutWidths[i].Equals(Columns[i].ActualWidth);
+            _laidOutWidths[i] = Columns[i].ActualWidth;
+        }
+
+        if (!moved)
+        {
+            return;
+        }
+
         foreach (var index in ItemContainerGenerator.RealizedIndices)
         {
-            if (ItemContainerGenerator.ContainerFromIndex(index) is MeasurableUIComponent row)
-            {
-                row.InvalidateMeasure();
-            }
+            (ItemContainerGenerator.ContainerFromIndex(index) as IMeasurableComponent)?.InvalidateMeasure();
         }
 
         RefreshStrips();
@@ -2675,6 +2687,7 @@ public partial class TreeDataGrid : Selector
 
     private bool _autoWidthGrew;
     private bool _measuringRows;
+    private double[] _laidOutWidths = [];
 
     /// <summary>Total width of the columns as the last pass sized them.</summary>
     public double ColumnsWidth { get; private set; }
@@ -3949,6 +3962,7 @@ public partial class TreeDataGrid : Selector
         FrozenWidth = frozen;
         RightFrozenWidth = pinnedRight;
         UpdateColumnWindow(availableSize.Width);
+        RelayRowsAndStripsIfWidthsMoved();
 
         _measuringRows = true;
         Size<double> desired;
@@ -3971,6 +3985,7 @@ public partial class TreeDataGrid : Selector
             FrozenWidth = regrown;
             RightFrozenWidth = regrownRight;
             UpdateColumnWindow(availableSize.Width);
+            RelayRowsAndStripsIfWidthsMoved();
             desired = base.MeasureOverride(availableSize);
         }
 

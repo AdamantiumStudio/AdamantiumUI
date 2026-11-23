@@ -2,6 +2,9 @@
 
 - `TreeDataGrid.HeadersVisibility`: collapsed, the row of column headers goes and the rows start at the top, for a tree
   with columns whose meaning is plain without titles.
+- `ITheme.AccentFillColorChanged`: the accent as a wash lighter than the selection's, derived from the accent like the
+  rest of the ramp. A `TreeDataGrid` cell whose state is `Changed` - a debugger's value from one stop to the next - is
+  washed in it across the whole cell, in every theme; search and selection still win over it.
 
 ### Fixed
 
@@ -9,5 +12,5 @@
   grow beside a star column its rows and header kept their cells where they stood: the next column stood over them.
   - A row's cell of an Auto column now measures its content unbounded and reports the width itself, however it comes
     to be measured. A column held under its widest by `MaxWidth` still measures at its width and trims there.
-  - A width reported outside the grid's own pass lays out again the grid, the rows shown and the header.
+  - When a pass moves the column widths, the rows shown and the header are laid out again at them.
   - The strip for a new record and a cell being edited do not widen an Auto column.

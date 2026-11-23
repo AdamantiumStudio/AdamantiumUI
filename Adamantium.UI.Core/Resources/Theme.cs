@@ -133,6 +133,7 @@ public class Theme : AdamantiumComponent, ITheme
         // accent change would leave every selected row in the previous color.
         Recolor(AccentFillColorSelectionProperty, WithAlpha(seed, AccentSelectionOpacity));
         Recolor(AccentFillColorSelectionStrongProperty, WithAlpha(seed, AccentSelectionOpacity + 0.15));
+        Recolor(AccentFillColorChangedProperty, WithAlpha(seed, AccentSelectionOpacity * 0.45));
         Recolor(AccentForegroundColorProperty, OnAccent(seed));
     }
 
@@ -277,6 +278,9 @@ public class Theme : AdamantiumComponent, ITheme
     public static readonly AdamantiumProperty AccentFillColorSelectionStrongProperty = AdamantiumProperty.Register(
         nameof(AccentFillColorSelectionStrong), typeof(Brush), typeof(Theme), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty AccentFillColorChangedProperty = AdamantiumProperty.Register(
+        nameof(AccentFillColorChanged), typeof(Brush), typeof(Theme), new PropertyMetadata(null));
+
     public static readonly AdamantiumProperty AccentFillColorDisabledProperty = AdamantiumProperty.Register(
         nameof(AccentFillColorDisabled), typeof(Brush), typeof(Theme), new PropertyMetadata(null));
 
@@ -317,6 +321,12 @@ public class Theme : AdamantiumComponent, ITheme
     {
         get => GetValue<Brush>(AccentFillColorSelectionStrongProperty);
         set => SetValue(AccentFillColorSelectionStrongProperty, value);
+    }
+
+    public Brush AccentFillColorChanged
+    {
+        get => GetValue<Brush>(AccentFillColorChangedProperty);
+        set => SetValue(AccentFillColorChangedProperty, value);
     }
 
     public Brush AccentFillColorDisabled

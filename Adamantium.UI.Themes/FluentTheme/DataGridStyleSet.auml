@@ -562,6 +562,11 @@
                             <Setter TargetName="Expander" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
                         </PropertyTrigger>
                         <!-- A WASH, not a plate, and the content keeps its colors - see the macOS set. -->
+                        <!-- CHANGED since the step before - see the macOS set. -->
+                        <PropertyTrigger Property="State" Value="Changed">
+                            <Setter TargetName="CellBorder" Property="Background"
+                                    Value="{ThemeResource AccentFillColorChanged}"/>
+                        </PropertyTrigger>
                         <!-- FOUND by the search - see the macOS set for why it is a wash of its own and why it stands
                              before the selection. -->
                         <PropertyTrigger Property="IsSearchMatch" Value="true">
