@@ -2677,11 +2677,7 @@ public partial class TreeDataGrid : Selector
             return;
         }
 
-        foreach (var index in ItemContainerGenerator.RealizedIndices)
-        {
-            (ItemContainerGenerator.ContainerFromIndex(index) as IMeasurableComponent)?.InvalidateMeasure();
-        }
-
+        InvalidateRealizedRows();
         RefreshStrips();
     }
 
