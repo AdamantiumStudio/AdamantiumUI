@@ -71,14 +71,13 @@ public class HunspellWordPredictorTests
         await _predictor.CompleteAsync(language, starts[0], [], 3, CancellationToken.None);
         var reading = clock.Elapsed.TotalMilliseconds;
 
+        // As typed: each beginning asked once, the next letter after the one before.
         var slowest = 0.0;
         foreach (var start in starts)
         {
             clock.Restart();
-            for (var index = 0; index < 5; index++)
-                await _predictor.CompleteAsync(language, start, [], 3, CancellationToken.None);
-
-            slowest = System.Math.Max(slowest, clock.Elapsed.TotalMilliseconds / 5);
+            await _predictor.CompleteAsync(language, start, [], 3, CancellationToken.None);
+            slowest = System.Math.Max(slowest, clock.Elapsed.TotalMilliseconds);
         }
 
         TestContext.Progress.WriteLine($"MEASURE {language}: read {reading:F0} ms, slowest key {slowest:F2} ms");

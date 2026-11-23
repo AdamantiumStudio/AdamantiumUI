@@ -9,12 +9,16 @@ namespace Adamantium.UI.Platforms.Linux.Hunspell;
 /// the beginning can grow from are expanded when asked - a whole language's forms run into millions. Stems are looked up
 /// by the beginning's first three letters, so a form whose suffix strips into the beginning is still found; past 2000
 /// stems for a beginning - a letter or two - only the stems themselves are offered. A suffix's own suffixes go one level
-/// deep, as hunspell's twofold suffixes. The dictionary has no frequencies: shorter words come first, then by the
-/// alphabet.</summary>
+/// deep, as hunspell's twofold suffixes. The forms of the latest sixteen beginnings are kept, so the next letters only
+/// narrow them. The dictionary has no frequencies: shorter words come first, then by the alphabet. It may be asked from
+/// any thread.</summary>
 internal sealed class HunspellDictionary
 {
     private const int MostStemsExpanded = 2000;
     private const int KeyLength = 3;
+    private const int MostKeysKept = 16;
+
+    private readonly Dictionary<string, string[]> _expanded = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly HunspellAffixes _affixes;
     private readonly Stem[] _stems;
@@ -88,30 +92,53 @@ internal sealed class HunspellDictionary
     private void Collect(string start, string stemStart, HunspellAffixRule prefix, HashSet<string> found)
     {
         var key = stemStart.Length > KeyLength ? stemStart[..KeyLength] : stemStart;
+        foreach (var form in FormsGrownFrom(key, prefix))
+        {
+            if (form.StartsWith(start, StringComparison.OrdinalIgnoreCase))
+                found.Add(form);
+        }
+    }
+
+    private string[] FormsGrownFrom(string key, HunspellAffixRule prefix)
+    {
+        // The forms of the stems a key begins are kept for the latest keys: the next letters typed only narrow them.
+        var cacheKey = prefix == null ? key : $"{prefix.Flag}{prefix.Add}|{key}";
+        lock (_expanded)
+        {
+            if (_expanded.TryGetValue(cacheKey, out var known))
+                return known;
+        }
+
         var first = LowerBound(key);
         var last = EndOfRange(first, key);
         var expands = last - first <= MostStemsExpanded;
+        var forms = new List<string>();
         for (var index = first; index < last; index++)
         {
             var stem = _stems[index];
             if (prefix != null && !stem.Flags.Contains(prefix.Flag))
                 continue;
 
-            if (!expands)
+            if (expands)
             {
-                var word = prefix?.Apply(stem.Word) ?? stem.Word;
-                if (word != null && IsAlone(stem.Flags) && word.StartsWith(start, StringComparison.OrdinalIgnoreCase))
-                    found.Add(word);
-
-                continue;
+                forms.AddRange(FormsOf(stem, prefix));
             }
-
-            foreach (var form in FormsOf(stem, prefix))
+            else if (IsAlone(stem.Flags) && (prefix == null ? stem.Word : prefix.Apply(stem.Word)) is { } word)
             {
-                if (form.StartsWith(start, StringComparison.OrdinalIgnoreCase))
-                    found.Add(form);
+                forms.Add(word);
             }
         }
+
+        var grown = forms.ToArray();
+        lock (_expanded)
+        {
+            if (_expanded.Count >= MostKeysKept)
+                _expanded.Clear();
+
+            _expanded[cacheKey] = grown;
+        }
+
+        return grown;
     }
 
     private List<string> FormsOf(Stem stem, HunspellAffixRule prefix)

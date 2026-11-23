@@ -42,7 +42,8 @@ internal sealed class HunspellWordPredictor : IWordPredictor
             return [];
 
         var dictionary = await loading.WaitAsync(cancellation).ConfigureAwait(false);
-        return dictionary == null ? [] : dictionary.Complete(start, count);
+        // Off the asking thread even when the dictionary was read already: expanding stems takes milliseconds.
+        return dictionary == null ? [] : await Task.Run(() => dictionary.Complete(start, count), cancellation).ConfigureAwait(false);
     }
 
     public Task<IReadOnlyList<string>> CorrectAsync(string language, string word, IReadOnlyList<string> previousWords,
