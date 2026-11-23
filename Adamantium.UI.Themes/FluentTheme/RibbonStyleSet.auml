@@ -1500,7 +1500,7 @@
             <Setter TargetName="SplitRule" Property="Grid.Row" Value="0"/>
             <Setter TargetName="SplitRule" Property="Grid.Column" Value="1"/>
             <Setter TargetName="SplitRule" Property="Width" Value="{ResourceReference StrokeThinValue}"/>
-            <Setter TargetName="SplitRule" Property="Height" Value="NaN"/>
+            <Setter TargetName="SplitRule" Property="Height" Value="Auto"/>
             <Setter TargetName="SplitRule" Property="Margin" Value="0 5"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Column" Value="2"/>

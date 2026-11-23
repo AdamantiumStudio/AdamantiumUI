@@ -24,6 +24,7 @@
     <Phrase Key="Right" Text="Right"/>
     <Phrase Key="Bottom" Text="Bottom"/>
     <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Down" Text="Down: split, top, bottom"/>
     <Phrase Key="Clockwise" Text="Clockwise"/>
     <Phrase Key="CounterClockwise" Text="Counterclockwise"/>
 </Language>

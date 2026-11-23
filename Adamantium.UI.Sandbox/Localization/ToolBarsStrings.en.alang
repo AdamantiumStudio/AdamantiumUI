@@ -34,6 +34,25 @@
     <Phrase Key="InsertTable" Text="Insert table"/>
     <Phrase Key="InsertRow" Text="Insert row"/>
     <Phrase Key="DeleteRow" Text="Delete row"/>
+    <Phrase Key="Side" Text="A bar down the side"/>
+    <Phrase Key="SideHint" Text="Down the side the bar is a column as wide as a command. A number stands in its narrow form, its label as its tooltip; the author field and the font list are too wide, so each is folded into a button that opens it beside the column. Turn the tray along: everything stands as before."/>
+    <Phrase Key="SideOrientation" Text="The tray runs"/>
+    <Phrase Key="Picture" Text="Picture Format"/>
+    <Phrase Key="PictureTools" Text="Picture Tools"/>
+    <Phrase Key="PictureSize" Text="Size"/>
+    <Phrase Key="Crop" Text="Crop"/>
+    <Phrase Key="PictureWidth" Text="Width"/>
+    <Phrase Key="PictureHeight" Text="Height"/>
+    <Phrase Key="Author" Text="Author"/>
+    <Phrase Key="Arrange" Text="Arrange"/>
+    <Phrase Key="Wrap" Text="Wrap text"/>
+    <Phrase Key="Rotate" Text="Rotate"/>
+    <Phrase Key="CaptionFont" Text="Caption font"/>
+    <Phrase Key="InLine" Text="In line with text"/>
+    <Phrase Key="Square" Text="Square"/>
+    <Phrase Key="InFront" Text="In front of text"/>
+    <Phrase Key="RotateRight" Text="Rotate right"/>
+    <Phrase Key="RotateLeft" Text="Rotate left"/>
     <Phrase Key="Nothing" Text="nothing yet"/>
     <Phrase Key="Report" Text="Pressed: {command}"/>
 </Language>

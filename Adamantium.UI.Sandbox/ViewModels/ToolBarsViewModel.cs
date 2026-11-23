@@ -22,6 +22,28 @@ public partial class ToolBarsViewModel : TabPageViewModel
     /// <summary>Where the sections that do not fit on the bar of sections go: to its menu, or onto a new line.</summary>
     [Bindable] private Adamantium.UI.Controls.CommandWrapping _sectionsWrapping;
 
+    /// <summary>Which way the picture's tray runs: down the side, its commands in their narrow forms or folded; or along.</summary>
+    [Bindable] private Adamantium.UI.Controls.Panels.Orientation _sideOrientation = Adamantium.UI.Controls.Panels.Orientation.Vertical;
+
+    /// <summary>The picture's size, in centimetres, as its two number boxes show it.</summary>
+    [Bindable] private double? _pictureWidth = 5.08;
+
+    [Bindable] private double? _pictureHeight = 3.49;
+
+    /// <summary>Who wrote the picture's caption: a field too wide for the column, so folded down the side.</summary>
+    [Bindable] private string _author = "Ann";
+
+    /// <summary>The caption's font, picked from a list too wide for the column.</summary>
+    [Bindable] private string _font = "Inter";
+
+    /// <summary>How the picture stands among the text: the keys of the wrap button's list, among the page's phrases.</summary>
+    public string[] WrapKinds { get; } = ["InLine", "Square", "InFront"];
+
+    /// <summary>The ways the rotate button's list turns the picture.</summary>
+    public string[] RotateKinds { get; } = ["RotateRight", "RotateLeft"];
+
+    public string[] Fonts { get; } = ["Inter", "Georgia", "Consolas"];
+
     public ToolBarsViewModel() : base("ToolBars")
     {
     }

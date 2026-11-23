@@ -92,22 +92,26 @@ public class ToolBarTrayTests
     private static Vector2<double> Middle(IUIComponent element, IUIComponent root) =>
         element.TranslatePoint(new Vector2<double>(element.RenderSize.Width / 2, element.RenderSize.Height / 2), root);
 
-    private static Thumb Grip(ToolBar bar) => (Thumb)bar.GetTemplateChild("PART_Grip");
+    private static DragHandle Grip(ToolBar bar) => (DragHandle)bar.GetTemplateChild("PART_Grip");
 
-    // Dragged from the middle of its grip to a point of the window, as the grip reports a drag: from where it was
-    // pressed, in the window.
+    // Let go of at a point of the window, as a drag drops it: on the first tray there that takes it - the tray says where
+    // it lands; the drag itself is DragDrop's (ToolBarDragBehavior).
     private static void Drag(ToolBar bar, IUIComponent root, Vector2<double> to)
     {
-        var grip = Grip(bar);
-        var from = Middle(grip, root);
-        grip.RaiseEvent(new DragStartedEventArgs(from) { RoutedEvent = Thumb.DragStartedEvent });
-        grip.RaiseEvent(new DragEventArgs(to - from) { RoutedEvent = Thumb.DragDeltaEvent });
-        grip.RaiseEvent(new DragCompletedEventArgs(to - from, false) { RoutedEvent = Thumb.DragCompletedEvent });
+        foreach (var tray in root.GetVisualDescendants().OfType<ToolBarTray>())
+        {
+            if (tray.DropBar(bar, root.TranslatePoint(to, tray)))
+            {
+                break;
+            }
+        }
+
         Show(root);
     }
 
+    // In the menu itself or, a bar's own command, in its item there.
     private static bool IsInOverflow(ToolBar bar, IUIComponent command) =>
-        ReferenceEquals(command.VisualParent, bar.GetTemplateChild("PART_OverflowItems"));
+        command.GetVisualAncestors().Contains(bar.GetTemplateChild("PART_OverflowItems"));
 
     [SetUp]
     public void Reset() => _styleSet = null;
@@ -912,10 +916,11 @@ public class ToolBarTrayTests
         });
     }
 
-    // Down the side a contextual bar shows no label - its color alone says it there - while automation reads its
-    // context as the bar's help text either way, and the application's own help text before it.
+    // Down the side a contextual bar shows its label under the grip, turned to read top to bottom - the plate as tall as
+    // the name is long - while automation reads its context as the bar's help text either way, and the application's
+    // own help text before it.
     [TestCaseSource(nameof(StyleSets))]
-    public void AContextualBarDownTheSide_ShowsNoLabel_ButAutomationReadsItsContext(System.Type styleSet)
+    public void AContextualBarDownTheSide_ShowsItsLabelTurned_AndAutomationReadsItsContext(System.Type styleSet)
     {
         Use(styleSet);
         var table = Bar("Table", 0, 0);
@@ -923,8 +928,10 @@ public class ToolBarTrayTests
         table.ContextualHeader = "Table Tools";
         var tray = Tray(table);
         tray.Orientation = Orientation.Vertical;
-        Shown(tray, 1000);
-        var plate = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
+        var side = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { tray } } };
+        Show(side);
+        var along = (UIComponent)table.GetTemplateChild("ContextualHeaderPlate");
+        var down = (UIComponent)table.GetTemplateChild("ContextualHeaderPlateDown");
         var peer = table.GetAutomationPeer();
 
         var context = peer.HelpText;
@@ -933,7 +940,10 @@ public class ToolBarTrayTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(plate.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(along.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(down.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(down.RenderSize.Height, Is.GreaterThan(down.RenderSize.Width), "turned, it runs down");
+            Assert.That(At(down, side).Y, Is.LessThan(At((IUIComponent)table.Items[0], side).Y), "before the commands");
             Assert.That(context, Is.EqualTo("Table Tools"));
             Assert.That(own, Is.EqualTo("Rows and columns"));
         });
@@ -1134,6 +1144,38 @@ public class ToolBarTrayTests
         {
             Assert.That(opened, Is.True);
             Assert.That(bar.IsOverflowOpen, Is.False);
+        });
+    }
+
+    // The room between bars is the tray's, only between neighbours: a bar alone down the side stands in the middle of
+    // its tray, and along a row the last bar ends where the tray's padding begins.
+    [TestCaseSource(nameof(StyleSets))]
+    public void TheRoomBetweenBars_IsOnlyBetweenThem(System.Type styleSet)
+    {
+        Use(styleSet);
+        var down = Bar("Down", 0, 0);
+        var side = Tray(down);
+        side.BarSpacing = 8;
+        side.Orientation = Orientation.Vertical;
+        var column = new Border { Width = 400, Height = 800, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { side } } };
+        Show(column);
+        var leftRoom = At(down, side).X;
+        var rightRoom = side.RenderSize.Width - leftRoom - down.RenderSize.Width;
+
+        var first = Bar("First", 0, 0);
+        var second = Bar("Second", 0, 1);
+        var along = Tray(first, second);
+        along.BarSpacing = 8;
+        var row = new Border { Width = 1000, Height = 300, Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { along } } };
+        Show(row);
+        var gap = At(second, along).X - At(first, along).X - first.RenderSize.Width;
+        var tail = along.RenderSize.Width - At(second, along).X - second.RenderSize.Width;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rightRoom, Is.EqualTo(leftRoom).Within(0.5), "a bar alone stands in the middle of its tray");
+            Assert.That(gap, Is.EqualTo(8).Within(0.5), "the room between two bars of a row");
+            Assert.That(tail, Is.EqualTo(At(first, along).X).Within(0.5), "after the last, only the tray's padding");
         });
     }
 

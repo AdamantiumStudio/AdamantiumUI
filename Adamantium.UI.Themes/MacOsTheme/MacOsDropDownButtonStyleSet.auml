@@ -37,7 +37,8 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}">
-                            <Grid ColumnDefinitions="*,Auto">
+                            <!-- The arrow after the content; under it down the side of a bar (the row below). -->
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
                                 <ContentPresenter x:Name="PART_ContentPresenter"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
@@ -83,6 +84,14 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="Plate" Property="Opacity" Value="0.4"/>
         </PropertyTrigger>
+        <!-- Down the side of a bar: the arrow under the content, the list beside the column. -->
+        <PropertyTrigger Property="ToolBar.CommandOrientation" Value="Vertical">
+            <Setter TargetName="Chevron" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="Chevron" Property="Grid.Row" Value="1"/>
+            <Setter TargetName="Chevron" Property="Margin" Value="{ResourceReference DropDownChevronInsetDown}"/>
+            <Setter TargetName="Chevron" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_Popup" Property="Placement" Value="Right"/>
+        </PropertyTrigger>
     </Style>
 
     <Style Selector="SplitButton" BasedOn="DropDownButton"/>
@@ -97,7 +106,8 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}">
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+                            <!-- Body, rule, arrow along; down the side of a bar, one under another (the rows). -->
+                            <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="*,Auto,Auto">
                                 <Border x:Name="Body"
                                         CornerRadius="{ResourceReference SplitButtonLeadingRadius}"
                                         Padding="{TemplateBinding Padding}">
@@ -159,6 +169,23 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsBodyEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Opacity" Value="0.4"/>
+        </PropertyTrigger>
+        <!-- Down the side of a bar: the arrow's own part under the body, the rule between them across, the list beside
+             the column. -->
+        <PropertyTrigger Property="ToolBar.CommandOrientation" Value="Vertical">
+            <Setter TargetName="Body" Property="CornerRadius" Value="{ResourceReference SplitButtonTopRadius}"/>
+            <Setter TargetName="SplitRule" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="SplitRule" Property="Grid.Row" Value="1"/>
+            <Setter TargetName="SplitRule" Property="Width" Value="Auto"/>
+            <Setter TargetName="SplitRule" Property="Height" Value="{ResourceReference StrokeThinValue}"/>
+            <Setter TargetName="SplitRule" Property="Margin" Value="5 0"/>
+            <Setter TargetName="PART_DropDownArea" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_DropDownArea" Property="Grid.Row" Value="2"/>
+            <Setter TargetName="PART_DropDownArea" Property="CornerRadius" Value="{ResourceReference SplitButtonBottomRadius}"/>
+            <Setter TargetName="PART_DropDownArea" Property="Padding" Value="{ResourceReference SplitButtonArrowPaddingDown}"/>
+            <Setter TargetName="Chevron" Property="Margin" Value="0"/>
+            <Setter TargetName="Chevron" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_Popup" Property="Placement" Value="Right"/>
         </PropertyTrigger>
     </Style>
 

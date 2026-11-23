@@ -1584,8 +1584,8 @@
             <Setter TargetName="SplitRule" Property="Grid.Row" Value="0"/>
             <Setter TargetName="SplitRule" Property="Grid.Column" Value="1"/>
             <Setter TargetName="SplitRule" Property="Width" Value="{ResourceReference StrokeThinValue}"/>
-            <!-- NaN, not 0: the rule has to go back to being sized by its row. A zero would be obeyed. -->
-            <Setter TargetName="SplitRule" Property="Height" Value="NaN"/>
+            <!-- Auto, not 0: the rule has to go back to being sized by its row. A zero would be obeyed. -->
+            <Setter TargetName="SplitRule" Property="Height" Value="Auto"/>
             <Setter TargetName="SplitRule" Property="Margin" Value="0 4"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Column" Value="2"/>

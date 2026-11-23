@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -40,6 +41,26 @@ public class NumericUpDown : RangeLimitsBase
     /// <summary>Swaps the two buttons, whatever <see cref="ButtonsPlacement"/> they are in.</summary>
     public static readonly AdamantiumProperty AreButtonsSwappedProperty = AdamantiumProperty.Register(
         nameof(AreButtonsSwapped), typeof(bool), typeof(NumericUpDown), new PropertyMetadata(false));
+
+    /// <summary>Which way the number and its buttons run. Vertical, the box is as narrow as its number: a
+    /// <see cref="NumericButtonsPlacement.Split"/> pair stands over and under it, and its <see cref="Unit"/> under it.
+    /// The theme turns a box standing on the column of a tool bar down the side
+    /// (<see cref="ToolBar.CommandOrientationProperty"/>), unless it is set.</summary>
+    public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.Register(nameof(Orientation),
+        typeof(Orientation), typeof(NumericUpDown),
+        new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>What the number counts - cm, °, pt - shown beside it, or under it when <see cref="Orientation"/> is
+    /// vertical. Not part of the number: it is neither typed nor read back.</summary>
+    public static readonly AdamantiumProperty UnitProperty = AdamantiumProperty.Register(nameof(Unit),
+        typeof(string), typeof(NumericUpDown),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure,
+            static (a, e) => ((NumericUpDown)a).HasUnit = !string.IsNullOrEmpty((string)e.NewValue)));
+
+    private static readonly AdamantiumPropertyKey HasUnitPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(HasUnit),
+        typeof(bool), typeof(NumericUpDown), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty HasUnitProperty = HasUnitPropertyKey.Property;
 
     public static readonly AdamantiumProperty AreButtonsVisibleProperty = AdamantiumProperty.Register(
         nameof(AreButtonsVisible), typeof(bool), typeof(NumericUpDown), new PropertyMetadata(true));
@@ -237,6 +258,25 @@ public class NumericUpDown : RangeLimitsBase
     {
         get => GetValue<bool>(AreButtonsSwappedProperty);
         set => SetValue(AreButtonsSwappedProperty, value);
+    }
+
+    public Orientation Orientation
+    {
+        get => GetValue<Orientation>(OrientationProperty);
+        set => SetValue(OrientationProperty, value);
+    }
+
+    public string Unit
+    {
+        get => GetValue<string>(UnitProperty);
+        set => SetValue(UnitProperty, value);
+    }
+
+    /// <summary>Whether a <see cref="Unit"/> is shown.</summary>
+    public bool HasUnit
+    {
+        get => GetValue<bool>(HasUnitProperty);
+        private set => SetValue(HasUnitPropertyKey, value);
     }
 
     public bool AreButtonsVisible

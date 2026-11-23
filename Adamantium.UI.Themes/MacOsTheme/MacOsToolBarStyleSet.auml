@@ -7,6 +7,9 @@
     <Style Selector="ToolBarTray">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
         <Setter Property="Padding" Value="6,4"/>
+        <!-- Room between bars and between rows - only between them, so the tray's padding is the same on every side. -->
+        <Setter Property="BarSpacing" Value="8"/>
+        <Setter Property="BandSpacing" Value="4"/>
         <Setter Property="BarsHeader" Value="{Localize ToolBarStrings.Bars}"/>
         <Setter Property="ContextualBarsHeader" Value="{Localize ToolBarStrings.ContextualBars}"/>
         <Setter Property="ItemsPanel">
@@ -40,13 +43,15 @@
 
     <!-- A bar's grip: six round dots in two columns, in the secondary ink - a handle the eye finds at once - coming up to
          the primary ink under the pointer, as a row's drag handle does. -->
-    <Style Selector="Thumb.ToolBarGrip">
+    <Style Selector="DragHandle.ToolBarGrip">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <!-- As tall as the bar, not a row's handle size. -->
+        <Setter Property="Height" Value="Auto"/>
         <!-- Room between the grip and the first command; under it on a bar down the side. -->
         <Setter Property="Margin" Value="0,0,3,0"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Thumb">
+                <ControlTemplate TargetType="DragHandle">
                     <Border Background="Transparent">
                         <Path HorizontalAlignment="Center" VerticalAlignment="Center"
                               Fill="{TemplateBinding Foreground}"
@@ -57,7 +62,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="Thumb.ToolBarGrip">
+    <Style Selector="DragHandle.ToolBarGrip">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         </PropertyTrigger>
@@ -68,9 +73,9 @@
         <Setter Property="Background" Value="{ResourceReference SubtleFillColorSecondary}"/>
         <Setter Property="Accent" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="Padding" Value="3"/>
-        <Setter Property="Margin" Value="0,0,8,4"/>
         <Setter Property="OverflowButtonLength" Value="{ResourceReference ToolBarOverflowButtonLength}"/>
         <Setter Property="Spacing" Value="{ResourceReference ToolBarSpacing}"/>
+        <Setter Property="ColumnWidth" Value="{ResourceReference ToolBarColumnWidth}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolBar">
@@ -84,13 +89,13 @@
                                     CornerRadius="8"
                                     Opacity="{ResourceReference ToolBarContextualWashOpacity}" Visibility="Collapsed"/>
                             <DockPanel Margin="{TemplateBinding Padding}">
-                                <!-- The grip: drawn by Thumb.ToolBarGrip below. -->
-                                <Thumb x:Name="PART_Grip"
-                                       Classes="ToolBarGrip"
-                                       DockPanel.Dock="Left"
-                                       Width="{ResourceReference ToolBarGripLength}"
-                                       Cursor="SizeAll"
-                                       AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
+                                <!-- The grip a drag carries the bar by, where the application lets bars be dragged
+                                     (ToolBarDragBehavior); drawn by DragHandle.ToolBarGrip above. -->
+                                <DragHandle x:Name="PART_Grip"
+                                            Classes="ToolBarGrip"
+                                            DockPanel.Dock="Left"
+                                            Width="{ResourceReference ToolBarGripLength}"
+                                            AutomationProperties.Name="{Localize ToolBarStrings.Grip}"/>
                                 <ToggleButton x:Name="PART_OverflowButton"
                                               DockPanel.Dock="Right"
                                               Width="{TemplateBinding OverflowButtonLength}"
@@ -129,6 +134,22 @@
                                                            Content="{TemplateBinding ContextualHeader}"
                                                            ContentTemplate="{TemplateBinding ContextualHeaderTemplate}"/>
                                 </Border>
+                                <!-- Down the side, the same name under the grip, turned to read top to bottom as a
+                                     folded pane's tab does: a layout turn, so the plate is as tall as the name is long. -->
+                                <Border x:Name="ContextualHeaderPlateDown"
+                                        DockPanel.Dock="Top"
+                                        Margin="0,3,0,6"
+                                        Visibility="Collapsed"
+                                        Background="{TemplateBinding Accent}"
+                                        CornerRadius="{ResourceReference CornerRadiusDefault}">
+                                    <RibbonContextualLabel Accent="Transparent"
+                                                           Content="{TemplateBinding ContextualHeader}"
+                                                           ContentTemplate="{TemplateBinding ContextualHeaderTemplate}">
+                                        <RibbonContextualLabel.LayoutTransform>
+                                            <Transform RotationAngle="90"/>
+                                        </RibbonContextualLabel.LayoutTransform>
+                                    </RibbonContextualLabel>
+                                </Border>
                                 <ToolBarPanel x:Name="PART_Items" Spacing="{TemplateBinding Spacing}"
                                             Orientation="{TemplateBinding Orientation}"
                                             VerticalAlignment="Center"/>
@@ -164,11 +185,11 @@
         </PropertyTrigger>
         <PropertyTrigger Property="Orientation" Value="Vertical">
             <Setter TargetName="PART_Grip" Property="DockPanel.Dock" Value="Top"/>
-            <Setter TargetName="PART_Grip" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_Grip" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_Grip" Property="Height" Value="{ResourceReference ToolBarGripLength}"/>
             <Setter TargetName="PART_Grip" Property="Margin" Value="0,0,0,3"/>
             <Setter TargetName="PART_OverflowButton" Property="DockPanel.Dock" Value="Bottom"/>
-            <Setter TargetName="PART_OverflowButton" Property="Width" Value="NaN"/>
+            <Setter TargetName="PART_OverflowButton" Property="Width" Value="Auto"/>
             <Setter TargetName="PART_OverflowButton" Property="Height" Value="{TemplateBinding OverflowButtonLength}"/>
             <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Stretch"/>
             <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Center"/>
@@ -183,12 +204,20 @@
         <PropertyTrigger Property="HasContextInOverflow" Value="true">
             <Setter TargetName="OverflowContextFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- Named at the bar's start along it, and turned under the grip down the side. -->
         <MultiTrigger>
             <MultiTrigger.Conditions>
                 <Condition Property="HasContextualHeader" Value="true"/>
                 <Condition Property="Orientation" Value="Horizontal"/>
             </MultiTrigger.Conditions>
             <Setter TargetName="ContextualHeaderPlate" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="HasContextualHeader" Value="true"/>
+                <Condition Property="Orientation" Value="Vertical"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ContextualHeaderPlateDown" Property="Visibility" Value="Visible"/>
         </MultiTrigger>
     </Style>
 
@@ -242,6 +271,44 @@
             <Setter TargetName="ContextWash" Property="Visibility" Value="Visible"/>
             <Setter TargetName="ContextFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+    </Style>
+
+    <!-- A command's place on a bar: the command itself, or - folded on a column down the side - its button, the card
+         beside the column holding the command under its label, as a Mac popover would. The item puts the command into
+         one presenter or the other, so neither binds the content. -->
+    <Style Selector="ToolBarItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolBarItem">
+                    <Grid>
+                        <ContentPresenter x:Name="PART_ContentPresenter"/>
+                        <Popup x:Name="PART_Card"
+                               Placement="Right"
+                               KeepOpen="False"
+                               IgnoreTargetPress="True">
+                            <Popup.ChildTemplate>
+                                <ControlTemplate TargetType="Popup">
+                                    <!-- Along a bar on the card: the command stands there as it does on a bar. -->
+                                    <Border Background="{ResourceReference FlyoutSurfaceFill}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="1"
+                                            CornerRadius="{ResourceReference ToolBarContextFrameRadius}"
+                                            Padding="{ResourceReference ToolBarCardPadding}"
+                                            ToolBar.CommandOrientation="Horizontal">
+                                        <StackPanel Spacing="{ResourceReference ToolBarCardSpacing}">
+                                            <ContentPresenter x:Name="PART_CardHeader"
+                                                              Foreground="{ObservableResource TextFillColorSecondary}"
+                                                              FontSize="{ResourceReference FontSizeCaption}"/>
+                                            <ContentPresenter x:Name="PART_CardPresenter" HorizontalAlignment="Left"/>
+                                        </StackPanel>
+                                    </Border>
+                                </ControlTemplate>
+                            </Popup.ChildTemplate>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </StyleSet>

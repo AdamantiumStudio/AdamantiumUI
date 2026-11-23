@@ -24,6 +24,7 @@
     <Phrase Key="Right" Text="Справа"/>
     <Phrase Key="Bottom" Text="Снизу"/>
     <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Down" Text="Вертикально: раздельно, сверху, снизу"/>
     <Phrase Key="Clockwise" Text="По часовой"/>
     <Phrase Key="CounterClockwise" Text="Против часовой"/>
 </Language>
