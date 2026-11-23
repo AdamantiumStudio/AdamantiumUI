@@ -112,6 +112,11 @@ public class DockingArea : Panel
             _compass.Measure(availableSize);
         }
 
+        if (_busyShown)
+        {
+            _busyOverlay.Measure(availableSize);
+        }
+
         var tree = _tree == null ? default : _tree.DesiredSize;
         return new Size<double>(
             double.IsInfinity(availableSize.Width) ? left + right + tree.Width : availableSize.Width,
@@ -141,6 +146,11 @@ public class DockingArea : Panel
         if (_compassInline)
         {
             _compass.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        }
+
+        if (_busyShown)
+        {
+            _busyOverlay.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
         }
 
         return finalSize;
@@ -496,6 +506,54 @@ public class DockingArea : Panel
     }
 
     // --- Unsaved work ---------------------------------------------------------------------------------------------------
+
+    /// <summary>Whether the area is busy - while an application gets ready, say: an overlay (<see cref="BusyOverlay"/>)
+    /// covers it and every window torn out of it, taking the pointer and the keyboard, so nothing in their panes can be
+    /// changed. Set on the main area; a floating one follows it.</summary>
+    public static readonly AdamantiumProperty IsBusyProperty = AdamantiumProperty.Register(
+        nameof(IsBusy), typeof(bool), typeof(DockingArea), new PropertyMetadata(false, OnIsBusyChanged));
+
+    public bool IsBusy
+    {
+        get => GetValue<bool>(IsBusyProperty);
+        set => SetValue(IsBusyProperty, value);
+    }
+
+    // Made the first time the area is busy; an area never busy has none.
+    private DockingBusyOverlay _busyOverlay;
+    private bool _busyShown;
+
+    /// <summary>What covers the area while it is busy - a control, so a theme can style it.</summary>
+    public DockingBusyOverlay BusyOverlay => _busyOverlay ??= new DockingBusyOverlay();
+
+    private static void OnIsBusyChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        var area = (DockingArea)component;
+        foreach (var each in area.Family)
+        {
+            each.ShowBusy(area.Owner.IsBusy);
+        }
+    }
+
+    private void ShowBusy(bool busy)
+    {
+        if (busy == _busyShown) return;
+
+        _busyShown = busy;
+        if (busy)
+        {
+            Children.Add(BusyOverlay);
+
+            // A field being typed in under it stops taking keys.
+            if (IsKeyboardFocusWithin) BusyOverlay.Focus();
+        }
+        else
+        {
+            Children.Remove(BusyOverlay);
+        }
+
+        InvalidateMeasure();
+    }
 
     /// <summary>Whether closing panes with unsaved work (<see cref="Pane.IsDirty"/>) asks first - one question for all of
     /// them, however they close: a tab, a "close all", the window. On by default.</summary>
@@ -1584,6 +1642,12 @@ public class DockingArea : Panel
             wanted.Add(_compass);
         }
 
+        // Last, so it lies over everything else.
+        if (_busyShown)
+        {
+            wanted.Add(_busyOverlay);
+        }
+
         // Only touch the children when they actually differ - an unchanged area must not be torn down and rebuilt.
         if (!SameChildren(Children, wanted))
         {
@@ -1894,6 +1958,7 @@ public class DockingArea : Panel
     {
         var area = new DockingArea(Owner, root);
         Owner._satellites.Add(area);
+        area.ShowBusy(Owner.IsBusy);
 
         // A DockingWindow, not a bare Window: what a floating panel's window looks like belongs in one selector.
         window = kept ?? new DockingWindow();

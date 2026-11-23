@@ -16,6 +16,18 @@
   <Invoke Target="id=DockingView/name=Navigate" />
   <Wait Target="id=DockingWindow" />
   <Expect Target="id=DockingWindow" Name="Notes" />
+  <!-- Busy: an overlay over the area and over the window torn out of it, each with its busy indicator. Off again, both
+       go and a tab takes a click. -->
+  <Expect Target="id=DockingView/type=TabItem,name=Output" Selected="False" />
+  <Toggle Target="id=BusyToggle" />
+  <Wait Target="id=DockingView/id=PART_BusyIndicator" Offscreen="False" Timeout="5s" />
+  <Wait Target="id=DockingWindow/id=PART_BusyIndicator" Offscreen="False" Timeout="5s" />
+  <Toggle Target="id=BusyToggle" />
+  <Absent Target="id=DockingView/id=PART_BusyIndicator" Timeout="5s" />
+  <Absent Target="id=DockingWindow/id=PART_BusyIndicator" Timeout="5s" />
+  <Click Target="id=DockingView/type=TabItem,name=Output" />
+  <Expect Target="id=DockingView/type=TabItem,name=Output" Selected="True" />
+  <Select Target="id=DockingView/type=TabItem,name=Console" />
   <Window Target="id=DockingWindow" Action="Close" />
   <Absent Target="id=DockingWindow" />
   <!-- Docked without the mouse: a pane to an edge, out into a window and back into a panel as a tab, a pane beside another's
