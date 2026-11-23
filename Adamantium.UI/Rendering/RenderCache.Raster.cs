@@ -118,14 +118,15 @@ public partial class RenderCache
         return run.Tiles.Count > 0 ? run : null;
     }
 
-    // What the element's subtree draws, relative to the element, as its layer's print is worked out: false when it
-    // holds copies of itself, which no tile follows. Content that cannot be told apart from frame to frame is drawn anew
-    // each frame.
+    // What the element's subtree draws, relative to the element: false when it holds copies of itself, which no tile
+    // follows. A change of what it draws is told by its groups being recorded again - not by the identity of what they
+    // hold, which the walk renews as it draws them (a brush's snapshot, a text's colors) - and by a brush repainted in
+    // place, by its paint version. Content that cannot be told apart - a living halo - is drawn anew each frame.
     private bool PrintRaster(RasterRun run)
     {
         var print = PrintSeed;
         Mix(ref print, run.Scale);
-        var still = Core.Media.Brush.PaintEpoch == _framePaintEpoch && !MovedByTheCompositor(run.Element);
+        var still = !MovedByTheCompositor(run.Element);
         var hasText = false;
         for (var i = run.Start; i < run.End; i++)
         {
@@ -135,22 +136,18 @@ public partial class RenderCache
                 return false;
             }
 
+            Mix(ref print, group.Recorded);
+            if (!ReferenceEquals(group.Component, run.Element))
+            {
+                MixRelative(ref print, World(group.Component) * run.FromWindow);
+            }
+
             foreach (var unit in group.Units)
             {
-                if (!still)
-                {
-                    break;
-                }
-
-                still = MixRasterContent(ref print, unit, ref hasText);
-                if (!ReferenceEquals(unit.Component, run.Element))
-                {
-                    MixRelative(ref print, World(unit.Component) * run.FromWindow);
-                }
-
+                still &= MixRasterUnit(ref print, unit, ref hasText);
                 if (unit.Placement is { } placement)
                 {
-                    MixMatrix(ref print, Newest(placement));
+                    MixRelative(ref print, Newest(placement));
                 }
             }
         }
@@ -169,11 +166,9 @@ public partial class RenderCache
 
     private long _rasterFrames;
 
-    // What a draw of a raster shows, as a layer's print tells it - and the marks of its groups, its pictures and its
-    // meshes by what they are: recorded anew, they are new objects, so a change is told; still, they stay. A brush that a
-    // layer cannot tell apart from frame to frame - a pattern drawn by a drawing - is told by its paint version, which a
-    // repaint in place moves.
-    private static bool MixRasterContent(ref ulong print, IRenderUnit unit, ref bool hasText)
+    // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
+    // text's revision. False for a living halo, which changes every frame.
+    private static bool MixRasterUnit(ref ulong print, IRenderUnit unit, ref bool hasText)
     {
         if (unit.RenderData?.LivingHalo != null)
         {
@@ -182,41 +177,20 @@ public partial class RenderCache
 
         switch (unit)
         {
-            case RenderUnits.GroupMarkRenderUnit mark:
-                Mix(ref print, Identity(mark));
-                Mix(ref print, Identity(mark.Payload));
-                return true;
-            case RenderUnits.ImageRenderUnit or RenderUnits.ColoredMeshRenderUnit:
-                Mix(ref print, Identity(unit));
-                Mix(ref print, Identity(unit.RenderData));
-                return true;
             case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
-                Mix(ref print, Identity(unit));
-                Mix(ref print, Identity(unit.RenderData?.Halo));
-                Mix(ref print, Identity(shape));
-                MixPainted(ref print, shape.Brush);
-                MixPainted(ref print, shape.Pen?.Brush);
-                Mix(ref print, Identity(shape.Pen));
-                return true;
+                Mix(ref print, shape.Brush?.PaintVersion ?? 0);
+                Mix(ref print, shape.Pen?.Brush?.PaintVersion ?? 0);
+                break;
             case RenderUnits.TextRenderUnit { Payload: { } text }:
                 hasText = true;
-                Mix(ref print, Identity(unit));
-                Mix(ref print, Identity(unit.RenderData?.Halo));
-                Mix(ref print, Identity(text));
                 Mix(ref print, text.Revision);
-                MixPainted(ref print, text.Foreground);
-                MixPainted(ref print, text.Background);
-                MixPainted(ref print, text.Stroke);
-                return true;
-            default:
-                return MixContent(ref print, unit, ref hasText);
+                Mix(ref print, text.Foreground?.PaintVersion ?? 0);
+                Mix(ref print, text.Background?.PaintVersion ?? 0);
+                Mix(ref print, text.Stroke?.PaintVersion ?? 0);
+                break;
         }
-    }
 
-    private static void MixPainted(ref ulong print, Core.Media.Brush brush)
-    {
-        Mix(ref print, Identity(brush));
-        Mix(ref print, brush?.PaintVersion ?? 0);
+        return true;
     }
 
     // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes

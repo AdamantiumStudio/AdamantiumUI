@@ -73,7 +73,12 @@ public partial class RenderCache
             if (Units.Count == 0) return;
             Units.Clear();
             BumpMembership();
+            Recorded++;
         }
+
+        /// <summary>How many times its units were rebuilt or emptied - what an element drawn as a raster tells a change of
+        /// what it draws by.</summary>
+        public long Recorded;
 
         // Per-group batch slot runs + the ARENA they live in, for the spliced-patch draw path. One arena per group: a
         // group whose units land in two different families has no single segment to repair and falls back to the walk,
