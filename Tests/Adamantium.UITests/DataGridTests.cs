@@ -2317,10 +2317,12 @@ public class DataGridTests
     }
 
     // A template column's editor binds the row itself, waiting on the commit (UpdateSourceTrigger.Explicit): the commit
-    // writes what was typed, a cancel never does - the editor's leaving does not write it either.
-    [TestCase(true)]
-    [TestCase(false)]
-    public void ATemplateEditorBoundExplicitly_IsWrittenByTheCommit_NeverByACancel(bool commit)
+    // writes what was typed - Enter's, or the one a column moved under the edit makes - and a cancel never does, the
+    // editor's leaving included.
+    [TestCase("commit")]
+    [TestCase("cancel")]
+    [TestCase("column moved")]
+    public void ATemplateEditorBoundExplicitly_IsWrittenByTheCommit_NeverByACancel(string ending)
     {
         var items = new List<Editable> { new() { Name = "one" } };
         var column = new DataGridTemplateColumn
@@ -2352,15 +2354,27 @@ public class DataGridTests
         FocusManager.Focus(editor);
         editor.Text = "typed";
         var whileEditing = items[0].Name;
-        if (commit) grid.CommitEdit();
-        else grid.CancelEdit();
+        switch (ending)
+        {
+            case "commit":
+                grid.CommitEdit();
+                break;
+            case "cancel":
+                grid.CancelEdit();
+                break;
+            default:
+                grid.Columns.Insert(0, new DataGridTextColumn { Binding = new Binding("Count"), Width = new GridLength(60) });
+                break;
+        }
+
         Relayout(grid);
 
         Assert.Multiple(() =>
         {
             Assert.That(opened, Is.EqualTo(("one", 0, 3)), "the editor opens on the value, all of it selected");
             Assert.That(whileEditing, Is.EqualTo("one"), "typing writes nothing yet");
-            Assert.That(items[0].Name, Is.EqualTo(commit ? "typed" : "one"));
+            Assert.That(items[0].Name, Is.EqualTo(ending == "cancel" ? "one" : "typed"));
+            Assert.That(grid.IsEditing, Is.False);
         });
     }
 

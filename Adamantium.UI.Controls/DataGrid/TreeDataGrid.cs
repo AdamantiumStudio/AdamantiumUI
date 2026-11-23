@@ -3647,11 +3647,13 @@ public partial class TreeDataGrid : Selector
             marked.Refusal = null;
         }
 
+        // A commit as much as Enter's: what the editor's own bindings wait on is written too.
+        cell?.WriteExplicitBindings();
         EndEdit();
     }
 
-    // A template column writes through its OWN two-way bindings while the user is in it, so there is nothing left here
-    // to write and refusing would leave the cell stuck in edit.
+    // A template column writes through its OWN two-way bindings - as the user types, or bound Explicit as the edit is
+    // committed - so there is nothing left here to write and refusing would leave the cell stuck in edit.
     // EVERY value the table writes goes through here, which is what makes one history of it: the editor, the paste and
     // the placeholder all arrive at this line, and a fourth way of writing would have to as well.
     private bool WriteThroughColumn(DataGridColumn column, object item, object value)
