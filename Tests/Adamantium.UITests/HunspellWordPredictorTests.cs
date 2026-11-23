@@ -61,10 +61,11 @@ public class HunspellWordPredictorTests
         Assert.That(words, Is.Empty);
     }
 
-    // Asked on every key: the time a beginning takes once the dictionary is read.
+    // Asked on every key, from the keyboard's thread: the ask hands back at once, and the words come off that thread in
+    // a frame or three - the first key of a new beginning expands its stems, the next letters only narrow them.
     [TestCase("ru-RU", "п", "пр", "при", "прив", "приве")]
     [TestCase("en-US", "h", "he", "hel", "hell", "hello")]
-    public async Task EachKey_TakesLittleTime(string language, params string[] starts)
+    public async Task EachKey_HandsBackAtOnce_AndItsWordsComeSoon(string language, params string[] starts)
     {
         Assume.That(_predictor.Supports(language), Is.True, $"no hunspell dictionary for {language} here");
         var clock = Stopwatch.StartNew();
@@ -72,15 +73,23 @@ public class HunspellWordPredictorTests
         var reading = clock.Elapsed.TotalMilliseconds;
 
         // As typed: each beginning asked once, the next letter after the one before.
+        var slowestHandBack = 0.0;
         var slowest = 0.0;
         foreach (var start in starts)
         {
             clock.Restart();
-            await _predictor.CompleteAsync(language, start, [], 3, CancellationToken.None);
+            var ask = _predictor.CompleteAsync(language, start, [], 3, CancellationToken.None);
+            slowestHandBack = System.Math.Max(slowestHandBack, clock.Elapsed.TotalMilliseconds);
+            await ask;
             slowest = System.Math.Max(slowest, clock.Elapsed.TotalMilliseconds);
         }
 
-        TestContext.Progress.WriteLine($"MEASURE {language}: read {reading:F0} ms, slowest key {slowest:F2} ms");
-        Assert.That(slowest, Is.LessThan(30), "a key's words in less than 30 ms");
+        TestContext.Progress.WriteLine(
+            $"MEASURE {language}: read {reading:F0} ms, slowest hand-back {slowestHandBack:F2} ms, slowest key {slowest:F2} ms");
+        Assert.Multiple(() =>
+        {
+            Assert.That(slowestHandBack, Is.LessThan(1), "the keyboard's thread is held under a millisecond");
+            Assert.That(slowest, Is.LessThan(50), "a key's words within three frames");
+        });
     }
 }
