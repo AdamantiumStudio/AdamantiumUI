@@ -144,7 +144,7 @@ internal static class Commands
                 : throw new AutomationException("dock <pane> top | left | bottom | right | fill | none"),
             arguments.Option("beside") is { } beside ? session.Find(beside) : null),
         "window" => Window(target, arguments.At(1)),
-        "touch" => Touch(target, arguments),
+        "touch" => Touch(session, target, arguments),
         "pen" => Pen(target, arguments),
         "touches" => Touches(session, arguments),
         "pinch" => Pinch(target, arguments),
@@ -174,12 +174,15 @@ internal static class Commands
         _ => throw new AutomationException("window <selector> minimize | maximize | restore | close | hide | show")
     };
 
-    private static Task Touch(AutomationElement target, ScriptArguments arguments)
+    private static Task Touch(AutomationSession session, AutomationElement target, ScriptArguments arguments)
     {
         var system = arguments.Flag("os");
         return arguments.At(1) switch
         {
             "tap" => target.TapAsync(system),
+            "hold" when arguments.Option("to") is { } to => system
+                ? throw new AutomationException("hold --to slides by simulated input only, not --os.")
+                : target.HoldAndSlideToAsync(session.Find(to)),
             "hold" => target.HoldAsync(system),
             "drag" => DragAsync((fromX, fromY, toX, toY) => target.TouchDragAsync(fromX, fromY, toX, toY, system), arguments.At(2), arguments.At(3)),
             var gesture => throw new AutomationException($"'{gesture}': tap, hold, or drag x1,y1 x2,y2.")

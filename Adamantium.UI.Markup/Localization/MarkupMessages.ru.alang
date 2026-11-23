@@ -127,6 +127,7 @@
     <Phrase Key="ScenarioDragNeeds" Text="{step} с Gesture=&quot;Drag&quot; нужны {attributes}"/>
     <Phrase Key="ScenarioOnlyForDrag" Text="{step}: {attribute} бывает только у Gesture=&quot;Drag&quot;"/>
     <Phrase Key="ScenarioHeldPenButtons" Text="У удерживаемого пера нет Barrel и Eraser"/>
+    <Phrase Key="ScenarioSlideOnlyForHold" Text="{step}: SlideTo бывает только у Gesture=&quot;Hold&quot; и только у ввода внутри приложения, не ThroughSystem"/>
     <Phrase Key="ScenarioChecksNothing" Text="{step} ничего не проверяет: добавьте ключ, например Name или Value, или свойство контрола"/>
     <Phrase Key="ScenarioVisibleOnlyByName" Text="Visible запускает приложение на видимом рабочем столе только в тесте, запущенном по имени: добавьте Explicit с причиной"/>
     <Phrase Key="ScenarioNoApplication" Text="Сценариям нужно приложение, которое они ведут: задайте в проекте AdamantiumScenarioApplication - имя его исполняемого файла"/>

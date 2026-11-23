@@ -10,7 +10,8 @@ public sealed class AutomationRequest
     public string Target { get; set; }
 
     /// <summary>The selector paths of the elements a command about several is about - one finger each for
-    /// <see cref="AutomationCommand.Touches"/>.</summary>
+    /// <see cref="AutomationCommand.Touches"/>; for a held <see cref="AutomationCommand.Touch"/> or
+    /// <see cref="AutomationCommand.Pen"/>, the one element it slides to.</summary>
     public string[] Targets { get; set; }
 
     public string Value { get; set; }

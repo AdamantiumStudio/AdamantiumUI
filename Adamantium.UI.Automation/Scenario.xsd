@@ -439,6 +439,9 @@
         <xs:attribute name="To" type="Pair">
           <xs:annotation><xs:documentation>Where a drag ends, in the element.</xs:documentation></xs:annotation>
         </xs:attribute>
+        <xs:attribute name="SlideTo" type="Selector">
+          <xs:annotation><xs:documentation>With Gesture="Hold": once held, the contact slides, still down, to this element - one the hold may have opened - and is lifted there.</xs:documentation></xs:annotation>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

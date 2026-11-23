@@ -251,6 +251,9 @@ public static class MarkupMessages
         Say(nameof(ScenarioOnlyForDrag), new PhraseArgument("step", step), new PhraseArgument("attribute", attribute));
 
     public static string ScenarioHeldPenButtons() => Say(nameof(ScenarioHeldPenButtons));
+
+    public static string ScenarioSlideOnlyForHold(string step) =>
+        Say(nameof(ScenarioSlideOnlyForHold), new PhraseArgument("step", step));
     public static string ScenarioChecksNothing(string step) => Say(nameof(ScenarioChecksNothing), new PhraseArgument("step", step));
     public static string ScenarioVisibleOnlyByName() => Say(nameof(ScenarioVisibleOnlyByName));
     public static string ScenarioNoApplication() => Say(nameof(ScenarioNoApplication));

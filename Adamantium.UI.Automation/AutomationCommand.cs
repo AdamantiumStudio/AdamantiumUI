@@ -157,7 +157,9 @@ public enum AutomationCommand
     Wheel,
 
     /// <summary>A finger on the target, inside the application: a tap in its middle, or, when
-    /// <see cref="AutomationRequest.Value"/> is <c>x1,y1 x2,y2</c>, a stroke between those points in its own units.</summary>
+    /// <see cref="AutomationRequest.Value"/> is <c>x1,y1 x2,y2</c>, a stroke between those points in its own units. Held
+    /// (<c>hold</c> in <see cref="AutomationRequest.Properties"/>) with one of <see cref="AutomationRequest.Targets"/>, it
+    /// slides, still down, to that element's middle once the hold has started, and lifts there.</summary>
     Touch,
 
     /// <summary>A pen on the target, as <see cref="Touch"/> puts a finger there. <see cref="AutomationRequest.Properties"/>
