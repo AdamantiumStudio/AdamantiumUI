@@ -99,15 +99,18 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>Screen pixels per world unit.</summary>
     public static readonly AdamantiumProperty ScaleProperty = AdamantiumProperty.Register(nameof(Scale),
         typeof(Double), typeof(InfiniteCanvas),
-        new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault,
-            OnCameraChanged, CoerceScale));
+        new PropertyMetadata(1.0, PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged, CoerceScale));
 
     /// <summary>Where the world's origin sits on screen, in pixels.</summary>
     public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
         typeof(Vector2<double>), typeof(InfiniteCanvas),
-        new PropertyMetadata(Vector2<double>.Zero,
-            PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged,
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged,
             CoerceOffset));
+
+    // Whether the ground changes with the camera: its grid's marks or the world's axes move with it. A plain one does not,
+    // and the camera's move draws it again only when it does (OnCameraChanged).
+    private bool GroundFollowsTheCamera =>
+        GridStyle != CanvasGridStyle.Transparent && (GridStyle != CanvasGridStyle.None || AxisBrush != null);
 
     /// <summary>How far the camera may zoom out and in: a practical default, not a precision limit, since drawing receives
     /// screen coordinates.</summary>
@@ -1927,8 +1930,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         canvas.SyncScrollBars();
 
         // The ground is one quad whose shader is handed the camera, and the glass is what the hand is doing - both are
-        // drawn again, and both are small.
-        canvas.InvalidateRender(false);
+        // drawn again, and both are small. A plain ground - no marks, no axes - is the same at every camera, and drawing
+        // it again made the frame dirty: everything on the plane was walked again, where the move alone is matrices.
+        if (canvas.GroundFollowsTheCamera) canvas.InvalidateRender(false);
         canvas.RepaintGlass();
     }
 
