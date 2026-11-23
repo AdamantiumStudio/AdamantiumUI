@@ -441,6 +441,108 @@ internal sealed class OffscreenLayers : IDisposable
     // The composite's mode past BlendMode's: the content in place of the copy of what lay under it, by the masks.
     private const float ReplaceMode = 16f;
 
+    // ---- TILES of an element drawn as a raster (DrawingMode.Raster) -----------------------------------------------
+
+    /// <summary>The side of a raster tile's texture, in texels.</summary>
+    public const int TileTexels = 512;
+
+    /// <summary>Whether the tile kept under <paramref name="key"/> holds a drawing with this <paramref name="print"/>.
+    /// </summary>
+    public bool HoldsTile(object key, ulong print) =>
+        _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0 && entry.Print == print;
+
+    /// <summary>Opens a fresh texture for the tile kept under <paramref name="key"/>, drawn in its own space: a window
+    /// pixel lands on the texel it names, 0 to <see cref="TileTexels"/> each way, whatever lies past the window. Kept
+    /// with <paramref name="print"/> by <see cref="EndTile"/>.</summary>
+    public DrawSpace BeginTile(IGraphicsDevice gd, object key, ulong print, Matrix4x4F projection)
+    {
+        var region = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = TileTexels, Height = TileTexels } };
+        return Open(gd, key, region, print, true, false, projection, region, true, Colors.Transparent, out _);
+    }
+
+    /// <summary>Closes the tile <see cref="BeginTile"/> opened, keeping what it holds for <see cref="LayDownTile"/> in this
+    /// and later frames, and gives back the space it was opened in.</summary>
+    public DrawSpace EndTile(IGraphicsDevice gd)
+    {
+        var open = _open.Pop();
+        if (gd != null && open.Color != null && !open.Reused)
+        {
+            gd.SuspendRendering();
+            gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, open.Color,
+                AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+                ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+                PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+            gd.SetRenderTargets(open.Target);
+            gd.SetDepthBuffer(open.Depth);
+            gd.ClearColor = open.Clear;
+            gd.MSAALevel = open.Samples;
+            gd.TargetOrigin = open.Origin;
+            gd.ResumeRendering();
+
+            var entry = open.Entry;
+            entry.Latest = open.Slot;
+            entry.Print = open.Print;
+            entry.Valid = true;
+            entry.Width = open.Region.Extent.Width;
+            entry.Height = open.Region.Extent.Height;
+        }
+
+        var outer = _spaces.Peek().Outer;
+        LeaveSpace(gd);
+        return outer;
+    }
+
+    /// <summary>Lays the tile kept under <paramref name="key"/> over <paramref name="box"/> - window device pixels, not
+    /// whole ones: the camera puts a tile anywhere and at any scale - stretched to it, cut by <paramref name="scissor"/>.
+    /// False when it holds no drawing.</summary>
+    public bool LayDownTile(IGraphicsDevice gd, object key, Vector4F box, Rect2D scissor)
+    {
+        if (gd == null || gd.CurrentViewports.Length == 0 || !_cached.TryGetValue(key, out var entry) || !entry.Valid
+            || entry.Latest < 0 || scissor.Extent.Width == 0 || scissor.Extent.Height == 0)
+        {
+            return false;
+        }
+
+        entry.LastUsed = _frame;
+        _group ??= new GroupCompositeEffect(gd);
+        var viewport = gd.CurrentViewports[0];
+        var restore = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : scissor;
+        var texture = entry.Ring[entry.Latest];
+
+        gd.SetScissors(scissor);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = true;
+        gd.ColorBlendEquation = ColorBlendEquations.Premultiplied;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        gd.VertexType = null;
+
+        var texels = new Vector4F((float)TileTexels / entry.TextureWidth, (float)TileTexels / entry.TextureHeight, 0, 0);
+        _group.LayerBox.SetValue(new Vector4F(box.X - viewport.X, box.Y - viewport.Y, box.Z, box.W));
+        _group.SourceRegion.SetValue(box);
+        _group.LayerTexels.SetValue(texels);
+        _group.Mask0.SetValue(Vector4F.Zero);
+        _group.Mask1.SetValue(Vector4F.Zero);
+        _group.Mask2.SetValue(Vector4F.Zero);
+        _group.Mask0Texture.SetResource(texture);
+        _group.Mask1Texture.SetResource(texture);
+        _group.Mask2Texture.SetResource(texture);
+        _group.BackdropTexture.SetResource(texture);
+        _group.Backdrop.SetValue(texels);
+        _group.GroupAlpha.SetValue(1f);
+        _group.BlendMode.SetValue(0f);
+        _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
+        _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
+        _group.SourceTexture.SetResource(texture);
+        _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _group.GroupCompositeDrawPass.Apply();
+        gd.Draw(4, 1);
+        gd.SetScissors(restore);
+        return true;
+    }
+
     /// <summary>Fills the group target just opened over <paramref name="region"/> with the copy of what lay under it.
     /// </summary>
     public void FillFromBackdrop(IGraphicsDevice gd, GroupBackdrop backdrop, Rect2D region)

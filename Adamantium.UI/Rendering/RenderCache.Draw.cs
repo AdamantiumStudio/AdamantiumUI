@@ -1002,6 +1002,7 @@ public partial class RenderCache
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
         _bandsDrawnUnder = null;
+        _rasterRun = null;
         ResetGroups();
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
@@ -1024,6 +1025,30 @@ public partial class RenderCache
                 }
             }
 
+            // An element drawn as a raster: its tiles still held are laid down and its subtree passed over; the others are
+            // drawn first, each by a walk of the subtree into it (OpenRasterTile), the run ending at its last group.
+            var rasterLaidDown = false;
+            if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
+                && group.Component?.DrawingMode == DrawingMode.Raster && StartRaster(groupIndex, fullScissor) is { } raster)
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+                // A replay does not draw tiles yet: a frame showing one is walked.
+                _opsReplayable = false;
+                if (raster.ToDraw.Count == 0)
+                {
+                    LayDownRaster(device, raster);
+                    groupIndex = raster.End - 1;
+                    rasterLaidDown = true;
+                }
+                else
+                {
+                    raster.RecordingBefore = _recording;
+                    _recording = false;
+                    _rasterRun = raster;
+                    fullScissor = OpenRasterTile(device, raster);
+                }
+            }
+
             if (device != null && !_cloneMatrix.HasValue && OpensLayer(group.Component))
             {
                 var layer = group.Component;
@@ -1042,7 +1067,7 @@ public partial class RenderCache
                 }
             }
 
-            for (var unitIndex = 0; unitIndex < group.Units.Count; unitIndex++)
+            for (var unitIndex = 0; !rasterLaidDown && unitIndex < group.Units.Count; unitIndex++)
             {
             var unit = group.Units[unitIndex];
             // Group boundary (recording walks): reset this group's spliced-patch records once per group (re-derived by the
@@ -2064,6 +2089,25 @@ public partial class RenderCache
                     _cloneMatrix = null;
                     _recording = recordingBeforeClones;
                 }
+            }
+
+            // The last group of an element drawn as a raster: its tile is closed, the next one drawn by a walk of the
+            // subtree again, or - the last drawn - every tile laid down.
+            if (_rasterRun is { } rasterRun && groupIndex == rasterRun.End - 1)
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+                fullScissor = CloseRasterTile(device);
+                if (++rasterRun.Drawing < rasterRun.ToDraw.Count)
+                {
+                    fullScissor = OpenRasterTile(device, rasterRun);
+                    groupIndex = rasterRun.Start - 1;
+                    continue;
+                }
+
+                _cloneMatrix = null;
+                _recording = rasterRun.RecordingBefore;
+                _rasterRun = null;
+                LayDownRaster(device, rasterRun);
             }
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)
