@@ -1576,6 +1576,15 @@ public partial class InfiniteCanvas : ICanvasCamera
         var resized = _viewport != viewport;
         _viewport = viewport;
 
+        // The ground covers the viewport: moved or resized - a panel beside it folded away - it is drawn again there.
+        // The camera's move does not draw a plain ground again, so nothing else would.
+        var ground = new Rect(ViewportOrigin, viewport);
+        if (ground != _groundAt)
+        {
+            _groundAt = ground;
+            InvalidateRender(false);
+        }
+
         if (!_cameraPlaced && viewport is { Width: > 0, Height: > 0 })
         {
             _cameraPlaced = true;
