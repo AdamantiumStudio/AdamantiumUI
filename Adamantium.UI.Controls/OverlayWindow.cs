@@ -353,6 +353,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         if (HostPopup == null) return;
         HostPopup.Placement = PlacementMode.Relative;   // Relative anchors the card's top-left at (offset), not centered
+        HostPopup.PlacementAlignment = PlacementAlignment.Start;   // opened at the top-right, its top-left from now on
         HostPopup.HorizontalOffset = Left;
         HostPopup.VerticalOffset = Top;
     }
