@@ -12,6 +12,9 @@ internal sealed class HunspellAffixes
 {
     private readonly Dictionary<string, char> _longFlags = new(StringComparer.Ordinal);
     private readonly Dictionary<char, bool> _crossProduct = [];
+    private readonly Dictionary<char, int> _rulesLeft = [];
+    private readonly HashSet<char> _neverAlone = [];
+    private string _needAffix = string.Empty;
     private readonly List<string> _aliases = [];
     private string _flagMode = "char";
     private char _nextFlag = '';
@@ -26,8 +29,21 @@ internal sealed class HunspellAffixes
     /// <summary>The rules of each class by its flag.</summary>
     public Dictionary<char, List<HunspellAffixRule>> Rules { get; } = [];
 
-    /// <summary>Flags whose stems are not words alone: NEEDAFFIX, ONLYINCOMPOUND, FORBIDDENWORD.</summary>
-    public HashSet<char> NotAlone { get; } = [];
+    /// <summary>Whether a stem or a form of these flags is a word only with an affix on it (NEEDAFFIX).</summary>
+    public bool NeedsAffix(string flags) => _needAffix.Length > 0 && flags.Contains(_needAffix, StringComparison.Ordinal);
+
+    /// <summary>Whether a stem of these flags makes no word at all, alone or with affixes: one only for compounds
+    /// (ONLYINCOMPOUND), or forbidden (FORBIDDENWORD).</summary>
+    public bool IsNeverAlone(string flags)
+    {
+        foreach (var flag in flags)
+        {
+            if (_neverAlone.Contains(flag))
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>Reads the .aff file's <paramref name="bytes"/>.</summary>
     public static HunspellAffixes Read(byte[] bytes)
@@ -37,7 +53,7 @@ internal sealed class HunspellAffixes
         var pending = 0;
         foreach (var raw in lines)
         {
-            var parts = raw.Split((char[])[' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+            var parts = raw.TrimEnd('\r').Split((char[])[' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0 || parts[0].StartsWith('#'))
                 continue;
 
@@ -58,9 +74,12 @@ internal sealed class HunspellAffixes
                     }
 
                     break;
-                case "NEEDAFFIX" or "ONLYINCOMPOUND" or "FORBIDDENWORD" when parts.Length > 1:
+                case "NEEDAFFIX" when parts.Length > 1:
+                    affixes._needAffix = affixes.Flags(parts[1]);
+                    break;
+                case "ONLYINCOMPOUND" or "FORBIDDENWORD" when parts.Length > 1:
                     foreach (var flag in affixes.Flags(parts[1]))
-                        affixes.NotAlone.Add(flag);
+                        affixes._neverAlone.Add(flag);
 
                     break;
                 case "PFX" or "SFX" when parts.Length >= 4:
@@ -89,13 +108,17 @@ internal sealed class HunspellAffixes
         if (flags.Length != 1)
             return;
 
-        // A class begins with its header - "SFX A Y 3": whether it crosses with the other kind, and how many rules.
+        // A class begins with its header - "SFX A Y 3": whether it crosses with the other kind, and how many rules
+        // follow; a line while rules are owed is a rule, whatever its fields look like.
         var flag = flags[0];
-        if (parts[2] is "Y" or "N" && int.TryParse(parts[3], out _))
+        if (_rulesLeft.GetValueOrDefault(flag) == 0)
         {
             _crossProduct[flag] = parts[2] == "Y";
+            _rulesLeft[flag] = int.TryParse(parts[3], out var count) ? count : 0;
             return;
         }
+
+        _rulesLeft[flag]--;
 
         var strip = parts[2] == "0" ? string.Empty : parts[2];
         var addAndFlags = parts[3].Split('/', 2);
@@ -130,6 +153,15 @@ internal sealed class HunspellAffixes
                 var flags = new StringBuilder();
                 foreach (var number in written.Split(',', StringSplitOptions.RemoveEmptyEntries))
                     flags.Append(FlagFor(number.Trim()));
+
+                return flags.ToString();
+            }
+            case "UTF-8":
+            {
+                // A flag past the Basic Multilingual Plane is two UTF-16 units: kept as one character too.
+                var flags = new StringBuilder(written.Length);
+                foreach (var rune in written.EnumerateRunes())
+                    flags.Append(rune.IsBmp ? (char)rune.Value : FlagFor(rune.ToString()));
 
                 return flags.ToString();
             }

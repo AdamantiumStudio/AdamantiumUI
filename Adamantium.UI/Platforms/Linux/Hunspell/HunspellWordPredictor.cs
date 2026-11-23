@@ -20,6 +20,7 @@ internal sealed class HunspellWordPredictor : IWordPredictor
     private readonly ISpellChecker _spelling;
     private readonly IReadOnlyList<string> _folders;
     private readonly Dictionary<string, Task<HunspellDictionary>> _dictionaries = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Task<HunspellDictionary>> _loads = new(StringComparer.Ordinal);
 
     public HunspellWordPredictor(ISpellChecker spelling) : this(spelling, DictionaryFolders())
     {
@@ -68,8 +69,15 @@ internal sealed class HunspellWordPredictor : IWordPredictor
             if (_dictionaries.TryGetValue(language, out var known))
                 return known;
 
+            // Two tags falling to the same files - en-US and en-GB to en_US.dic - share one dictionary read once.
             var files = FindFiles(language);
-            var loading = files == null ? null : Task.Run(() => Load(files));
+            Task<HunspellDictionary> loading = null;
+            if (files != null && !_loads.TryGetValue(files.Dic, out loading))
+            {
+                loading = Task.Run(() => Load(files));
+                _loads[files.Dic] = loading;
+            }
+
             _dictionaries[language] = loading;
             return loading;
         }

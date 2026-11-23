@@ -5,24 +5,23 @@ using System.IO;
 namespace Adamantium.UI.Platforms.Linux.Hunspell;
 
 /// <summary>A hunspell dictionary (an .aff and a .dic, hunspell(5)) for completing words: the words a beginning goes on
-/// to, its stems with the forms their affixes make. Nothing is expanded ahead: the stems are kept sorted, and only those
-/// the beginning can grow from are expanded when asked - a whole language's forms run into millions. Stems are looked up
-/// by the beginning's first three letters, so a form whose suffix strips into the beginning is still found; past 2000
-/// stems for a beginning - a letter or two - only the stems themselves are offered. A suffix's own suffixes go one level
-/// deep, as hunspell's twofold suffixes. The forms of the latest sixteen beginnings are kept, so the next letters only
-/// narrow them. The dictionary has no frequencies: shorter words come first, then by the alphabet. It may be asked from
-/// any thread.</summary>
+/// to, its stems with the forms their affixes make. A whole language's forms run into millions, so they are not kept:
+/// reading the dictionary indexes each stem by the first three letters of every form it makes, and a beginning of three
+/// letters or more expands only the stems indexed under its first three - also those whose suffix strips letters, or a
+/// short stem a suffix lengthens. The forms of the latest sixteen such keys are kept, so the next letters only narrow
+/// them. A beginning of one or two letters offers stems alone. A suffix's own suffixes go one level deep, as hunspell's
+/// twofold suffixes; prefixes take no suffixes of their own and two prefixes do not stack. The dictionary has no
+/// frequencies: shorter words come first, then by the alphabet. It may be asked from any thread.</summary>
 internal sealed class HunspellDictionary
 {
-    private const int MostStemsExpanded = 2000;
     private const int KeyLength = 3;
     private const int MostKeysKept = 16;
-
-    private readonly Dictionary<string, string[]> _expanded = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly HunspellAffixes _affixes;
     private readonly Stem[] _stems;
     private readonly List<HunspellAffixRule> _prefixes = [];
+    private readonly Dictionary<string, int[]> _stemsByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string[]> _formsByKey = new(StringComparer.OrdinalIgnoreCase);
 
     private HunspellDictionary(HunspellAffixes affixes, Stem[] stems)
     {
@@ -32,10 +31,12 @@ internal sealed class HunspellDictionary
         {
             foreach (var rule in rules)
             {
-                if (rule.IsPrefix && rule.Add.Length > 0)
+                if (rule.IsPrefix)
                     _prefixes.Add(rule);
             }
         }
+
+        IndexStems();
     }
 
     /// <summary>The dictionary of <paramref name="affPath"/> and <paramref name="dicPath"/>.</summary>
@@ -48,6 +49,7 @@ internal sealed class HunspellDictionary
         var affixes = HunspellAffixes.Read(aff);
         var lines = affixes.Encoding.GetString(dic).Split('\n');
         var stems = new List<Stem>(lines.Length);
+        var flagSets = new Dictionary<string, string>(StringComparer.Ordinal);
         // The first line counts the stems; each next is a stem, a slash and its flags, then data after a tab or space.
         for (var index = 1; index < lines.Length; index++)
         {
@@ -59,7 +61,16 @@ internal sealed class HunspellDictionary
             if (word.Length == 0)
                 continue;
 
-            stems.Add(new Stem(word, slash < 0 ? string.Empty : affixes.StemFlags(entry[(slash + 1)..])));
+            var flags = slash < 0 ? string.Empty : affixes.StemFlags(entry[(slash + 1)..]);
+            // Many stems share one set of flags: kept once.
+            if (!flagSets.TryGetValue(flags, out var shared))
+            {
+                shared = flags;
+                flagSets[flags] = flags;
+            }
+
+            if (!affixes.IsNeverAlone(shared))
+                stems.Add(new Stem(word, shared));
         }
 
         stems.Sort((left, right) => string.Compare(left.Word, right.Word, StringComparison.OrdinalIgnoreCase));
@@ -74,12 +85,23 @@ internal sealed class HunspellDictionary
             return [];
 
         var found = new HashSet<string>(StringComparer.Ordinal);
-        Collect(start, start, null, found);
-        // A form a prefix makes - «un» + «do» - begins with the prefix: the stem is looked up by what follows it.
-        foreach (var prefix in _prefixes)
+        if (start.Length < KeyLength)
         {
-            if (start.StartsWith(prefix.Add, StringComparison.OrdinalIgnoreCase) && start.Length > prefix.Add.Length)
-                Collect(start, prefix.Strip + start[prefix.Add.Length..], prefix, found);
+            var first = LowerBound(start);
+            var last = LowerBound(start + '￿');
+            for (var index = first; index < last; index++)
+            {
+                if (!_affixes.NeedsAffix(_stems[index].Flags))
+                    found.Add(_stems[index].Word);
+            }
+        }
+        else
+        {
+            foreach (var form in FormsGrownFrom(start[..KeyLength]))
+            {
+                if (form.StartsWith(start, StringComparison.OrdinalIgnoreCase))
+                    found.Add(form);
+            }
         }
 
         List<string> words = [.. found];
@@ -89,66 +111,78 @@ internal sealed class HunspellDictionary
         return words.Count > count ? words.GetRange(0, count) : words;
     }
 
-    private void Collect(string start, string stemStart, HunspellAffixRule prefix, HashSet<string> found)
+    private void IndexStems()
     {
-        var key = stemStart.Length > KeyLength ? stemStart[..KeyLength] : stemStart;
-        foreach (var form in FormsGrownFrom(key, prefix))
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var byKey = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < _stems.Length; index++)
         {
-            if (form.StartsWith(start, StringComparison.OrdinalIgnoreCase))
-                found.Add(form);
+            keys.Clear();
+            foreach (var form in FormsOf(_stems[index]))
+            {
+                if (form.Length >= KeyLength)
+                    keys.Add(form[..KeyLength]);
+            }
+
+            foreach (var key in keys)
+            {
+                if (!byKey.TryGetValue(key, out var stems))
+                {
+                    stems = [];
+                    byKey[key] = stems;
+                }
+
+                stems.Add(index);
+            }
         }
+
+        foreach (var (key, stems) in byKey)
+            _stemsByKey[key] = stems.ToArray();
     }
 
-    private string[] FormsGrownFrom(string key, HunspellAffixRule prefix)
+    private string[] FormsGrownFrom(string key)
     {
-        // The forms of the stems a key begins are kept for the latest keys: the next letters typed only narrow them.
-        var cacheKey = prefix == null ? key : $"{prefix.Flag}{prefix.Add}|{key}";
-        lock (_expanded)
+        lock (_formsByKey)
         {
-            if (_expanded.TryGetValue(cacheKey, out var known))
+            if (_formsByKey.TryGetValue(key, out var known))
                 return known;
         }
 
-        var first = LowerBound(key);
-        var last = EndOfRange(first, key);
-        var expands = last - first <= MostStemsExpanded;
         var forms = new List<string>();
-        for (var index = first; index < last; index++)
+        if (_stemsByKey.TryGetValue(key, out var stems))
         {
-            var stem = _stems[index];
-            if (prefix != null && !stem.Flags.Contains(prefix.Flag))
-                continue;
-
-            if (expands)
+            foreach (var index in stems)
             {
-                forms.AddRange(FormsOf(stem, prefix));
-            }
-            else if (IsAlone(stem.Flags) && (prefix == null ? stem.Word : prefix.Apply(stem.Word)) is { } word)
-            {
-                forms.Add(word);
+                foreach (var form in FormsOf(_stems[index]))
+                {
+                    if (form.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                        forms.Add(form);
+                }
             }
         }
 
         var grown = forms.ToArray();
-        lock (_expanded)
+        lock (_formsByKey)
         {
-            if (_expanded.Count >= MostKeysKept)
-                _expanded.Clear();
+            if (_formsByKey.Count >= MostKeysKept)
+                _formsByKey.Clear();
 
-            _expanded[cacheKey] = grown;
+            _formsByKey[key] = grown;
         }
 
         return grown;
     }
 
-    private List<string> FormsOf(Stem stem, HunspellAffixRule prefix)
+    private List<string> FormsOf(Stem stem)
     {
-        // The stem alone, if it stands alone, and the forms its suffixes make, then a suffix's own suffixes on those -
-        // a queue, not recursion - with a prefix put on the forms that cross with it.
+        // The stem alone, unless it needs an affix; the forms its suffixes make, then a suffix's own suffixes on those -
+        // a queue, not recursion; and the stem's prefixes on the stem, and on the suffixed forms where both cross.
         var forms = new List<string>();
-        if (IsAlone(stem.Flags))
+        var needsAffix = _affixes.NeedsAffix(stem.Flags);
+        if (!needsAffix)
             forms.Add(stem.Word);
 
+        var crossing = new List<string>();
         var queue = new Queue<Stem>();
         queue.Enqueue(stem);
         var firstLevel = 1;
@@ -163,15 +197,15 @@ internal sealed class HunspellDictionary
 
                 foreach (var rule in rules)
                 {
-                    if (rule.IsPrefix || (prefix != null && !rule.CrossProduct))
+                    if (rule.IsPrefix || rule.Apply(current.Word) is not { } form)
                         continue;
 
-                    var form = rule.Apply(current.Word);
-                    if (form == null)
-                        continue;
-
-                    if (IsAlone(rule.Continuation))
+                    if (!_affixes.NeedsAffix(rule.Continuation))
+                    {
                         forms.Add(form);
+                        if (rule.CrossProduct && ReferenceEquals(current, stem))
+                            crossing.Add(form);
+                    }
 
                     if (expandsFurther && rule.Continuation.Length > 0)
                         queue.Enqueue(new Stem(form, rule.Continuation));
@@ -179,37 +213,25 @@ internal sealed class HunspellDictionary
             }
         }
 
-        if (prefix == null)
-            return forms;
-
-        var prefixed = new List<string>(forms.Count);
-        foreach (var form in forms)
+        foreach (var prefix in _prefixes)
         {
-            if (prefix.Apply(form) is { } word)
-                prefixed.Add(word);
+            if (!stem.Flags.Contains(prefix.Flag) || _affixes.NeedsAffix(prefix.Continuation))
+                continue;
+
+            if (prefix.Apply(stem.Word) is { } prefixed)
+                forms.Add(prefixed);
+
+            if (!prefix.CrossProduct)
+                continue;
+
+            foreach (var suffixed in crossing)
+            {
+                if (prefix.Apply(suffixed) is { } both)
+                    forms.Add(both);
+            }
         }
 
-        return prefixed;
-    }
-
-    private bool IsAlone(string flags)
-    {
-        foreach (var flag in flags)
-        {
-            if (_affixes.NotAlone.Contains(flag))
-                return false;
-        }
-
-        return true;
-    }
-
-    private int EndOfRange(int first, string key)
-    {
-        var last = first;
-        while (last < _stems.Length && _stems[last].Word.StartsWith(key, StringComparison.OrdinalIgnoreCase))
-            last++;
-
-        return last;
+        return forms;
     }
 
     private int LowerBound(string key)
