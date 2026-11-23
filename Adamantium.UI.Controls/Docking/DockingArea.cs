@@ -114,7 +114,7 @@ public class DockingArea : Panel
 
         if (_busyShown)
         {
-            _busyOverlay.Measure(availableSize);
+            BusyOverlay.Measure(availableSize);
         }
 
         var tree = _tree == null ? default : _tree.DesiredSize;
@@ -150,7 +150,7 @@ public class DockingArea : Panel
 
         if (_busyShown)
         {
-            _busyOverlay.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+            BusyOverlay.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
         }
 
         return finalSize;
@@ -540,20 +540,30 @@ public class DockingArea : Panel
         if (busy == _busyShown) return;
 
         _busyShown = busy;
-        if (busy)
-        {
-            Children.Add(BusyOverlay);
 
-            // A field being typed in under it stops taking keys.
-            if (IsKeyboardFocusWithin) BusyOverlay.Focus();
-        }
-        else
+        // The panes under it are disabled too: no focus goes into them - Tab, a window given back its focus - and a
+        // field being typed in gives the focus up.
+        CoerceValue(IsEnabledProperty);
+
+        // Before the layout is built the overlay waits: the area counts its children to know whether its markup came
+        // yet, and the layout's first build puts it on top.
+        if (_layoutBuilt)
         {
-            Children.Remove(BusyOverlay);
+            if (busy)
+            {
+                Children.Add(BusyOverlay);
+            }
+            else
+            {
+                Children.Remove(BusyOverlay);
+            }
         }
 
         InvalidateMeasure();
     }
+
+    /// <summary>Not usable while busy, whatever <see cref="UIComponent.IsEnabled"/> is set to.</summary>
+    protected override bool IsEnabledCore => !_busyShown;
 
     /// <summary>Whether closing panes with unsaved work (<see cref="Pane.IsDirty"/>) asks first - one question for all of
     /// them, however they close: a tab, a "close all", the window. On by default.</summary>
@@ -1645,7 +1655,7 @@ public class DockingArea : Panel
         // Last, so it lies over everything else.
         if (_busyShown)
         {
-            wanted.Add(_busyOverlay);
+            wanted.Add(BusyOverlay);
         }
 
         // Only touch the children when they actually differ - an unchanged area must not be torn down and rebuilt.
