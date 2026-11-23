@@ -5,4 +5,5 @@
     <Phrase Key="Close" Text="Закрыть"/>
     <Phrase Key="MoreCommands" Text="Ещё команды"/>
     <Phrase Key="Pin" Text="Закрепить"/>
+    <Phrase Key="Collapse" Text="Свернуть до заголовка"/>
 </Language>

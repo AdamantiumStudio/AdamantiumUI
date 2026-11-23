@@ -15,6 +15,7 @@
         <Setter Property="OverlayBrush" Value="{ResourceReference SmokeFillColorDefault}"/>
         <Setter Property="TitleBarBackground" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>
         <Setter Property="TitleForeground" Value="{ResourceReference TextFillColorPrimary}"/>
+        <Setter Property="MinWidth" Value="{ResourceReference OverlayMinWidth}"/>
         <!-- Sized to content and centered on the overlay; the manager then offsets and drags it. -->
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -25,7 +26,6 @@
             <Setter.Value>
                 <ControlTemplate TargetType="OverlayWindow">
                     <Border x:Name="PART_Window"
-                            MinWidth="{ResourceReference OverlayMinWidth}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -40,7 +40,7 @@
                                     BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                     BorderThickness="{ResourceReference TitleBarUnderline}"
                                     Height="{ResourceReference TitleBarHeight}">
-                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                                     <Grid x:Name="PART_TitleThumb" Grid.Column="0" Background="Transparent">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                 Margin="{ResourceReference TitleBarTitleInset}">
@@ -58,7 +58,21 @@
                                     <!-- FULL HEIGHT of the caption, as a window's buttons are: given a size of its own the
                                          plate was a small square floating in the strip, and the hover read as landing
                                          beside the glyph rather than on the button. -->
-                                    <Button x:Name="PART_PinButton" Grid.Column="1" Visibility="Collapsed"
+                                    <!-- Collapse: a chevron up, turned down while collapsed - the way back to the content. -->
+                                    <Button x:Name="PART_CollapseButton" Grid.Column="1" Visibility="Collapsed"
+                                            AutomationProperties.AutomationId="Collapse"
+                                            AutomationProperties.Name="{Localize WindowStrings.Collapse}"
+                                            Classes="CaptionButton"
+                                            Width="{ResourceReference DockHeaderButtonSize}"
+                                            MinWidth="0" MinHeight="0" Padding="0"
+                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                            VerticalAlignment="Stretch">
+                                        <Path x:Name="CollapseGlyph" Data="M0,5 L5,0 L10,5"
+                                                Stroke="{TemplateBinding TitleForeground}"
+                                                StrokeThickness="{ResourceReference StrokeThinValue}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                    <Button x:Name="PART_PinButton" Grid.Column="2" Visibility="Collapsed"
                                             AutomationProperties.AutomationId="Pin"
                                             AutomationProperties.Name="{Localize WindowStrings.Pin}"
                                             Classes="CaptionButton"
@@ -76,7 +90,7 @@
                                                 Fill="Transparent"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
-                                    <Button x:Name="PART_CloseButton" Grid.Column="2"
+                                    <Button x:Name="PART_CloseButton" Grid.Column="3"
                                             AutomationProperties.AutomationId="Close"
                                             AutomationProperties.Name="{Localize WindowStrings.Close}"
                                             Classes="CaptionButton CloseButton"
@@ -121,6 +135,15 @@
         </PropertyTrigger>
         <PropertyTrigger Property="CanResize" Value="true">
             <Setter TargetName="PART_ResizeGrip" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="CanCollapse" Value="true">
+            <Setter TargetName="PART_CollapseButton" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <!-- Collapsed: the caption alone; after CanResize, so the grip goes with the content. -->
+        <PropertyTrigger Property="IsCollapsed" Value="true">
+            <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_ResizeGrip" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="CollapseGlyph" Property="Data" Value="M0,0 L5,5 L10,0"/>
         </PropertyTrigger>
         <!-- Pinned: the tack fills in. The same filled/hollow pair the docking caption uses for auto-hide, so the two
              mean the same thing in both places. -->

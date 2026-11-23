@@ -24,6 +24,11 @@
   <Wait Target="id=OverlayWindow/id=OverlayDemoView" />
   <Move Target="id=OverlayWindow" By="-20,10" />
   <Resize Target="id=OverlayWindow" Size="480,300" />
+  <!-- Collapsed to its title bar, the content goes; expanded, it is back. -->
+  <Invoke Target="id=OverlayWindow/id=Collapse" />
+  <Wait Target="id=OverlayWindow/id=OverlayDemoView" Offscreen="True" Timeout="5s" />
+  <Invoke Target="id=OverlayWindow/id=Collapse" />
+  <Wait Target="id=OverlayWindow/id=OverlayDemoView" Offscreen="False" Timeout="5s" />
   <Window Target="id=OverlayWindow" Action="Close" />
   <Absent Target="id=OverlayWindow" />
   <!-- The click-through window, closed by automation: a click cannot reach it. -->

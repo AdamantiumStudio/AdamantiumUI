@@ -11,6 +11,7 @@
     <Phrase Key="Forget" Text="Забыть"/>
     <Phrase Key="ResetLayout" Text="Сбросить"/>
     <Phrase Key="PinnedRow" Text="Закреплённые вкладки отдельным рядом"/>
+    <Phrase Key="Busy" Text="Занято"/>
 
     <Phrase Key="Scene" Text="Сцена"/>
     <Phrase Key="Game" Text="Игра"/>

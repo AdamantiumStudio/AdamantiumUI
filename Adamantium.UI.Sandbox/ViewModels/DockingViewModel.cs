@@ -69,6 +69,9 @@ public partial class DockingViewModel : TabPageViewModel
 
     [Bindable] private DockZone _selectedPlace = DockZone.Center;
 
+    /// <summary>Whether the area is busy: an overlay over it and over every window torn out of it.</summary>
+    [Bindable] private bool _isBusy;
+
     private IRegion Region => _navigation.Regions[RegionName];
 
     // What the area holds, asked of the region rather than of the control.

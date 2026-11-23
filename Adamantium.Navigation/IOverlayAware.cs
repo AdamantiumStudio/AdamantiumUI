@@ -22,6 +22,7 @@ public interface IOverlayAware
     bool AllowMove => true;
     bool CanResize => true;
     bool CanPin => true;
+    bool CanCollapse => false;
     bool CanClose => true;
     bool IsModal => false;
 

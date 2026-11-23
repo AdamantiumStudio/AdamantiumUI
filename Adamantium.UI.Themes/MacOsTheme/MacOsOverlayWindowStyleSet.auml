@@ -24,7 +24,6 @@
             <Setter.Value>
                 <ControlTemplate TargetType="OverlayWindow">
                     <Border x:Name="PART_Window"
-                            MinWidth="300"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -44,6 +43,15 @@
                                                 AutomationProperties.AutomationId="Close"
                                                 AutomationProperties.Name="{Localize WindowStrings.Close}"/>
                                         <Image x:Name="CloseGlyph" Source="{ResourceReference TrafficLightCloseGlyph}"
+                                                Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <!-- Collapsing to the caption is the yellow light's job, as minimizing is a window's. -->
+                                    <Grid x:Name="CollapseCell" Visibility="Collapsed">
+                                        <Button x:Name="PART_CollapseButton" Classes="TrafficLight MinimizeLight" Focusable="False"
+                                                AutomationProperties.AutomationId="Collapse"
+                                                AutomationProperties.Name="{Localize WindowStrings.Collapse}"/>
+                                        <Image x:Name="CollapseGlyph" Source="{ResourceReference TrafficLightMinimizeGlyph}"
                                                 Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
@@ -112,6 +120,7 @@
              style to hang this on: SourceName is what lets the trigger sit on the window and ask about its caption. -->
         <PropertyTrigger SourceName="PART_TitleBar" Property="IsPointerOver" Value="true">
             <Setter TargetName="CloseGlyph" Property="Opacity" Value="1"/>
+            <Setter TargetName="CollapseGlyph" Property="Opacity" Value="1"/>
             <Setter TargetName="PinGlyphImage" Property="Opacity" Value="1"/>
         </PropertyTrigger>
     </Style>
@@ -126,6 +135,14 @@
         </PropertyTrigger>
         <PropertyTrigger Property="CanResize" Value="true">
             <Setter TargetName="PART_ResizeGrip" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="CanCollapse" Value="true">
+            <Setter TargetName="CollapseCell" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <!-- Collapsed: the caption alone; after CanResize, so the grip goes with the content. -->
+        <PropertyTrigger Property="IsCollapsed" Value="true">
+            <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_ResizeGrip" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <!-- Pinned lights up its own light, the way the lights say anything at all. -->
         <PropertyTrigger Property="IsPinned" Value="true">

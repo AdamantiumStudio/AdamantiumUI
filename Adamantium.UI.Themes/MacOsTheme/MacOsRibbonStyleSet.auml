@@ -739,6 +739,10 @@
             <!-- The label turns with the fill: primary ink on the accent is the one pair this palette does not read. -->
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
         </PropertyTrigger>
+        <!-- Faded whole, picture and name, as a ribbon button's icon is: a cell keeps its own colors. -->
+        <PropertyTrigger Property="IsEnabled" Value="false">
+            <Setter TargetName="PART_ContentPresenter" Property="Opacity" Value="0.36"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- A group's title in the gallery's drop-down, quieter than the choices under it. -->

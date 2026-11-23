@@ -149,6 +149,7 @@ public class AutomationAuditTests
         [typeof(TreeDataGrid)] = (T.DataGrid, null),
         [typeof(DockCompassWindow)] = (T.Window, null),
         [typeof(DockingWindow)] = (T.Window, null),
+        [typeof(DockingBusyOverlay)] = (null, "covers a busy docking area; its busy indicator is what automation sees"),
         [typeof(Pane)] = (T.TabItem, null),
         [typeof(PaneGroup)] = (T.Tab, null),
         [typeof(UnsavedQuestion)] = (T.Pane, null),
