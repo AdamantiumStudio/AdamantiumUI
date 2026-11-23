@@ -252,6 +252,7 @@ public static class MarkupMessages
 
     public static string ScenarioHeldPenButtons() => Say(nameof(ScenarioHeldPenButtons));
     public static string ScenarioChecksNothing(string step) => Say(nameof(ScenarioChecksNothing), new PhraseArgument("step", step));
+    public static string ScenarioVisibleOnlyByName() => Say(nameof(ScenarioVisibleOnlyByName));
     public static string ScenarioNoApplication() => Say(nameof(ScenarioNoApplication));
     public static string ScenarioNotInTestProject() => Say(nameof(ScenarioNotInTestProject));
 

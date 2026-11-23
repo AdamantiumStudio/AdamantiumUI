@@ -21,6 +21,11 @@ public class ScenarioGeneratorTests
     private static GeneratedProject Generate(IReadOnlyDictionary<string, string> files, string application = "App") =>
         AumlCodegenHarness.Project(files, application == null ? null : new Dictionary<string, string> { ["AdamantiumScenarioApplication"] = application });
 
+    // The launch options a generated test starts its application with.
+    private static string Launch(GeneratedProject project, string test) =>
+        project.Source[project.Source.IndexOf($"Task {test}()", System.StringComparison.Ordinal)..]
+            .Split("LaunchOptions", 2)[1].Split(';', 2)[0];
+
     [Test]
     public void AStep_CallsTheTypedApi_WithTheLineItWasWrittenOn()
     {
@@ -174,16 +179,38 @@ public class ScenarioGeneratorTests
             ["Scenarios/BySystem.ascenario"] = $"{Header} Explicit=\"Real input.\">\n{bySystem}\n</Scenario>",
             ["Scenarios/BySystemWithTheRest.ascenario"] = $"{Header}>\n{bySystem}\n</Scenario>"
         });
-        string Launch(string test) =>
-            project.Source[project.Source.IndexOf($"Task {test}()", System.StringComparison.Ordinal)..]
-                .Split("LaunchOptions", 2)[1].Split(';', 2)[0];
 
         Assert.Multiple(() =>
         {
             Assert.That(project.Errors, Is.Empty, AumlCodegenHarness.Errors(project.Errors));
-            Assert.That(Launch("Plain"), Does.Contain("VirtualDisplay = true"));
-            Assert.That(Launch("BySystem"), Does.Contain("VirtualDisplay = false"));
-            Assert.That(Launch("BySystemWithTheRest"), Does.Contain("VirtualDisplay = true"));
+            Assert.That(Launch(project, "Plain"), Does.Contain("VirtualDisplay = true"));
+            Assert.That(Launch(project, "BySystem"), Does.Contain("VirtualDisplay = false"));
+            Assert.That(Launch(project, "BySystemWithTheRest"), Does.Contain("VirtualDisplay = true"));
+        });
+    }
+
+    // What the system gives only on the desktop someone sees - Windows' typing suggestions: a scenario asks for it, and
+    // a test run by name starts there; in the ordinary run it starts where nobody sees it.
+    [Test]
+    public void AScenarioByNameAskingForTheVisibleDesktop_StartsThere_InTheOrdinaryRunWhereNobodySeesIt()
+    {
+        const string steps = "  <Invoke Target=\"id=Open\" />";
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Shown.ascenario"] = $"{Header} Visible=\"true\" Explicit=\"Typing suggestions.\">\n{steps}\n</Scenario>",
+            ["Scenarios/NotShown.ascenario"] = $"{Header} Visible=\"false\" Explicit=\"By name.\">\n{steps}\n</Scenario>",
+            ["Scenarios/WithTheRest.ascenario"] = $"{Header} Visible=\"true\">\n{steps}\n</Scenario>",
+            ["Scenarios/Wrong.ascenario"] = $"{Header} Visible=\"maybe\" Explicit=\"By name.\">\n{steps}\n</Scenario>"
+        });
+        string FileOf(Microsoft.CodeAnalysis.Diagnostic error) => System.IO.Path.GetFileName(error.Location.GetMappedLineSpan().Path);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors.Select(error => $"{error.Id} {FileOf(error)}"),
+                Is.EquivalentTo(new[] { "AUS011 WithTheRest.ascenario", "AUS002 Wrong.ascenario" }),
+                "asked for in the ordinary run it would do nothing; no yes or no is the schema's error");
+            Assert.That(Launch(project, "Shown"), Does.Contain("VirtualDisplay = false"));
+            Assert.That(Launch(project, "NotShown"), Does.Contain("VirtualDisplay = true"));
         });
     }
 
