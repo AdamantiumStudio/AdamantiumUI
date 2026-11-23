@@ -34,7 +34,7 @@ public sealed class ColoredMeshRenderComponent : UIRenderComponent
             return;
         }
 
-        var packed = Retained.CurveFill.From(outline);
+        var packed = outline.Fill;
         if (packed == null)
         {
             _outlineEnclosesNothing = true;
