@@ -806,7 +806,7 @@ public partial class RenderCache
         // The group's units have been rebuilt - added to, replaced in place, or dropped. Anything keeping a list derived
         // from them (the pre-render sweep) has to know, and this is the one place that mutates them.
         ControlGroup.BumpMembership();
-        group.MarkRecorded();
+        group.Recorded++;
         return group;
     }
 

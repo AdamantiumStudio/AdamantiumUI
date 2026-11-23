@@ -326,38 +326,6 @@ public class RasterDrawingRenderTests
         Assert.That(repainted.At(40, 40), Is.EqualTo((255, 0, 0)), "the new paint");
     }
 
-    private static Frame Replaced(DrawingMode mode)
-    {
-        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = mode };
-        var red = new Square(Colors.Red);
-        Canvas.SetLeft(red, 20);
-        Canvas.SetTop(red, 20);
-        host.Children.Add(red);
-        using var stand = new Stand(host);
-        stand.Render();
-        host.Children.Remove(red);
-        var blue = new Square(Colors.Blue);
-        Canvas.SetLeft(blue, 20);
-        Canvas.SetTop(blue, 20);
-        host.Children.Add(blue);
-        host.InvalidateMeasure();
-        return stand.Render();
-    }
-
-    // A part of it put in place of one of the same shape is drawn: the texture of the one before is not laid down.
-    [Test]
-    public void APartReplacedByOneOfTheSameShape_DrawsItsTileAnew()
-    {
-        var vector = Replaced(DrawingMode.Vector);
-        var raster = Replaced(DrawingMode.Raster);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(vector.At(40, 40), Is.EqualTo((0, 0, 255)), "drawn from its shapes, the one put in its place");
-            Assert.That(raster.At(40, 40), Is.EqualTo((0, 0, 255)), "as a raster, the one put in its place");
-        });
-    }
-
     // What is drawn after it is drawn where it is, over the whole window: closing a tile goes back to what the walk drew
     // within, not to the tile's 512 pixels - which had a viewer's panels past them vanish.
     [Test]

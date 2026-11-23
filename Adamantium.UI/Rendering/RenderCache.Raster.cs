@@ -5,7 +5,6 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
-using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
@@ -62,9 +61,8 @@ public partial class RenderCache
     }
 
     // An element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it turns on the
-    // window, has no size, lies under a rounded clip (the texture is laid down cut square), holds copies of its subtree
-    // or layers - its own or inside it, which a texture drawn as a clone does not open - lies outside the window, or
-    // would take a texture too large.
+    // window, has no size, lies under a rounded clip (the texture is laid down cut square), holds copies of its subtree,
+    // lies outside the window, or would take a texture too large.
     private RasterRun StartRaster(int groupIndex, Rect2D fullScissor)
     {
         var element = _groups[groupIndex].Component;
@@ -216,7 +214,7 @@ public partial class RenderCache
         for (var i = run.Start; i < run.End; i++)
         {
             var group = _groups[i];
-            if (group.Clones is { Count: > 0 } || OpensLayer(group.Component))
+            if (group.Clones is { Count: > 0 })
             {
                 return false;
             }
@@ -230,8 +228,6 @@ public partial class RenderCache
             foreach (var unit in group.Units)
             {
                 still &= MixRasterUnit(ref print, unit, ref hasText);
-                // Faded in place, not recorded again: the texture holds it at the fade it was drawn at.
-                Mix(ref print, (double)EffectiveOpacity(unit.Component));
                 if (unit.Placement is { } placement)
                 {
                     MixRelative(ref print, Newest(placement));
@@ -256,8 +252,7 @@ public partial class RenderCache
     private static void Mix(ref ulong print, double value) => Mix(ref print, BitConverter.DoubleToInt64Bits(value));
 
     // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
-    // text's revision. False for a living halo, which changes every frame, and for a kind of draw not known here, whose
-    // changes in place could not be told.
+    // text's revision. False for a living halo, which changes every frame.
     private static bool MixRasterUnit(ref ulong print, IRenderUnit unit, ref bool hasText)
     {
         if (unit.RenderData?.LivingHalo != null)
@@ -267,44 +262,21 @@ public partial class RenderCache
 
         switch (unit)
         {
-            case RenderUnits.RectangleRenderUnit { Payload: { } rectangle }:
-                MixPaint(ref print, rectangle.Brush);
-                MixPaint(ref print, rectangle.BorderBrush);
-                MixPaint(ref print, rectangle.Pen?.Brush);
-                return true;
-            case RenderUnits.EllipseRenderUnit { Payload: { } ellipse }:
-                MixPaint(ref print, ellipse.Brush);
-                MixPaint(ref print, ellipse.Pen?.Brush);
-                return true;
-            case RenderUnits.RegularPolygonRenderUnit { Payload: { } polygon }:
-                MixPaint(ref print, polygon.Brush);
-                MixPaint(ref print, polygon.Pen?.Brush);
-                return true;
             case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
-                MixPaint(ref print, shape.Brush);
-                MixPaint(ref print, shape.Pen?.Brush);
-                return true;
-            case RenderUnits.LineRenderUnit { Payload: { } line }:
-                MixPaint(ref print, line.Pen?.Brush);
-                return true;
+                Mix(ref print, shape.Brush?.PaintVersion ?? 0);
+                Mix(ref print, shape.Pen?.Brush?.PaintVersion ?? 0);
+                break;
             case RenderUnits.TextRenderUnit { Payload: { } text }:
                 hasText = true;
                 Mix(ref print, text.Revision);
-                MixPaint(ref print, text.Foreground);
-                MixPaint(ref print, text.Background);
-                MixPaint(ref print, text.Stroke);
-                return true;
-            case RenderUnits.ImageRenderUnit { Payload: { } image }:
-                // A picture still decoding draws nothing until its texture is there; a live surface changes in place.
-                Mix(ref print, (image.Image as BitmapSource)?.Texture != null ? 1 : 0);
-                MixPaint(ref print, image.Filter);
-                return image.Image is not (SharedSurfaceImage or RenderTargetImage);
-            default:
-                return false;
+                Mix(ref print, text.Foreground?.PaintVersion ?? 0);
+                Mix(ref print, text.Background?.PaintVersion ?? 0);
+                Mix(ref print, text.Stroke?.PaintVersion ?? 0);
+                break;
         }
-    }
 
-    private static void MixPaint(ref ulong print, Core.Media.Brush brush) => Mix(ref print, brush?.PaintVersion ?? 0);
+        return true;
+    }
 
     // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes
     // back a few float steps apart as the camera moves, which is not a change.

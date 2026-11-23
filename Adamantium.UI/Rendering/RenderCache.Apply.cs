@@ -534,7 +534,7 @@ public partial class RenderCache
                     NoteEffects(units[i]);
                 }
 
-                group.MarkRecorded();
+                group.Recorded++;
                 return;
             }
         }
