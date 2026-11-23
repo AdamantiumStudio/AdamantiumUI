@@ -1,5 +1,5 @@
 using System.Xml.Linq;
-using Adamantium.Localization.Generators;
+using Adamantium.Localization;
 
 namespace Adamantium.UI.LanguageServer;
 

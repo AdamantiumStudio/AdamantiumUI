@@ -85,6 +85,11 @@
       <ProjectReference Include="..\..\Adamantium.UI.LanguageServer\Adamantium.UI.LanguageServer.csproj" />
     </ItemGroup>
 
+    <!-- The codegen harness runs the table generator beside the AUML one. -->
+    <ItemGroup>
+      <AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="HostedGenerator" />
+    </ItemGroup>
+
     <ItemGroup>
       <Content Include="MainWindow.xml">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

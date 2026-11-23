@@ -135,7 +135,7 @@ public sealed class AumlWorkspace : IDisposable
                 IncludeSubdirectories = true,
             };
             watcher.Filters.Add("*.cs");
-            watcher.Filters.Add("*" + Adamantium.Localization.Generators.LanguageFileParser.Extension);
+            watcher.Filters.Add("*" + Adamantium.Localization.LanguageFileParser.Extension);
             watcher.Filters.Add("*.auml");
             FileSystemEventHandler onChange = (_, e) =>
             {

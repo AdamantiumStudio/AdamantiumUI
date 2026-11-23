@@ -37,6 +37,9 @@
          NetStandardAnalyzer a netstandard2.0 assembly a generator from source loads, as an analyzer only; a generator's
                              package carries it, so packages need none. The project builds for its one framework, so
                              this reference and a plain one to it are one build, not two writing the same file.
+         HostedGenerator     a source generator the project runs itself, as the language server does: its assembly
+                             taken as a library, never run on the project - from its package, the assembly in the
+                             package's analyzers, as a generator's package has nothing in lib.
        PrivateAssets and GeneratePathProperty go with the item; a generator's package keeps its assets private unless the
        item says otherwise. -->
   <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
@@ -47,6 +50,7 @@
                       OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'NetStandardAnalyzer')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'HostedGenerator')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
@@ -56,7 +60,17 @@
     <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'Generator')->HasMetadata('PrivateAssets')->'%(Identity)')"
                       Version="$(AdamantiumEngineVersion)" />
     <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'%(Identity)')" Version="$(AdamantiumEngineVersion)" />
+    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'HostedGenerator')->'%(Identity)')"
+                      Version="$(AdamantiumEngineVersion)" ExcludeAssets="all" PrivateAssets="all" />
   </ItemGroup>
+
+  <!-- A hosted generator's assembly from its package: NuGet keeps a package in its id and version in lower case. -->
+  <Target Name="AdamantiumHostedGeneratorReferences" BeforeTargets="ResolveAssemblyReferences" Condition="'$(UseEngineSource)' != 'true'">
+    <ItemGroup>
+      <Reference Include="$(NuGetPackageRoot)$([System.String]::Copy('%(AdamantiumEngineReference.Identity)').ToLowerInvariant())/$(AdamantiumEngineVersion.ToLowerInvariant())/analyzers/dotnet/cs/%(AdamantiumEngineReference.Identity).dll"
+                 Condition="'%(AdamantiumEngineReference.Role)' == 'HostedGenerator'" />
+    </ItemGroup>
+  </Target>
 
   <!-- An AdamantiumVulkan assembly, named once as an AdamantiumVulkanReference: its project when the source is beside,
        its package of AdamantiumVulkanVersion when it is not (see Directory.Build.props). -->
