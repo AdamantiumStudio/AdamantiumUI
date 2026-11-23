@@ -4,6 +4,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
@@ -138,7 +139,7 @@ public partial class RenderCache
                     break;
                 }
 
-                still = MixContent(ref print, unit, ref hasText);
+                still = MixRasterContent(ref print, unit, ref hasText);
                 if (!ReferenceEquals(unit.Component, run.Element))
                 {
                     MixRelative(ref print, World(unit.Component) * run.FromWindow);
@@ -163,6 +164,56 @@ public partial class RenderCache
     }
 
     private long _rasterFrames;
+
+    // What a draw of a raster shows, as a layer's print tells it - and the marks of its groups, its pictures and its
+    // meshes by what they are: recorded anew, they are new objects, so a change is told; still, they stay. A brush that a
+    // layer cannot tell apart from frame to frame - a pattern drawn by a drawing - is told by its paint version, which a
+    // repaint in place moves.
+    private static bool MixRasterContent(ref ulong print, IRenderUnit unit, ref bool hasText)
+    {
+        if (unit.RenderData?.LivingHalo != null)
+        {
+            return false;
+        }
+
+        switch (unit)
+        {
+            case RenderUnits.GroupMarkRenderUnit mark:
+                Mix(ref print, Identity(mark));
+                Mix(ref print, Identity(mark.Payload));
+                return true;
+            case RenderUnits.ImageRenderUnit or RenderUnits.ColoredMeshRenderUnit:
+                Mix(ref print, Identity(unit));
+                Mix(ref print, Identity(unit.RenderData));
+                return true;
+            case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
+                Mix(ref print, Identity(unit));
+                Mix(ref print, Identity(unit.RenderData?.Halo));
+                Mix(ref print, Identity(shape));
+                MixPainted(ref print, shape.Brush);
+                MixPainted(ref print, shape.Pen?.Brush);
+                Mix(ref print, Identity(shape.Pen));
+                return true;
+            case RenderUnits.TextRenderUnit { Payload: { } text }:
+                hasText = true;
+                Mix(ref print, Identity(unit));
+                Mix(ref print, Identity(unit.RenderData?.Halo));
+                Mix(ref print, Identity(text));
+                Mix(ref print, text.Revision);
+                MixPainted(ref print, text.Foreground);
+                MixPainted(ref print, text.Background);
+                MixPainted(ref print, text.Stroke);
+                return true;
+            default:
+                return MixContent(ref print, unit, ref hasText);
+        }
+    }
+
+    private static void MixPainted(ref ulong print, Core.Media.Brush brush)
+    {
+        Mix(ref print, Identity(brush));
+        Mix(ref print, brush?.PaintVersion ?? 0);
+    }
 
     // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes
     // back a few float steps apart as the camera moves, which is not a change.
@@ -192,6 +243,21 @@ public partial class RenderCache
     }
 
     private Rect2D CloseRasterTile(IGraphicsDevice device) => DrawIn(_offscreenLayers.EndTile(device));
+
+    /// <summary>Whether <paramref name="unit"/> is drawn into the tiles of an element drawn as a raster - its own or an
+    /// ancestor's - rather than into the frame's batches.</summary>
+    internal bool DrawnIntoTiles(IRenderUnit unit)
+    {
+        for (var c = unit.Component; c != null; c = ApplySnap(c).RenderParent)
+        {
+            if (c.DrawingMode == DrawingMode.Raster)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // Lays down every tile the run shows, where the element stands now.
     private void LayDownRaster(IGraphicsDevice device, RasterRun run)
