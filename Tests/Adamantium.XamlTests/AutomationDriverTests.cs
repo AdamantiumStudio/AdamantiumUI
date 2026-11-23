@@ -224,6 +224,38 @@ public class AutomationDriverTests
         Assert.That(clicks, Is.Zero);
     }
 
+    // Held past the holding time, the finger slides on, still down, to an element the hold opened and lifts there.
+    [Test]
+    public async Task AFingerHeld_SlidesToWhatTheHoldOpened_AndLiftsThere()
+    {
+        var row = Pads(1, out var buttons);
+        var held = false;
+        var opened = new Button { Name = "Opened", Content = "Opened", Width = 60, Height = 60 };
+        buttons[0].AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) =>
+        {
+            if (e.HoldingState == HoldingState.Started && !held)
+            {
+                held = true;
+                row.Children.Add(opened);
+            }
+        }), handledEventsToo: true);
+        Vector2<double>? liftedAt = null;
+        var moves = 0;
+        buttons[0].AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler((_, _) => moves++), handledEventsToo: true);
+        row.AddHandler(PointerEvents.PointerReleasedEvent,
+            new PointerReleasedEventHandler((_, e) => liftedAt = e.GetPosition(opened)), handledEventsToo: true);
+        await using var session = await Driving(row);
+
+        await session.Find(By.Id("Pad0")).HoldAndSlideToAsync(session.Find(By.Id("Opened")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(held, Is.True, "held before it slid");
+            Assert.That(moves, Is.GreaterThan(1), "slid in steps, not jumped");
+            Assert.That(liftedAt, Is.EqualTo(new Vector2<double>(30, 30)), "lifted in the middle of what the hold opened");
+        });
+    }
+
     // Drawn together, every finger ends its own offset away from where it went down.
     [Test]
     public async Task FingersDrawnTogether_EachEndsByTheOffset([Values(2, 10)] int fingers)

@@ -127,6 +127,7 @@
     <Phrase Key="ScenarioDragNeeds" Text="{step} with Gesture=&quot;Drag&quot; needs {attributes}"/>
     <Phrase Key="ScenarioOnlyForDrag" Text="{step}: {attribute} is for Gesture=&quot;Drag&quot; only"/>
     <Phrase Key="ScenarioHeldPenButtons" Text="A held pen takes no Barrel or Eraser"/>
+    <Phrase Key="ScenarioSlideOnlyForHold" Text="{step}: SlideTo is for Gesture=&quot;Hold&quot; only, by simulated input, not ThroughSystem"/>
     <Phrase Key="ScenarioChecksNothing" Text="{step} checks nothing: add a key such as Name or Value, or a property of the control"/>
     <Phrase Key="ScenarioVisibleOnlyByName" Text="Visible starts the application on the desktop someone sees only in a test run by name: add Explicit with the reason"/>
     <Phrase Key="ScenarioNoApplication" Text="Scenarios need the application they drive: set AdamantiumScenarioApplication in the project to the name of its executable"/>

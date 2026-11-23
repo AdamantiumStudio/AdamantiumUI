@@ -102,6 +102,26 @@ public class ScenarioGeneratorTests
     }
 
     [Test]
+    public void AHoldThatSlidesTo_AnotherElement_HoldsThenSlides()
+    {
+        var scenario = Read("  <Touch Target=\"id=Language\" Gesture=\"Hold\" SlideTo=\"id=Languages/name=English\" />\n"
+                            + "  <Pen Target=\"id=Language\" Gesture=\"Hold\" SlideTo=\"id=Languages/name=English\" Pressure=\"0.7\" />");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(scenario.Problems, Is.Empty);
+            Assert.That(scenario.Steps[0], Does.Contain(".HoldAndSlideToAsync("));
+            Assert.That(scenario.Steps[1], Does.Contain(".PenHoldAndSlideToAsync(").And.Contain("0.7f"));
+        });
+    }
+
+    [TestCase("  <Touch Target=\"id=Language\" Gesture=\"Tap\" SlideTo=\"id=English\" />", "AUS005")]
+    [TestCase("  <Touch Target=\"id=Language\" Gesture=\"Hold\" ThroughSystem=\"true\" SlideTo=\"id=English\" />", "AUS005")]
+    [TestCase("  <Pen Target=\"id=Language\" Gesture=\"Hold\" Barrel=\"true\" SlideTo=\"id=English\" />", "AUS006")]
+    public void ASlide_IsForASimulatedHoldOnly_AndAHeldPenStillTakesNoButtons(string step, string problem) =>
+        Assert.That(Read(step).Problems.Single().Id, Is.EqualTo(problem));
+
+    [Test]
     public void TheName_IsTheFilesUnlessGiven_AndHasToBeAnIdentifier()
     {
         Assert.Multiple(() =>

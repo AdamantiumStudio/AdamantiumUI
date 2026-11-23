@@ -120,6 +120,39 @@ internal static class InputSimulator
         Lift(ends, [.. contacts.Select(contact => contact.Along(1))], at);
     }
 
+    /// <summary>Contacts already down drawn, without lifting, each from where it rests to the middle of
+    /// <paramref name="destinations"/>' element of the same index, a step of each at a time; returns where they rest
+    /// then, to be lifted there.</summary>
+    public static (IWindow Window, Vector2<double> Point)[] Slide(IReadOnlyList<(IWindow Window, Vector2<double> Point)> down,
+        IReadOnlyList<Contact> contacts, IReadOnlyList<(UIComponent Element, Vector2<double> Local)> destinations)
+    {
+        const int steps = 8;
+        var at = Now();
+        var ends = new (IWindow Window, Vector2<double> Point)[down.Count];
+        for (var i = 0; i < down.Count; i++)
+        {
+            var (element, local) = destinations[i];
+            if (!ReferenceEquals(element.RootVisual?.Window, down[i].Window))
+            {
+                throw new AutomationException("The contact slides within its window: the element to slide to is in another.");
+            }
+
+            ends[i] = (down[i].Window, InWindow(element, local));
+            Send(RawPointerEventType.Move, down[i].Window, LeadIn(down[i].Point, ends[i].Point), contacts[i], at);
+        }
+
+        for (var step = 1; step <= steps; step++)
+        {
+            for (var i = 0; i < down.Count; i++)
+            {
+                var (start, end) = (down[i].Point, ends[i].Point);
+                Send(RawPointerEventType.Move, down[i].Window, start + (end - start) * (step / (double)steps), contacts[i], at);
+            }
+        }
+
+        return ends;
+    }
+
     // How far apart the system's frames come, as ISyntheticPointerInput plays them.
     private static readonly TimeSpan SystemFrameGap = TimeSpan.FromMilliseconds(16);
 

@@ -419,6 +419,30 @@ public sealed class AutomationElement
     public Task HoldAsync(bool throughSystem = false) =>
         ContactAsync(AutomationCommand.Touch, null, [AutomationExecutor.HoldGesture], throughSystem);
 
+    /// <summary>A finger held still in its middle past the holding time, then drawn without lifting to the middle of
+    /// <paramref name="destination"/> and lifted there: a long press that slides to a choice it opened - a key's
+    /// alternates, a list over a key. The destination is found once the hold has started, so it may be one the hold
+    /// opened.</summary>
+    public Task HoldAndSlideToAsync(AutomationElement destination) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Touch,
+            Target = Selector,
+            Targets = [destination.Selector],
+            Properties = [AutomationExecutor.HoldGesture]
+        });
+
+    /// <summary>A pen held still in its middle past the holding time, then drawn to <paramref name="destination"/> and
+    /// lifted there, as <see cref="HoldAndSlideToAsync"/> draws a finger.</summary>
+    public Task PenHoldAndSlideToAsync(AutomationElement destination, float pressure = 0.5f) =>
+        _session.RunAsync(new AutomationRequest
+        {
+            Command = AutomationCommand.Pen,
+            Target = Selector,
+            Targets = [destination.Selector],
+            Properties = [.. PenOptions(pressure, false, false), AutomationExecutor.HoldGesture]
+        });
+
     /// <summary>A pen held still in its middle past the holding time and lifted, as <see cref="HoldAsync"/> holds a
     /// finger.</summary>
     public Task PenHoldAsync(float pressure = 0.5f, bool throughSystem = false) =>
