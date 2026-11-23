@@ -21,10 +21,11 @@
 		<AdamantiumEngineReference Include="Adamantium.Mathematics" />
 	</ItemGroup>
 
-	<!-- Language files read as the build reads them: the engine's parser, its plural rules and messages. -->
+	<!-- Language files read as the build reads them: the engine's parser, its plural rules and messages, and the build's
+	     own table generator, run here for the tables and problems the build would have. -->
 	<ItemGroup>
 		<AdamantiumEngineReference Include="Adamantium.Localization" />
-		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" />
+		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="HostedGenerator" />
 	</ItemGroup>
 
 	<ItemGroup>

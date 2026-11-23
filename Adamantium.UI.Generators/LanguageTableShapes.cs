@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Adamantium.Localization.Generators;
+using Adamantium.Localization;
 using Adamantium.UI.Markup.CodeGeneration;
 
 namespace Adamantium.UI.Generators;

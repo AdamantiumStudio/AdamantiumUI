@@ -80,6 +80,9 @@
 	<ItemGroup>
 		<AdamantiumEngineReference Include="Adamantium.MVVM" />
 		<AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" PrivateAssets="none" />
+		<!-- An application's language tables: the generator goes to it with the UI, as a dependency, not in the UI's
+		     analyzers, so it runs once. -->
+		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" PrivateAssets="none" />
 	</ItemGroup>
 
 	<ItemGroup>
