@@ -79,6 +79,8 @@ public class ToolBarItem : ContentControl
         base.OnApplyTemplate();
         HookCard(GetTemplateChild("PART_Card") as Popup);
         Host();
+        // A new template's card, closed, is told what the item is in.
+        OnIsCardOpenChanged();
     }
 
     public override void OnRemoveTemplate()
@@ -180,6 +182,28 @@ public class ToolBarItem : ContentControl
         holder.Content = item;
     }
 
+    /// <summary>Lets go of what <paramref name="container"/> held, as its bar or section lets it go: the command, free for
+    /// its next item, and the binding to it, so the command - which outlives the item - does not hold it.</summary>
+    internal static void Release(IUIComponent container)
+    {
+        if (container is not ToolBarItem holder)
+        {
+            return;
+        }
+
+        holder.RemoveBinding(VisibilityProperty);
+        holder.ClearValue(VisibilityProperty);
+        holder.SetCurrentValue(IsCardOpenProperty, false);
+        if (holder.Content is IUIComponent)
+        {
+            holder.Content = null;
+        }
+        else
+        {
+            holder.DataContext = null;
+        }
+    }
+
     /// <summary>The command a bar's or a section's <paramref name="command"/> stands for: what an item holds, else itself.
     /// Its settings - where it overflows to, how it stands down the side - are written on it, not on its item.</summary>
     internal static IMeasurableComponent CommandOf(IMeasurableComponent command) =>
@@ -239,20 +263,19 @@ public class ToolBarItem : ContentControl
         return moved;
     }
 
-    /// <summary>Takes its form again where it stands: its command's vertical form or icon changed. A command that folds
-    /// only when too wide is measured again for it.</summary>
+    /// <summary>Takes its form again where it stands: its command's vertical form changed. A command that folds only when
+    /// too wide is measured again for it.</summary>
     internal void Restand()
     {
-        if (SetForm() == null && Form == ToolBarItemForm.Folded)
-        {
-            Form = ToolBarItemForm.Shown;
-        }
-
-        Stand(_onColumn, _columnWidth);
+        Stand(_onColumn, _columnWidth, true);
         InvalidateMeasure();
     }
 
-    private bool Stand(bool onColumn, double columnWidth)
+    /// <summary>Its command's folded icon changed: the button shows it.</summary>
+    internal void ShowFoldedIcon() => ShowLabel();
+
+    // Whether the item moved - to or from the column, or to a column of another width - or changed its form.
+    private bool Stand(bool onColumn, double columnWidth, bool reform = false)
     {
         var moved = _onColumn != onColumn || !_columnWidth.Equals(columnWidth);
         _onColumn = onColumn;
@@ -260,15 +283,14 @@ public class ToolBarItem : ContentControl
         SetValue(ToolBar.CommandOrientationProperty, onColumn ? Orientation.Vertical : Orientation.Horizontal);
         FollowLabel(onColumn ? _labelSource : null);
 
-        // What does not hang on the command's width is decided now: a hidden item is never measured to decide it.
-        var form = SetForm() ?? (Form == ToolBarItemForm.Hidden ? ToolBarItemForm.Shown : Form);
+        // What does not hang on the command's width is decided now: a hidden item is never measured to decide it. A
+        // command that folds only when too wide is measured again when its column or its form changed - folded, its
+        // width on the column cannot be told otherwise.
+        var form = SetForm() ?? (Form == ToolBarItemForm.Hidden || (moved || reform) && Form == ToolBarItemForm.Folded
+            ? ToolBarItemForm.Shown
+            : Form);
         moved |= form != Form;
         Form = form;
-        // An icon given to the command since it was folded reaches its button.
-        if (Form == ToolBarItemForm.Folded)
-        {
-            ShowLabel();
-        }
         if (moved)
         {
             InvalidateMeasure();
@@ -300,8 +322,8 @@ public class ToolBarItem : ContentControl
     }
 
     // A command that folds when too wide is measured as it stands on the column, in its own narrow form if it has one,
-    // and folded if it is wider than the column. Folded stays folded while the column does: the command is on its card
-    // then, drawn as along a bar, so its width on the column cannot be told again.
+    // and folded if it is wider than the column. Folded stays folded while the column stays as it is: the command is on
+    // its card then, drawn as along a bar, so its width on the column cannot be told again.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         if (_onColumn && Form == ToolBarItemForm.Shown && SetForm() == null && ContentHost is { } presenter)
@@ -319,9 +341,16 @@ public class ToolBarItem : ContentControl
     private const double Tolerance = 1e-6;
 
     // The label's text, followed: a language switched while the bar is down the side reaches the tooltip and the card.
+    // Text only - a label holding a control is read for its name, its control left where it is.
     private static readonly AdamantiumProperty LabelTextProperty = AdamantiumProperty.Register("LabelText",
         typeof(object), typeof(ToolBarItem),
-        new PropertyMetadata(null, static (a, e) => ((ToolBarItem)a).Label = e.NewValue));
+        new PropertyMetadata(null, static (a, e) => ((ToolBarItem)a).Label = e.NewValue switch
+        {
+            null => null,
+            string text => text,
+            UIComponent shown => shown.GetAutomationPeer()?.Name is { Length: > 0 } name ? name : null,
+            var other => other.ToString()
+        }));
 
     private IUIComponent _followed;
 
@@ -386,13 +415,17 @@ public class ToolBarItem : ContentControl
 
     private void OnFormChanged()
     {
-        if (Form != ToolBarItemForm.Folded)
+        CoerceValue(VisibilityProperty);
+        Host();
+        // A card asked open before the command folded opens with the fold; unfolded, there is no card.
+        if (Form == ToolBarItemForm.Folded)
+        {
+            OnIsCardOpenChanged();
+        }
+        else
         {
             SetCurrentValue(IsCardOpenProperty, false);
         }
-
-        CoerceValue(VisibilityProperty);
-        Host();
     }
 
     // The command where its form shows it: in the item, or - folded - on the card beside the column, the button in its

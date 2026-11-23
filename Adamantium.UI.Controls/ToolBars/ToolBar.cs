@@ -126,11 +126,15 @@ public class ToolBar : ItemsControl
     /// <summary>The icon of the button a command is folded into on the column; set on the command. None, the first two
     /// letters of its label.</summary>
     public static readonly AdamantiumProperty FoldedIconProperty = AdamantiumProperty.RegisterAttached("FoldedIcon",
-        typeof(object), typeof(AdamantiumComponent), new PropertyMetadata(null, OnCommandFormChanged));
+        typeof(object), typeof(AdamantiumComponent),
+        new PropertyMetadata(null, static (a, _) => ItemOf(a)?.ShowFoldedIcon()));
 
     // Told to its item: the command may be on the item's card, out of the column's layout.
     private static void OnCommandFormChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
-        ((a as UIComponent)?.ContentOwner as ToolBarItem)?.Restand();
+        ItemOf(a)?.Restand();
+
+    private static ToolBarItem ItemOf(AdamantiumComponent command) =>
+        (command as UIComponent)?.ContentOwner as ToolBarItem;
 
     /// <summary>The way the commands under it stand, set by their <see cref="ToolBarItem"/>: vertical on the column of a
     /// bar down the side, horizontal along a bar, in its overflow menu and on a folded command's card. A theme draws the
@@ -142,7 +146,9 @@ public class ToolBar : ItemsControl
     /// <summary>How wide a command may be to stand on the column of a bar down the side; a wider one is folded
     /// (<see cref="ToolBarVerticalForm.Auto"/>) - a theme metric.</summary>
     public static readonly AdamantiumProperty ColumnWidthProperty = AdamantiumProperty.Register(nameof(ColumnWidth),
-        typeof(double), typeof(ToolBar), new PropertyMetadata(40.0, PropertyMetadataOptions.AffectsMeasure));
+        typeof(double), typeof(ToolBar),
+        new PropertyMetadata(40.0, PropertyMetadataOptions.AffectsMeasure,
+            static (a, _) => ((ToolBar)a).OnColumnWidthChanged()));
 
     private readonly List<IMeasurableComponent> _commands = [];
     private readonly List<bool> _overflowing = [];
@@ -203,6 +209,12 @@ public class ToolBar : ItemsControl
 
     protected internal override void PrepareContainer(IUIComponent container, object item) =>
         ToolBarItem.Prepare(container, item, ItemTemplate);
+
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        ToolBarItem.Release(container);
+        base.ClearContainer(container);
+    }
 
     /// <summary>The bar's name: in its tray's menu and to automation.</summary>
     public object Header
@@ -443,6 +455,16 @@ public class ToolBar : ItemsControl
     {
         // The panel reads it from the bar, measured on its own: told nothing, it would keep its old lines.
         _onBar?.InvalidateMeasure();
+    }
+
+    // Its sections place their commands as they are measured: measured as they were, they would not be.
+    private void OnColumnWidthChanged()
+    {
+        _lengths.Clear();
+        foreach (var group in _commands.OfType<ToolBarGroup>())
+        {
+            group.InvalidateMeasure();
+        }
     }
 
     // Turned, the bar measures its commands again along the new way, its sections turned with it.

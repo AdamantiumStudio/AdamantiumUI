@@ -93,6 +93,12 @@ public class ToolBarGroup : ItemsControl
     protected internal override void PrepareContainer(IUIComponent container, object item) =>
         ToolBarItem.Prepare(container, item, ItemTemplate);
 
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        ToolBarItem.Release(container);
+        base.ClearContainer(container);
+    }
+
     // Its commands are told where they stand before they are measured; its panel makes the items of new ones as it
     // measures, so those are told after it, and measured again.
     protected override Size<double> MeasureOverride(Size<double> availableSize)

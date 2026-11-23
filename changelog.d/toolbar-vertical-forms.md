@@ -24,5 +24,6 @@
 
 ### Fixed
 
-- A `{ResourceReference}` written in a template threw when the element joined the visual tree with no application
-  context to look it up in; it is left unresolved there, as the lookup before it already was.
+- A `{ResourceReference}` written before there was an application - a template built ahead of it - threw when its
+  element joined the visual tree, or never resolved: it looked in the resources there were when it was written. It looks
+  among the application's resources as they are when the element arrives.

@@ -327,6 +327,179 @@ public class ToolBarVerticalFormTests
         });
     }
 
+    // A command of the bar's own, outside any section, goes to the menu as a section does: standing there as along a bar.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ABarsOwnCommandInTheOverflowMenu_StandsAsAlongABar(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var wide = new TextBox { Width = 120 };
+        ToolBar.SetVerticalForm(wide, ToolBarVerticalForm.Fold);
+        ToolBar.SetOverflowMode(wide, ToolBarOverflowMode.Always);
+        side.Bar.Items.Add(wide);
+        Show(side);
+        var item = ItemOf(wide);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(side.Bar.HasOverflowItems, Is.True, "or this proves nothing");
+            Assert.That(item.Form, Is.EqualTo(ToolBarItemForm.Shown), "in the menu, not folded");
+            Assert.That(ToolBar.GetCommandOrientation(wide), Is.EqualTo(Orientation.Horizontal));
+        });
+    }
+
+    // A wider column takes back what it folded only for want of room; a narrower one folds what no longer fits - in
+    // a section as well as on the bar.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AColumnMadeWiderOrNarrower_FoldsAgainWhatItMust(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var author = ItemHolding(side.Group, side.Author);
+        var bold = ItemHolding(side.Group, side.Bold);
+        var before = author.Form;
+
+        side.Bar.ColumnWidth = 200;
+        Show(side);
+        var wider = author.Form;
+        side.Bar.ColumnWidth = 20;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo(ToolBarItemForm.Folded));
+            Assert.That(wider, Is.EqualTo(ToolBarItemForm.Shown), "the field fits the wider column");
+            Assert.That(author.Form, Is.EqualTo(ToolBarItemForm.Folded));
+            Assert.That(bold.Form, Is.EqualTo(ToolBarItemForm.Folded), "30 wide, on a column of 20");
+        });
+    }
+
+    // A card asked open before its command folded opens as it folds; the first press on the button then closes it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ACardAskedOpenBeforeTheFold_OpensWithIt(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        side.Tray.Orientation = Orientation.Horizontal;
+        Show(side);
+        var author = ItemHolding(side.Group, side.Author);
+        author.IsCardOpen = true;
+        Show(side);
+        var along = Card(author).IsOpen;
+
+        side.Tray.Orientation = Orientation.Vertical;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(along, Is.False, "along a bar a command has no card to open");
+            Assert.That(author.Form, Is.EqualTo(ToolBarItemForm.Folded));
+            Assert.That(Card(author).IsOpen, Is.True);
+            Assert.That(((ToolBarFoldButton)Inline(author).Content).IsChecked, Is.True);
+        });
+    }
+
+    // An icon given to a folded command reaches its button, the card left open.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AnIconGivenToAFoldedCommand_LeavesItsCardOpen(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var author = ItemHolding(side.Group, side.Author);
+        author.IsCardOpen = true;
+        Show(side);
+
+        var icon = new TextBlock { Text = "✎" };
+        ToolBar.SetFoldedIcon(side.Author, icon);
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(author.Form, Is.EqualTo(ToolBarItemForm.Folded));
+            Assert.That(author.IsCardOpen, Is.True);
+            Assert.That(((ToolBarFoldButton)Inline(author).Content).Content, Is.SameAs(icon));
+        });
+    }
+
+    // On the bar's own column, the rule before a section stands only after a command left on the column: a label gone
+    // with its command, and a command set to hide, are none.
+    [TestCaseSource(nameof(StyleSets))]
+    public void TheRuleBeforeASection_StandsOnlyAfterACommandLeftOnTheColumn(System.Type styleSet)
+    {
+        Use(styleSet);
+        var label = new TextBlock { Text = "Zoom" };
+        var zoom = new Slider { Width = 120 };
+        AutomationProperties.SetLabeledBy(zoom, label);
+        ToolBar.SetVerticalForm(zoom, ToolBarVerticalForm.Hide);
+        var group = new ToolBarGroup { Header = "Edit", Items = { new Button { Width = 30, Height = 24, Content = "B" } } };
+        var bar = new ToolBar { Header = "View", Items = { label, zoom, group } };
+        var side = new Side
+        {
+            Bar = bar, Group = group,
+            Tray = new ToolBarTray { Orientation = Orientation.Vertical, Items = { bar } }
+        };
+        side.Window = new Window
+        {
+            Width = 600, Height = 600,
+            Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { side.Tray } }
+        };
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ItemOf(label).Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(ItemOf(zoom).Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(group.ShowsSeparator, Is.False, "nothing stands before the section on the column");
+        });
+    }
+
+    // A label holding a control of its own names the command by its text; its control stays in it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void ALabelHoldingAControl_NamesTheCommand_AndKeepsItsControl(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var text = new TextBlock { Text = "Writer" };
+        var label = new ContentControl { Content = text };
+        var field = new TextBox { Width = 120 };
+        AutomationProperties.SetLabeledBy(field, label);
+        side.Group.Items.Add(label);
+        side.Group.Items.Add(field);
+        Show(side);
+        var item = ItemHolding(side.Group, field);
+        item.IsCardOpen = true;
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(item.Label, Is.EqualTo("Writer"));
+            Assert.That(((ToolBarFoldButton)Inline(item).Content).Content, Is.EqualTo("Wr"));
+            Assert.That(label.Content, Is.SameAs(text));
+            Assert.That(text.GetVisualAncestors(), Does.Contain(label), "the label's text stays in the label");
+        });
+    }
+
+    // Let go of when the bar makes its items again, an item holds neither its command nor a binding to it.
+    [TestCaseSource(nameof(StyleSets))]
+    public void AnItemLetGo_HoldsNeitherItsCommandNorABindingToIt(System.Type styleSet)
+    {
+        Use(styleSet);
+        var side = Build();
+        var old = ItemHolding(side.Group, side.Bold);
+        var bound = BindingEngine.GetBindingExpression(old, UIComponent.VisibilityProperty) != null;
+
+        side.Group.Items.Remove(side.Bold);
+        Show(side);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(bound, Is.True, "or this proves nothing");
+            Assert.That(old.Content, Is.Null);
+            Assert.That(BindingEngine.GetBindingExpression(old, UIComponent.VisibilityProperty), Is.Null,
+                "no longer following the command");
+        });
+    }
+
     [Test]
     public void TheInitials_AreTheFirstTwoLettersOfTheLabel()
     {
