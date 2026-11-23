@@ -9,17 +9,24 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
 
-// Elements drawn as a raster (DrawingMode.Raster): their subtree is drawn into tiles of a texture in the element's own
-// space, at a scale a power of two from what the camera shows, and the tiles are laid down where the camera puts them -
-// moved and scaled, not drawn again, until the scale goes a step further or what they show changes. A tile is drawn as a
-// clone of the subtree is: under a matrix from the window to the tile, into a target that is the tile's own.
+// Elements drawn as a raster (DrawingMode.Raster): their subtree is drawn into one texture in the element's own space -
+// what the window shows of it and a quarter as much again each way, at a scale a power of two from what the camera shows
+// - and laid down where the camera puts it: moved and scaled, not drawn again, until the scale goes a step further, the
+// camera leaves what it holds or what it shows changes. It is drawn as a clone of the subtree is: under a matrix from the
+// window to the texture, into a target of its own - one walk of the subtree, as a frame drawn from its shapes takes.
 public partial class RenderCache
 {
-    // The element whose tiles are being drawn this frame, or null.
+    // The element whose texture is being drawn this frame, or null.
     private RasterRun _rasterRun;
 
-    // A tile of an element at a scale: what its texture is kept under from frame to frame.
-    private readonly record struct RasterTileKey(Guid Element, float Scale, int Column, int Row);
+    // What each element drawn as a raster holds - the part of it, in its units, at the scale - from frame to frame.
+    private readonly Dictionary<Guid, (float Scale, Rect Part)> _rasterParts = new();
+
+    // How far past what is seen the texture reaches each way, as a share of it: room for the camera to move in.
+    private const double RasterRoom = 0.25;
+
+    // The largest side of the texture, in texels; past it the element is drawn from its shapes.
+    private const int RasterLargest = 8192;
 
     private sealed class RasterRun
     {
@@ -33,28 +40,28 @@ public partial class RenderCache
         public Matrix4x4F World;
         public Matrix4x4F FromWindow;
 
-        // Device pixels to a unit of the element its tiles are drawn at, and a tile's side in its units.
+        // Device pixels to a unit of the element its texture is drawn at, and the part of it held, in its units.
         public float Scale;
-        public double Side;
+        public Rect Part;
+        public int Width;
+        public int Height;
 
-        // What its subtree draws, relative to it: its tiles hold it while this stays.
+        // What its subtree draws, relative to it: its texture holds it while this stays.
         public ulong Print;
 
-        // What cuts it in the window, in device pixels; and the bounds the walk drew within when it began, which closing a
-        // tile goes back to.
+        // What cuts it in the window, in device pixels; and the bounds the walk drew within when it began, which closing
+        // the texture goes back to.
         public Rect2D Scissor;
         public Rect2D Bounds;
 
-        // Every tile it shows now, and those of them drawn this frame.
-        public readonly List<RasterTileKey> Tiles = [];
-        public readonly List<RasterTileKey> ToDraw = [];
-        public int Drawing;
+        // Whether its texture is drawn this frame.
+        public bool Draws;
 
         public bool RecordingBefore;
     }
 
-    // The tiles of an element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it
-    // turns on the window, has no size, holds copies of its subtree, or lies outside the window.
+    // An element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it turns on the
+    // window, has no size, holds copies of its subtree, lies outside the window, or would take a texture too large.
     private RasterRun StartRaster(int groupIndex, Rect2D fullScissor)
     {
         var element = _groups[groupIndex].Component;
@@ -81,51 +88,75 @@ public partial class RenderCache
             World = world,
             FromWindow = Matrix4x4F.Invert(world),
             Scale = MathF.Pow(2f, MathF.Ceiling(MathF.Log2(shown))),
+            Bounds = fullScissor,
         };
-        run.Side = OffscreenLayers.TileTexels / run.Scale;
-        run.Bounds = fullScissor;
-        // Its tiles hold it cut by its own clip only; what cuts it above is where they are laid down.
+
+        // It is held cut by its own clip only; what cuts it above is where it is laid down.
         run.Scissor = LaidDownClip(element) is { } laidDown ? ToClipScissor(laidDown, fullScissor) : fullScissor;
-        if (run.Scissor.Extent.Width == 0 || run.Scissor.Extent.Height == 0 || !PrintRaster(run))
+        if (run.Scissor.Extent.Width == 0 || run.Scissor.Extent.Height == 0)
         {
             return null;
         }
 
-        // The tiles under what the window shows of it, in its units.
+        // What the window shows of it, in its units: the part held stays while it holds that at this scale.
         var scale = (float)_renderScale;
+        var whole = new Rect(0, 0, size.Width, size.Height);
         var seen = new Rect(run.Scissor.Offset.X / scale, run.Scissor.Offset.Y / scale, run.Scissor.Extent.Width / scale,
-            run.Scissor.Extent.Height / scale).TransformToAABB(run.FromWindow);
-        var columns = (int)Math.Ceiling(size.Width / run.Side);
-        var rows = (int)Math.Ceiling(size.Height / run.Side);
-        var firstColumn = Math.Max(0, (int)Math.Floor(seen.X / run.Side));
-        var lastColumn = Math.Min(columns - 1, (int)Math.Floor(seen.Right / run.Side));
-        var firstRow = Math.Max(0, (int)Math.Floor(seen.Y / run.Side));
-        var lastRow = Math.Min(rows - 1, (int)Math.Floor(seen.Bottom / run.Side));
-        _offscreenLayers ??= new OffscreenLayers();
-        for (var row = firstRow; row <= lastRow; row++)
+            run.Scissor.Extent.Height / scale).TransformToAABB(run.FromWindow).Intersect(whole);
+        if (seen.IsEmpty || !(seen.Width > 0) || !(seen.Height > 0))
         {
-            for (var column = firstColumn; column <= lastColumn; column++)
+            return null;
+        }
+
+        run.Part = _rasterParts.TryGetValue(element.RenderId, out var held) && held.Scale == run.Scale
+                                                                             && Holds(held.Part, seen)
+            ? held.Part
+            : Grown(seen, RasterRoom).Intersect(whole);
+        run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
+        run.Height = (int)Math.Ceiling(run.Part.Height * run.Scale);
+        if (run.Width > RasterLargest || run.Height > RasterLargest)
+        {
+            // Without the room, then; and past that, drawn from its shapes.
+            run.Part = seen;
+            run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
+            run.Height = (int)Math.Ceiling(run.Part.Height * run.Scale);
+            if (run.Width > RasterLargest || run.Height > RasterLargest)
             {
-                var key = new RasterTileKey(element.RenderId, run.Scale, column, row);
-                run.Tiles.Add(key);
-                if (!_offscreenLayers.HoldsTile(key, run.Print))
-                {
-                    run.ToDraw.Add(key);
-                }
+                return null;
             }
         }
 
-        return run.Tiles.Count > 0 ? run : null;
+        if (run.Width <= 0 || run.Height <= 0 || !PrintRaster(run))
+        {
+            return null;
+        }
+
+        _rasterParts[element.RenderId] = (run.Scale, run.Part);
+        _offscreenLayers ??= new OffscreenLayers();
+        run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
+        return run;
     }
 
-    // What the element's subtree draws, relative to the element: false when it holds copies of itself, which no tile
-    // follows. A change of what it draws is told by its groups being recorded again - not by the identity of what they
-    // hold, which the walk renews as it draws them (a brush's snapshot, a text's colors) - and by a brush repainted in
-    // place, by its paint version. Content that cannot be told apart - a living halo - is drawn anew each frame.
+    private static bool Holds(Rect outer, Rect inner) =>
+        inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
+
+    private static Rect Grown(Rect rect, double share) =>
+        new(rect.X - rect.Width * share, rect.Y - rect.Height * share, rect.Width * (1 + 2 * share),
+            rect.Height * (1 + 2 * share));
+
+    // What the element's subtree draws, relative to the element, and the part of it held: false when it holds copies of
+    // itself, which no texture follows. A change of what it draws is told by its groups being recorded again - not by the
+    // identity of what they hold, which the walk renews as it draws them (a brush's snapshot, a text's colors) - and by a
+    // brush repainted in place, by its paint version. Content that cannot be told apart - a living halo - is drawn anew
+    // each frame.
     private bool PrintRaster(RasterRun run)
     {
         var print = PrintSeed;
         Mix(ref print, run.Scale);
+        Mix(ref print, run.Part.X);
+        Mix(ref print, run.Part.Y);
+        Mix(ref print, run.Part.Width);
+        Mix(ref print, run.Part.Height);
         var still = !MovedByTheCompositor(run.Element);
         var hasText = false;
         for (var i = run.Start; i < run.End; i++)
@@ -152,19 +183,21 @@ public partial class RenderCache
             }
         }
 
-        // Glyphs still on their way are drawn missing: the tiles are drawn again until none is. Not the atlas's version,
-        // which any text anywhere moves - and drawing the tiles asks for glyphs of their own, so it never stood still.
+        // Glyphs still on their way are drawn missing: it is drawn again until none is. Not the atlas's version, which any
+        // text anywhere moves - and drawing it asks for glyphs of its own, so it never stood still.
         if (hasText)
         {
             still &= !FontAtlasStore.HasPendingGlyphs;
         }
 
-        // Not to be told apart: a print of its own each frame, which no tile holds.
+        // Not to be told apart: a print of its own each frame, which no texture holds.
         run.Print = still ? print : print ^ (ulong)++_rasterFrames;
         return true;
     }
 
     private long _rasterFrames;
+
+    private static void Mix(ref ulong print, double value) => Mix(ref print, BitConverter.DoubleToInt64Bits(value));
 
     // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
     // text's revision. False for a living halo, which changes every frame.
@@ -205,24 +238,24 @@ public partial class RenderCache
         Mix(ref print, (long)Math.Round(relative.M42 * 4096.0));
     }
 
-    // Opens the next tile of the run to draw, and draws the subtree into it from here: under the matrix from the window to
-    // the tile, a texel to the device pixel.
+    // Opens the run's texture, and draws the subtree into it from here: under the matrix from the window to it, a texel
+    // to the device pixel.
     private Rect2D OpenRasterTile(IGraphicsDevice device, RasterRun run)
     {
-        var key = run.ToDraw[run.Drawing];
         var toTexels = (float)(run.Scale / _renderScale);
-        var toTile = Matrix4x4F.Identity;
-        toTile.M11 = toTexels;
-        toTile.M22 = toTexels;
-        toTile.M41 = (float)(-key.Column * run.Side * toTexels);
-        toTile.M42 = (float)(-key.Row * run.Side * toTexels);
-        _cloneMatrix = run.FromWindow * toTile;
-        return DrawIn(_offscreenLayers.BeginTile(device, key, run.Print, _projectionMatrix, run.Bounds));
+        var toTexture = Matrix4x4F.Identity;
+        toTexture.M11 = toTexels;
+        toTexture.M22 = toTexels;
+        toTexture.M41 = (float)(-run.Part.X * toTexels);
+        toTexture.M42 = (float)(-run.Part.Y * toTexels);
+        _cloneMatrix = run.FromWindow * toTexture;
+        return DrawIn(_offscreenLayers.BeginTile(device, run.Element.RenderId, run.Print, _projectionMatrix, run.Bounds,
+            run.Width, run.Height));
     }
 
     private Rect2D CloseRasterTile(IGraphicsDevice device) => DrawIn(_offscreenLayers.EndTile(device));
 
-    /// <summary>Whether <paramref name="unit"/> is drawn into the tiles of an element drawn as a raster - its own or an
+    /// <summary>Whether <paramref name="unit"/> is drawn into the texture of an element drawn as a raster - its own or an
     /// ancestor's - rather than into the frame's batches.</summary>
     internal bool DrawnIntoTiles(IRenderUnit unit)
     {
@@ -237,15 +270,13 @@ public partial class RenderCache
         return false;
     }
 
-    // Lays down every tile the run shows, where the element stands now.
+    // Lays the texture down where the element stands now.
     private void LayDownRaster(IGraphicsDevice device, RasterRun run)
     {
         var scale = (float)_renderScale;
-        foreach (var key in run.Tiles)
-        {
-            var box = new Rect(key.Column * run.Side, key.Row * run.Side, run.Side, run.Side).TransformToAABB(run.World);
-            _offscreenLayers.LayDownTile(device, key, new Vector4F((float)box.X * scale, (float)box.Y * scale,
-                (float)box.Width * scale, (float)box.Height * scale), run.Scissor);
-        }
+        var held = new Rect(run.Part.X, run.Part.Y, run.Width / run.Scale, run.Height / run.Scale);
+        var box = held.TransformToAABB(run.World);
+        _offscreenLayers.LayDownTile(device, run.Element.RenderId, new Vector4F((float)box.X * scale,
+            (float)box.Y * scale, (float)box.Width * scale, (float)box.Height * scale), run.Scissor);
     }
 }

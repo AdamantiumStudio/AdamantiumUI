@@ -1025,16 +1025,16 @@ public partial class RenderCache
                 }
             }
 
-            // An element drawn as a raster: its tiles still held are laid down and its subtree passed over; the others are
-            // drawn first, each by a walk of the subtree into it (OpenRasterTile), the run ending at its last group.
+            // An element drawn as a raster: a texture still held is laid down and its subtree passed over; else it is drawn
+            // first, by a walk of the subtree into it (OpenRasterTile), the run ending at its last group.
             var rasterLaidDown = false;
             if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
                 && group.Component?.DrawingMode == DrawingMode.Raster && StartRaster(groupIndex, fullScissor) is { } raster)
             {
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
-                // A replay does not draw tiles yet: a frame showing one is walked.
+                // A replay does not draw a raster yet: a frame showing one is walked.
                 _opsReplayable = false;
-                if (raster.ToDraw.Count == 0)
+                if (!raster.Draws)
                 {
                     LayDownRaster(device, raster);
                     groupIndex = raster.End - 1;
@@ -2091,19 +2091,11 @@ public partial class RenderCache
                 }
             }
 
-            // The last group of an element drawn as a raster: its tile is closed, the next one drawn by a walk of the
-            // subtree again, or - the last drawn - every tile laid down.
+            // The last group of an element drawn as a raster: its texture is closed and laid down.
             if (_rasterRun is { } rasterRun && groupIndex == rasterRun.End - 1)
             {
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
                 fullScissor = CloseRasterTile(device);
-                if (++rasterRun.Drawing < rasterRun.ToDraw.Count)
-                {
-                    fullScissor = OpenRasterTile(device, rasterRun);
-                    groupIndex = rasterRun.Start - 1;
-                    continue;
-                }
-
                 _cloneMatrix = null;
                 _recording = rasterRun.RecordingBefore;
                 _rasterRun = null;

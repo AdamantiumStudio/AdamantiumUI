@@ -441,23 +441,22 @@ internal sealed class OffscreenLayers : IDisposable
     // The composite's mode past BlendMode's: the content in place of the copy of what lay under it, by the masks.
     private const float ReplaceMode = 16f;
 
-    // ---- TILES of an element drawn as a raster (DrawingMode.Raster) -----------------------------------------------
+    // ---- THE TEXTURE of an element drawn as a raster (DrawingMode.Raster) ------------------------------------------
 
-    /// <summary>The side of a raster tile's texture, in texels.</summary>
-    public const int TileTexels = 512;
-
-    /// <summary>Whether the tile kept under <paramref name="key"/> holds a drawing with this <paramref name="print"/>.
+    /// <summary>Whether the texture kept under <paramref name="key"/> holds a drawing with this <paramref name="print"/>.
     /// </summary>
     public bool HoldsTile(object key, ulong print) =>
         _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0 && entry.Print == print;
 
-    /// <summary>Opens a fresh texture for the tile kept under <paramref name="key"/>, drawn in its own space: a window
-    /// pixel lands on the texel it names, 0 to <see cref="TileTexels"/> each way, whatever lies past the window. Kept
-    /// with <paramref name="print"/> by <see cref="EndTile"/>, which goes back to the space it was opened in - its
-    /// <paramref name="projection"/> and <paramref name="bounds"/>.</summary>
-    public DrawSpace BeginTile(IGraphicsDevice gd, object key, ulong print, Matrix4x4F projection, Rect2D bounds)
+    /// <summary>Opens a fresh texture of <paramref name="width"/> by <paramref name="height"/> texels kept under
+    /// <paramref name="key"/>, drawn in its own space: a window pixel lands on the texel it names, whatever lies past the
+    /// window. Kept with <paramref name="print"/> by <see cref="EndTile"/>, which goes back to the space it was opened in
+    /// - its <paramref name="projection"/> and <paramref name="bounds"/>.</summary>
+    public DrawSpace BeginTile(IGraphicsDevice gd, object key, ulong print, Matrix4x4F projection, Rect2D bounds,
+        int width, int height)
     {
-        var region = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = TileTexels, Height = TileTexels } };
+        var region = new Rect2D
+            { Offset = new Offset2D(), Extent = new Extent2D { Width = (uint)width, Height = (uint)height } };
         return Open(gd, key, region, print, true, false, projection, bounds, true, Colors.Transparent, out _);
     }
 
@@ -520,7 +519,7 @@ internal sealed class OffscreenLayers : IDisposable
         gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
         gd.VertexType = null;
 
-        var texels = new Vector4F((float)TileTexels / entry.TextureWidth, (float)TileTexels / entry.TextureHeight, 0, 0);
+        var texels = new Vector4F((float)entry.Width / entry.TextureWidth, (float)entry.Height / entry.TextureHeight, 0, 0);
         _group.LayerBox.SetValue(new Vector4F(box.X - viewport.X, box.Y - viewport.Y, box.Z, box.W));
         _group.SourceRegion.SetValue(box);
         _group.LayerTexels.SetValue(texels);
