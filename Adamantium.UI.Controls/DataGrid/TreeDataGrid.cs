@@ -3569,6 +3569,8 @@ public partial class TreeDataGrid : Selector
             return false;
         }
 
+        // A template column's editor binds the row itself: what waits on the commit is written now, never on a cancel.
+        cell.WriteExplicitBindings();
         EndEdit();
         return true;
     }

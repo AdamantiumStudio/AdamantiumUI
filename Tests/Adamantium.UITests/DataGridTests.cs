@@ -2316,6 +2316,52 @@ public class DataGridTests
         });
     }
 
+    // A template column's editor binds the row itself, waiting on the commit (UpdateSourceTrigger.Explicit): the commit
+    // writes what was typed, a cancel never does - the editor's leaving does not write it either.
+    [TestCase(true)]
+    [TestCase(false)]
+    public void ATemplateEditorBoundExplicitly_IsWrittenByTheCommit_NeverByACancel(bool commit)
+    {
+        var items = new List<Editable> { new() { Name = "one" } };
+        var column = new DataGridTemplateColumn
+        {
+            Width = new GridLength(100),
+            CellTemplate = new DataTemplate(() =>
+            {
+                var text = new Adamantium.UI.Controls.Text.TextBlock();
+                text.SetBinding("Text", new Binding("Name"));
+                return new TemplateResult { RootComponent = text };
+            }),
+            CellEditingTemplate = new DataTemplate(() =>
+            {
+                var box = new Adamantium.UI.Controls.Text.TextBox();
+                box.SetBinding("Text",
+                    new Binding("Name") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.Explicit });
+                return new TemplateResult { RootComponent = box };
+            })
+        };
+        var grid = Grid(column);
+        grid.ItemsSource = items;
+        Relayout(grid);
+        Chrome(grid);
+
+        grid.BeginEdit(0, 0);
+        Relayout(grid, grid.CellFor(0, 0));
+        var editor = Editor(grid.CellFor(0, 0));
+        FocusManager.Focus(editor);
+        editor.Text = "typed";
+        var whileEditing = items[0].Name;
+        if (commit) grid.CommitEdit();
+        else grid.CancelEdit();
+        Relayout(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(whileEditing, Is.EqualTo("one"), "typing writes nothing yet");
+            Assert.That(items[0].Name, Is.EqualTo(commit ? "typed" : "one"));
+        });
+    }
+
     [Test]
     public void CancelKeepsWhatTheEditorNeverWrote()
     {
