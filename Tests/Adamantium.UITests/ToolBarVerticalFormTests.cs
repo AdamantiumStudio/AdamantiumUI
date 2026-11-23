@@ -322,7 +322,8 @@ public class ToolBarVerticalFormTests
         side.Bar.Items.Insert(0, small);
         side.Bar.CommandWrapping = CommandWrapping.Wrap;
         Show(side);
-        side.Tray.MaxHeight = side.Group.RenderSize.Height;
+        // Room for the small section and the bar's chrome, less than the long section with it.
+        side.Tray.MaxHeight = small.RenderSize.Height + 50;
         Show(side);
 
         Assert.Multiple(() =>

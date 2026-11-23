@@ -368,9 +368,13 @@ public class ToolBar : ItemsControl
     /// <summary>How long the bar is with every command it can show on it.</summary>
     internal double FullLength { get; private set; } = double.NaN;
 
-    /// <summary>How short the bar can be: its grip, the commands that never overflow and the overflow button - and on a
+    /// <summary>How short the bar would be: its grip, the commands that never overflow and the overflow button - and on a
     /// bar whose commands wrap, its longest command, since each goes onto a line whole.</summary>
     internal double ShortestLength { get; private set; } = double.NaN;
+
+    /// <summary>How short the bar can be at all: its grip, the commands that never overflow and the overflow button. A bar
+    /// that wraps is given less than its <see cref="ShortestLength"/> only when its tray has no more room.</summary>
+    internal double LeastLength { get; private set; } = double.NaN;
 
     internal ToolBarTray Tray => this.GetVisualAncestors().OfType<ToolBarTray>().FirstOrDefault();
 
@@ -596,11 +600,14 @@ public class ToolBar : ItemsControl
         var margin = horizontal ? Margin.Left + Margin.Right : Margin.Top + Margin.Bottom;
         FullLength = margin + ChromeWithWholeHeader + OnBar(lengths, Overflowing(mode => mode == ToolBarOverflowMode.Always)) +
                      (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0);
-        // A bar that wraps is as short as its longest command: the rest go onto new lines.
+        // The least it can be: its chrome, what never goes to the menu, and the menu's chevron.
+        LeastLength = margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
+                      (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
+        // A bar that wraps would rather be as short as its longest command, the rest on new lines; given less, its sections
+        // longer than a line go to the menu.
         ShortestLength = Wraps
             ? margin + _chrome + Longest(lengths) + (Any(ToolBarOverflowMode.Always) ? OverflowButtonLength : 0)
-            : margin + _chrome + OnBar(lengths, Overflowing(mode => mode != ToolBarOverflowMode.Never)) +
-              (_commands.Count > 0 && !All(ToolBarOverflowMode.Never) ? OverflowButtonLength : 0);
+            : LeastLength;
         return size;
     }
 
