@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Adamantium.Localization.Generators;
+using Adamantium.Localization;
 
 namespace Adamantium.UI.LanguageServer;
 
@@ -51,7 +51,7 @@ public sealed class LanguageFileContext
             var baseFile = LanguageFileParser.Parse(basePath, baseText, project?.ProjectDir ?? Path.GetDirectoryName(path));
             return new LanguageFileContext(file, project, false, Path.GetFileName(basePath),
                 baseFile.Entries.Select(e => new LanguageStringInfo(e.Key, [], e.Value, e.Chooser, e.ByNumber,
-                    e.Cases.Select(c => c.Case).ToList())).ToList());
+                    e.Cases.Select(c => c.Name).ToList())).ToList());
         }
 
         var table = model?.LanguageTables.FirstOrDefault(t => t.Name == file.Table);

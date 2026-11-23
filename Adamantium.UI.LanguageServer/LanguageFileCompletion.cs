@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Adamantium.Localization;
-using Adamantium.Localization.Generators;
 
 namespace Adamantium.UI.LanguageServer;
 
