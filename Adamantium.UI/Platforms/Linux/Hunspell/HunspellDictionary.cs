@@ -8,20 +8,20 @@ namespace Adamantium.UI.Platforms.Linux.Hunspell;
 /// to, its stems with the forms their affixes make. A whole language's forms run into millions, so they are not kept:
 /// reading the dictionary indexes each stem by the first three letters of every form it makes, and a beginning of three
 /// letters or more expands only the stems indexed under its first three - also those whose suffix strips letters, or a
-/// short stem a suffix lengthens. The forms of the latest sixteen such keys are kept, so the next letters only narrow
-/// them. A beginning of one or two letters offers stems alone. A suffix's own suffixes go one level deep, as hunspell's
+/// short stem a suffix lengthens - shortest stems first, and only until no stem left can make a word as short as those
+/// found. A beginning of one or two letters offers stems alone. A suffix's own suffixes go one level deep, as hunspell's
 /// twofold suffixes; prefixes take no suffixes of their own and two prefixes do not stack. The dictionary has no
 /// frequencies: shorter words come first, then by the alphabet. It may be asked from any thread.</summary>
 internal sealed class HunspellDictionary
 {
     private const int KeyLength = 3;
-    private const int MostKeysKept = 16;
 
     private readonly HunspellAffixes _affixes;
     private readonly Stem[] _stems;
     private readonly List<HunspellAffixRule> _prefixes = [];
     private readonly Dictionary<string, int[]> _stemsByKey = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string[]> _formsByKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly int _longestStrip;
+    private readonly bool _hasPrefixes;
 
     private HunspellDictionary(HunspellAffixes affixes, Stem[] stems)
     {
@@ -33,9 +33,12 @@ internal sealed class HunspellDictionary
             {
                 if (rule.IsPrefix)
                     _prefixes.Add(rule);
+                else
+                    _longestStrip = Math.Max(_longestStrip, rule.Strip.Length);
             }
         }
 
+        _hasPrefixes = _prefixes.Count > 0;
         IndexStems();
     }
 
@@ -95,13 +98,9 @@ internal sealed class HunspellDictionary
                     found.Add(_stems[index].Word);
             }
         }
-        else
+        else if (_stemsByKey.TryGetValue(start[..KeyLength], out var stems))
         {
-            foreach (var form in FormsGrownFrom(start[..KeyLength]))
-            {
-                if (form.StartsWith(start, StringComparison.OrdinalIgnoreCase))
-                    found.Add(form);
-            }
+            CollectShortest(start, count, stems, found);
         }
 
         List<string> words = [.. found];
@@ -137,40 +136,40 @@ internal sealed class HunspellDictionary
         }
 
         foreach (var (key, stems) in byKey)
+        {
+            stems.Sort((left, right) => _stems[left].Word.Length.CompareTo(_stems[right].Word.Length));
             _stemsByKey[key] = stems.ToArray();
+        }
     }
 
-    private string[] FormsGrownFrom(string key)
+    private void CollectShortest(string start, int count, int[] stems, HashSet<string> found)
     {
-        lock (_formsByKey)
+        // The stems come shortest first, and a form is shorter than its stem by two suffixes' strips at most (a suffix's
+        // own suffix strips too): once the count is found and no stem left can make one as short, the rest are not
+        // expanded.
+        var mostStripped = 2 * _longestStrip;
+        var lengths = new List<int>(count + 1);
+        foreach (var index in stems)
         {
-            if (_formsByKey.TryGetValue(key, out var known))
-                return known;
-        }
+            var stem = _stems[index];
+            if (lengths.Count >= count && stem.Word.Length - mostStripped > lengths[count - 1])
+                break;
 
-        var forms = new List<string>();
-        if (_stemsByKey.TryGetValue(key, out var stems))
-        {
-            foreach (var index in stems)
+            // A stem whose own letters part from the beginning makes no form of it - unless a prefix may go first.
+            var shared = Math.Min(start.Length, stem.Word.Length - mostStripped);
+            if (shared > 0 && !_hasPrefixes
+                           && !stem.Word.AsSpan(0, shared).Equals(start.AsSpan(0, shared), StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            foreach (var form in FormsOf(stem))
             {
-                foreach (var form in FormsOf(_stems[index]))
-                {
-                    if (form.StartsWith(key, StringComparison.OrdinalIgnoreCase))
-                        forms.Add(form);
-                }
+                if (!form.StartsWith(start, StringComparison.OrdinalIgnoreCase) || !found.Add(form))
+                    continue;
+
+                var at = lengths.BinarySearch(form.Length);
+                lengths.Insert(at < 0 ? ~at : at, form.Length);
             }
         }
-
-        var grown = forms.ToArray();
-        lock (_formsByKey)
-        {
-            if (_formsByKey.Count >= MostKeysKept)
-                _formsByKey.Clear();
-
-            _formsByKey[key] = grown;
-        }
-
-        return grown;
     }
 
     private List<string> FormsOf(Stem stem)
