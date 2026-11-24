@@ -37,7 +37,7 @@ public sealed class RecordingHost : IUniverseHostService
 
     public void AskNewSurface() => Interlocked.Increment(ref _newSurfacesAsked);
 
-    public void DrawWhereItStands()
+    public void DrawWhereItStands(bool heldAtAStatement)
     {
     }
 
