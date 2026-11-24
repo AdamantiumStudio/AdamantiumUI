@@ -19,8 +19,32 @@ public partial class RenderCache
     // The element whose texture is being drawn this frame, or null.
     private RasterRun _rasterRun;
 
-    // What each element drawn as a raster holds - the part of it, in its units, at the scale - from frame to frame.
-    private readonly Dictionary<Guid, (float Scale, Rect Part)> _rasterParts = new();
+    // What each element drawn as a raster holds in its texture, and what it is asked to hold, from frame to frame.
+    private readonly Dictionary<Guid, RasterHeld> _rasterParts = new();
+
+    private sealed class RasterHeld
+    {
+        // What the texture holds: the part of the element, in its units, at the scale, in texels.
+        public bool Drawn;
+        public float Scale;
+        public Rect Part;
+        public int Width;
+        public int Height;
+
+        // What the frames ask of it - another scale, part or print - and since when they have asked the same.
+        public float WantedScale;
+        public Rect WantedPart;
+        public ulong WantedPrint;
+        public long WantedSince;
+    }
+
+    // How long what a raster is asked to hold has to stay the same before its texture is drawn again: while the camera
+    // zooms, a step of scale, a part left or the page drawn at another detail each frame, the texture it holds is laid
+    // down stretched, and drawn anew once, when the camera has stopped.
+    private static readonly long RasterSettles = System.Diagnostics.Stopwatch.Frequency * 150 / 1000;
+
+    // A raster laid down stretched this frame waits to be drawn anew: the frames go on until it is.
+    private bool _rasterSettling;
 
     // How far past what is seen the texture reaches each way, as a share of it: room for the camera to move in.
     private const double RasterRoom = 0.25;
@@ -56,6 +80,9 @@ public partial class RenderCache
 
         // Whether its texture is drawn this frame.
         public bool Draws;
+
+        // Whether what it draws can be told apart frame to frame (see PrintRaster).
+        public bool Still;
 
         public bool RecordingBefore;
     }
@@ -109,8 +136,13 @@ public partial class RenderCache
             return null;
         }
 
-        run.Part = _rasterParts.TryGetValue(element.RenderId, out var held) && held.Scale == run.Scale
-                                                                             && Holds(held.Part, seen)
+        if (!_rasterParts.TryGetValue(element.RenderId, out var held))
+        {
+            held = new RasterHeld();
+            _rasterParts[element.RenderId] = held;
+        }
+
+        run.Part = held.Drawn && held.Scale == run.Scale && Holds(held.Part, seen)
             ? held.Part
             : Grown(seen, RasterRoom).Intersect(whole);
         run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
@@ -132,11 +164,48 @@ public partial class RenderCache
             return null;
         }
 
-        _rasterParts[element.RenderId] = (run.Scale, run.Part);
         _rasterShown.Add(element);
         _offscreenLayers ??= new OffscreenLayers();
         run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
+        if (run.Draws && held.Drawn && run.Still && _offscreenLayers.HoldsAnyTile(element.RenderId) && !Settled(held, run))
+        {
+            // Still moving: what it holds, stretched to where the camera puts it.
+            run.Scale = held.Scale;
+            run.Part = held.Part;
+            run.Width = held.Width;
+            run.Height = held.Height;
+            run.Draws = false;
+            _rasterSettling = true;
+            return run;
+        }
+
+        if (run.Draws)
+        {
+            held.Drawn = true;
+            held.Scale = run.Scale;
+            held.Part = run.Part;
+            held.Width = run.Width;
+            held.Height = run.Height;
+        }
+
         return run;
+    }
+
+    // Whether what the frames ask the raster to hold has stayed the same for RasterSettles; asked something else, it
+    // starts counting again.
+    private static bool Settled(RasterHeld held, RasterRun run)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (held.WantedScale != run.Scale || held.WantedPart != run.Part || held.WantedPrint != run.Print)
+        {
+            held.WantedScale = run.Scale;
+            held.WantedPart = run.Part;
+            held.WantedPrint = run.Print;
+            held.WantedSince = now;
+            return false;
+        }
+
+        return now - held.WantedSince >= RasterSettles;
     }
 
     // The elements drawn as a raster this frame - laid down or drawn anew; the rest are drawn from their shapes.
@@ -146,6 +215,7 @@ public partial class RenderCache
     private void BeginRasterFrame()
     {
         _rasterRun = null;
+        _rasterSettling = false;
         if (_rasterParts.Count > _rasterShown.Count)
         {
             _rasterShownIds.Clear();
@@ -244,6 +314,7 @@ public partial class RenderCache
 
         // Not to be told apart: a print of its own each frame, which no texture holds.
         run.Print = still ? print : print ^ (ulong)++_rasterFrames;
+        run.Still = still;
         return true;
     }
 

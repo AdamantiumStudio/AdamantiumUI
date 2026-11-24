@@ -652,7 +652,7 @@ public partial class RenderCache
         finally
         {
             DrawReplayed = LastFrameReplayed;
-            Moves = DrewMoving();
+            Moves = DrewMoving() || _rasterSettling;
 
             // Swept here, after the frame is finished, and on replayed frames too, which RenderCore returns early from.
             if (_leftTheOrder.Count > 0 && device != null)

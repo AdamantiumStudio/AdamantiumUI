@@ -602,6 +602,9 @@ internal sealed class OffscreenLayers : IDisposable
     public bool HoldsTile(object key, ulong print) =>
         _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0 && entry.Print == print;
 
+    /// <summary>Whether the texture kept under <paramref name="key"/> holds a drawing, whatever its print.</summary>
+    public bool HoldsAnyTile(object key) => _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0;
+
     /// <summary>Opens a fresh texture of <paramref name="width"/> by <paramref name="height"/> texels kept under
     /// <paramref name="key"/>, drawn in its own space: a window pixel lands on the texel it names, whatever lies past the
     /// window. Kept with <paramref name="print"/> by <see cref="EndTile"/>, which goes back to the space it was opened in
