@@ -37,6 +37,10 @@ public sealed class RecordingHost : IUniverseHostService
 
     public void AskNewSurface() => Interlocked.Increment(ref _newSurfacesAsked);
 
+    public void DrawWhereItStands()
+    {
+    }
+
     public void MovePointer(float x, float y, bool isOver) => Pointer.Add($"{x},{y},{isOver}");
 
     public void Focus(bool hasKeyboard) => Focuses.Add(hasKeyboard);

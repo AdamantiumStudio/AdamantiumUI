@@ -146,6 +146,8 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
 
     public Task<byte[]> CaptureFrameAsync(CancellationToken cancellationToken) => Host.CaptureFrameAsync(cancellationToken);
 
+    public void DrawWhereItStands() => LiveHost?.DrawWhereItStands();
+
     public void Dispose()
     {
         if (_disposed)

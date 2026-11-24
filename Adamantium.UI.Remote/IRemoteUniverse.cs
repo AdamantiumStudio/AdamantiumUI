@@ -29,6 +29,10 @@ public interface IRemoteUniverse : IDisposable
     /// <summary>The last frame drawn, as a PNG.</summary>
     Task<byte[]> CaptureFrameAsync(CancellationToken cancellationToken);
 
+    /// <summary>Asks for the world drawn as it stands, with no step of the game: at a stop of a game a debugger holds
+    /// (launched <see cref="UniverseLaunch.IsDebugged"/>), for its view to show where it stands. Not waited for.</summary>
+    void DrawWhereItStands();
+
     /// <summary>Done once the universe stopped or the host's process went away.</summary>
     Task Ended { get; }
 }
