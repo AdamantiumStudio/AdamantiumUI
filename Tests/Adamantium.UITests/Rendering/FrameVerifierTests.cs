@@ -5,6 +5,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -167,7 +168,48 @@ public class FrameVerifierTests
             File.Exists(_settings.LogPath) ? File.ReadAllText(_settings.LogPath) : "no log");
     }
 
-    // The unit factory needs one, but nothing here draws a texture or text.
+    // A brush recolored in place goes on screen at the next draw, whichever record that draws: a theme's variant switched
+    // between a frame's record and its drawing.
+    [Test]
+    public void TextRecoloredAfterItsRecord_RaisesNothing()
+    {
+        var device = GpuTestDevice.Device;
+        using var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new StubResourceFactory()), Dim, Dim)
+        {
+            ClearColor = Colors.Black
+        };
+        var brush = new SolidColorBrush(Colors.White);
+        var root = new VisualRoot(new TextBlock { Text = "Wg8", Foreground = brush, FontSize = 28 }, Dim, Dim);
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
+        RenderDirty.MarkStructural();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var verifier = new FrameVerifier(_settings, root);
+        renderer.Cache.Observer = new RecoloringObserver(verifier, () => brush.Color = Colors.Red);
+
+        RenderDirty.MarkStructural();   // the frame walks the tree, baking the text anew
+        Draw(renderer, root, verifier);
+        renderer.Cache.Observer = verifier;
+        Draw(renderer, root, verifier);
+
+        Assert.That(_settings.VerifiedFrames, Is.EqualTo(2), "both frames must be checked");
+        Assert.That(_settings.MismatchedFrames, Is.Zero,
+            File.Exists(_settings.LogPath) ? File.ReadAllText(_settings.LogPath) : "no log");
+    }
+
+    private sealed class RecoloringObserver(FrameVerifier verifier, Action recolor) : IRenderCacheObserver
+    {
+        public void Recorded(RenderPacket packet) => verifier.Recorded(packet);
+
+        public void Applied(RenderPacket packet)
+        {
+            verifier.Applied(packet);
+            recolor();
+        }
+    }
+
+    // The unit factory needs one, but nothing here draws a texture.
     private sealed class StubResourceFactory : IResourceFactory
     {
         public uint MaxTextureDimension => uint.MaxValue;
@@ -177,6 +219,8 @@ public class FrameVerifierTests
         public ITexture CreateTextureArray(TextureDescription description, IReadOnlyList<byte[]> layers) => throw new NotSupportedException();
         public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor) => throw new NotSupportedException();
         public IRenderTarget CreateRenderTarget(uint width, uint height, MSAALevel msaa, SurfaceFormat format, ImageLayout desiredLayout) => throw new NotSupportedException();
-        public FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice) => throw new NotSupportedException();
+        private FontRenderer _fontRenderer;
+
+        public FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice) => _fontRenderer ??= new FontRenderer(graphicsDevice);
     }
 }
