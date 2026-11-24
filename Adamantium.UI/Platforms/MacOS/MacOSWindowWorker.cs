@@ -301,6 +301,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         else
             NSWindow.OrderFront(_nsWindow);
         JoinOwner();
+        _platform.JoinOwned(_nsWindow);
+    }
+
+    internal void JoinIfOwnedBy(IntPtr owner)
+    {
+        if (_owner == owner && _nsWindow != IntPtr.Zero && NSWindow.IsVisible(_nsWindow))
+            JoinOwner();
     }
 
     public void HideWindow() => OnMainThread(() =>
@@ -709,10 +716,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             JoinOwner();
     }
 
-    // Only once shown: a child window is put on screen the moment it is added.
+    // Only once both are shown: a child window is put on screen, or off it, with its owner.
     private void JoinOwner()
     {
-        if (_owner == IntPtr.Zero)
+        if (_owner == IntPtr.Zero || !NSWindow.IsVisible(_owner))
             return;
 
         // It takes its owner's level, and floats over an ordinary owner only when it is itself on top.

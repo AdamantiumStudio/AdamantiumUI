@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.CoreGraphics;
@@ -21,6 +22,8 @@ public class MacOSPlatform : IApplicationPlatform
 
     private readonly int _threadId;
     private readonly List<MacOSWindowWorker> _windows = [];
+    private readonly List<MacOSPlatform> _guests = [];
+    private readonly MacOSPlatform _host;
 
     public MacOSPlatform()
     {
@@ -35,6 +38,27 @@ public class MacOSPlatform : IApplicationPlatform
         Cursor.Platform = new MacOSCursors(this);
     }
 
+    /// <summary>The splash window's side of <paramref name="host"/>: the same thread and event loop, with signals and
+    /// windows of its own - answered while the application starts, when the application's own signals still wait.</summary>
+    internal MacOSPlatform(MacOSPlatform host)
+    {
+        _host = host;
+        _threadId = host._threadId;
+        Desktop = host.Desktop;
+        lock (host._guests)
+            host._guests.Add(this);
+    }
+
+    /// <summary>The dispatcher of a splash window's side; null for the application's own.</summary>
+    internal Threading.Dispatcher Dispatcher { get; set; }
+
+    /// <summary>Takes a splash window's side away from its host.</summary>
+    internal void Disconnect()
+    {
+        lock (_host._guests)
+            _host._guests.Remove(this);
+    }
+
     /// <summary>The monitors, and the way between AppKit's points and the pixels windows are told.</summary>
     internal MacOSDisplays Desktop { get; }
 
@@ -46,29 +70,73 @@ public class MacOSPlatform : IApplicationPlatform
     {
         using var wake = token.Register(Signal);
         NSApplication.Activate();
+        Signal();   // what was asked for while a wait took the wake
         while (!token.IsCancellationRequested)
-        {
-            var pool = ObjCRuntime.PushAutoreleasePool();
-            try
-            {
-                var nsEvent = NSApplication.NextEvent(NSDate.DistantFuture);
-                if (nsEvent == IntPtr.Zero)
-                    continue;
+            AnswerNext(NSDate.DistantFuture, true);
+    }
 
-                var type = NSEvent.TypeOf(nsEvent);
-                if (type == NSEventType.ApplicationDefined && NSEvent.SubtypeOf(nsEvent) == WakeSubtype)
-                    Signaled?.Invoke();
-                else if (type == NSEventType.KeyUp && NSApplication.KeyWindow is var key && key != IntPtr.Zero &&
-                         (NSEvent.ModifierFlagsOf(nsEvent) & NSEventModifierFlags.Command) != 0)
-                    NSWindow.SendEvent(key, nsEvent);   // NSApplication keeps a key's release to itself while Command is held
-                else
-                    NSApplication.SendEvent(nsEvent);
-            }
-            finally
-            {
-                ObjCRuntime.PopAutoreleasePool(pool);
-            }
+    public void Wait(Task task, CancellationToken token)
+    {
+        if (!IsOnUIThread)
+        {
+            Task.WaitAny([task], token);
+            return;
         }
+
+        using var wake = token.Register(Signal);
+        task.ContinueWith(_ => Signal(), TaskScheduler.Default);
+        while (AnswerNext(NSDate.DistantPast, false) || !task.IsCompleted)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!task.IsCompleted)
+                AnswerNext(NSDate.DistantFuture, false);
+        }
+    }
+
+    // While the application starts its own signals wait, as on every platform: only the splash window's are answered.
+    private bool AnswerNext(IntPtr until, bool answersOwn)
+    {
+        var pool = ObjCRuntime.PushAutoreleasePool();
+        try
+        {
+            var nsEvent = NSApplication.NextEvent(until);
+            if (nsEvent == IntPtr.Zero)
+                return false;
+
+            var type = NSEvent.TypeOf(nsEvent);
+            if (type == NSEventType.ApplicationDefined && NSEvent.SubtypeOf(nsEvent) == WakeSubtype)
+            {
+                if (answersOwn)
+                    Signaled?.Invoke();
+                SignalGuests();
+            }
+            else if (type == NSEventType.KeyUp && NSApplication.KeyWindow is var key && key != IntPtr.Zero &&
+                     (NSEvent.ModifierFlagsOf(nsEvent) & NSEventModifierFlags.Command) != 0)
+                NSWindow.SendEvent(key, nsEvent);   // NSApplication keeps a key's release to itself while Command is held
+            else
+                NSApplication.SendEvent(nsEvent);
+
+            return true;
+        }
+        finally
+        {
+            ObjCRuntime.PopAutoreleasePool(pool);
+        }
+    }
+
+    private void SignalGuests()
+    {
+        MacOSPlatform[] guests;
+        lock (_guests)
+        {
+            if (_guests.Count == 0)
+                return;
+
+            guests = [.. _guests];
+        }
+
+        foreach (var guest in guests)
+            guest.Signaled?.Invoke();
     }
 
     public void Signal()
@@ -123,10 +191,44 @@ public class MacOSPlatform : IApplicationPlatform
     /// when called there, else queued.</summary>
     internal void RunOnMainThread(Action action)
     {
-        if (IsOnUIThread)
+        if (!IsOnUIThread)
+        {
+            (Dispatcher ?? Threading.Dispatcher.CurrentDispatcher).Invoke(action);
+            return;
+        }
+
+        var pool = ObjCRuntime.PushAutoreleasePool();
+        try
+        {
             action();
-        else
-            Threading.Dispatcher.CurrentDispatcher.Invoke(action);
+        }
+        finally
+        {
+            ObjCRuntime.PopAutoreleasePool(pool);
+        }
+    }
+
+    /// <summary>The windows a shown <paramref name="owner"/> has, the splash window's side included, join it.</summary>
+    internal void JoinOwned(IntPtr owner)
+    {
+        var host = _host ?? this;
+        host.JoinOwnedHere(owner);
+        MacOSPlatform[] guests;
+        lock (host._guests)
+            guests = [.. host._guests];
+
+        foreach (var guest in guests)
+            guest.JoinOwnedHere(owner);
+    }
+
+    private void JoinOwnedHere(IntPtr owner)
+    {
+        MacOSWindowWorker[] windows;
+        lock (ModalLock)
+            windows = [.. _windows];
+
+        foreach (var window in windows)
+            window.JoinIfOwnedBy(owner);
     }
 
     private static void ShowApplicationIcon()

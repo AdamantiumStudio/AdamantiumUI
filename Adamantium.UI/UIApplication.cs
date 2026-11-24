@@ -959,12 +959,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         if (StartWithSplash())
         {
+            DesktopPlatform.Wait(devices, CancellationToken.None);
             devices.GetAwaiter().GetResult();
             EntityWorld.Initialize();
             StartLoop();
+            if (_splash.IsOnApplicationThread)
+            {
+                DesktopPlatform.Wait(_splash.Shown, cancellationTokenSource.Token);
+            }
         }
 
         ReadBlueprint();
+        AnswerSplash();
         LoadThemes();
         LoadLanguage();
         devices.GetAwaiter().GetResult();
@@ -975,11 +981,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             EntityWorld.Initialize();
         }
 
+        AnswerSplash();
         OnInitialize();
+        AnswerSplash();
         RegisterServices(Container);
         _visualRenderer = Container.Resolve<IVisualRenderer>();   // its device is created on the first snapshot
         IsInitialized = true;
-        
+        AnswerSplash();
+
         if (MainWindow != null)
         {
             OnWindowCreated(MainWindow);
@@ -1090,7 +1099,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 done.SetException(e);
             }
         });
-        Task.WaitAny([done.Task], cancellationTokenSource.Token);
+        DesktopPlatform.Wait(done.Task, cancellationTokenSource.Token);
         done.Task.GetAwaiter().GetResult();
         StartupCancellation.ThrowIfCancellationRequested();
     }
@@ -1403,6 +1412,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return true;
     }
 
+    private Platforms.IApplicationPlatform DesktopPlatform => UIContext.Resolve<Platforms.IApplicationPlatform>();
+
+    // Between the steps of the start, where the splash window has no thread of its own to answer on.
+    private void AnswerSplash()
+    {
+        if (_splash is { IsRunning: true, IsOnApplicationThread: true })
+        {
+            DesktopPlatform.Wait(Task.CompletedTask, CancellationToken.None);
+            StartupCancellation.ThrowIfCancellationRequested();
+        }
+    }
+
     /// <summary>What the splash window says while the application starts - the document it opens, say; null for
     /// nothing. Read once, as the start shows the window, before the services are made.</summary>
     protected virtual string StartupSplashMessage => null;
@@ -1446,7 +1467,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private Type SplashWindowType()
     {
         var type = SplashType ?? BlueprintAttribute?.SplashWindow;
-        return Configuration.Platform is Platform.Linux or Platform.Windows ? type : null;
+        return SplashScreen.IsSupported ? type : null;
     }
 
     private void CancelStartup()

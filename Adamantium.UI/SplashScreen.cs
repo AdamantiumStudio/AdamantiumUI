@@ -5,13 +5,15 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Platforms;
+using Adamantium.UI.Platforms.MacOS;
 using Adamantium.UI.Platforms.Wayland;
 using Adamantium.UI.Platforms.Windows;
 
 namespace Adamantium.UI;
 
 /// <summary>Runs the splash window on a thread, a dispatcher and a connection to the desktop of its own, so that it
-/// shows, moves and answers its close button while the application's own thread is busy starting.</summary>
+/// shows, moves and answers its close button while the application's own thread is busy starting. On macOS the thread is
+/// the application's own (<see cref="IsOnApplicationThread"/>): it draws throughout and answers between steps.</summary>
 internal sealed class SplashScreen : ISplashScreen
 {
     private readonly UIApplication _application;
@@ -56,9 +58,30 @@ internal sealed class SplashScreen : ISplashScreen
     /// <summary>Whether the window was closed, or asked to close, already.</summary>
     public bool IsHandedOver => Volatile.Read(ref _handedOver) != 0;
 
+    /// <summary>Whether this platform shows a splash window.</summary>
+    public static bool IsSupported => Configuration.Platform is Platform.Linux or Platform.Windows or Platform.OSX;
+
+    /// <summary>Whether the window lives on the application's own thread - AppKit knows no other - which then has to
+    /// answer it between the steps of the start.</summary>
+    public bool IsOnApplicationThread => Configuration.Platform == Platform.OSX;
+
     public void Start()
     {
         _running = true;
+        if (IsOnApplicationThread)
+        {
+            _stop.Token.Register(End);
+            ((MacOSPlatform)_application.UIContext.Resolve<IApplicationPlatform>()).RunOnMainThread(() =>
+            {
+                TryOpen();
+                if (Window == null)
+                {
+                    _stop.Cancel();
+                }
+            });
+            return;
+        }
+
         var thread = new Thread(Run) { IsBackground = true, Name = "AdamantiumSplash" };
         if (OperatingSystem.IsWindows())
         {
@@ -102,7 +125,7 @@ internal sealed class SplashScreen : ISplashScreen
         _stop.Cancel();
     }
 
-    private void Run()
+    private void TryOpen()
     {
         try
         {
@@ -114,6 +137,11 @@ internal sealed class SplashScreen : ISplashScreen
             Interlocked.Exchange(ref _handedOver, 1);
             BecomeClosable();
         }
+    }
+
+    private void Run()
+    {
+        TryOpen();
 
         try
         {
@@ -128,13 +156,19 @@ internal sealed class SplashScreen : ISplashScreen
         }
         finally
         {
-            _shown.TrySetResult();
-            _dispatcher?.Detach();
-            (_platform as WaylandPlatform)?.Disconnect();
-            (_platform as WindowsPlatform)?.Disconnect();
-            _running = false;
-            LoopSignal.Request();
+            End();
         }
+    }
+
+    private void End()
+    {
+        _shown.TrySetResult();
+        _dispatcher?.Detach();
+        (_platform as WaylandPlatform)?.Disconnect();
+        (_platform as WindowsPlatform)?.Disconnect();
+        (_platform as MacOSPlatform)?.Disconnect();
+        _running = false;
+        LoopSignal.Request();
     }
 
     private void Open()
@@ -144,6 +178,10 @@ internal sealed class SplashScreen : ISplashScreen
         if (_platform is WaylandPlatform wayland)
         {
             wayland.Dispatcher = _dispatcher;
+        }
+        else if (_platform is MacOSPlatform macOS)
+        {
+            macOS.Dispatcher = _dispatcher;
         }
 
         var window = (SplashWindow)Activator.CreateInstance(_windowType);
@@ -224,10 +262,11 @@ internal sealed class SplashScreen : ISplashScreen
         _dispatcher.InvokeAsync(_stop.Cancel);
     }
 
-    private static IApplicationPlatform CreatePlatform() => Configuration.Platform switch
+    private IApplicationPlatform CreatePlatform() => Configuration.Platform switch
     {
         Platform.Linux => new WaylandPlatform(false),
         Platform.Windows => new WindowsPlatform(false),
+        Platform.OSX => new MacOSPlatform((MacOSPlatform)_application.UIContext.Resolve<IApplicationPlatform>()),
         _ => throw new PlatformNotSupportedException($"No splash window on {Configuration.Platform} yet.")
     };
 }

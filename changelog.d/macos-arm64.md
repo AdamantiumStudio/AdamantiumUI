@@ -6,6 +6,8 @@
 - Windows on macOS: the caption of the theme instead of the system's, minimizing, maximizing, the full screen (⌃⌘F),
   modal windows, `ResizeMode`, the minimum and maximum size, `Topmost`, `WindowOpacity`, `TransparentToInput`,
   `Owner`; `Displays` tells the monitors, so windows open centered and come back where they were closed.
+- The splash window on macOS: drawn throughout the start, its mouse answered between the start's steps - AppKit lives
+  on the application's own thread.
 - `OverlayWindow.CaptionButtonPlacement`: which side of the caption the buttons sit on, in Fluent and Graphite.
 - The application template's theme may be the platform's, which is its default.
 
