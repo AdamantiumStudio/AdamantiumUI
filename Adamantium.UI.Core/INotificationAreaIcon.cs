@@ -10,8 +10,18 @@ public interface INotificationAreaIcon : IDisposable
     /// <summary>Clicked with the left button, or picked from the keyboard.</summary>
     event EventHandler Clicked;
 
-    /// <summary>Its menu asked for - a right click, or the menu key - at a point of the desktop.</summary>
+    /// <summary>Its menu asked for - a right click, or the menu key - at a point of the desktop - where the application
+    /// opens the menu itself.</summary>
     event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
+
+    /// <summary>Its menu, where the desktop shows the menu itself - a Linux panel: read on the application's loop thread
+    /// each time the menu is about to show; null for none. Where the application opens the menu, <see cref="MenuAsked"/>
+    /// is raised instead and this is never read.</summary>
+    Func<IReadOnlyList<NotificationAreaMenuItem>> Menu
+    {
+        get => null;
+        set { }
+    }
 }
 
 /// <summary>Where on the desktop the menu of a <see cref="INotificationAreaIcon"/> was asked for, in physical pixels.

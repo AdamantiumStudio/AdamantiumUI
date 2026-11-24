@@ -78,6 +78,7 @@ public static class LinuxPlatform
         FileDialog.Platform = new PortalFileDialog(owner =>
             (container.Resolve<IApplicationPlatform>() as IPortalParent)?.PortalParentOf(owner) ?? string.Empty);
         FileManager.Platform = new DesktopFileManager();
+        NotificationArea.Platform = new StatusNotifierArea();
         if (OperatingSystem.IsLinux())
         {
             Trash.Platform = new FreedesktopTrash();

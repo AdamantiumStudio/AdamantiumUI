@@ -6,6 +6,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Themes.FluentTheme;
@@ -199,6 +200,69 @@ public class TrayIconTests
         icon.TakeAway();
     }
 
+    // A desktop that shows the menu itself - a Linux panel - reads it from the icon: the rows as they stand when read, a
+    // row picked as a click on it would pick it.
+    [Test]
+    public void ItsMenu_IsReadAsItStands_AndARowPickedAsAClickWould()
+    {
+        var show = new Recording();
+        var docked = new MenuItem { Header = "Along the bottom", IsCheckable = true };
+        var icon = new TrayIcon
+        {
+            ContextMenu = new ContextMenu
+            {
+                Items =
+                {
+                    new MenuItem { Header = "Show", Command = show },
+                    docked,
+                    new MenuItem { Header = "Hidden", Visibility = Visibility.Collapsed },
+                    new MenuItem { Header = "Off", IsEnabled = false },
+                    new Separator(),
+                    new MenuItem { Header = "More", Items = { new MenuItem { Header = "Inner" } } },
+                },
+            },
+        };
+        icon.Place();
+
+        var rows = _area.Shown.Single().Menu();
+        var before = docked.IsChecked;
+        rows[0].Picked();
+        rows[1].Picked();
+        var afterPick = _area.Shown.Single().Menu();
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rows.Select(row => row.IsSeparator ? "-" : row.Text),
+                Is.EqualTo(new[] { "Show", "Along the bottom", "Off", "-", "More" }), "the collapsed row is left out");
+            Assert.That(rows[1].IsCheckable, Is.True);
+            Assert.That(rows[2].IsEnabled, Is.False);
+            Assert.That(rows[4].Items.Select(row => row.Text), Is.EqualTo(new[] { "Inner" }));
+            Assert.That(show.Ran, Has.Count.EqualTo(1), "Show ran its command");
+            Assert.That(docked.IsChecked, Is.Not.EqualTo(before), "the checkable row turned");
+            Assert.That(afterPick[1].IsChecked, Is.EqualTo(docked.IsChecked), "read again, as it stands now");
+        });
+    }
+
+    // No ContextMenu, no menu offered - a panel shows no empty one on a right click; one given later is offered.
+    [Test]
+    public void WithoutAContextMenu_NoMenuIsOffered_UntilOneIsGiven()
+    {
+        var icon = new TrayIcon();
+        icon.Place();
+        var without = _area.Shown.Single().Menu;
+
+        icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Show" } } };
+        var given = _area.Shown.Single().Menu;
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(without, Is.Null);
+            Assert.That(given().Select(row => row.Text), Is.EqualTo(new[] { "Show" }));
+        });
+    }
+
     private sealed class Area : INotificationAreaPlatform
     {
         public List<Icon> Shown { get; } = [];
@@ -218,6 +282,8 @@ public class TrayIconTests
         public event EventHandler Clicked;
 
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
+
+        public Func<IReadOnlyList<NotificationAreaMenuItem>> Menu { get; set; }
 
         public void Click() => Clicked?.Invoke(this, EventArgs.Empty);
 

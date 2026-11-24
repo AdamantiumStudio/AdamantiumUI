@@ -1,4 +1,5 @@
 using Adamantium.Core.Commands;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -98,6 +99,7 @@ public sealed class TrayIcon : FundamentalUIComponent
 
             _shown.Clicked += OnClicked;
             _shown.MenuAsked += OnMenuAsked;
+            _shown.Menu = ContextMenu != null ? ReadMenu : null;
         }
         else if (!wanted && _shown != null)
         {
@@ -117,6 +119,43 @@ public sealed class TrayIcon : FundamentalUIComponent
         {
             command.Execute(parameter);
         }
+    }
+
+    // For a desktop that shows the menu itself - a Linux panel: the rows of ContextMenu as they stand now, each picked as
+    // a click on it would pick it. Read on the loop thread, each time the menu is about to show.
+    private IReadOnlyList<NotificationAreaMenuItem> ReadMenu() => ContextMenu is { } menu ? RowsOf(menu) : [];
+
+    private static List<NotificationAreaMenuItem> RowsOf(ItemsControl owner)
+    {
+        List<NotificationAreaMenuItem> rows = [];
+        foreach (var item in owner.Items)
+        {
+            switch (item)
+            {
+                case Separator or ISeparatorItem { IsSeparator: true }:
+                    rows.Add(NotificationAreaMenuItem.Separator);
+                    break;
+                case MenuItem { Visibility: Visibility.Visible } row:
+                    rows.Add(new NotificationAreaMenuItem
+                    {
+                        Text = row.Header as string ?? row.GetAutomationPeer()?.Name,
+                        IsEnabled = row.IsEnabled,
+                        IsCheckable = row.IsCheckable,
+                        IsChecked = row.IsChecked,
+                        Items = row.HasItems ? RowsOf(row) : [],
+                        Picked = () => row.Invoke(),
+                    });
+                    break;
+                case MenuItem:
+                    break;
+                default:
+                    // A row of data, which the menu makes a MenuItem of only as it opens: its text, nothing to pick.
+                    rows.Add(new NotificationAreaMenuItem { Text = item?.ToString(), IsEnabled = false });
+                    break;
+            }
+        }
+
+        return rows;
     }
 
     private void OnMenuAsked(object sender, NotificationAreaMenuEventArgs e)
@@ -188,6 +227,12 @@ public sealed class TrayIcon : FundamentalUIComponent
         if (e.NewValue is ContextMenu menu)
         {
             icon.AddLogicalChild(menu);
+        }
+
+        // An icon without a menu offers none: a panel shows no empty one on a right click.
+        if (icon._shown != null)
+        {
+            icon._shown.Menu = e.NewValue != null ? icon.ReadMenu : null;
         }
     }
 }
