@@ -333,7 +333,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
                 if (NewPage is { ClosedItself: true })
                 {
                     closedItself = true;
-                    Bridge?.OnPageClosed();
+                    Bridge?.OnPageClosed(new WebPageClosedEventArgs(null, null));
                     return;
                 }
 
