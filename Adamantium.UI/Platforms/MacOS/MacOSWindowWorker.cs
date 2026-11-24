@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Internals;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -19,6 +20,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private const int DefaultWidth = 800;
     private const int DefaultHeight = 600;
     private const int WheelNotch = 120;
+    private const int MinWidth = 320;
+    private const int MinHeight = 120;
 
     private readonly MacOSPlatform _platform;
     private IWindow _window;
@@ -26,9 +29,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr _view;
     private IntPtr _delegate;
     private IntPtr _layer;
+    private IntPtr _owner;
     private double _scale = 1;
     private NSEventModifierFlags _flags;
     private InputModifiers _buttons;
+    private IntPtr _pressEvent;
     private bool _closed;
 
     public MacOSWindowWorker(IUIContext context)
@@ -66,9 +71,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var top = double.IsNaN(window.Top) ? (visible.Size.Height - height) / 2 : window.Top;
         var content = new CGRect(left, MainScreenHeight - top - height, width, height);
 
-        _nsWindow = NSWindow.Create(content, NSWindowStyleMask.Titled | NSWindowStyleMask.Closable |
-                                             NSWindowStyleMask.Miniaturizable | NSWindowStyleMask.Resizable);
+        _nsWindow = NSWindow.Create(content, StyleFor(window.ResizeMode));
         NSWindow.SetTitle(_nsWindow, window.Title);
+        if (window.UseCustomChrome)
+            NSWindow.HideTitleBar(_nsWindow);
+        NSWindow.SetContentMinSize(_nsWindow, new CGSize(MinExtent(window.MinWidth, MinWidth),
+            MinExtent(window.MinHeight, MinHeight)));
+        NSWindow.SetContentMaxSize(_nsWindow, new CGSize(MaxExtent(window.MaxWidth), MaxExtent(window.MaxHeight)));
+        ApplyOverlayTraits(window.Topmost, window.WindowOpacity, window.TransparentToInput);
 
         _view = NSView.Create(MacOSContentView.Class, new CGRect(0, 0, width, height));
         ObjCManagedObject.Attach(_view, this);
@@ -90,10 +100,23 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         window.DisplayRefreshRate = RefreshRate();
         window.UpdateClientSizeFromPlatform(width, height);
 
+        if (window.Owner != null)
+            ParentTo(window.Owner.Handle);
+
         Input.DragDrop.RegisterNativeDropTarget(window);
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
         window.OnSourceInitialized();
+        window.StateChanged += WindowOnStateChanged;
+        window.ResizeModeChanged += WindowOnResizeModeChanged;
+    }
+
+    public bool AppliesWindowOpacity => true;
+
+    public void SetOwner(IWindow owner)
+    {
+        var handle = owner?.Handle ?? IntPtr.Zero;
+        OnMainThread(() => ParentTo(handle));
     }
 
     public void SetTitle(string title) => OnMainThread(() => NSWindow.SetTitle(_nsWindow, title));
@@ -118,6 +141,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void UpdateOverlayTraits()
     {
+        var topmost = _window.Topmost;
+        var opacity = _window.WindowOpacity;
+        var transparent = _window.TransparentToInput;
+        OnMainThread(() => ApplyOverlayTraits(topmost, opacity, transparent));
     }
 
     public void ShowWindow(WindowState windowState) => OnMainThread(() =>
@@ -129,13 +156,18 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
                 NSWindow.Miniaturize(_nsWindow);
                 break;
             case WindowState.Maximized:
+                if (NSWindow.IsMiniaturized(_nsWindow))
+                    NSWindow.Deminiaturize(_nsWindow);
                 NSWindow.MakeKeyAndOrderFront(_nsWindow);
                 if (!NSWindow.IsZoomed(_nsWindow))
                     NSWindow.Zoom(_nsWindow);
                 break;
             default:
+                // From the Dock the window comes back as it went, zoomed or not, as a click on its Dock tile brings it.
                 if (NSWindow.IsMiniaturized(_nsWindow))
                     NSWindow.Deminiaturize(_nsWindow);
+                else if (NSWindow.IsZoomed(_nsWindow))
+                    NSWindow.Zoom(_nsWindow);
                 NSWindow.MakeKeyAndOrderFront(_nsWindow);
                 break;
         }
@@ -177,9 +209,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
     }
 
-    public void BeginMoveDrag()
+    public void BeginMoveDrag() => OnMainThread(() =>
     {
-    }
+        if (_pressEvent != IntPtr.Zero)
+            NSWindow.PerformWindowDrag(_nsWindow, _pressEvent);
+    });
 
     internal void OnPointer(IntPtr nsEvent, RawPointerEventType type, MouseButtons button)
     {
@@ -191,6 +225,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             _buttons |= ButtonModifier(button);
         else if (type == RawPointerEventType.Up)
             _buttons &= ~ButtonModifier(button);
+
+        if (type == RawPointerEventType.Down && button == MouseButtons.Left)
+        {
+            NSObject.Release(_pressEvent);
+            _pressEvent = NSObject.Retain(nsEvent);
+        }
 
         var args = new RawPointerEventArgs(type, window, PositionOf(nsEvent), Modifiers(nsEvent), TimeOf(nsEvent))
         {
@@ -296,7 +336,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             if (_closed)
                 return;
 
-            _window.State = state;
+            if (_window.State != WindowState.Minimized)
+                SetStateFromPlatform(state);
             _window.UpdateClientSizeFromPlatform(bounds.Size.Width, bounds.Size.Height);
         });
     }
@@ -347,12 +388,78 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnMiniaturized(bool miniaturized)
     {
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, miniaturized);
+        var restored = NSWindow.IsZoomed(_nsWindow) ? WindowState.Maximized : WindowState.Normal;
         MacOSPlatform.DispatchInput(() =>
         {
             if (!_closed)
-                _window.State = miniaturized ? WindowState.Minimized : WindowState.Normal;
+                SetStateFromPlatform(miniaturized ? WindowState.Minimized : restored);
         });
     }
+
+    // What AppKit did reaches the window without being sent back to AppKit as a request.
+    private void SetStateFromPlatform(WindowState state)
+    {
+        if (_window.State == state)
+            return;
+
+        _window.StateChanged -= WindowOnStateChanged;
+        _window.State = state;
+        _window.StateChanged += WindowOnStateChanged;
+    }
+
+    private void WindowOnStateChanged(object sender, StateChangedEventArgs e) => ShowWindow(e.State);
+
+    private void WindowOnResizeModeChanged(object sender, EventArgs e)
+    {
+        var resizeMode = _window.ResizeMode;
+        var customChrome = _window.UseCustomChrome;
+        OnMainThread(() =>
+        {
+            NSWindow.SetStyleMask(_nsWindow, StyleFor(resizeMode, customChrome));
+            if (customChrome)
+                NSWindow.HideTitleBar(_nsWindow);
+        });
+    }
+
+    private NSWindowStyleMask StyleFor(WindowResizeMode resizeMode) => StyleFor(resizeMode, _window.UseCustomChrome);
+
+    private static NSWindowStyleMask StyleFor(WindowResizeMode resizeMode, bool customChrome)
+    {
+        var style = NSWindowStyleMask.Titled | NSWindowStyleMask.Closable;
+        if (resizeMode != WindowResizeMode.NoResize)
+            style |= NSWindowStyleMask.Miniaturizable;
+        if (resizeMode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip)
+            style |= NSWindowStyleMask.Resizable;
+        if (customChrome)
+            style |= NSWindowStyleMask.FullSizeContentView;
+
+        return style;
+    }
+
+    private void ApplyOverlayTraits(bool topmost, double opacity, bool transparentToInput)
+    {
+        NSWindow.SetLevel(_nsWindow, topmost ? NSWindow.FloatingLevel : NSWindow.NormalLevel);
+        NSWindow.SetAlphaValue(_nsWindow, double.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1));
+        NSWindow.SetIgnoresMouseEvents(_nsWindow, transparentToInput);
+    }
+
+    private void ParentTo(IntPtr owner)
+    {
+        if (_owner == owner)
+            return;
+
+        if (_owner != IntPtr.Zero)
+            NSWindow.RemoveChildWindow(_owner, _nsWindow);
+        _owner = owner;
+        if (_owner != IntPtr.Zero)
+            NSWindow.AddChildWindow(_owner, _nsWindow);
+    }
+
+    private static double MinExtent(double extent, double fallback) =>
+        !double.IsNaN(extent) && extent > 0 ? extent : fallback;
+
+    private static double MaxExtent(double extent) =>
+        !double.IsNaN(extent) && !double.IsInfinity(extent) && extent > 0 ? extent : float.MaxValue;
 
     private void OnWindowClosed(object sender, EventArgs e)
     {
@@ -360,17 +467,21 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
 
         _closed = true;
+        _window.StateChanged -= WindowOnStateChanged;
+        _window.ResizeModeChanged -= WindowOnResizeModeChanged;
         Input.DragDrop.UnregisterNativeDropTarget(_window);
         UIContext.UIApplication.RemoveWindow(_window);
         _window.SetHandle(IntPtr.Zero);
         OnMainThread(() =>
         {
             NSWindow.SetDelegate(_nsWindow, IntPtr.Zero);
+            ParentTo(IntPtr.Zero);
             NSWindow.Close(_nsWindow);
             ObjCManagedObject.Release(_view);
             ObjCManagedObject.Release(_delegate);
             NSObject.Release(_delegate);
             NSObject.Release(_view);
+            NSObject.Release(_pressEvent);
             NSObject.Release(_nsWindow);
         });
     }

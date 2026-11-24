@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Adamantium.Imaging;
 using Adamantium.Imaging.Ico;
+using Adamantium.UI.Platforms;
 using Adamantium.UI.Platforms.Linux;
 using NUnit.Framework;
 

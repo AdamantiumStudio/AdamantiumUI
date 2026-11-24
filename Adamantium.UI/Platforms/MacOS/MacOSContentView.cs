@@ -17,6 +17,7 @@ internal static unsafe class MacOSContentView
     internal static readonly IntPtr Class = new ObjCClassBuilder("AdamantiumContentView", "NSView")
         .AddMethod("acceptsFirstResponder", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&Yes, "B@:")
         .AddMethod("acceptsFirstMouse:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte>)&YesFor, "B@:@")
+        .AddMethod("mouseDownCanMoveWindow", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&No, "B@:")
         .AddMethod("mouseDown:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&LeftDown, Event)
         .AddMethod("mouseUp:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&LeftUp, Event)
         .AddMethod("rightMouseDown:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&RightDown, Event)
@@ -39,6 +40,9 @@ internal static unsafe class MacOSContentView
 
     [UnmanagedCallersOnly]
     private static byte YesFor(IntPtr self, IntPtr selector, IntPtr nsEvent) => 1;
+
+    [UnmanagedCallersOnly]
+    private static byte No(IntPtr self, IntPtr selector) => 0;
 
     [UnmanagedCallersOnly]
     private static void LeftDown(IntPtr self, IntPtr selector, IntPtr nsEvent) =>

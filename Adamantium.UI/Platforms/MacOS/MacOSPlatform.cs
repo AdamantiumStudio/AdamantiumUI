@@ -2,6 +2,7 @@
 using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.MacOS.AppKit;
+using Adamantium.MacOS.CoreGraphics;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core;
@@ -22,6 +23,7 @@ public class MacOSPlatform : IApplicationPlatform
         _threadId = Environment.CurrentManagedThreadId;
         var pool = ObjCRuntime.PushAutoreleasePool();
         NSApplication.Launch();
+        ShowApplicationIcon();
         ObjCRuntime.PopAutoreleasePool(pool);
         Cursor.Platform = new MacOSCursors();
     }
@@ -85,6 +87,19 @@ public class MacOSPlatform : IApplicationPlatform
             action();
         else
             Threading.Dispatcher.CurrentDispatcher.Invoke(action);
+    }
+
+    private static void ShowApplicationIcon()
+    {
+        if (ApplicationIcon.Load() is not { Pictures.Count: > 0 } icon)
+            return;
+
+        var picture = icon.Pictures[0];
+        var cgImage = CGImage.FromPremultipliedBgra(picture.PremultipliedBgra, picture.Size, picture.Size);
+        var image = NSImage.FromCGImage(cgImage, new CGSize(picture.Size, picture.Size));
+        NSApplication.SetIconImage(image);
+        NSObject.Release(image);
+        CoreGraphicsInterop.Release(cgImage);
     }
 
     public static void Initialize(IContainerRegistry resolver)
