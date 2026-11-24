@@ -813,6 +813,28 @@ public class PropertyGridTests
         });
     }
 
+    // A view-model handing out a new command each time it is asked: the grid asks once more at the end of a pass, and
+    // that is no reason to build again.
+    [Test]
+    public void AnItemButtonNewOnEveryRead_Rests()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Items", "Remove");
+        var grid = Built(Section(shelves.Items[0], list));
+        var before = PropertyGrid.Rebuilds;
+
+        grid.DataContext = new RemovingAnew();
+        var found = Settled(grid) - before;
+        var resting = Settled(grid) - before - found;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(found, Is.EqualTo(1), "one build more when the command is found");
+            Assert.That(resting, Is.Zero);
+            Assert.That(RowsWhoseHeaderIs(grid, "A").Definition.ShowActionButton, Is.True);
+        });
+    }
+
     // A list in a list, the inner one's button read off each outer item: the outer items each have one - the value moves
     // from one command to another, and nothing is built again.
     [Test]
@@ -879,11 +901,201 @@ public class PropertyGridTests
         });
     }
 
+    // ...and later, an item other than the one the line was last pointed at changes its answer: its line comes or goes
+    // all the same. What no line reads builds nothing.
+    [Test]
+    public void ALineShownOnlyForSomeItems_FollowsEachItemLater()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Shown = false;
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        shelves.Shelved[1].Shown = true;
+        Settled(grid);
+        var allShown = RowsOf(grid, name).Count;
+
+        shelves.Shelved[0].Shown = false;
+        Settled(grid);
+        var firstHidden = RowsOf(grid, name).Count;
+
+        var before = PropertyGrid.Rebuilds;
+        shelves.Shelved[0].Remove = new Doing();
+        var unread = Settled(grid) - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(allShown, Is.EqualTo(3), "the middle one, shown again");
+            Assert.That(firstHidden, Is.EqualTo(2), "the first, hidden");
+            Assert.That(unread, Is.Zero, "a property no line reads");
+        });
+    }
+
+    // An item renamed after the lines are built: its heading says the new name. Several items changed at once build
+    // the grid once, on the loop - not inside the write that changed them.
+    [Test]
+    public void AnItemRenamedLater_ShowsItsNewName_BuiltOnceOnTheLoop()
+    {
+        var shelves = new Shelves();
+        var grid = Built(Section(shelves, Listed("Shelved", "Remove")));
+        Settled(grid);
+        var before = PropertyGrid.Rebuilds;
+
+        shelves.Shelved[0].Name = "Top";
+        shelves.Shelved[2].Name = "Bottom";
+        var inTheWrite = PropertyGrid.Rebuilds - before;
+        var onTheLoop = Settled(grid) - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inTheWrite, Is.Zero, "nothing built inside the writes");
+            Assert.That(onTheLoop, Is.EqualTo(1), "one build for both");
+            Assert.That(RowsWhoseHeaderIs(grid, "Top"), Is.Not.Null);
+            Assert.That(RowsWhoseHeaderIs(grid, "Bottom"), Is.Not.Null);
+        });
+    }
+
+    // Built again, an item's lines are pointed at the same targets: refreshed, not bound anew - a spinner held on one of
+    // them stays one move.
+    [Test]
+    public void AnItemsLinesBuiltAgain_KeepTheirTargets()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        var before = RowsOf(grid, name).Select(row => row.Targets).ToList();
+
+        grid.Rebuild();
+        var after = RowsOf(grid, name).Select(row => row.Targets).ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(after, Has.Count.EqualTo(3));
+            Assert.That(Enumerable.Range(0, after.Count).All(index => ReferenceEquals(after[index], before[index])), Is.True);
+        });
+    }
+
+    // A line's words read off each item - its description - are each item's own, not the last one's.
+    [Test]
+    public void ALinesWordsReadOffEachItem_AreEachItemsOwn()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.Description), new Self { Path = "Inspected.Name" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Is.EqualTo(new[] { "Shelf 0", "Shelf 1", "Shelf 2" }));
+    }
+
+    // The last item - the one its lines stay pointed at - changing its answer builds the grid on the loop as the others
+    // do, not inside the write.
+    [Test]
+    public void TheLastItemChangingItsAnswer_IsBuiltOnTheLoop()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var before = PropertyGrid.Rebuilds;
+
+        shelves.Shelved[2].Shown = false;
+        var inTheWrite = PropertyGrid.Rebuilds - before;
+        var onTheLoop = Settled(grid) - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inTheWrite, Is.Zero);
+            Assert.That(onTheLoop, Is.EqualTo(1));
+            Assert.That(RowsOf(grid, name), Has.Count.EqualTo(2));
+        });
+    }
+
+    // ...and the list folded since: its lines are still pointed at that item, and what it changes is still built on the
+    // loop, not inside the write.
+    [Test]
+    public void TheLastItemChangingItsAnswer_IsBuiltOnTheLoop_WithTheListFolded()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        list.IsExpanded = false;
+        Settled(grid);
+        var before = PropertyGrid.Rebuilds;
+
+        shelves.Shelved[2].Shown = false;
+
+        Assert.That(PropertyGrid.Rebuilds - before, Is.Zero);
+    }
+
+    // An item's line whose choices the item hands out new on every read: the grid's own reading at the end of a pass is
+    // no reason to build it again, and it comes to rest.
+    [Test]
+    public void AnItemsLineReadNewOnEveryRead_Rests()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var kind = new ChoiceProperty { Header = "Kind", Binding = new Binding("Name") };
+        kind.SetBinding(ChoiceProperty.ItemsSourceProperty, new Self { Path = "Inspected.Options" });
+        list.Children.Add(kind);
+        var grid = Built(Section(shelves, list));
+        var before = PropertyGrid.Rebuilds;
+
+        var settling = Settled(grid) - before;
+        var resting = Settled(grid) - before - settling;
+
+        Assert.That(resting, Is.Zero);
+    }
+
+    // Two items equal to each other are still two to hear: the first of them changing its answer is heard too.
+    [Test]
+    public void ALineShownOnlyForSomeItems_HearsEachOfTwoEqualItems()
+    {
+        var twins = new Twins();
+        var list = Listed("Items", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        var grid = Built(Section(twins, list));
+        Settled(grid);
+
+        twins.Items[0].Shown = false;
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name), Has.Count.EqualTo(1));
+    }
+
+    // An inner list's button read off its outer item: an item given one later shows it on its items.
+    [Test]
+    public void AnInnerListsButtonReadOffEachItem_FollowsEachItemLater()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Remove = null;
+        var grid = Built(Section(shelves, Nested()));
+        Settled(grid);
+
+        var given = new Doing();
+        shelves.Shelved[1].Remove = given;
+        Settled(grid);
+
+        Assert.That(ButtonsOf(grid, "A"), Is.EqualTo(new[] { shelves.Shelved[0].Remove, given, shelves.Shelved[2].Remove }));
+    }
+
     // Ten passes of bindings and layout; the rebuild count after them.
     private static long Settled(PropertyGrid grid)
     {
         for (var pass = 0; pass < 10; pass++)
         {
+            LoopSignal.Drain();
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
             grid.Measure(new Size<double>(400, 400), force: true);
             grid.Arrange(new Rect(0, 0, 400, 400));
@@ -925,15 +1137,75 @@ public class PropertyGridTests
         public ICommand Remove { get; } = new Doing();
     }
 
-    public sealed class Shelf
+    public sealed class RemovingAnew
     {
+        public ICommand Remove => new Doing();
+    }
+
+    // An item equal to any other of its kind, as a record of equal values is.
+    public sealed class Twin : INotifyPropertyChanged
+    {
+        private bool _shown = true;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
         public string Name { get; set; }
 
-        public ICommand Remove { get; set; } = new Doing();
+        public bool Shown
+        {
+            get => _shown;
+            set
+            {
+                _shown = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Shown)));
+            }
+        }
 
-        public bool Shown { get; set; } = true;
+        public override bool Equals(object other) => other is Twin;
+
+        public override int GetHashCode() => 1;
+    }
+
+    public sealed class Twins
+    {
+        public TrackingCollection<Twin> Items { get; } = new() { new Twin { Name = "A" }, new Twin { Name = "B" } };
+    }
+
+    public sealed class Shelf : INotifyPropertyChanged
+    {
+        private string _name;
+        private ICommand _remove = new Doing();
+        private bool _shown = true;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public string Name
+        {
+            get => _name;
+            set => Set(ref _name, value);
+        }
+
+        public ICommand Remove
+        {
+            get => _remove;
+            set => Set(ref _remove, value);
+        }
+
+        public bool Shown
+        {
+            get => _shown;
+            set => Set(ref _shown, value);
+        }
 
         public TrackingCollection<Shelf> Items { get; } = new();
+
+        public string[] Options => new[] { "Wide", "Narrow" };
+
+        private void Set<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string name = null)
+        {
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
     }
 
     public sealed class Shelves

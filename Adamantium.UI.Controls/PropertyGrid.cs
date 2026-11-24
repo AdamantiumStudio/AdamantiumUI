@@ -210,6 +210,22 @@ public class PropertyGrid : Control
     private readonly Dictionary<PropertySection, BindingExpressionBase> _foldingHeldBySearch = new();
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
+
+    // A list's items, with what the lines shared between them read off each (IsVisible="{Self Inspected.IsSphere}" reads
+    // IsSphere). A shared line is pointed at one item at a time, so the others reach it only through here. Per list,
+    // what its lines read.
+    private readonly Dictionary<object, FollowedItem> _itemReads = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<ItemsProperty, HashSet<String>> _listReads = new();
+
+    private readonly Action _rebuildForItems;
+    private int _itemsChanged;
+
+    // The lines this build ran one more pass for, for what its own reading brought - loop-thread only.
+    private readonly HashSet<PropertyDefinition> _answeredReading = new();
+
+    // Each listed item's targets, this pass and the one before.
+    private Dictionary<object, object[]> _itemTargets = new(ReferenceEqualityComparer.Instance);
+    private Dictionary<object, object[]> _lastItemTargets = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<PropertySection> _templated = new(ReferenceEqualityComparer.Instance);
     private readonly List<PropertySection> _dropped = [];
@@ -242,6 +258,7 @@ public class PropertyGrid : Control
     {
         Sections.CollectionChanged += OnSectionsChanged;
         _sourceChanges = new CrossThreadChanges<NotifyCollectionChangedEventArgs>(_ => Rebuild());
+        _rebuildForItems = RebuildForItems;
     }
 
     /// <summary>The sections, in display order. [Content], so an inspector is written as the list of sections it is.</summary>
@@ -435,6 +452,7 @@ public class PropertyGrid : Control
         }
 
         _rebuilding = true;
+        _answeredReading.Clear();
         try
         {
             do
@@ -458,7 +476,37 @@ public class PropertyGrid : Control
         Watch();
         UnfollowItems();
 
-        if (_host == null) return;
+        // This pass reads every item as it is now: a build asked of the loop for an earlier change is not needed.
+        Volatile.Write(ref _itemsChanged, 0);
+
+        if (_host == null)
+        {
+            // No rows, so no items they stand for.
+            _itemTargets.Clear();
+            _lastItemTargets.Clear();
+            return;
+        }
+
+        // Every binding the pass reads again - a line pointed at its item, a line attached to its row, the last refresh -
+        // is the grid's own reading, not news from outside.
+        foreach (var definition in _watched) definition.RereadingGrids++;
+        try
+        {
+            BuildRows();
+        }
+        finally
+        {
+            foreach (var definition in _watched) definition.RereadingGrids--;
+
+            // The items of the pass before were wanted only to give theirs back: the ones gone since are let go of.
+            _lastItemTargets.Clear();
+        }
+    }
+
+    private void BuildRows()
+    {
+        (_lastItemTargets, _itemTargets) = (_itemTargets, _lastItemTargets);
+        _itemTargets.Clear();
 
         _host.Children.Clear();
         _rows.Clear();
@@ -559,6 +607,12 @@ public class PropertyGrid : Control
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
+
+        // What it heard is let go of with it; a build it asked the loop for is not wanted any more.
+        UnfollowItems();
+        Volatile.Write(ref _itemsChanged, 0);
+        _itemTargets.Clear();
+        _lastItemTargets.Clear();
         _dropped.AddRange(_built.Values);
         _dropped.AddRange(_generated);
         _built.Clear();
@@ -1165,12 +1219,14 @@ public class PropertyGrid : Control
         if (targets.Count != 1 || ValueOf(targets[0], items) is not IEnumerable source) return;
 
         FollowItems(source);
+        foreach (var child in items.Children) Share(child);
 
         var index = 0;
         foreach (var item in source)
         {
             if (item == null) continue;
 
+            FollowItem(item, items);
             index++;
 
             var label = new ItemHeaderLine
@@ -1182,10 +1238,30 @@ public class PropertyGrid : Control
                 ActionTip = items.ItemActionTip
             };
 
-            AddRow(host, label, new[] { item }, depth + 1, wanted, ref at);
+            var target = TargetsOf(item);
+            AddRow(host, label, target, depth + 1, wanted, ref at);
 
-            foreach (var child in items.Children) AddRow(host, child, new[] { item }, depth + 2, wanted, ref at);
+            foreach (var child in items.Children) AddRow(host, child, target, depth + 2, wanted, ref at);
         }
+    }
+
+    // Before any of them is pointed at an item: what the item changes from then on is built on the loop.
+    // Every pass, down to the last: a line added under one shared since is shared too.
+    private static void Share(PropertyDefinition line)
+    {
+        line.IsSharedByItems = true;
+        foreach (var child in line.Children) Share(child);
+    }
+
+    // The same targets for an item pass after pass: a row given them again is refreshed, not bound anew - a spinner held
+    // on an item's line stays one move while the grid is built again under it.
+    private object[] TargetsOf(object item)
+    {
+        if (_itemTargets.TryGetValue(item, out var target)) return target;
+
+        if (!_lastItemTargets.TryGetValue(item, out target)) target = [item];
+        _itemTargets[item] = target;
+        return target;
     }
 
     // The collections an ItemsProperty is showing, for as long as it is showing them. A socket added or dropped is a
@@ -1206,6 +1282,109 @@ public class PropertyGrid : Control
         }
 
         _followed.Clear();
+
+        foreach (var followed in _itemReads.Values)
+        {
+            Follow(followed, null);
+        }
+
+        _itemReads.Clear();
+        _listReads.Clear();
+    }
+
+    // An item heard for what its list's lines read off it, while they stand.
+    private void FollowItem(object item, ItemsProperty items)
+    {
+        if (item is not System.ComponentModel.INotifyPropertyChanged live) return;
+
+        var reads = ReadOffEachItem(items);
+        if (reads.Count == 0) return;
+
+        if (_itemReads.TryGetValue(item, out var known))
+        {
+            // The same item in two lists: what both read. A new set, never one changed in place - an item changed by a
+            // game reads it on its own thread.
+            if (!known.Reads.IsSupersetOf(reads)) known.Reads = new HashSet<String>(known.Reads.Concat(reads));
+            return;
+        }
+
+        // Heard as this entry, whatever the item gives as the sender.
+        var followed = new FollowedItem(reads);
+        _itemReads[item] = followed;
+        Follow(followed, live, (_, e) => OnFollowedItemChanged(followed, e));
+    }
+
+    private HashSet<String> ReadOffEachItem(ItemsProperty items)
+    {
+        if (_listReads.TryGetValue(items, out var reads)) return reads;
+
+        // Its items' names too: a socket renamed is its heading renamed.
+        reads = new HashSet<String>();
+        AddFirstStep(items.ItemHeader, reads);
+        foreach (var child in items.Children) CollectReads(child, reads);
+        _listReads[items] = reads;
+        return reads;
+    }
+
+    // What a line and those under it read off the item they are pointed at - a list inside stops there: its own lines
+    // are pointed at its items. The item itself, read whole, is heard no more than one alone in a section is.
+    private static void CollectReads(PropertyDefinition definition, HashSet<String> reads)
+    {
+        // Only Self bindings: the line's other bindings read the panel's view-model.
+        foreach (var binding in BindingEngine.GetBindings(definition))
+        {
+            if (binding.BindingBase is Self own) AddFirstStep(own, reads);
+        }
+
+        // A list inside reads its items off this one: another collection put in their place is another list.
+        if (definition is ItemsProperty)
+        {
+            AddFirstStep(definition.Binding, reads);
+            return;
+        }
+
+        foreach (var child in definition.Children) CollectReads(child, reads);
+    }
+
+    // The property a path starts with - Pins of Pins[0].Name - the one the item says changed. A Self binding's path is
+    // read off the line, so it counts from the item it is pointed at.
+    private static void AddFirstStep(BindingBase binding, HashSet<String> reads)
+    {
+        const String inspected = nameof(PropertyDefinition.Inspected) + ".";
+
+        // A binding with a source of its own reads that, not the item.
+        var path = binding switch
+        {
+            Binding { Source: null, ElementName: null } plain => plain.Path?.Path,
+            Self { Path: { } own } when own.StartsWith(inspected, StringComparison.Ordinal) => own.Substring(inspected.Length),
+            _ => null
+        };
+
+        if (String.IsNullOrEmpty(path)) return;
+
+        var end = path.IndexOfAny(['.', '[', '(']);
+        if (end != 0) reads.Add(end < 0 ? path : path.Substring(0, end));
+    }
+
+    // Built again on the loop, once for however many items changed before it: never in the middle of the write that
+    // changed one - a value typed into one of the item's own lines - and never on the thread of an item changed by a game.
+    private void OnFollowedItemChanged(FollowedItem followed, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (!String.IsNullOrEmpty(e.PropertyName) && !followed.Reads.Contains(e.PropertyName)) return;
+
+        RebuildForItemsOnTheLoop();
+    }
+
+    private void RebuildForItemsOnTheLoop()
+    {
+        if (Interlocked.Exchange(ref _itemsChanged, 1) == 0) LoopSignal.Post(_rebuildForItems);
+    }
+
+    private void RebuildForItems()
+    {
+        // A change heard on another thread as the grid was released: nothing to build, nothing to hear again. One only
+        // out of the tree for a moment - a docked pane moving - may come back, and is built as ever.
+        if (Interlocked.Exchange(ref _itemsChanged, 0) == 1 && ReleasedInBatch == 0) Rebuild();
     }
 
     private void OnFollowedChanged(object sender, NotifyCollectionChangedEventArgs e) => Rebuild();
@@ -1249,12 +1428,42 @@ public class PropertyGrid : Control
         foreach (var child in definition.Children) Watch(child);
     }
 
+    // Which line the grid is pointing means something on the loop only: from another thread, built there in any case.
     private void OnDefinitionLayoutChanged(object sender, EventArgs e)
     {
-        if (sender != _pointing) Rebuild();
+        var line = (PropertyDefinition)sender;
+        if (OffTheLoop()) RebuildForItemsOnTheLoop();
+        else if (line == _pointing) return;
+        else if (line.IsSharedByItems) RebuildSharedLine(line);
+        else Rebuild();
     }
 
-    private void OnDefinitionWordsChanged(object sender, EventArgs e) => Refresh(definition: (PropertyDefinition)sender);
+    // Words a line says as it is pointed at its item are that item's: the rows already built for the items before it
+    // keep their own. A shared line's words changed later are one item's, so its rows are built again, each for its own.
+    private void OnDefinitionWordsChanged(object sender, EventArgs e)
+    {
+        var line = (PropertyDefinition)sender;
+        if (OffTheLoop()) RebuildForItemsOnTheLoop();
+        else if (line == _pointing) return;
+        else if (line.IsSharedByItems) RebuildSharedLine(line);
+        else Refresh(definition: line);
+    }
+
+    // Raised on a thread of its own - an item a game changes, the line bound to it: built on the loop, never there.
+    private static bool OffTheLoop() => LoopSignal.IsClaimed && !LoopSignal.IsLoopThread;
+
+    // On the loop. A change this grid's own building brought - a binding found late - runs the pass once more, at once,
+    // once for each line: the same line asking again is a value handed out new on every read, which would never end.
+    private void RebuildSharedLine(PropertyDefinition line)
+    {
+        if (_rebuilding)
+        {
+            if (_answeredReading.Add(line)) _rebuildAgain = true;
+            return;
+        }
+
+        RebuildForItemsOnTheLoop();
+    }
 
     // A file chosen through the line's own button is written exactly as a typed path is: the same before/after report,
     // so an edit made by pointing at a file can be taken back like any other.

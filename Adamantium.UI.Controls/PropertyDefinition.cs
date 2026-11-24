@@ -169,6 +169,27 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         internal set => SetValue(InspectedProperty, value);
     }
 
+    /// <summary>True while a grid itself reads this line's bindings again: what comes of that is a second reading of the
+    /// same answer, not news from outside. Counted: two grids may show the same line.</summary>
+    internal bool IsRereadByGrid => RereadingGrids > 0;
+
+    internal int RereadingGrids { get; set; }
+
+    /// <summary>A line under a list: one for all its items, pointed at each in turn and left pointed at the last - from
+    /// then on, what an item changes reaches it, maybe on a game's thread. Taken out of its list, it is not.</summary>
+    internal bool IsSharedByItems { get; set; }
+
+    // A list inside keeps its own lines: they are still its items'.
+    private void Unshare()
+    {
+        if (!IsSharedByItems) return;
+
+        IsSharedByItems = false;
+        if (this is ItemsProperty) return;
+
+        foreach (var child in Children) child.Unshare();
+    }
+
     /// <summary>One line about what the property means - a tooltip, and the status line in an editor.</summary>
     public String Description
     {
@@ -357,7 +378,12 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         // A child is a definition like any other, so it JOINS the tree too - otherwise the three lines of a vector
         // would be the only ones in the inspector whose bindings resolve against nothing.
         foreach (var child in e.OldItems?.OfType<PropertyDefinition>() ?? Enumerable.Empty<PropertyDefinition>())
+        {
             RemoveLogicalChild(child);
+
+            // Out of the list, it is no item's line any more - moved within it, or put back, it still is.
+            if (e.Action != NotifyCollectionChangedAction.Move && !Children.Contains(child)) child.Unshare();
+        }
 
         foreach (var child in e.NewItems?.OfType<PropertyDefinition>() ?? Enumerable.Empty<PropertyDefinition>())
             AddLogicalChild(child);
@@ -1262,10 +1288,15 @@ public class ItemsProperty : CompositeProperty
     public static readonly AdamantiumProperty ItemActionTipProperty = AdamantiumProperty.Register(
         nameof(ItemActionTip), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null));
 
-    // Each item's line takes the button as it is built: one given or replaced after - a bound command found only once
-    // the grid has a data context, or another view-model's - builds the lines again.
-    private static void OnItemActionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
-        (component as ItemsProperty)?.Relayout();
+    // Each item's line takes the button as it is built: one given or replaced after - another view-model's - builds the
+    // lines again. Read again by the grid, only a button come or gone does (a bound command found only once the grid
+    // has a data context); a view-model may hand out a new command on every read.
+    private static void OnItemActionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not ItemsProperty items) return;
+
+        if (!items.IsRereadByGrid || (e.OldValue == null) != (e.NewValue == null)) items.Relayout();
+    }
 
     /// <summary>What each item is CALLED, read off the item itself - the socket's own name over its two lines. Nothing
     /// numbers them instead, which is what a list whose items have no names of their own wants.</summary>
