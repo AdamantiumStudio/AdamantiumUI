@@ -99,6 +99,7 @@ internal sealed class OffscreenLayers : IDisposable
 
         _idle.Clear();
         ResetGroupTargets(gd);
+        ShrinkLevels(gd);
     }
 
     /// <summary>The space drawing lands in, inside an open layer; outside one it is the caller's own.</summary>
@@ -307,6 +308,36 @@ internal sealed class OffscreenLayers : IDisposable
     // Sizes are taken up to a step, so a group a few pixels larger than the last does not make a texture of its own.
     private const uint GroupTargetStep = 256;
 
+    // A target or a level of depth not needed for this many frames goes: inside a raster as large as the texture, each
+    // step of zoom asked other sizes, and those held for the layers' 120 frames - a minute at a few frames a second -
+    // gathered gigabytes.
+    private const long GroupTargetIdleFrames = 8;
+
+    // The depth of the levels made smaller to what the last few frames asked, when that is far less: grown for a raster's
+    // texture zoomed in, they kept its size after.
+    private void ShrinkLevels(IGraphicsDevice gd)
+    {
+        foreach (var level in _levels)
+        {
+            if (_frame - level.AskedSince < GroupTargetIdleFrames)
+            {
+                continue;
+            }
+
+            if ((ulong)level.Width * level.Height > 4UL * level.AskedWidth * level.AskedHeight && level.Depth.Length > 0)
+            {
+                Release(gd, level.Depth);
+                level.Depth = [];
+                level.Width = 0;
+                level.Height = 0;
+            }
+
+            level.AskedWidth = 0;
+            level.AskedHeight = 0;
+            level.AskedSince = _frame;
+        }
+    }
+
     private PooledTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
     {
         var pick = -1;
@@ -371,7 +402,7 @@ internal sealed class OffscreenLayers : IDisposable
         _takenGroupTargets.Clear();
         for (var i = _freeGroupTargets.Count - 1; i >= 0; i--)
         {
-            if (_frame - _freeGroupTargets[i].LastUsed > IdleFrames)
+            if (_frame - _freeGroupTargets[i].LastUsed > GroupTargetIdleFrames)
             {
                 if (_freeGroupTargets[i].Texture is IDisposable idle)
                 {
@@ -1055,6 +1086,8 @@ internal sealed class OffscreenLayers : IDisposable
         }
 
         var level = _levels[depth];
+        level.AskedWidth = Math.Max(level.AskedWidth, width);
+        level.AskedHeight = Math.Max(level.AskedHeight, height);
         var frames = Math.Max(1, (int)gd.MaxFramesInFlight);
         var depthFormat = gd.CurrentDepthStencilBuffer is Texture { } windowDepth
             ? (DepthFormat)windowDepth.Description.Format
