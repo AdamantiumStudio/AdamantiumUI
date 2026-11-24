@@ -959,7 +959,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         if (StartWithSplash())
         {
-            DesktopPlatform.Wait(devices, CancellationToken.None);
+            ApplicationPlatform.Wait(devices, CancellationToken.None);
             devices.GetAwaiter().GetResult();
             EntityWorld.Initialize();
             StartLoop();
@@ -1096,7 +1096,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 done.SetException(e);
             }
         });
-        DesktopPlatform.Wait(done.Task, cancellationTokenSource.Token);
+        ApplicationPlatform.Wait(done.Task, cancellationTokenSource.Token);
         done.Task.GetAwaiter().GetResult();
         StartupCancellation.ThrowIfCancellationRequested();
     }
@@ -1409,14 +1409,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return true;
     }
 
-    private Platforms.IApplicationPlatform DesktopPlatform => UIContext.Resolve<Platforms.IApplicationPlatform>();
+    private Platforms.IApplicationPlatform ApplicationPlatform => UIContext.Resolve<Platforms.IApplicationPlatform>();
 
     // Between the steps of the start, where the splash window has no thread of its own to answer on.
     private void AnswerSplash()
     {
         if (_splash is { IsRunning: true, IsOnApplicationThread: true })
         {
-            DesktopPlatform.Wait(Task.CompletedTask, CancellationToken.None);
+            ApplicationPlatform.Wait(Task.CompletedTask, CancellationToken.None);
             StartupCancellation.ThrowIfCancellationRequested();
         }
     }

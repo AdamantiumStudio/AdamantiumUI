@@ -125,6 +125,18 @@ public class SplashWindowTests
         Assert.That(window.IsDisplayed, Is.False);
     }
 
+    [TestCase(CaptionButtonPlacement.Left, HorizontalAlignment.Left)]
+    [TestCase(CaptionButtonPlacement.Right, HorizontalAlignment.Right)]
+    public async Task TheCloseButton_StandsOnTheSideOfTheCaptionButtons(CaptionButtonPlacement placement, HorizontalAlignment side)
+    {
+        var splash = Splash();
+        splash.CaptionButtonPlacement = placement;
+        var session = AutomationSession.InProcess(splash);
+        await session.WaitForIdleAsync();
+
+        Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).HorizontalAlignment, Is.EqualTo(side));
+    }
+
     [Test]
     public async Task WithoutTheCloseButton_ThereIsNone()
     {

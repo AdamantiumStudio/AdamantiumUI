@@ -40,6 +40,9 @@
         <PropertyTrigger Property="ShowCloseButton" Value="false">
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
+        <PropertyTrigger Property="CaptionButtonPlacement" Value="Left">
+            <Setter TargetName="PART_CloseButton" Property="HorizontalAlignment" Value="Left"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- Text and a spinner, which a splash window shows most: nothing else of a theme reaches it. -->

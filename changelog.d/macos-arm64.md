@@ -9,6 +9,7 @@
 - The splash window on macOS: drawn throughout the start, its mouse answered between the start's steps - AppKit lives
   on the application's own thread.
 - `OverlayWindow.CaptionButtonPlacement`: which side of the caption the buttons sit on, in Fluent and Graphite.
+- A splash window's close button stands on the side of `CaptionButtonPlacement`: on the left on macOS.
 - The application template's theme may be the platform's, which is its default.
 
 ### Changed
@@ -20,6 +21,8 @@
 
 ### Fixed
 
+- The frame verifier raised an alarm over text recolored in place between a frame's record and its drawing, as switching
+  the theme's variant does.
 - The MacOs theme's traffic lights were smaller, closer together and further from the window's edge than macOS's, and
   their glyphs thinner.
 - Off-screen rendering asked the Vulkan loader, not the instance, for a headless surface: where the loader lists
