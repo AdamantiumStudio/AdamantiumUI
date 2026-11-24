@@ -1367,14 +1367,11 @@ public class ItemsProperty : CompositeProperty
     private long _pass;
     private bool _makeAgain;
     private object _making = new();
-    private int _checkingBindings;
-    private readonly Action _checkBindings;
 
     public ItemsProperty()
     {
         // After the line's own handler built the grid again on the copies still there: made again, and built once more.
         Children.CollectionChanged += (_, _) => MakeItemsAgain();
-        _checkBindings = CheckBindings;
     }
 
     // Each heading reads it: read another way, they are other headings.
@@ -1619,10 +1616,13 @@ public class ItemsProperty : CompositeProperty
 
         if (!IsCopied(property)) return;
 
-        // Each copy binds on its own, against its own item. A change may be a binding being given or replaced - at any
-        // level, a template's markup binding where its plain values stand - which says so before it is registered: the
-        // bindings are compared on the loop, the setting of it over, and the copies made again if they differ.
-        if (Interlocked.Exchange(ref _checkingBindings, 1) == 0) LoopSignal.Post(_checkBindings);
+        // Each copy binds on its own, against its own item: a binding given or taken since they were made makes them
+        // again. One still being given says so before it is registered - the grid's next pass (BeginPass) finds it.
+        if (!SameBindings())
+        {
+            MakeItemsAgain();
+            return;
+        }
 
         // Every slot the template holds - by hand, by a theme's or a resource's expression, by a style - set as it
         // stands on each copy, and taken off where it no longer stands: what outranks what is the copy's. The slot its
@@ -1647,12 +1647,6 @@ public class ItemsProperty : CompositeProperty
     {
         _making = making;
         _makeAgain = false;
-    }
-
-    private void CheckBindings()
-    {
-        Volatile.Write(ref _checkingBindings, 0);
-        if (_items.Count > 0 && !SameBindings()) MakeItemsAgain();
     }
 
     private void OnTemplateLinesChanged(object sender, NotifyCollectionChangedEventArgs e) => MakeItemsAgain();

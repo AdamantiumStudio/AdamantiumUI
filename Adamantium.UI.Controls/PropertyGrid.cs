@@ -1407,7 +1407,16 @@ public class PropertyGrid : Control
     {
         // A line let go of says what it gives back as it goes: nothing to build for.
         var line = (PropertyDefinition)sender;
-        if (line.IsReleased || _listLines.Contains(line)) return;
+        if (line.IsReleased) return;
+
+        // A list's line as written is not shown; built once on the loop, with the copies it reached, the pass finds
+        // a binding it was given since they were made (ItemsProperty.BeginPass). A copy standing as a list inside an
+        // item's line is only settling its own bindings: nothing to build for.
+        if (_listLines.Contains(line))
+        {
+            if (line.Original == null) RebuildSoon();
+            return;
+        }
 
         if (_rebuilding)
         {
@@ -1436,7 +1445,13 @@ public class PropertyGrid : Control
     private void OnDefinitionWordsChanged(object sender, EventArgs e)
     {
         var line = (PropertyDefinition)sender;
-        if (line.IsReleased || _listLines.Contains(line)) return;
+        if (line.IsReleased) return;
+
+        if (_listLines.Contains(line))
+        {
+            if (line.Original == null) RebuildSoon();
+            return;
+        }
 
         if (line.Original == null && line is not ItemHeaderLine)
         {
