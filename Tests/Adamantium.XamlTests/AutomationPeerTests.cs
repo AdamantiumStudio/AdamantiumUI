@@ -14,6 +14,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.FluentTheme;
 using NUnit.Framework;
@@ -265,6 +266,34 @@ public class AutomationPeerTests
         string[] expected = ["Buttons", "Docking"];
 
         Assert.That(ids, Is.EqualTo(expected));
+    }
+
+    // A virtualizing strip lists the tabs it has not made as stand-ins; a reader hears them by the name their tab will
+    // have, not as blanks (24.11: on AT-SPI every gallery tab past the first twelve had no name).
+    // ...a binding read off the item, or a phrase whose key is - as the gallery names its tabs.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void TabsAVirtualizingStripHasNotMade_TakeTheirNamesFromTheItemContainerStyle(bool localized)
+    {
+        var style = new Style { Selector = new StyleSelector { Types = { typeof(TabItem) } } };
+        BindingBase name = localized
+            // No table yet: the phrase is its key, said as it is.
+            ? new Localize { TableSource = new Binding { Source = string.Empty }, KeySource = new Binding(nameof(Page.Key)) }
+            : new Binding(nameof(Page.Key));
+        style.Setters.Add(new Setter("AutomationProperties.Name", name));
+        var tabs = new TabControl { ItemContainerStyle = style, IsVirtualizing = true, TabWidth = 100 };
+        var pages = Enumerable.Range(0, 40).Select(i => new Page { Key = $"Page {i}" }).ToList();
+        tabs.ItemsSource = pages;
+        Shown(tabs);
+
+        var listed = tabs.GetAutomationPeer().GetChildren().Where(peer => peer.ControlType == AutomationControlType.TabItem)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tabs.ItemContainerGenerator.RealizedCount, Is.LessThan(pages.Count), "some tabs are not made");
+            Assert.That(listed.Select(peer => peer.Name), Is.EqualTo(pages.Select(page => page.Key)));
+        });
     }
 
     [Test]

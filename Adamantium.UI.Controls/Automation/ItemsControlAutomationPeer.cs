@@ -109,7 +109,14 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
 
     /// <summary>The automation id the item container style would give an item's element - a binding there read on the
     /// item - for a control whose unmade items are the same ones it shows, made later.</summary>
-    protected string AutomationIdFromContainerStyle(object item)
+    protected string AutomationIdFromContainerStyle(object item) =>
+        FromContainerStyle(item, AutomationProperties.AutomationIdProperty);
+
+    /// <summary>The name the item container style would give an item's element - a binding there read on the item; empty
+    /// when the style names none.</summary>
+    protected string NameFromContainerStyle(object item) => FromContainerStyle(item, AutomationProperties.NameProperty);
+
+    private string FromContainerStyle(object item, AdamantiumProperty property)
     {
         if (((ItemsControl)Owner).ItemContainerStyle is not { } style)
         {
@@ -119,7 +126,7 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         foreach (var setter in style.Setters)
         {
             if (setter is not Setter { Property: { } path } declared ||
-                AdamantiumPropertyMap.ResolveProperty(typeof(UIComponent), path) != AutomationProperties.AutomationIdProperty)
+                AdamantiumPropertyMap.ResolveProperty(typeof(UIComponent), path) != property)
             {
                 continue;
             }
@@ -129,11 +136,13 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
                 return declared.Value as string ?? string.Empty;
             }
 
-            var probe = new BoundValue();
+            // The item is the data its element would have: a binding nested in another - a phrase's key - reads it there.
+            var probe = new BoundValue { DataContext = item };
             probe.PointAt(item, binding);
-            var id = probe.Value as string;
+            // As text, as the element's string property would take it: a number or a phrase object names it too.
+            var value = probe.Value?.ToString();
             probe.Release();
-            return id ?? string.Empty;
+            return value ?? string.Empty;
         }
 
         return string.Empty;
