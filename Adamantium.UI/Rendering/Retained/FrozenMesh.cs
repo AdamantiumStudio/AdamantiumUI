@@ -73,7 +73,7 @@ internal sealed class FrozenMesh
                       (InstancedFillCollector.CurvesEnabled && !(fromTriangles && fill != null) || fill == null
                           ? geometry.CurvesForDrawing
                           : null);
-        var curves = outline != null ? CurveFill.From(outline) : null;
+        var curves = outline?.Fill;
         if (fill == null && curves == null)
         {
             return null;

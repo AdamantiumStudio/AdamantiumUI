@@ -14,7 +14,6 @@ internal sealed class OffscreenLayers : IDisposable
 {
     private const long IdleFrames = 120;
 
-    private readonly List<OffscreenLayerLevel> _levels = [];
     private readonly Stack<OpenOffscreenLayer> _open = new();
     private readonly Dictionary<object, CachedLayer> _cached = new();
     private readonly List<object> _idle = [];
@@ -94,10 +93,17 @@ internal sealed class OffscreenLayers : IDisposable
                 Release(gd, new[] { idle.SoftScratch });
             }
 
+            idle.Store?.Release(gd);
+            if (idle.Pending != null)
+            {
+                Release(gd, new[] { idle.Pending });
+            }
             _cached.Remove(owner);
         }
 
         _idle.Clear();
+        // The frame before was the window's pass: what it did not need goes.
+        _windowStore.EndPass(gd, _takenGroupTargets);
     }
 
     /// <summary>The space drawing lands in, inside an open layer; outside one it is the caller's own.</summary>
@@ -271,13 +277,63 @@ internal sealed class OffscreenLayers : IDisposable
         bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused) =>
         Open(gd, owner, region, print, reusable, allowReuse, projection, bounds, whole, Colors.Transparent, out reused);
 
-    /// <summary>Opens a target of <paramref name="owner"/>'s own over <paramref name="region"/> (window device pixels),
-    /// cleared to <paramref name="clear"/>: what a group of draws, or one of its masks, is drawn into, in the space it was
-    /// opened in - its <paramref name="projection"/> and <paramref name="bounds"/>. Drawn afresh every frame;
-    /// <see cref="EndGroupTarget"/> closes it and keeps what it holds for <see cref="LayDownGroup"/>.</summary>
-    public DrawSpace BeginGroupTarget(IGraphicsDevice gd, object owner, Rect2D region, Color clear, Matrix4x4F projection,
-        Rect2D bounds) =>
-        Open(gd, owner, region, 0, false, false, projection, bounds, false, clear, out _);
+    /// <summary>Opens a target over <paramref name="region"/> (window device pixels), cleared to <paramref name="clear"/>:
+    /// what a group of draws, or one of its masks, is drawn into, in the space it was opened in - its
+    /// <paramref name="projection"/> and <paramref name="bounds"/>. Drawn afresh every frame; <see cref="EndGroupTarget"/>
+    /// closes it and keeps what it holds for <see cref="LayDownGroup"/>, which gives it back.</summary>
+    public DrawSpace BeginGroupTarget(IGraphicsDevice gd, Rect2D region, Color clear, Matrix4x4F projection, Rect2D bounds)
+    {
+        if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
+        {
+            _open.Push(default);
+            return EnterSpace(gd, region, projection, bounds, false);
+        }
+
+        var target = TakeGroupTarget(gd, region.Extent.Width, region.Extent.Height);
+        OpenOver(gd, target.Texture, target.Width, target.Height, region, null, 0, 0, false, clear);
+        return EnterSpace(gd, region, projection, bounds, false);
+    }
+
+    // ---- GROUP TARGETS: drawn and laid down within one frame, so they are shared - taken from a store as a group opens
+    // and given back when it is laid down. Kept per group, each held a ring of its own the size of what it covers, and a
+    // page of hundreds of cut groups drawn as a raster held gigabytes. The window has a store, and so has each raster's
+    // texture, for the groups inside it: each lets go of what its last pass did not need.
+
+    private readonly OffscreenTargetStore _windowStore = new();
+
+    // The store of the raster's texture being drawn now, or null.
+    private OffscreenTargetStore _tileStore;
+
+    private OffscreenTargetStore Store => _tileStore ?? _windowStore;
+
+    // Targets out of their stores this frame.
+    private readonly List<OffscreenTargetStore.StoredTarget> _takenGroupTargets = [];
+
+    private OffscreenTargetStore.StoredTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
+    {
+        var target = Store.Take(gd, width, height);
+        _takenGroupTargets.Add(target);
+        return target;
+    }
+
+    private void GiveBack(IRenderTarget texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _takenGroupTargets.Count; i++)
+        {
+            if (ReferenceEquals(_takenGroupTargets[i].Texture, texture))
+            {
+                var target = _takenGroupTargets[i];
+                _takenGroupTargets.RemoveAt(i);
+                target.Store.GiveBack(target);
+                return;
+            }
+        }
+    }
 
     private DrawSpace Open(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
         bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, Color clear, out bool reused)
@@ -307,13 +363,21 @@ internal sealed class OffscreenLayers : IDisposable
         }
 
         EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
+
         var slot = (entry.Latest + 1) % entry.Ring.Length;
-        var color = entry.Ring[slot];
-        var level = LevelAt(gd, _open.Count, entry.TextureWidth, entry.TextureHeight);
+        OpenOver(gd, entry.Ring[slot], entry.TextureWidth, entry.TextureHeight, region, entry, slot, print, reusable, clear);
+        return EnterSpace(gd, region, projection, bounds, whole);
+    }
+
+    // Draws from here into color - textureWidth by textureHeight, holding region at its corner - cleared to clear.
+    private void OpenOver(IGraphicsDevice gd, IRenderTarget color, uint textureWidth, uint textureHeight, Rect2D region,
+        CachedLayer entry, int slot, ulong print, bool reusable, Color clear)
+    {
+        var level = LevelAt(gd, _open.Count, textureWidth, textureHeight);
         var depth = level.Depth.Length > 0 ? level.Depth[(int)(gd.CurrentFrame % (uint)level.Depth.Length)] : null;
 
         _open.Push(new OpenOffscreenLayer(gd.CurrentRenderTarget, gd.CurrentDepthStencilBuffer, gd.TargetOrigin, gd.ClearColor,
-            gd.MSAALevel, color, entry.TextureWidth, entry.TextureHeight, region, entry, slot, print, reusable, false));
+            gd.MSAALevel, color, textureWidth, textureHeight, region, entry, slot, print, reusable, false));
 
         gd.SuspendRendering();
         var commandBuffer = gd.CurrentCommandBuffer;
@@ -337,7 +401,6 @@ internal sealed class OffscreenLayers : IDisposable
         gd.BeginRendering(commandBuffer);
         gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
         Redrawn++;
-        return EnterSpace(gd, region, projection, bounds, whole);
     }
 
     /// <summary>Closes the target <see cref="BeginGroupTarget"/> opened and goes back to the one, and the space, it was
@@ -362,12 +425,6 @@ internal sealed class OffscreenLayers : IDisposable
         gd.MSAALevel = open.Samples;
         gd.TargetOrigin = open.Origin;
         gd.ResumeRendering();
-
-        var entry = open.Entry;
-        entry.Latest = open.Slot;
-        entry.Valid = false;
-        entry.Width = open.Region.Extent.Width;
-        entry.Height = open.Region.Extent.Height;
         LeaveSpace(gd);
         return new GroupTarget(open.Color, open.Region, open.TextureWidth, open.TextureHeight);
     }
@@ -379,6 +436,17 @@ internal sealed class OffscreenLayers : IDisposable
     /// and takes its place where the masks let it through.</summary>
     public void LayDownGroup(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
         GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor, bool replaces = false)
+    {
+        Composite(gd, content, masks, backdrop, blendMode, alpha, scissor, replaces);
+        GiveBack(content.Texture);
+        foreach (var (mask, _) in masks)
+        {
+            GiveBack(mask.Texture);
+        }
+    }
+
+    private void Composite(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
+        GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor, bool replaces)
     {
         if (gd == null || !content.Drawn || gd.CurrentViewports.Length == 0 || scissor.Extent.Width == 0
             || scissor.Extent.Height == 0)
@@ -440,6 +508,257 @@ internal sealed class OffscreenLayers : IDisposable
 
     // The composite's mode past BlendMode's: the content in place of the copy of what lay under it, by the masks.
     private const float ReplaceMode = 16f;
+
+    // ---- THE TEXTURE of an element drawn as a raster (DrawingMode.Raster) ------------------------------------------
+
+    /// <summary>Whether the texture kept under <paramref name="key"/> holds a drawing with this <paramref name="print"/>.
+    /// </summary>
+    public bool HoldsTile(object key, ulong print) =>
+        _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0 && entry.Print == print;
+
+    /// <summary>Whether the texture kept under <paramref name="key"/> holds a drawing, whatever its print.</summary>
+    public bool HoldsAnyTile(object key) => _cached.TryGetValue(key, out var entry) && entry.Valid && entry.Latest >= 0;
+
+    // ---- Drawn anew square by square: a texture beside the one laid down, each square drawn into a small target of its
+    // own and pasted into place, the texture laid down meanwhile until the last square is in.
+
+    // The small target the square being drawn goes into.
+    private OffscreenTargetStore.StoredTarget _square;
+
+    /// <summary>Whether the texture being drawn anew under <paramref name="key"/> is drawn for <paramref name="print"/>.
+    /// </summary>
+    public bool DrawsAnew(object key, ulong print) =>
+        _cached.TryGetValue(key, out var entry) && entry.Pending != null && entry.PendingPrint == print;
+
+    /// <summary>Starts drawing anew the texture kept under <paramref name="key"/>: <paramref name="width"/> by
+    /// <paramref name="height"/> texels holding <paramref name="print"/>, beside the one laid down.</summary>
+    public void StartDrawingAnew(IGraphicsDevice gd, object key, ulong print, int width, int height)
+    {
+        if (!_cached.TryGetValue(key, out var entry))
+        {
+            entry = new CachedLayer();
+            _cached[key] = entry;
+        }
+
+        entry.Store ??= new OffscreenTargetStore();
+        if (entry.Pending != null && (entry.PendingWidth != width || entry.PendingHeight != height))
+        {
+            Release(gd, new[] { entry.Pending });
+            entry.Pending = null;
+        }
+
+        if (entry.Pending == null)
+        {
+            entry.Pending = gd.CreateRenderTarget((uint)width, (uint)height, MSAALevel.None,
+                gd.CurrentRenderTarget.SurfaceFormat, ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit,
+                ImageLayout.ShaderReadOnlyOptimal, "RasterAnew");
+            entry.PendingWidth = (uint)width;
+            entry.PendingHeight = (uint)height;
+        }
+
+        entry.PendingCleared = false;
+        entry.PendingPrint = print;
+        entry.LastUsed = _frame;
+    }
+
+    /// <summary>Opens a square of <paramref name="width"/> by <paramref name="height"/> texels of the texture being drawn
+    /// anew under <paramref name="key"/>, drawn in its own space: what is drawn from here goes into it, up to
+    /// <see cref="EndSquare"/>, which goes back to the space it was opened in - its <paramref name="projection"/> and
+    /// <paramref name="bounds"/>. What is drawn into it - depth, the groups inside - comes from the texture's own store.
+    /// </summary>
+    public DrawSpace BeginSquare(IGraphicsDevice gd, object key, Matrix4x4F projection, Rect2D bounds, int width, int height)
+    {
+        var entry = _cached[key];
+        _tileStore = entry.Store;
+        var region = new Rect2D
+            { Offset = new Offset2D(), Extent = new Extent2D { Width = (uint)width, Height = (uint)height } };
+        if (gd?.CurrentRenderTarget == null)
+        {
+            _open.Push(default);
+            return EnterSpace(gd, region, projection, bounds, true);
+        }
+
+        _square = _tileStore.Take(gd, (uint)width, (uint)height);
+        OpenOver(gd, _square.Texture, _square.Width, _square.Height, region, null, 0, 0, false, Colors.Transparent);
+        return EnterSpace(gd, region, projection, bounds, true);
+    }
+
+    /// <summary>Closes the square <see cref="BeginSquare"/> opened and pastes it at <paramref name="at"/>, texels of the
+    /// texture being drawn anew; gives back the space the square was opened in.</summary>
+    public DrawSpace EndSquare(IGraphicsDevice gd, object key, Rect2D at)
+    {
+        var open = _open.Pop();
+        var entry = _cached[key];
+        if (gd != null && open.Color != null)
+        {
+            gd.SuspendRendering();
+            var commands = gd.CurrentCommandBuffer;
+            gd.InsertImageMemoryBarrier(commands, open.Color,
+                AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+                ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+                PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+
+            // Into the texture being drawn anew, what is in it kept - cleared once, when its first square goes in.
+            gd.InsertImageMemoryBarrier(commands, entry.Pending,
+                AccessFlagBits2.ShaderReadBit, AccessFlagBits2.ColorAttachmentReadBit | AccessFlagBits2.ColorAttachmentWriteBit,
+                entry.PendingCleared ? ImageLayout.ShaderReadOnlyOptimal : ImageLayout.Undefined,
+                ImageLayout.ColorAttachmentOptimal,
+                PipelineStageFlagBits2.FragmentShaderBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);
+            var viewports = gd.CurrentViewports.ToArray();
+            gd.SetRenderTargets(entry.Pending);
+            gd.SetDepthBuffer(null);
+            gd.ClearColor = Colors.Transparent;
+            gd.MSAALevel = MSAALevel.None;
+            gd.TargetOrigin = new NativePoint(0, 0);
+            gd.SetViewports(new Viewport { Width = entry.PendingWidth, Height = entry.PendingHeight, MinDepth = 0, MaxDepth = 1 });
+            gd.BeginRendering(commands, continueRendering: entry.PendingCleared);
+            entry.PendingCleared = true;
+            Paste(gd, open.Color, open.TextureWidth, open.TextureHeight, at, entry.PendingWidth, entry.PendingHeight);
+            gd.SuspendRendering();
+            gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, entry.Pending,
+                AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+                ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+                PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+
+            gd.SetViewports(viewports);
+            gd.SetRenderTargets(open.Target);
+            gd.SetDepthBuffer(open.Depth);
+            gd.ClearColor = open.Clear;
+            gd.MSAALevel = open.Samples;
+            gd.TargetOrigin = open.Origin;
+            gd.ResumeRendering();
+        }
+
+        if (_square != null)
+        {
+            _tileStore.GiveBack(_square);
+            _square = null;
+        }
+
+        _tileStore = null;
+        var outer = _spaces.Peek().Outer;
+        LeaveSpace(gd);
+        return outer;
+    }
+
+    // The square, texel for texel, at its place: nothing under it mixed in.
+    private void Paste(IGraphicsDevice gd, IRenderTarget square, uint squareWidth, uint squareHeight, Rect2D at,
+        uint width, uint height)
+    {
+        _group ??= new GroupCompositeEffect(gd);
+        gd.SetScissors(at);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = false;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        gd.VertexType = null;
+
+        var box = new Vector4F(at.Offset.X, at.Offset.Y, at.Extent.Width, at.Extent.Height);
+        var texels = new Vector4F(at.Extent.Width / (float)squareWidth, at.Extent.Height / (float)squareHeight, 0, 0);
+        _group.LayerBox.SetValue(box);
+        _group.SourceRegion.SetValue(box);
+        _group.LayerTexels.SetValue(texels);
+        _group.Mask0.SetValue(Vector4F.Zero);
+        _group.Mask1.SetValue(Vector4F.Zero);
+        _group.Mask2.SetValue(Vector4F.Zero);
+        _group.Mask0Texture.SetResource(square);
+        _group.Mask1Texture.SetResource(square);
+        _group.Mask2Texture.SetResource(square);
+        _group.BackdropTexture.SetResource(square);
+        _group.Backdrop.SetValue(texels);
+        _group.GroupAlpha.SetValue(1f);
+        _group.BlendMode.SetValue(0f);
+        _group.ViewportSize.SetValue(new Vector2F(width, height));
+        _group.TargetOrigin.SetValue(new Vector2F(0, 0));
+        _group.SourceTexture.SetResource(square);
+        _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _group.GroupCompositeDrawPass.Apply();
+        gd.Draw(4, 1);
+        gd.ColorBlendEnabled = true;
+    }
+
+    /// <summary>Lets go of the texture being drawn anew under <paramref name="key"/>, if one is: what it was drawn for is
+    /// held again.</summary>
+    public void StopDrawingAnew(IGraphicsDevice gd, object key)
+    {
+        if (gd == null || !_cached.TryGetValue(key, out var entry) || entry.Pending == null)
+        {
+            return;
+        }
+
+        Release(gd, new[] { entry.Pending });
+        entry.Pending = null;
+        entry.Store?.EndPass(gd, _takenGroupTargets);
+    }
+
+    /// <summary>The last square of the texture drawn anew under <paramref name="key"/> is in: it is the one laid down from
+    /// now, the one before let go, and what the drawing did not need of its store goes.</summary>
+    public void FinishDrawingAnew(IGraphicsDevice gd, object key)
+    {
+        var entry = _cached[key];
+        Release(gd, entry.Ring);
+        entry.Ring = new[] { entry.Pending };
+        entry.Latest = 0;
+        entry.Valid = true;
+        entry.Print = entry.PendingPrint;
+        entry.TextureWidth = entry.Width = entry.PendingWidth;
+        entry.TextureHeight = entry.Height = entry.PendingHeight;
+        entry.Pending = null;
+        entry.Store?.EndPass(gd, _takenGroupTargets);
+    }
+
+    /// <summary>Lays the tile kept under <paramref name="key"/> over <paramref name="box"/> - window device pixels, not
+    /// whole ones: the camera puts a tile anywhere and at any scale - stretched to it, cut by <paramref name="scissor"/>.
+    /// False when it holds no drawing.</summary>
+    public bool LayDownTile(IGraphicsDevice gd, object key, Vector4F box, Rect2D scissor, float alpha = 1f)
+    {
+        if (gd == null || gd.CurrentViewports.Length == 0 || !_cached.TryGetValue(key, out var entry) || !entry.Valid
+            || entry.Latest < 0 || scissor.Extent.Width == 0 || scissor.Extent.Height == 0)
+        {
+            return false;
+        }
+
+        entry.LastUsed = _frame;
+        _group ??= new GroupCompositeEffect(gd);
+        var viewport = gd.CurrentViewports[0];
+        var restore = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : scissor;
+        var texture = entry.Ring[entry.Latest];
+
+        gd.SetScissors(scissor);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = true;
+        gd.ColorBlendEquation = ColorBlendEquations.Premultiplied;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        gd.VertexType = null;
+
+        var texels = new Vector4F((float)entry.Width / entry.TextureWidth, (float)entry.Height / entry.TextureHeight, 0, 0);
+        _group.LayerBox.SetValue(new Vector4F(box.X - viewport.X, box.Y - viewport.Y, box.Z, box.W));
+        _group.SourceRegion.SetValue(box);
+        _group.LayerTexels.SetValue(texels);
+        _group.Mask0.SetValue(Vector4F.Zero);
+        _group.Mask1.SetValue(Vector4F.Zero);
+        _group.Mask2.SetValue(Vector4F.Zero);
+        _group.Mask0Texture.SetResource(texture);
+        _group.Mask1Texture.SetResource(texture);
+        _group.Mask2Texture.SetResource(texture);
+        _group.BackdropTexture.SetResource(texture);
+        _group.Backdrop.SetValue(texels);
+        _group.GroupAlpha.SetValue(alpha);
+        _group.BlendMode.SetValue(0f);
+        _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
+        _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
+        _group.SourceTexture.SetResource(texture);
+        _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _group.GroupCompositeDrawPass.Apply();
+        gd.Draw(4, 1);
+        gd.SetScissors(restore);
+        return true;
+    }
 
     /// <summary>Fills the group target just opened over <paramref name="region"/> with the copy of what lay under it.
     /// </summary>
@@ -792,36 +1111,8 @@ internal sealed class OffscreenLayers : IDisposable
         }
     }
 
-    private OffscreenLayerLevel LevelAt(IGraphicsDevice gd, int depth, uint width, uint height)
-    {
-        while (_levels.Count <= depth)
-        {
-            _levels.Add(new OffscreenLayerLevel());
-        }
-
-        var level = _levels[depth];
-        var frames = Math.Max(1, (int)gd.MaxFramesInFlight);
-        var depthFormat = gd.CurrentDepthStencilBuffer is Texture { } windowDepth
-            ? (DepthFormat)windowDepth.Description.Format
-            : (DepthFormat?)null;
-        if (!depthFormat.HasValue
-            || (level.Depth.Length == frames && level.Width >= width && level.Height >= height))
-        {
-            return level;
-        }
-
-        Release(gd, level.Depth);
-        level.Width = Math.Max(level.Width, width);
-        level.Height = Math.Max(level.Height, height);
-        level.Depth = new IDepthStencilBuffer[frames];
-        for (var i = 0; i < frames; i++)
-        {
-            level.Depth[i] = gd.CreateDepthBuffer(level.Width, level.Height, depthFormat.Value, MSAALevel.None,
-                name: $"LayerDepth{depth}:{i}");
-        }
-
-        return level;
-    }
+    private OffscreenLayerLevel LevelAt(IGraphicsDevice gd, int depth, uint width, uint height) =>
+        Store.LevelAt(gd, depth, width, height);
 
     private static void Release<T>(IGraphicsDevice gd, T[] resources)
     {
@@ -836,16 +1127,17 @@ internal sealed class OffscreenLayers : IDisposable
 
     public void Dispose()
     {
-        foreach (var level in _levels)
+        foreach (var target in _takenGroupTargets)
         {
-            foreach (var depth in level.Depth)
-            {
-                (depth as IDisposable)?.Dispose();
-            }
+            (target.Texture as IDisposable)?.Dispose();
         }
 
+        _takenGroupTargets.Clear();
+        _windowStore.DisposeNow();
         foreach (var entry in _cached.Values)
         {
+            entry.Store?.DisposeNow();
+            (entry.Pending as IDisposable)?.Dispose();
             foreach (var color in entry.Ring)
             {
                 (color as IDisposable)?.Dispose();
@@ -864,7 +1156,6 @@ internal sealed class OffscreenLayers : IDisposable
             (entry.SoftScratch as IDisposable)?.Dispose();
         }
 
-        _levels.Clear();
         _cached.Clear();
         _composite?.Dispose();
         _composite = null;

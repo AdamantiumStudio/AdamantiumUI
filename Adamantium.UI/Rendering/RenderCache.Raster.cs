@@ -1,0 +1,905 @@
+using System;
+using System.Collections.Generic;
+using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Fonts;
+using Adamantium.Mathematics;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Rendering.Payloads;
+using Adamantium.UI.Rendering.RenderUnits;
+using Adamantium.Vulkan.Core;
+
+namespace Adamantium.UI.Rendering;
+
+// Elements drawn as a raster (DrawingMode.Raster): their subtree is drawn into one texture in the element's own space -
+// what the window shows of it and a quarter as much again each way, at a scale a power of two from what the camera shows
+// - and laid down where the camera puts it: moved and scaled, not drawn again, until the scale goes a step further, the
+// camera leaves what it holds or what it shows changes. It is drawn as a clone of the subtree is: under a matrix from the
+// window to the texture, into a target of its own - one walk of the subtree, as a frame drawn from its shapes takes.
+public partial class RenderCache
+{
+    // The element whose texture is being drawn this frame, or null.
+    private RasterRun _rasterRun;
+
+    // What each element drawn as a raster holds in its texture, and what it is asked to hold, from frame to frame.
+    private readonly Dictionary<Guid, RasterHeld> _rasterParts = new();
+
+    // ---- test observability: how many rasters are being drawn anew, and how many textures were drawn to the last square.
+    internal int RastersDrawingAnew => _rasterWantsDrawing.Count;
+    internal int RasterTexturesFinished { get; private set; }
+
+    private sealed class RasterHeld
+    {
+        // What the texture holds: the part of the element, in its units, at the scale, in texels.
+        public bool Drawn;
+        public float Scale;
+        public Rect Part;
+        public int Width;
+        public int Height;
+
+        // What the frames ask of it - another scale, part or print - and since when they have asked the same.
+        public float WantedScale;
+        public Rect WantedPart = Rect.Empty;
+        public ulong WantedPrint;
+        public long WantedSince;
+
+        // The texture being drawn anew: what it will hold, its squares in the order they are drawn, the next, whether it
+        // was started, and where each of its draws and groups lies in it - worked out once for all its squares.
+        public ulong AnewPrint;
+        public float AnewScale;
+        public Rect AnewPart;
+        public int AnewWidth;
+        public int AnewHeight;
+        public List<Rect2D> AnewOrder;
+        public int AnewNext;
+        public bool AnewStarted;
+        public Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)> AnewMeasured;
+
+        // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
+        // the glyphs landed: the same again, it holds.
+        public bool DrawsKnown;
+        public ulong DrawsFades;
+        public long DrawsRecorded;
+        public ulong DrawsGroups;
+        public long DrawsPaint;
+        public int DrawsLanded;
+        public ulong DrawsPrint;
+        public bool DrawsStill;
+        public bool DrawsText;
+    }
+
+    // How long the scale and part a raster is asked to hold have to stay the same before its texture is drawn again:
+    // while the camera zooms, a step of scale or a part left each few frames, the texture it holds is laid down
+    // stretched, and drawn anew once, when the camera has stopped.
+    private static readonly long RasterSettles = System.Diagnostics.Stopwatch.Frequency * 150 / 1000;
+
+    // A raster laid down stretched this frame waits to be drawn anew: the frames go on until it is.
+    private bool _rasterSettling;
+
+    // How far past what is seen the texture reaches each way, as a share of it: room for the camera to move in.
+    private const double RasterRoom = 0.25;
+
+    // The largest side of the texture, in texels; past it the element is drawn from its shapes.
+    private const int RasterLargest = 8192;
+
+    private sealed class RasterRun
+    {
+        public IUIComponent Element;
+
+        // The element's groups: [Start, End).
+        public int Start;
+        public int End;
+
+        // The element's world, and its inverse - from the window to the element.
+        public Matrix4x4F World;
+        public Matrix4x4F FromWindow;
+
+        // Device pixels to a unit of the element its texture is drawn at, and the part of it held, in its units.
+        public float Scale;
+        public Rect Part;
+        public int Width;
+        public int Height;
+
+        // What its subtree draws, relative to it: its texture holds it while this stays.
+        public ulong Print;
+
+        // What cuts it in the window, in device pixels; and the bounds the walk drew within when it began, which closing
+        // the texture goes back to.
+        public Rect2D Scissor;
+        public Rect2D Bounds;
+
+        // Whether its texture is drawn this frame.
+        public bool Draws;
+
+        // Whether what it draws can be told apart frame to frame (see PrintRaster).
+        public bool Still;
+
+        // Drawn anew: what it holds and is drawn into, the square open now - in texels, and in the units its draws are
+        // placed in, grown by a fringe - and when this frame's squares began.
+        public RasterHeld Held;
+        public Rect2D Square;
+        public Rect SquareIn;
+        public Matrix4x4F ToSquare;
+        public long SquaresSince;
+
+        public bool RecordingBefore;
+    }
+
+    // An element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it turns on the
+    // window or is mirrored, it or a part of it is a layer, it has no size, lies under a rounded clip (the texture is
+    // laid down cut square), holds copies of its subtree, lies outside the window, or would take a texture too large.
+    private RasterRun StartRaster(int groupIndex, Rect2D fullScissor)
+    {
+        var element = _groups[groupIndex].Component;
+        var world = World(element);
+        var size = ApplySnap(element).RenderSize;
+        if (!TheRightWayRound(world) || !(size.Width > 0) || !(size.Height > 0) || UnderARoundedClip(element))
+        {
+            return null;
+        }
+
+        var across = MathF.Sqrt(world.M11 * world.M11 + world.M12 * world.M12);
+        var down = MathF.Sqrt(world.M21 * world.M21 + world.M22 * world.M22);
+        var shown = MathF.Max(across, down) * (float)_renderScale;
+        if (!(shown > 0))
+        {
+            return null;
+        }
+
+        // A layer is not opened inside its texture: a mask, a soft edge or a reflection in it would be lost.
+        var end = CloneSubtreeEnd(groupIndex);
+        for (var i = groupIndex; i < end; i++)
+        {
+            if (WantsLayer(_groups[i].Component))
+            {
+                return null;
+            }
+        }
+
+        var run = new RasterRun
+        {
+            Element = element,
+            Start = groupIndex,
+            End = end,
+            World = world,
+            FromWindow = Matrix4x4F.Invert(world),
+            Scale = MathF.Pow(2f, MathF.Ceiling(MathF.Log2(shown))),
+            Bounds = fullScissor,
+        };
+
+        // It is held cut by its own clip only; what cuts it above is where it is laid down.
+        run.Scissor = LaidDownClip(element) is { } laidDown ? ToClipScissor(laidDown, fullScissor) : fullScissor;
+        if (run.Scissor.Extent.Width == 0 || run.Scissor.Extent.Height == 0)
+        {
+            return null;
+        }
+
+        // What the window shows of it, in its units: the part held stays while it holds that at this scale.
+        var scale = (float)_renderScale;
+        var whole = new Rect(0, 0, size.Width, size.Height);
+        var seen = new Rect(run.Scissor.Offset.X / scale, run.Scissor.Offset.Y / scale, run.Scissor.Extent.Width / scale,
+            run.Scissor.Extent.Height / scale).TransformToAABB(run.FromWindow).Intersect(whole);
+        if (seen.IsEmpty || !(seen.Width > 0) || !(seen.Height > 0))
+        {
+            return null;
+        }
+
+        if (!_rasterParts.TryGetValue(element.RenderId, out var held))
+        {
+            held = new RasterHeld();
+            _rasterParts[element.RenderId] = held;
+        }
+
+        // The part held, or the part waited for, while either holds what is seen: a zoom eases to its end, the camera
+        // moving by a hair each frame, and a part worked out anew each frame never stayed the same long enough.
+        run.Part = held.Drawn && held.Scale == run.Scale && Holds(held.Part, seen) ? held.Part
+            : held.WantedScale == run.Scale && !held.WantedPart.IsEmpty && Holds(held.WantedPart, seen) ? held.WantedPart
+            : Grown(seen, RasterRoom).Intersect(whole);
+        run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
+        run.Height = (int)Math.Ceiling(run.Part.Height * run.Scale);
+        if (run.Width > RasterLargest || run.Height > RasterLargest)
+        {
+            // Without the room, then; and past that, drawn from its shapes.
+            run.Part = seen;
+            run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
+            run.Height = (int)Math.Ceiling(run.Part.Height * run.Scale);
+            if (run.Width > RasterLargest || run.Height > RasterLargest)
+            {
+                return null;
+            }
+        }
+
+        if (run.Width <= 0 || run.Height <= 0 || !PrintRaster(run, held))
+        {
+            return null;
+        }
+
+        _rasterShown.Add(element);
+        _offscreenLayers ??= new OffscreenLayers();
+        run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
+        if (!run.Draws && held.AnewOrder != null)
+        {
+            // Back to what it holds before the last square was in: what was being drawn goes (LayDownRaster).
+            held.AnewOrder = null;
+            held.AnewMeasured = null;
+            _rasterWantsDrawing.Remove(element);
+        }
+        // Only what the camera does waits: another scale or part. What it draws changing is drawn at once.
+        var cameraMoved = held.Scale != run.Scale || held.Part != run.Part;
+        if (run.Draws && cameraMoved && held.Drawn && run.Still && _offscreenLayers.HoldsAnyTile(element.RenderId)
+            && !Settled(held, run))
+        {
+            // Still moving: what it holds, stretched to where the camera puts it.
+            run.Scale = held.Scale;
+            run.Part = held.Part;
+            run.Width = held.Width;
+            run.Height = held.Height;
+            run.Draws = false;
+            _rasterSettling = true;
+            return run;
+        }
+
+        // Its draws were not made ready for this frame (PreRender): what it holds once more, and drawn anew in the next.
+        if (run.Draws && _rasterSkipped.Contains(element))
+        {
+            _rasterWantsDrawing.Add(element);
+            _rasterSettling = true;
+            if (!held.Drawn)
+            {
+                return null;
+            }
+
+            run.Scale = held.Scale;
+            run.Part = held.Part;
+            run.Width = held.Width;
+            run.Height = held.Height;
+            run.Draws = false;
+            return run;
+        }
+
+        if (run.Draws)
+        {
+            // Drawn anew square by square, a few a frame, what it holds laid down meanwhile; its draws made ready until
+            // the last square is in.
+            _rasterWantsDrawing.Add(element);
+            if (held.AnewOrder == null || held.AnewPrint != run.Print)
+            {
+                held.AnewPrint = run.Print;
+                held.AnewScale = run.Scale;
+                held.AnewPart = run.Part;
+                held.AnewWidth = run.Width;
+                held.AnewHeight = run.Height;
+                held.AnewNext = 0;
+                held.AnewStarted = false;
+                held.AnewMeasured = null;
+                held.AnewOrder = SquaresFrom(run.Width, run.Height, element.RasterTileSize,
+                    (float)((seen.X + seen.Width / 2 - run.Part.X) * run.Scale),
+                    (float)((seen.Y + seen.Height / 2 - run.Part.Y) * run.Scale));
+            }
+
+            run.Held = held;
+        }
+
+        return run;
+    }
+
+    // Whether its group stands in the paint order though it draws nothing of its own: the walk opens its layer, or draws
+    // its texture, there.
+    private bool HostsItsSubtree(IUIComponent component) =>
+        WantsLayer(component) || component.DrawingMode == DrawingMode.Raster;
+
+    // Whether this is the element whose texture is being drawn: faded as one, as a layer is - what is above it and its
+    // own opacity fade the texture where it is laid down, not what is drawn into it.
+    private bool DrawnAsRaster(IUIComponent c) => _rasterRun is { } run && ReferenceEquals(run.Element, c);
+
+    // Along the axes, neither mirrored nor turned: the texture is laid down on a box, which keeps no flip or turn.
+    private static bool TheRightWayRound(Matrix4x4F world) =>
+        AlongTheAxes(world) && world.M12 == 0 && world.M21 == 0 && world.M11 > 0 && world.M22 > 0;
+
+    // The squares of a texture, the ones nearest the middle of what is seen first.
+    private static List<Rect2D> SquaresFrom(int width, int height, int side, float middleX, float middleY)
+    {
+        var squares = new List<Rect2D>();
+        for (var y = 0; y < height; y += side)
+        {
+            for (var x = 0; x < width; x += side)
+            {
+                squares.Add(new Rect2D
+                {
+                    Offset = new Offset2D { X = x, Y = y },
+                    Extent = new Extent2D { Width = (uint)Math.Min(side, width - x), Height = (uint)Math.Min(side, height - y) }
+                });
+            }
+        }
+
+        squares.Sort((a, b) => DistanceSquared(a, middleX, middleY).CompareTo(DistanceSquared(b, middleX, middleY)));
+        return squares;
+    }
+
+    private static float DistanceSquared(Rect2D square, float x, float y)
+    {
+        var dx = square.Offset.X + square.Extent.Width / 2f - x;
+        var dy = square.Offset.Y + square.Extent.Height / 2f - y;
+        return dx * dx + dy * dy;
+    }
+
+    // Whether what the frames ask the raster to hold has stayed the same for RasterSettles; asked something else, it
+    // starts counting again.
+    private static bool Settled(RasterHeld held, RasterRun run)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (held.WantedScale != run.Scale || held.WantedPart != run.Part || held.WantedPrint != run.Print)
+        {
+            held.WantedScale = run.Scale;
+            held.WantedPart = run.Part;
+            held.WantedPrint = run.Print;
+            held.WantedSince = now;
+            return false;
+        }
+
+        return now - held.WantedSince >= RasterSettles;
+    }
+
+    // ---- MADE READY: what of each raster's draws PreRender made ready for this frame.
+
+    // Each raster's draws that need making ready before a frame, apart from the rest, and its groups: [Start, End).
+    private readonly List<(IUIComponent Element, List<IRenderUnit> Units, int Start, int End)> _rasterPreRender = [];
+
+    // Whether nothing it draws can have changed since its print last went through its draws: no group recorded again,
+    // no brush repainted, no glyph landed. What did change is drawn in the frame it changed in.
+    private bool DrawsUnchanged(IUIComponent element, int start, int end)
+    {
+        if (!_rasterParts.TryGetValue(element.RenderId, out var held) || !held.DrawsKnown
+            || held.DrawsPaint != Core.Media.Brush.PaintEpoch || held.DrawsLanded != FontAtlasStore.LandedVersion)
+        {
+            return false;
+        }
+
+        long recorded = 0;
+        for (var i = start; i < end && i < _groups.Count; i++)
+        {
+            recorded += _groups[i].Recorded;
+        }
+
+        return recorded == held.DrawsRecorded && FadesIn(element, start, end) == held.DrawsFades;
+    }
+
+    // The rasters whose draws were not made ready for this frame: they lay down what they hold, or draw nothing.
+    private readonly HashSet<IUIComponent> _rasterSkipped = [];
+
+    // The rasters to be drawn anew: their draws are made ready for the next frame.
+    private readonly HashSet<IUIComponent> _rasterWantsDrawing = [];
+
+    // Whether the raster starting at this group had its draws left unready this frame - and, drawn from its shapes now,
+    // would draw them so: nothing of it this frame, all of it the next.
+    private bool LeftUnready(IUIComponent element)
+    {
+        if (!_rasterSkipped.Contains(element))
+        {
+            return false;
+        }
+
+        _rasterWantsDrawing.Add(element);
+        _rasterSettling = true;
+        return true;
+    }
+
+    // ---- REPLAY: a frame that only moves the camera is replayed, each raster in the stream laying down what it holds.
+
+    // Whether the recorded stream lays a raster down somewhere.
+    private bool _streamHoldsRasters;
+
+    // This frame's run of each raster the stream lays down, worked out before it is replayed.
+    private readonly Dictionary<IUIComponent, RasterRun> _replayedRasters = new();
+
+    private void RecordRasterMark(IUIComponent element, long order)
+    {
+        if (!_recording)
+        {
+            return;
+        }
+
+        // In a stretch of the stream of its own, as a layer's mark is.
+        CloseLayer();
+        RecordOp(new RenderOp { Kind = RenderOpKind.Raster, Layer = element, Order = order, OrderFirst = order });
+        CloseLayer();
+        _streamHoldsRasters = true;
+    }
+
+    // Whether every raster the stream lays down holds what this frame shows of it; one to be drawn anew - or drawn from
+    // its shapes now - has the frame walked.
+    private bool RastersHold(Rect2D fullScissor)
+    {
+        _replayedRasters.Clear();
+        if (!_streamHoldsRasters)
+        {
+            return true;
+        }
+
+        BeginRasterFrame();
+        foreach (var op in _ops)
+        {
+            if (op.Kind != RenderOpKind.Raster)
+            {
+                continue;
+            }
+
+            var index = GroupIndexOf(op.Layer);
+            var run = index >= 0 ? StartRaster(index, fullScissor) : null;
+            if (run == null || run.Draws)
+            {
+                return false;
+            }
+
+            _replayedRasters[op.Layer] = run;
+        }
+
+        return true;
+    }
+
+    private void ReplayRaster(IGraphicsDevice device, IUIComponent element)
+    {
+        if (_replayedRasters.TryGetValue(element, out var run))
+        {
+            LayDownRaster(device, run);
+        }
+    }
+
+    // The elements drawn as a raster this frame - laid down or drawn anew; the rest are drawn from their shapes.
+    private readonly HashSet<IUIComponent> _rasterShown = [];
+
+    // A frame's walk begins: what each element held is forgotten once it is drawn no more.
+    private void BeginRasterFrame()
+    {
+        _rasterRun = null;
+        _rasterSettling = false;
+        if (_rasterParts.Count > _rasterShown.Count)
+        {
+            _rasterShownIds.Clear();
+            foreach (var element in _rasterShown)
+            {
+                _rasterShownIds.Add(element.RenderId);
+            }
+
+            _rasterGone.Clear();
+            foreach (var id in _rasterParts.Keys)
+            {
+                if (!_rasterShownIds.Contains(id))
+                {
+                    _rasterGone.Add(id);
+                }
+            }
+
+            foreach (var id in _rasterGone)
+            {
+                _rasterParts.Remove(id);
+            }
+        }
+
+        _rasterShown.Clear();
+    }
+
+    private readonly HashSet<Guid> _rasterShownIds = [];
+    private readonly List<Guid> _rasterGone = [];
+
+    private bool UnderARoundedClip(IUIComponent element)
+    {
+        for (var c = element; c != null; c = ApplySnap(c).RenderParent)
+        {
+            var s = ApplySnap(c);
+            if (s.ClipToBounds && s.ClipRadii != Vector4F.Zero)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool Holds(Rect outer, Rect inner) =>
+        inner.X >= outer.X && inner.Y >= outer.Y && inner.Right <= outer.Right && inner.Bottom <= outer.Bottom;
+
+    private static Rect Grown(Rect rect, double share) =>
+        new(rect.X - rect.Width * share, rect.Y - rect.Height * share, rect.Width * (1 + 2 * share),
+            rect.Height * (1 + 2 * share));
+
+    // What the element's subtree draws, relative to the element, and the part of it held: false when it holds copies of
+    // itself, which no texture follows. A change of what it draws is told by its groups being recorded again - not by the
+    // identity of what they hold, which the walk renews as it draws them (a brush's snapshot, a text's colors) - and by a
+    // brush repainted in place, by its paint version. Content that cannot be told apart - a living halo - is drawn anew
+    // each frame.
+    private bool PrintRaster(RasterRun run, RasterHeld held)
+    {
+        var print = PrintSeed;
+        Mix(ref print, run.Scale);
+        Mix(ref print, run.Part.X);
+        Mix(ref print, run.Part.Y);
+        Mix(ref print, run.Part.Width);
+        Mix(ref print, run.Part.Height);
+        var groups = PrintSeed;
+        long recorded = 0;
+        for (var i = run.Start; i < run.End; i++)
+        {
+            var group = _groups[i];
+            if (group.Clones is { Count: > 0 })
+            {
+                return false;
+            }
+
+            recorded += group.Recorded;
+            Mix(ref groups, group.Recorded);
+            if (!ReferenceEquals(group.Component, run.Element))
+            {
+                MixRelative(ref groups, World(group.Component) * run.FromWindow);
+            }
+        }
+
+        // Its draws, one by one, only when one of them can have changed: a group recorded again, a brush repainted in
+        // place anywhere, glyphs landed. Gone through each frame, a page of thousands of draws took half of every frame
+        // the camera moved its texture in.
+        var paint = Core.Media.Brush.PaintEpoch;
+        var landed = FontAtlasStore.LandedVersion;
+        if (!held.DrawsKnown || held.DrawsGroups != groups || held.DrawsPaint != paint || held.DrawsLanded != landed)
+        {
+            var draws = PrintSeed;
+            var drawsStill = true;
+            var hasText = false;
+            var placed = false;
+            for (var i = run.Start; i < run.End; i++)
+            {
+                foreach (var unit in _groups[i].Units)
+                {
+                    drawsStill &= MixRasterUnit(ref draws, unit, ref hasText);
+                    if (unit.Placement is { } placement)
+                    {
+                        placed = true;
+                        MixRelative(ref draws, Newest(placement));
+                    }
+                }
+            }
+
+            // A placement moves without its group recorded again: gone through each frame where there are any.
+            held.DrawsKnown = !placed;
+            held.DrawsRecorded = recorded;
+            held.DrawsGroups = groups;
+            held.DrawsPaint = paint;
+            held.DrawsLanded = landed;
+            held.DrawsPrint = draws;
+            held.DrawsStill = drawsStill;
+            held.DrawsText = hasText;
+        }
+
+        held.DrawsFades = FadesIn(run.Element, run.Start, run.End);
+        Mix(ref print, (long)groups);
+        Mix(ref print, (long)held.DrawsPrint);
+        Mix(ref print, (long)held.DrawsFades);
+        var still = !MovedByTheCompositor(run.Element) && held.DrawsStill;
+
+        // Glyphs still on their way are drawn missing: it is drawn again until none is. Not the atlas's version, which any
+        // text anywhere moves - and drawing it asks for glyphs of its own, so it never stood still.
+        if (held.DrawsText)
+        {
+            still &= !FontAtlasStore.HasPendingGlyphs;
+        }
+
+        // Not to be told apart: a print of its own each frame, which no texture holds.
+        run.Print = still ? print : print ^ (ulong)++_rasterFrames;
+        run.Still = still;
+        return true;
+    }
+
+    private long _rasterFrames;
+
+    // How what is inside a raster is faded: in its texture. Its own opacity, and what is above it, fade it where it is
+    // laid down; its draws' own fade (SelfOpacity) is inside.
+    private ulong FadesIn(IUIComponent element, int start, int end)
+    {
+        var fades = PrintSeed;
+        for (var i = start; i < end && i < _groups.Count; i++)
+        {
+            var component = _groups[i].Component;
+            var snapshot = ApplySnap(component);
+            Mix(ref fades, snapshot.SelfOpacity);
+            if (!ReferenceEquals(component, element))
+            {
+                Mix(ref fades, snapshot.Opacity);
+            }
+        }
+
+        return fades;
+    }
+
+    private static void Mix(ref ulong print, double value) => Mix(ref print, BitConverter.DoubleToInt64Bits(value));
+
+    // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
+    // text's revision. False for a living halo, which changes every frame.
+    private static bool MixRasterUnit(ref ulong print, IRenderUnit unit, ref bool hasText)
+    {
+        if (unit.RenderData?.LivingHalo != null)
+        {
+            return false;
+        }
+
+        // The live brushes' versions: a snapshot is made anew at each repaint, and its own version is always the first.
+        switch (unit)
+        {
+            case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
+                Mix(ref print, shape.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, shape.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case RectangleRenderUnit { Payload: { } rectangle }:
+                Mix(ref print, rectangle.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, rectangle.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case EllipseRenderUnit { Payload: { } ellipse }:
+                Mix(ref print, ellipse.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, ellipse.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case RegularPolygonRenderUnit { Payload: { } polygon }:
+                Mix(ref print, polygon.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, polygon.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case LineRenderUnit { Payload: { } line }:
+                Mix(ref print, line.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case RenderUnits.TextRenderUnit { Payload: { } text }:
+                hasText = true;
+                Mix(ref print, text.Revision);
+                Mix(ref print, text.LiveForeground?.PaintVersion ?? 0);
+                Mix(ref print, text.LiveBackground?.PaintVersion ?? 0);
+                Mix(ref print, text.LiveStroke?.PaintVersion ?? 0);
+                break;
+        }
+
+        return true;
+    }
+
+    // Where a draw stands in the element, to a 4096th of its unit: worked out through the window, the same place comes
+    // back a few float steps apart as the camera moves, which is not a change.
+    private static void MixRelative(ref ulong print, Matrix4x4F relative)
+    {
+        Mix(ref print, (long)Math.Round(relative.M11 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M12 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M21 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M22 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M41 * 4096.0));
+        Mix(ref print, (long)Math.Round(relative.M42 * 4096.0));
+    }
+
+    // Begins drawing the run's texture anew: where each of its draws lies is worked out once, its target made ready, and
+    // its first square of this frame opened.
+    private Rect2D BeginDrawingAnew(IGraphicsDevice device, RasterRun run)
+    {
+        var held = run.Held;
+        if (!_offscreenLayers.DrawsAnew(run.Element.RenderId, held.AnewPrint))
+        {
+            _offscreenLayers.StartDrawingAnew(device, run.Element.RenderId, held.AnewPrint, held.AnewWidth, held.AnewHeight);
+            held.AnewNext = 0;
+            held.AnewMeasured = null;
+        }
+
+        held.AnewMeasured ??= MeasureDraws(run);
+        run.SquaresSince = System.Diagnostics.Stopwatch.GetTimestamp();
+        return OpenRasterSquare(device, run);
+    }
+
+    // Opens the run's next square, and draws the subtree into it from here: under the matrix from the window to it, a
+    // texel to the device pixel.
+    private Rect2D OpenRasterSquare(IGraphicsDevice device, RasterRun run)
+    {
+        var held = run.Held;
+        var square = held.AnewOrder[held.AnewNext];
+        run.Square = square;
+        var fringe = (FringePixels + 1) / held.AnewScale;
+        run.SquareIn = new Rect(held.AnewPart.X + square.Offset.X / held.AnewScale - fringe,
+            held.AnewPart.Y + square.Offset.Y / held.AnewScale - fringe, square.Extent.Width / held.AnewScale + 2 * fringe,
+            square.Extent.Height / held.AnewScale + 2 * fringe);
+        var toTexels = (float)(held.AnewScale / _renderScale);
+        var toTexture = Matrix4x4F.Identity;
+        toTexture.M11 = toTexels;
+        toTexture.M22 = toTexels;
+        toTexture.M41 = (float)((-held.AnewPart.X * held.AnewScale - square.Offset.X) / _renderScale);
+        toTexture.M42 = (float)((-held.AnewPart.Y * held.AnewScale - square.Offset.Y) / _renderScale);
+        _cloneMatrix = run.FromWindow * toTexture;
+        run.ToSquare = toTexture;
+        // Its subtree is cut by its own clip only in here (CumulativeClip): what was worked out for it outside is not.
+        _clipCache.Clear();
+        return DrawIn(_offscreenLayers.BeginSquare(device, run.Element.RenderId, _projectionMatrix, run.Bounds,
+            (int)square.Extent.Width, (int)square.Extent.Height));
+    }
+
+    // Closes the square open, put into the texture drawn anew.
+    private Rect2D CloseRasterSquare(IGraphicsDevice device, RasterRun run)
+    {
+        _clipCache.Clear();
+        run.Held.AnewNext++;
+        return DrawIn(_offscreenLayers.EndSquare(device, run.Element.RenderId, run.Square));
+    }
+
+    // Whether another square of the run is drawn this frame: until none is left, and within the element's budget once it
+    // holds a texture to lay down meanwhile - the first texture it ever holds is drawn whole.
+    private bool DrawsAnotherSquare(RasterRun run)
+    {
+        var held = run.Held;
+        if (held.AnewNext >= held.AnewOrder.Count)
+        {
+            return false;
+        }
+
+        // What never holds still is drawn anew each frame: whole, or it would never be finished.
+        var spent = System.Diagnostics.Stopwatch.GetTimestamp() - run.SquaresSince;
+        return !held.Drawn || !run.Still
+            || spent < run.Element.RasterFrameBudget.TotalSeconds * System.Diagnostics.Stopwatch.Frequency;
+    }
+
+    // The last square of the run is in: the texture drawn anew is the one held.
+    private void FinishDrawingAnew(IGraphicsDevice device, RasterRun run)
+    {
+        var held = run.Held;
+        _offscreenLayers.FinishDrawingAnew(device, run.Element.RenderId);
+        RasterTexturesFinished++;
+        _rasterWantsDrawing.Remove(run.Element);
+        held.Drawn = true;
+        held.Scale = held.AnewScale;
+        held.Part = held.AnewPart;
+        held.Width = held.AnewWidth;
+        held.Height = held.AnewHeight;
+        held.AnewOrder = null;
+        held.AnewMeasured = null;
+    }
+
+    // Where each draw of the run lies, in the element's units, and - at a group's begin mark - where all of the group
+    // lies and the unit past its end: a square passes over what it does not reach. A draw whose place is not known, and
+    // every other mark, reaches everywhere.
+    private Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)> MeasureDraws(RasterRun run)
+    {
+        var measured = new Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)>();
+        var everywhere = new Rect(double.MinValue / 4, double.MinValue / 4, double.MaxValue / 2, double.MaxValue / 2);
+        var open = new List<(int Begin, Rect Reach)>();
+        for (var i = run.Start; i < run.End; i++)
+        {
+            var group = _groups[i];
+            var units = group.Units;
+            var bounds = new Rect[units.Count];
+            var skipTo = new int[units.Count];
+            open.Clear();
+            for (var u = 0; u < units.Count; u++)
+            {
+                var unit = units[u];
+                skipTo[u] = u + 1;
+                if (unit is GroupMarkRenderUnit mark)
+                {
+                    bounds[u] = everywhere;
+                    if (mark.Kind == GroupMarkKind.Begin)
+                    {
+                        open.Add((u, Rect.Empty));
+                    }
+                    else if (mark.Kind == GroupMarkKind.End && open.Count > 0)
+                    {
+                        CloseMeasured(open, bounds, skipTo, u + 1);
+                    }
+
+                    continue;
+                }
+
+                var reach = UnitReach(unit, run.FromWindow) ?? everywhere;
+                bounds[u] = reach;
+                if (open.Count > 0)
+                {
+                    var top = open[^1];
+                    open[^1] = (top.Begin, Joined(top.Reach, reach));
+                }
+            }
+
+            // Left open by its element: it reaches to the last unit.
+            while (open.Count > 0)
+            {
+                CloseMeasured(open, bounds, skipTo, units.Count);
+            }
+
+            measured[units] = (bounds, skipTo);
+        }
+
+        return measured;
+    }
+
+    private static void CloseMeasured(List<(int Begin, Rect Reach)> open, Rect[] bounds, int[] skipTo, int past)
+    {
+        var closed = open[^1];
+        open.RemoveAt(open.Count - 1);
+        bounds[closed.Begin] = closed.Reach;
+        skipTo[closed.Begin] = past;
+        if (open.Count > 0)
+        {
+            var parent = open[^1];
+            open[^1] = (parent.Begin, Joined(parent.Reach, closed.Reach));
+        }
+    }
+
+    private static Rect Joined(Rect a, Rect b) => a.IsEmpty ? b : b.IsEmpty ? a : Union(a, b);
+
+    // Where a unit draws, in the element's units; null when it has no element.
+    private Rect? UnitReach(IRenderUnit unit, Matrix4x4F fromWindow)
+    {
+        if (unit.Component == null)
+        {
+            return null;
+        }
+
+        var local = DrawnInk(unit, true, out var grow) is { } drawn
+            ? drawn
+            : new Rect(0, 0, ApplySnap(unit.Component).RenderSize.Width, ApplySnap(unit.Component).RenderSize.Height);
+        return local.Inflate(grow).TransformToAABB(World(unit.Component) * fromWindow);
+    }
+
+    // Drawing a square of a raster, where the unit at `index` draws in the square's space, from where it lies in the
+    // element - worked out once for all its squares; null when not drawing one, or the unit has no element.
+    private Rect? MeasuredInk(List<IRenderUnit> units, int index)
+    {
+        if (units[index].Component == null || _rasterRun is not { Held.AnewMeasured: { } measured } run
+            || !measured.TryGetValue(units, out var drawn) || index >= drawn.Bounds.Length)
+        {
+            return null;
+        }
+
+        return drawn.Bounds[index].TransformToAABB(run.ToSquare);
+    }
+
+    // Drawing a square of a raster, the unit past the draw - or the whole group begun - at `index` when the square does
+    // not reach it; else `index`.
+    private int PastWhatTheSquareMisses(ControlGroup group, int index)
+    {
+        if (_rasterRun is not { Held.AnewMeasured: { } measured } run || !measured.TryGetValue(group.Units, out var drawn)
+            || index >= drawn.Bounds.Length)
+        {
+            return index;
+        }
+
+        var reach = drawn.Bounds[index];
+        var square = run.SquareIn;
+        var misses = reach.IsEmpty || reach.Right < square.X || reach.Bottom < square.Y || reach.X > square.Right
+            || reach.Y > square.Bottom;
+        return misses ? drawn.SkipTo[index] : index;
+    }
+
+    /// <summary>Whether <paramref name="unit"/> was drawn this frame into the texture of an element drawn as a raster - its
+    /// own or an ancestor's - rather than into the frame's batches.</summary>
+    internal bool DrawnIntoTiles(IRenderUnit unit)
+    {
+        if (_rasterShown.Count == 0)
+        {
+            return false;
+        }
+
+        for (var c = unit.Component; c != null; c = ApplySnap(c).RenderParent)
+        {
+            if (_rasterShown.Contains(c))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Lays the texture down where the element stands now.
+    private void LayDownRaster(IGraphicsDevice device, RasterRun run)
+    {
+        if (_rasterParts.TryGetValue(run.Element.RenderId, out var holding) && holding.AnewOrder == null)
+        {
+            _offscreenLayers.StopDrawingAnew(device, run.Element.RenderId);
+        }
+
+        var scale = (float)_renderScale;
+        var held = new Rect(run.Part.X, run.Part.Y, run.Width / run.Scale, run.Height / run.Scale);
+        var box = held.TransformToAABB(run.World);
+        var alpha = LayerAlpha(run.Element);
+        if (!(alpha > 0))
+        {
+            return;
+        }
+
+        _offscreenLayers.LayDownTile(device, run.Element.RenderId, new Vector4F((float)box.X * scale,
+            (float)box.Y * scale, (float)box.Width * scale, (float)box.Height * scale), run.Scissor, alpha);
+    }
+}

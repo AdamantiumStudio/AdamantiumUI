@@ -60,9 +60,4 @@ internal sealed class CommandGroup(GroupMarkRenderUnit begin)
 
     /// <summary>Whether a group inside it blends by a mode - found when it is placed.</summary>
     public bool HoldsBlend;
-
-    /// <summary>The keys its targets are kept under from frame to frame: its content's, then its masks'.</summary>
-    public readonly object ContentKey = new();
-
-    public readonly object[] MaskKeys = [new(), new(), new()];
 }
