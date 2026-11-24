@@ -42,6 +42,10 @@ public sealed partial class PdfContentSession : IDrawingSession
 
     private PdfMatrix _through;
 
+    /// <summary>Multiplied into every color written - a tinted drawing tile's tint, as the renderer multiplies it into
+    /// every pixel; white leaves colors as they are.</summary>
+    private Color _tint = Mathematics.Colors.White;
+
     /// <param name="content">The content stream written into.</param>
     /// <param name="toPage">From the units things are drawn in to the page's: for a sheet, the inverse of
     /// <see cref="PdfPageSpace.ToSheet"/>.</param>
@@ -349,6 +353,9 @@ public sealed partial class PdfContentSession : IDrawingSession
                 .Rectangle(box.Left, box.Bottom, box.Width, box.Height).Fill();
         }
 
+        // A mask says how much shows, not what color: no tint in it.
+        var tint = _tint;
+        _tint = Mathematics.Colors.White;
         _levels.Push(level);
         try
         {
@@ -359,6 +366,8 @@ public sealed partial class PdfContentSession : IDrawingSession
             while (_levels.Pop() != level)
             {
             }
+
+            _tint = tint;
         }
 
         return level.Builder.ToFormXObject(box, PdfTransparencyGroup.Layer);
@@ -402,7 +411,7 @@ public sealed partial class PdfContentSession : IDrawingSession
         if (widths == null)
         {
             Opacity(alpha, 1);
-            content.StrokeColor(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+            StrokeColor(color);
             Transform(place);
             content.LineWidth(ink.Thickness).LineCap(1).LineJoin(1);
             content.MoveTo(points[0].X, points[0].Y);
@@ -423,7 +432,7 @@ public sealed partial class PdfContentSession : IDrawingSession
         }
 
         Opacity(1, alpha);
-        content.FillColor(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+        FillColor(color);
         Transform(place);
         var widest = 0.0;
         for (var index = 0; index < count; index++)
@@ -472,7 +481,7 @@ public sealed partial class PdfContentSession : IDrawingSession
         var content = Content;
         content.SaveState();
         Opacity(1, alpha);
-        content.FillColor(arrow.Color.R / 255.0, arrow.Color.G / 255.0, arrow.Color.B / 255.0);
+        FillColor(arrow.Color);
         Transform(place);
         Capsule(shaftFrom, shaftTo, edge);
         Head(arrow.StartHead, from, along * -1, back, wide, edge);
@@ -544,9 +553,9 @@ public sealed partial class PdfContentSession : IDrawingSession
 
         Run(font, size, glyphs, runs);
 
-        // One gradient across the whole text, however many fonts and sizes it is set in.
+        // One gradient or tile across the whole text, however many fonts and sizes it is set in.
         Rect? whole = null;
-        if (foreground is GradientBrush)
+        if (foreground is GradientBrush or TileBrush)
         {
             foreach (var run in runs)
             {
@@ -674,6 +683,25 @@ public sealed partial class PdfContentSession : IDrawingSession
         }
 
         content.ClosePath();
+    }
+
+    /// <summary><paramref name="color"/> with the tint multiplied into its red, green and blue; its alpha as it is - a
+    /// tint's own alpha fades the whole tile.</summary>
+    private Color Tinted(Color color) => _tint == Mathematics.Colors.White
+        ? color
+        : new Color((byte)Math.Round(color.R * _tint.R / 255.0), (byte)Math.Round(color.G * _tint.G / 255.0),
+            (byte)Math.Round(color.B * _tint.B / 255.0), color.A);
+
+    private void FillColor(Color color)
+    {
+        var tinted = Tinted(color);
+        Content.FillColor(tinted.R / 255.0, tinted.G / 255.0, tinted.B / 255.0);
+    }
+
+    private void StrokeColor(Color color)
+    {
+        var tinted = Tinted(color);
+        Content.StrokeColor(tinted.R / 255.0, tinted.G / 255.0, tinted.B / 255.0);
     }
 
     private void Opacity(double stroke, double fill)

@@ -56,8 +56,11 @@ public sealed partial class PdfContentSession
     /// <summary>Strokes the pen's runs along <paramref name="curves"/>, in the content's current units: the bites of
     /// concave ends cut out first, the runs stroked without caps, then the convex ends filled with the same paint.
     /// <paramref name="paintCaps"/> fills the path given with the stroke's paint.</summary>
-    private bool StrokeRuns(Pen pen, PathCurves curves, double width, Action paintCaps)
+    /// <param name="reach">How far past the line the stroke reaches - its miters and ends: what a run's bites leave
+    /// uncut around it.</param>
+    private bool StrokeRuns(Pen pen, PathCurves curves, double width, double reach, Action paintCaps)
     {
+        reach = Math.Max(reach, width) * 2;
         var contours = Contours(curves);
         var runs = Runs(pen, contours, width);
         if (runs.Count == 0)
@@ -67,31 +70,16 @@ public sealed partial class PdfContentSession
 
         var content = Content;
         var half = width / 2;
-        var bites = false;
-        foreach (var run in runs)
-        {
-            bites |= IsConcave(run.StartCap) || IsConcave(run.EndCap);
-        }
-
-        if (bites)
-        {
-            var box = curves.Bounds;
-            var reach = width * 4;
-            content.Rectangle(box.X - reach, box.Y - reach, box.Width + reach * 2, box.Height + reach * 2);
-            foreach (var run in runs)
-            {
-                if (NativeCap(run) < 0)
-                {
-                    Ends(run, contours, half, true);
-                }
-            }
-
-            content.Clip(true);
-        }
 
         // A run whose two ends are alike and of PDF's kinds is stroked with PDF's own cap, in one piece with its line;
-        // the rest without caps, their ends drawn as shapes.
+        // the rest without caps, their ends drawn as shapes. A run with a concave end goes alone, its bites cut from it
+        // only - as on screen, where a bite takes from its own run and no other.
         var drawn = new bool[runs.Count];
+        for (var index = 0; index < runs.Count; index++)
+        {
+            drawn[index] = IsConcave(runs[index].StartCap) || IsConcave(runs[index].EndCap);
+        }
+
         foreach (var cap in (ReadOnlySpan<int>)[0, 1, 2, -1])
         {
             var any = false;
@@ -121,7 +109,7 @@ public sealed partial class PdfContentSession
         var convex = false;
         foreach (var run in runs)
         {
-            if (NativeCap(run) < 0)
+            if (NativeCap(run) < 0 && !IsConcave(run.StartCap) && !IsConcave(run.EndCap))
             {
                 convex |= Ends(run, contours, half, false);
             }
@@ -130,6 +118,29 @@ public sealed partial class PdfContentSession
         if (convex)
         {
             paintCaps();
+        }
+
+        var box = curves.Bounds;
+        foreach (var run in runs)
+        {
+            if (!IsConcave(run.StartCap) && !IsConcave(run.EndCap))
+            {
+                continue;
+            }
+
+            content.SaveState();
+            content.Rectangle(box.X - reach, box.Y - reach, box.Width + reach * 2, box.Height + reach * 2);
+            Ends(run, contours, half, true);
+            content.Clip(true);
+            content.LineCap(0);
+            WriteRun(contours[run.Contour], run.Start, run.End);
+            content.Stroke();
+            if (Ends(run, contours, half, false))
+            {
+                paintCaps();
+            }
+
+            content.RestoreState();
         }
 
         return true;
@@ -256,6 +267,7 @@ public sealed partial class PdfContentSession
                     : new StrokeRun(index, 0, contour.Length, PenLineCap.Flat, PenLineCap.Flat));
                 continue;
             }
+            var first = runs.Count;
             while (start < limit)
             {
                 for (var entry = 0; entry < entries && start < limit; entry++)
@@ -265,27 +277,58 @@ public sealed partial class PdfContentSession
                     {
                         if (windowed)
                         {
+                            // A dash that reaches an end of the window to within the length's own rounding wears
+                            // the line's end there.
+                            var near = total * 1e-9;
                             if (end > from && start < to || end == start && start >= from && start <= to)
                             {
                                 runs.Add(new StrokeRun(index, Math.Max(start, from), Math.Min(end, to),
-                                    start <= from ? pen.StartLineCap : pen.DashStartCap,
-                                    end >= to ? pen.EndLineCap : pen.DashEndCap));
+                                    start <= from + near ? pen.StartLineCap : pen.DashStartCap,
+                                    end >= to - near ? pen.EndLineCap : pen.DashEndCap));
                             }
                         }
                         else if (end > 0 || start >= 0)
                         {
-                            // Round a closed contour, a dash across its seam goes on past it.
-                            var at = start < 0 ? start + contour.Length : start;
-                            runs.Add(new StrokeRun(index, at, at + (end - start), pen.DashStartCap, pen.DashEndCap));
+                            // The pattern runs straight along the contour, its seam a plain cut, as the shader lays it.
+                            runs.Add(new StrokeRun(index, Math.Max(start, 0), Math.Min(end, contour.Length),
+                                start < 0 ? PenLineCap.Flat : pen.DashStartCap,
+                                end > contour.Length ? PenLineCap.Flat : pen.DashEndCap));
                         }
                     }
 
                     start = end;
                 }
             }
+
+            if (!windowed)
+            {
+                Seam(runs, first, contour.Length);
+            }
         }
 
         return runs;
+    }
+
+    /// <summary>Joins a closed contour's dash cut by its start and the one cut by its end into one going on through
+    /// the seam: both are painted there, so they meet as one line.</summary>
+    private static void Seam(List<StrokeRun> runs, int first, double length)
+    {
+        var last = runs.Count - 1;
+        if (last <= first)
+        {
+            return;
+        }
+
+        var head = runs[first];
+        var tail = runs[last];
+        if (head.Start > 0 || tail.End < length || head.StartCap != PenLineCap.Flat ||
+            tail.EndCap != PenLineCap.Flat)
+        {
+            return;
+        }
+
+        runs[last] = tail with { End = length + head.End, EndCap = head.EndCap };
+        runs.RemoveAt(first);
     }
 
     /// <summary>Writes the run from <paramref name="from"/> to <paramref name="to"/> along the contour as one subpath,
@@ -304,17 +347,21 @@ public sealed partial class PdfContentSession
             return;
         }
 
-        var whole = contour.Closed && from <= 0 && to >= contour.Length;
+        var length = contour.Length;
+        // Round a closed contour at most once: more paints nothing more.
+        to = Math.Min(to, from + length);
+        var whole = contour.Closed && from <= 0 && to >= length;
         var start = Along(contour, from);
         Content.MoveTo(start.X, start.Y);
-        var length = contour.Length;
+        var lap = (int)Math.Floor(from / length);
         var at = from;
-        while (at < to - 1e-12)
+        while (at < to - 1e-12 && lap <= (int)Math.Floor(to / length))
         {
-            var lap = Math.Floor(at / length) * length;
-            var stop = Math.Min(to, lap + length);
-            Span(contour, at - lap, stop - lap);
+            var lapStart = lap * length;
+            var stop = Math.Min(to, lapStart + length);
+            Span(contour, Math.Max(0, at - lapStart), stop - lapStart);
             at = stop;
+            lap++;
         }
 
         if (whole)

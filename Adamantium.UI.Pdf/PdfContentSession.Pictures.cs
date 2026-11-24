@@ -72,8 +72,9 @@ public sealed partial class PdfContentSession
             var vertex = vertices[index];
             var alpha = vertex.Color.A / 255.0;
             opaque &= vertex.Color.A == 255;
-            colors.Add(new PdfShadedVertex(vertex.Position.X, vertex.Position.Y, vertex.Color.R / 255.0,
-                vertex.Color.G / 255.0, vertex.Color.B / 255.0));
+            var color = Tinted(vertex.Color);
+            colors.Add(new PdfShadedVertex(vertex.Position.X, vertex.Position.Y, color.R / 255.0, color.G / 255.0,
+                color.B / 255.0));
             alphas.Add(new PdfShadedVertex(vertex.Position.X, vertex.Position.Y, alpha, alpha, alpha));
         }
 
@@ -138,7 +139,7 @@ public sealed partial class PdfContentSession
             return;
         }
 
-        var picture = _pictures.Of(image, frame);
+        var picture = _pictures.Of(image, frame, new Color(_tint.R, _tint.G, _tint.B, (byte)255), default);
         if (picture == null)
         {
             return;

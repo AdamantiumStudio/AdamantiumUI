@@ -215,6 +215,8 @@ public class PdfPensAndTilesTests
 
         Assert.That(Resources(saved).Dictionary.ContainsKey("Pattern"), Is.False);
         Assert.That(Content(saved), Does.Contain("W n").And.Contain("/Fm0 Do"));
+        Assert.That(Resources(saved).XObject("Fm0").Dictionary["Group"], Is.Not.Null,
+            "a group, so the brush's opacity fades it as one");
     }
 
     // A drawing brush's tile is the drawing itself, in vector: no image anywhere.
@@ -268,19 +270,102 @@ public class PdfPensAndTilesTests
         Assert.That(pixels.Take(4), Is.EqualTo(new byte[] { 200, 0, 0, 200 }), "200 gray times red; its alpha too");
     }
 
-    // A drawing's tint is multiplied over it, let through only where the drawing is - by its own alpha.
+    // A drawing's tint is multiplied into every color it has, as the renderer multiplies it into every pixel - so a
+    // half transparent part stays its own color times the tint, with no tint laid over what is under it.
     [Test]
-    public void ATintedDrawingTile_IsMultipliedOverIt_WhereItIs()
+    public void ATintedDrawingTile_HasTheTintMultipliedIntoItsColors()
     {
         var drawing = new GeometryDrawing
         {
-            Brush = new SolidColorBrush(Red),
+            Brush = new SolidColorBrush(new Color(255, 0, 0, 128)),
             Geometry = new EllipseGeometry(new Rect(0, 0, 10, 10)),
         };
-        var text = Encoding.ASCII.GetString(Bytes(session => session.DrawRectangle(
-            new DrawingBrush(drawing) { Tint = Blue }, new Rect(0, 0, 100, 100))));
-        Assert.That(text, Does.Contain("/Multiply"));
-        Assert.That(text, Does.Contain("/S /Alpha").Or.Contain("/S/Alpha"));
+        var saved = Save(session => session.DrawRectangle(
+            new DrawingBrush(drawing) { Tint = new Color(128, 255, 255, 255) }, new Rect(0, 0, 100, 100)));
+
+        var once = Resources(saved).XObject("Fm0");
+        var cell = (PdfDictionary)saved.Resolve(once.Dictionary["Resources"]);
+        var piece = (PdfStream)saved.Resolve(((PdfDictionary)cell["XObject"])["Fm0"]);
+        var drawn = Encoding.ASCII.GetString(saved.Decode(piece).Data.Span);
+        Assert.That(drawn, Does.Contain("0.501961 0 0 rg"), "red times half red");
+        Assert.That(drawn, Does.Not.Contain("Multiply"));
+    }
+
+    // A dash's concave end takes from that dash only: each such dash is cut by its own bites, alone.
+    [Test]
+    public void AConcaveDashEnd_IsBittenFromItsOwnDashOnly()
+    {
+        var saved = Save(session => session.DrawLine(new Vector2<double>(0, 100), new Vector2<double>(100, 100),
+            new Pen(new SolidColorBrush(Red), 4, dashStrokeArray: [10, 5], dashStartCap: PenLineCap.Flat,
+                dashEndCap: PenLineCap.ConcaveRound)));
+
+        Assert.That(Regex.Matches(Content(saved), @"W\* n").Count, Is.EqualTo(6),
+            "the six dashes ending in a bite each cut alone; the last ends where the line does, flat");
+    }
+
+    // Round a closed contour the pattern runs straight on: its seam is a plain cut, as the shader lays it - no dash
+    // more where the screen has a gap.
+    [Test]
+    public void DashesRoundAClosedContour_AreCutAtItsSeam()
+    {
+        var saved = Save(session => session.DrawRectangle(null, new Rect(0, 0, 10, 10),
+            new Pen(new SolidColorBrush(Red), 1, dashOffset: 1, dashStrokeArray: [2, 2])));
+
+        Assert.That(Regex.Matches(Content(saved), @" m\n").Count, Is.EqualTo(10),
+            "nine dashes inside, and the one across the seam - cut at 0 and at 40 - joined through it");
+    }
+
+    // A translucent pen in runs is one coverage: the runs and their drawn ends go into a group faded once.
+    [Test]
+    public void ATranslucentPenInRuns_IsFadedOnce_AsAGroup()
+    {
+        var saved = Save(session => session.DrawLine(new Vector2<double>(0, 100), new Vector2<double>(100, 100),
+            new Pen(new SolidColorBrush(new Color(255, 0, 0, 128)), 4, dashStrokeArray: [3, 1],
+                dashStartCap: PenLineCap.ConvexTriangle, dashEndCap: PenLineCap.Flat)));
+
+        var resources = Resources(saved);
+        Assert.That(Content(saved), Does.Contain("/Fm0 Do"));
+        Assert.That(((PdfName)((PdfDictionary)resources.XObject("Fm0").Dictionary["Group"])["S"]).Value,
+            Is.EqualTo("Transparency"));
+        Assert.That(Number(resources.ExtGState("GS0")["CA"]), Is.EqualTo(128 / 255.0).Within(1e-6));
+    }
+
+    // A picture pen is laid over the shape grown by the half width the stroke reaches past it, as the renderer lays it.
+    [Test]
+    public void APicturePen_IsLaidOverTheShapeGrownByHalfItsWidth()
+    {
+        var saved = Save(session => session.DrawRectangle(null, new Rect(0, 0, 100, 100),
+            new Pen(new ImageBrush(Picture(2, 2)) { Stretch = Stretch.Fill }, 10)));
+
+        var pattern = (PdfStream)Resources(saved).Pattern("P0");
+        var box = ((PdfArray)pattern.Dictionary["BBox"]).Select(Number).ToArray();
+        Assert.That(box[2] - box[0], Is.EqualTo(110).Within(1e-6));
+    }
+
+    // An absolute viewport is laid at the drawing's scale, as the renderer lays it.
+    [Test]
+    public void AnAbsoluteViewport_IsLaidAtTheDrawingsScale()
+    {
+        var brush = new ImageBrush(Picture(4, 4))
+        {
+            TileMode = TileMode.Tile,
+            Viewport = new Rect(0, 0, 32, 32),
+            ViewportUnits = BrushMappingMode.Absolute,
+        };
+        var saved = Save(session => session.DrawGeometry(brush, new RectangleGeometry(new Rect(0, 0, 100, 100)), null,
+            Matrix4x4.CreateScale<float>(2, 2, 1)));
+
+        Assert.That(Number(((PdfStream)Resources(saved).Pattern("P0")).Dictionary["XStep"]), Is.EqualTo(64).Within(1e-6));
+    }
+
+    // A dash longer than many laps of a tiny closed contour goes round it once, and the page is written.
+    [Test]
+    public void ADashLongerThanItsContour_GoesRoundItOnce()
+    {
+        var saved = Save(session => session.DrawEllipse(new Rect(0, 0, 0.1, 0.1), null,
+            new Pen(new SolidColorBrush(Red), 0.01, dashStrokeArray: [5, 1]), null));
+
+        Assert.That(saved.PageCount, Is.EqualTo(1));
     }
 
     /// <summary>The first image reached from <paramref name="form"/>, through the forms it draws.</summary>

@@ -42,6 +42,9 @@ public sealed partial class PdfContentSession
 
         var width = strokes ? pen.Thickness * PenUnit(pen, transform) : 0;
         var reach = strokes ? width / 2 * StrokeReach(pen, curves) : 0;
+        // The scale a tile brush is laid out at, as the renderer gives it: the drawing's to its root.
+        var toRoot = Matrix(transform).Then(_inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity);
+        var tileScale = new Vector2<double>(toRoot.A, toRoot.D);
         var wrote = false;
         if (fills && strokes && brush is SolidColorBrush fill && pen.Brush is SolidColorBrush line &&
             StrokesAsIs(pen))
@@ -52,12 +55,12 @@ public sealed partial class PdfContentSession
         {
             if (fills)
             {
-                wrote |= Fill(brush, curves, place, gradientBox ?? curves.Bounds);
+                wrote |= Fill(brush, curves, place, gradientBox ?? curves.Bounds, tileScale);
             }
 
             if (strokes)
             {
-                wrote |= Stroke(pen, width, curves, place, reach, gradientBox ?? curves.Bounds);
+                wrote |= Stroke(pen, width, curves, place, reach, gradientBox ?? curves.Bounds, tileScale);
             }
         }
 
@@ -97,7 +100,7 @@ public sealed partial class PdfContentSession
         var content = Content;
         content.SaveState();
         Opacity(Alpha(line), Alpha(fill));
-        content.FillColor(fill.Color.R / 255.0, fill.Color.G / 255.0, fill.Color.B / 255.0);
+        FillColor(fill.Color);
         Transform(place);
         Pen(pen, width, line.Color);
         var wrote = Write(curves, false, PdfMatrix.Identity);
@@ -114,7 +117,7 @@ public sealed partial class PdfContentSession
         return wrote;
     }
 
-    private bool Fill(Brush brush, PathCurves curves, PdfMatrix place, Rect gradientBox)
+    private bool Fill(Brush brush, PathCurves curves, PdfMatrix place, Rect gradientBox, Vector2<double> tileScale)
     {
         var content = Content;
         var evenOdd = curves.FillRule == FillRule.EvenOdd;
@@ -122,7 +125,7 @@ public sealed partial class PdfContentSession
         if (brush is SolidColorBrush solid)
         {
             Opacity(1, Alpha(solid));
-            content.FillColor(solid.Color.R / 255.0, solid.Color.G / 255.0, solid.Color.B / 255.0);
+            FillColor(solid.Color);
             Transform(place);
             var filled = Write(curves, true, PdfMatrix.Identity);
             if (filled)
@@ -136,7 +139,7 @@ public sealed partial class PdfContentSession
 
         if (brush is TileBrush tile)
         {
-            var tiles = Tiles(tile, gradientBox);
+            var tiles = Tiles(tile, gradientBox, tileScale);
             if (tiles == null)
             {
                 content.RestoreState();
@@ -188,19 +191,21 @@ public sealed partial class PdfContentSession
         return wrote;
     }
 
-    private bool Stroke(Pen pen, double width, PathCurves curves, PdfMatrix place, double reach, Rect gradientBox)
+    private bool Stroke(Pen pen, double width, PathCurves curves, PdfMatrix place, double reach, Rect gradientBox,
+        Vector2<double> tileScale)
     {
         var content = Content;
         content.SaveState();
-        Shading gradient = null;
         var solid = pen.Brush as SolidColorBrush;
-        // Ends drawn as shapes are filled with the stroke's own alpha.
         var alpha = solid != null ? Alpha(solid) : Math.Clamp(pen.Brush.Opacity, 0, 1);
         var asIs = StrokesAsIs(pen);
         PdfObject pattern = null;
         if (pen.Brush is TileBrush tile)
         {
-            var tiles = Tiles(tile, gradientBox);
+            // As the renderer lays it: over the shape grown by the half width the stroke reaches past it.
+            var half = width / 2;
+            var tiles = Tiles(tile, new Rect(gradientBox.X - half, gradientBox.Y - half, gradientBox.Width + width,
+                gradientBox.Height + width), tileScale);
             if (tiles == null)
             {
                 content.RestoreState();
@@ -211,7 +216,7 @@ public sealed partial class PdfContentSession
         }
         else if (solid == null)
         {
-            gradient = Gradient((GradientBrush)pen.Brush, gradientBox);
+            var gradient = Gradient((GradientBrush)pen.Brush, gradientBox);
             if (gradient == null)
             {
                 content.RestoreState();
@@ -222,44 +227,95 @@ public sealed partial class PdfContentSession
             pattern = PdfShadings.Pattern(gradient.Color, gradient.ToShape.Then(place));
         }
 
+        bool wrote;
+        if (asIs)
+        {
+            Opacity(alpha, 1);
+            wrote = StrokeWhole(pen, width, curves, place, solid, pattern);
+        }
+        else if (alpha >= 1)
+        {
+            wrote = StrokeInRuns(pen, width, curves, place, reach, solid, pattern);
+        }
+        else
+        {
+            // Runs and the ends drawn as shapes overlap where they meet: drawn opaque into a group of their own, faded
+            // once - one coverage, as on screen.
+            var level = new Level(new PdfContentBuilder(), null, true);
+            _levels.Push(level);
+            try
+            {
+                wrote = StrokeInRuns(pen, width, curves, place, reach, solid, pattern);
+            }
+            finally
+            {
+                while (_levels.Pop() != level)
+                {
+                }
+            }
+
+            if (wrote)
+            {
+                content.Opacity(alpha, alpha);
+                content.Draw(level.Builder.ToFormXObject(Box(curves.Bounds, place, reach), PdfTransparencyGroup.Layer));
+            }
+        }
+
+        content.RestoreState();
+        return wrote;
+    }
+
+    /// <summary>The pen as PDF strokes it, in one go.</summary>
+    private bool StrokeWhole(Pen pen, double width, PathCurves curves, PdfMatrix place, SolidColorBrush solid,
+        PdfObject pattern)
+    {
+        var content = Content;
         if (pattern != null)
         {
             content.StrokePattern(pattern);
         }
 
-        Opacity(alpha, asIs ? 1 : alpha);
         Transform(place);
         Pen(pen, width, solid?.Color);
-        bool wrote;
-        if (asIs)
+        var wrote = Write(curves, false, PdfMatrix.Identity);
+        if (wrote)
         {
-            wrote = Write(curves, false, PdfMatrix.Identity);
-            if (wrote)
-            {
-                content.Stroke();
-            }
-            else
-            {
-                content.EndPath();
-            }
+            content.Stroke();
         }
         else
         {
-            wrote = StrokeRuns(pen, curves, width, () =>
-            {
-                if (solid != null)
-                {
-                    content.FillColor(solid.Color.R / 255.0, solid.Color.G / 255.0, solid.Color.B / 255.0);
-                }
-                else
-                {
-                    content.FillPattern(pattern);
-                }
-
-                content.Fill();
-            });
+            content.EndPath();
         }
 
+        return wrote;
+    }
+
+    /// <summary>The pen stroked in runs, in the content's current state, its ends drawn as shapes in its paint.</summary>
+    private bool StrokeInRuns(Pen pen, double width, PathCurves curves, PdfMatrix place, double reach,
+        SolidColorBrush solid, PdfObject pattern)
+    {
+        var content = Content;
+        content.SaveState();
+        if (pattern != null)
+        {
+            content.StrokePattern(pattern);
+        }
+
+        Transform(place);
+        Pen(pen, width, solid?.Color);
+        var wrote = StrokeRuns(pen, curves, width, reach, () =>
+        {
+            if (solid != null)
+            {
+                FillColor(solid.Color);
+            }
+            else
+            {
+                content.FillPattern(pattern);
+            }
+
+            content.Fill();
+        });
         content.RestoreState();
         return wrote;
     }
@@ -287,7 +343,8 @@ public sealed partial class PdfContentSession
         var content = Content;
         if (color is { } solid)
         {
-            content.StrokeColor(solid.R / 255.0, solid.G / 255.0, solid.B / 255.0);
+            var tinted = Tinted(solid);
+            content.StrokeColor(tinted.R / 255.0, tinted.G / 255.0, tinted.B / 255.0);
         }
 
         content.LineWidth(width);
@@ -308,14 +365,14 @@ public sealed partial class PdfContentSession
 
     /// <summary>The gradient's shadings over <paramref name="bounds"/>: its colors, its alpha (null when opaque), and the
     /// matrix from the shadings' space to the shape's units. Null when it draws nothing.</summary>
-    private static Shading Gradient(GradientBrush brush, Rect bounds)
+    private Shading Gradient(GradientBrush brush, Rect bounds)
     {
         if (!(bounds.Width > 0) || !(bounds.Height > 0))
         {
             return null;
         }
 
-        var stops = Stops(brush);
+        var stops = Stops(brush, _tint);
         if (stops.Count == 0)
         {
             return null;
@@ -441,7 +498,7 @@ public sealed partial class PdfContentSession
 
     /// <summary>The stops the renderer draws - the first <see cref="GradientBrush.MaxRenderedStops"/> by offset - as
     /// colors 0..1, cut finer where they run in OKLab.</summary>
-    private static List<Stop> Stops(GradientBrush brush)
+    private static List<Stop> Stops(GradientBrush brush, Color tint)
     {
         var sorted = new List<GradientStop>(brush.GradientStops);
         sorted.Sort((one, other) => one.Offset.CompareTo(other.Offset));
@@ -453,8 +510,8 @@ public sealed partial class PdfContentSession
         var stops = new List<Stop>(sorted.Count);
         foreach (var stop in sorted)
         {
-            stops.Add(new Stop(Math.Clamp(stop.Offset, 0, 1), stop.Color.R / 255.0, stop.Color.G / 255.0,
-                stop.Color.B / 255.0, stop.Color.A / 255.0));
+            stops.Add(new Stop(Math.Clamp(stop.Offset, 0, 1), stop.Color.R / 255.0 * tint.R / 255.0,
+                stop.Color.G / 255.0 * tint.G / 255.0, stop.Color.B / 255.0 * tint.B / 255.0, stop.Color.A / 255.0));
         }
 
         if (brush.ColorInterpolationMode != ColorInterpolationMode.Oklab || stops.Count < 2)

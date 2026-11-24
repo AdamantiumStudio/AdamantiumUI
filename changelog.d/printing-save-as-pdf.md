@@ -14,11 +14,13 @@
   - pictures as images - a part of one, cut to rounded corners, an animation's frame - and a drawing's picture as the
     drawing itself, in vector;
   - tile brushes - a picture or a drawing - laid out as the renderer lays them (viewport, viewbox, stretch, alignment,
-    turned about their center), once or as tiling patterns, mirrored for the flip modes, tinted, a picture's
-    brightness, contrast and saturation changed as the shader changes them;
-  - pens as the stroke shader lays them: a trim, dashes - fitted to a closed contour, offset and phased - each end of
-    its own kind (flat, square, round, pointed, notched, bitten), a pen measured in the window's units as wide on the
-    sheet at any scale; ends PDF has are its own, the rest drawn as shapes, concave ones bitten out;
+    turned about their center, at the drawing's scale; a pen's over the shape grown by half its width), once - as a
+    group the brush's opacity fades as one - or as tiling patterns, mirrored for the flip modes; the tint multiplied
+    into every color, a picture's brightness, contrast and saturation changed as the shader changes them;
+  - pens as the stroke shader lays them: a trim, dashes - fitted to a closed contour, offset and phased, cut at its
+    seam - each end of its own kind (flat, square, round, pointed, notched, bitten), a pen measured in the window's
+    units as wide on the sheet at any scale; ends PDF has are its own, the rest drawn as shapes, a concave one bitten
+    from its own dash only; a translucent pen in runs faded once, as one coverage;
   - colored meshes as shaded triangles, their alpha a mask of the same triangles;
   - a group faded, blended or masked is a transparency group laid down as one, as a layer is on screen - before, its
     opacity was multiplied into each thing drawn in it, so overlapping parts came out darker; a group's glyphs cut it;

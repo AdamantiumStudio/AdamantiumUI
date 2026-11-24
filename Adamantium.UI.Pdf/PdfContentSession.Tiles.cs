@@ -31,17 +31,19 @@ public sealed partial class PdfContentSession
             Repeats ? box.Width : box.Width * LoneTileStep, Repeats ? box.Height : box.Height * LoneTileStep,
             ToShape.Then(place));
 
-        /// <summary>The one copy, as a form in the cell's space.</summary>
-        public PdfStream Once() => cell.ToFormXObject(box);
+        /// <summary>The one copy, as a group in the cell's space - faded as one by the brush's opacity, however its
+        /// drawing sets its own alpha.</summary>
+        public PdfStream Once() => cell.ToFormXObject(box, PdfTransparencyGroup.Layer);
     }
 
     private static bool PaintsTiles(TileBrush brush) =>
         brush is not VisualBrush && brush.Opacity > 0 &&
         brush.ContentSource is BitmapSource { PixelBytes: not null } or DrawingImage { Drawing: not null };
 
-    /// <summary>The tile brush laid over <paramref name="bounds"/>; null when it draws nothing or its picture has no
-    /// pixels to give.</summary>
-    private TilePaint Tiles(TileBrush brush, Rect bounds)
+    /// <summary>The tile brush laid over <paramref name="bounds"/> at <paramref name="scale"/> - what the renderer gives
+    /// an absolute viewport and a picture at its own size; null when it draws nothing or its picture has no pixels to
+    /// give.</summary>
+    private TilePaint Tiles(TileBrush brush, Rect bounds, Vector2<double> scale)
     {
         var size = brush.ContentSize;
         if (!(bounds.Width > 0) || !(bounds.Height > 0) || !(size.Width > 0) || !(size.Height > 0))
@@ -49,13 +51,13 @@ public sealed partial class PdfContentSession
             return null;
         }
 
-        var viewport = TileBrushLayout.Viewport(brush, bounds, 1, 1);
+        var viewport = TileBrushLayout.Viewport(brush, bounds, scale.X, scale.Y);
         if (!(viewport.Width > 0) || !(viewport.Height > 0))
         {
             return null;
         }
 
-        var layout = TileBrushLayout.Layout(brush, bounds, 1, 1);
+        var layout = TileBrushLayout.Layout(brush, bounds, scale.X, scale.Y);
         var width = viewport.Width;
         var height = viewport.Height;
         var flipX = brush.TileMode is TileMode.FlipX or TileMode.FlipXY;
@@ -111,15 +113,27 @@ public sealed partial class PdfContentSession
         var wholeHeight = drawn.Height / uv.Height;
         var whole = new Rect(drawn.X - uv.X * wholeWidth, drawn.Y - uv.Y * wholeHeight, wholeWidth, wholeHeight);
         var box = new PdfRectangle(drawn.X, drawn.Y, drawn.Right, drawn.Bottom);
+        // The tint is multiplied into every color the copy has, as the renderer multiplies it into every pixel; its
+        // alpha fades the copy as one.
+        var tint = Times(_tint, brush.Tint);
         PdfStream piece;
         if (source is DrawingImage drawing)
         {
-            var content = Capture(() => drawing.Render(this, whole, null));
-            piece = Tinted(content.ToFormXObject(box), box, brush.Tint);
+            var outer = _tint;
+            _tint = new Color(tint.R, tint.G, tint.B, (byte)255);
+            try
+            {
+                piece = Capture(() => drawing.Render(this, whole, null)).ToFormXObject(box, PdfTransparencyGroup.Layer);
+            }
+            finally
+            {
+                _tint = outer;
+            }
         }
         else
         {
-            var picture = _pictures.Of(source, -1, brush.Tint, brush.ColorAdjustment);
+            var picture = _pictures.Of(source, -1, new Color(tint.R, tint.G, tint.B, (byte)255),
+                brush.ColorAdjustment);
             if (picture == null)
             {
                 return false;
@@ -127,33 +141,20 @@ public sealed partial class PdfContentSession
 
             var image = new PdfContentBuilder().Transform(whole.Width, 0, 0, -whole.Height, whole.X,
                 whole.Y + whole.Height).Draw(picture);
-            piece = image.ToFormXObject(box);
+            piece = image.ToFormXObject(box, PdfTransparencyGroup.Layer);
         }
 
-        cell.SaveState().Transform(copy.A, copy.B, copy.C, copy.D, copy.E, copy.F).Draw(piece).RestoreState();
+        cell.SaveState().Transform(copy.A, copy.B, copy.C, copy.D, copy.E, copy.F);
+        if (tint.A < 255)
+        {
+            cell.Opacity(tint.A / 255.0, tint.A / 255.0);
+        }
+
+        cell.Draw(piece).RestoreState();
         return true;
     }
 
-    /// <summary>A drawing's piece with <paramref name="tint"/> multiplied in: the tint laid over it by multiply, in a
-    /// group let through only where the drawing itself is - by its alpha - and faded by the tint's alpha.</summary>
-    private static PdfStream Tinted(PdfStream piece, PdfRectangle box, Color tint)
-    {
-        if (tint == Mathematics.Colors.White)
-        {
-            return piece;
-        }
-
-        var alpha = new PdfContentBuilder().Draw(piece).ToFormXObject(box, PdfTransparencyGroup.Layer);
-        var multiplied = new PdfContentBuilder().Draw(piece).BlendMode(PdfBlendMode.Multiply)
-            .FillColor(tint.R / 255.0, tint.G / 255.0, tint.B / 255.0)
-            .Rectangle(box.Left, box.Bottom, box.Width, box.Height).Fill()
-            .ToFormXObject(box, PdfTransparencyGroup.Layer);
-        var tinted = new PdfContentBuilder().SaveState().SoftMask(alpha, false);
-        if (tint.A < 255)
-        {
-            tinted.Opacity(tint.A / 255.0, tint.A / 255.0);
-        }
-
-        return tinted.Draw(multiplied).RestoreState().ToFormXObject(box);
-    }
+    private static Color Times(Color one, Color other) => new((byte)Math.Round(one.R * other.R / 255.0),
+        (byte)Math.Round(one.G * other.G / 255.0), (byte)Math.Round(one.B * other.B / 255.0),
+        (byte)Math.Round(one.A * other.A / 255.0));
 }
