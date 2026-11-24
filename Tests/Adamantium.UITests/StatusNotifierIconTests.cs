@@ -276,6 +276,24 @@ public class StatusNotifierIconTests
         });
     }
 
+    // Icons are shown where a watcher runs with a panel registered - not with no watcher (GNOME without the AppIndicator
+    // extension), nor with a watcher no panel shows.
+    [Test]
+    public void TheIconsAreShown_WhereAWatcherRunsWithAPanel()
+    {
+        var withPanel = StatusNotifierArea.IsShownOn(_panel, _watcherName);
+        _watcher.HasPanel = false;
+        var withoutPanel = StatusNotifierArea.IsShownOn(_panel, _watcherName);
+        var withoutWatcher = StatusNotifierArea.IsShownOn(_panel, $"org.adamantium.NoWatcher.N{Guid.NewGuid():N}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withPanel, Is.True);
+            Assert.That(withoutPanel, Is.False);
+            Assert.That(withoutWatcher, Is.False);
+        });
+    }
+
     [Test]
     public void TakenAway_ItsBusNameGoes()
     {
@@ -356,10 +374,12 @@ public class StatusNotifierIconTests
 
         public FakeWatcher(string name)
         {
-            _served = _bus.Serve(call => System.Threading.Tasks.Task.FromResult(
-                call.Member == "RegisterStatusNotifierItem"
-                    ? Registering(call)
-                    : null));
+            _served = _bus.Serve(call => System.Threading.Tasks.Task.FromResult(call.Member switch
+            {
+                "RegisterStatusNotifierItem" => Registering(call),
+                "Get" => DBusMessage.MethodReturn(call, "v", writer => writer.WriteVariant(DBusVariant.Boolean(HasPanel))),
+                _ => null,
+            }));
             _bus.Call(DBusMessage.MethodCall("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
                 "RequestName", "su", writer =>
                 {
@@ -369,6 +389,9 @@ public class StatusNotifierIconTests
         }
 
         public IReadOnlyList<string> Registered => _registered.ToList();
+
+        /// <summary>A panel showing the icons is registered with it (IsStatusNotifierHostRegistered).</summary>
+        public bool HasPanel { get; set; } = true;
 
         public void Dispose()
         {

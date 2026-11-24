@@ -10,6 +10,9 @@
   icon without a `ContextMenu` offers no menu. Where another process holds the icon's bus name - a sandboxed one with
   the same process id - the watcher is told the connection's own name. A desktop with no such panel shows no icon, as
   before.
+- `NotificationArea.IsAvailable` asks the desktop whether it shows the icons now (`INotificationAreaPlatform.IsAvailable`,
+  true by default): on Linux, whether a StatusNotifierWatcher runs with a panel registered - GNOME without the
+  AppIndicator extension has none. An application that lives in the notification area shows its window there instead.
 - `INotificationAreaIcon.Menu` and `NotificationAreaMenuItem`: the menu of an icon for a desktop that shows the menu
   itself, read on the loop thread each time it is about to show. Where the application opens the menu, as on Windows,
   `MenuAsked` is raised as before and the menu is not read.
