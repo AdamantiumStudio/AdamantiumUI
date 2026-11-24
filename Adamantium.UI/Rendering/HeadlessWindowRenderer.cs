@@ -1,4 +1,3 @@
-using System.Linq;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Imaging;
@@ -18,14 +17,12 @@ public class HeadlessWindowRenderer : ForwardWindowRenderer
     {
     }
 
-    // A real headless surface where the loader/driver provides VK_EXT_headless_surface (Linux/Mesa, software ICDs),
-    // otherwise a plain offscreen RenderTarget (Windows and everywhere else). Both produce the same readable texture.
+    // A real headless surface where the instance has VK_EXT_headless_surface (Linux/Mesa, software ICDs), otherwise a
+    // plain offscreen RenderTarget (Windows, macOS). Both produce the same readable texture.
     protected override PresenterType PresenterKind =>
-        HeadlessSurfaceAvailable() ? PresenterType.Headless : PresenterType.RenderTarget;
-
-    private static bool HeadlessSurfaceAvailable() =>
-        Instance.EnumerateInstanceExtensionProperties()
-            .Any(e => e.ExtensionName == Constants.VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+        GraphicsDevice.MainDevice.VulkanInstance.IsExtensionEnabled(Constants.VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME)
+            ? PresenterType.Headless
+            : PresenterType.RenderTarget;
 
     /// <summary>Saves the last rendered frame to disk. Reads the resolve texture (MSAA-safe; equals the render target
     /// when MSAA is off), matching what an on-screen window copies out.</summary>
