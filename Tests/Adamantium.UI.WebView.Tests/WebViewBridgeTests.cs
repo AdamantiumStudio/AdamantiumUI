@@ -43,24 +43,40 @@ public class WebViewBridgeTests
         Assert.Throws<ArgumentNullException>(() => new WebViewBridge().AddScriptToNewDocument(null));
     }
 
-    // A page that closed itself is told while the view still holds its address - a browser keeps the tab to bring back
-    // by it - and the address goes after, so the same one given again opens it again.
+    // A page that closed itself is told with where it was and what it was called - a browser keeps the tab to bring back
+    // by them - though the view has let go of both: the same address given again opens it again.
     [Test]
-    public void APageThatClosedItself_IsToldWhileTheViewStillHoldsItsAddress()
+    public void APageThatClosedItself_IsToldWithItsAddressAndTitle()
     {
         var address = new Uri("https://example.com/closes-itself");
         var bridge = new WebViewBridge();
         var view = new WebView { Source = address, Bridge = bridge };
-        Uri heldWhenTold = null;
-        bridge.PageClosed += (_, _) => heldWhenTold = view.Source;
+        view.SetCurrentValue(WebView.TitleProperty, "Closes itself");
+        WebPageClosedEventArgs told = null;
+        bridge.PageClosed += (_, e) => told = e;
 
         // No browser made: the view's own, null, is the one closing.
         ((Cef.IWebViewBrowserView)view).PageClosed(null);
 
         Assert.Multiple(() =>
         {
-            Assert.That(heldWhenTold, Is.EqualTo(address));
+            Assert.That(told?.Address, Is.EqualTo(address));
+            Assert.That(told?.Title, Is.EqualTo("Closes itself"));
             Assert.That(view.Source, Is.Null);
         });
+    }
+
+    // Told last: an address the application gives the view then stands.
+    [Test]
+    public void AnAddressGivenWhenThePageClosedItself_Stands()
+    {
+        var home = new Uri("https://example.com/home");
+        var bridge = new WebViewBridge();
+        var view = new WebView { Source = new Uri("https://example.com/closes-itself"), Bridge = bridge };
+        bridge.PageClosed += (_, _) => view.Source = home;
+
+        ((Cef.IWebViewBrowserView)view).PageClosed(null);
+
+        Assert.That(view.Source, Is.EqualTo(home));
     }
 }
