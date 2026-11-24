@@ -712,7 +712,7 @@ public partial class RenderCache
     {
         if (_opacityChain.TryGetValue(c, out var v)) return v;
         var s = ApplySnap(c);
-        if (OpensLayer(c))
+        if (OpensLayer(c) || DrawnAsRaster(c))
         {
             v = 1f;
         }
@@ -733,7 +733,7 @@ public partial class RenderCache
         if (_opacitySlotCache.TryGetValue(c, out var cached)) return cached;
 
         var s = ApplySnap(c);
-        var layer = OpensLayer(c);
+        var layer = OpensLayer(c) || DrawnAsRaster(c);
         var parent = s.RenderParent != null && !layer ? OpacitySlotOf(device, s.RenderParent) : -1;
         var alpha = layer ? 1f : s.Opacity;
 
@@ -812,6 +812,14 @@ public partial class RenderCache
         if (!_cloneMatrix.HasValue)
         {
             return ResolveBakeCore(device, component, world, out slot);
+        }
+
+        // In a raster tile the matrix to the tile comes after the world, not before it as a copy's offset does: the whole
+        // of it is baked, on the identity slot.
+        if (_rasterRun != null)
+        {
+            slot = 0;
+            return World(component) * _cloneMatrix.Value;
         }
 
         return ResolveBakeCore(device, component, World(component), out slot) * _cloneMatrix.Value;
@@ -1249,8 +1257,10 @@ public partial class RenderCache
         if (_clipCache.TryGetValue(c, out var cached)) return cached;
         var s = ApplySnap(c);
         // An adorner skips its TARGET's own clip and, above it, obeys only the VIEWPORTS - see ClippedByRenderParent.
-        // A layer drawn whole holds itself and its subtree cut by its own clip only; see LaidDownClip.
-        if (DrawsWhole(c))
+        // A layer drawn whole holds itself and its subtree cut by its own clip only; see LaidDownClip. So does the texture
+        // of an element drawn as a raster while it is drawn, which holds it wherever the window is; drawn from its shapes,
+        // it is cut as anything else.
+        if (DrawsWhole(c) || ReferenceEquals(_rasterRun?.Element, c))
         {
             var own = OwnClip(c);
             _clipCache[c] = own;

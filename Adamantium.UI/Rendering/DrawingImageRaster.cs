@@ -35,6 +35,44 @@ internal static class DrawingImageRaster
     // The palette the current bakes were drawn under.
     private static int _bakedPalette = -1;
 
+    // Each owner's bakes on their way. A page of a map asks for a hundred and more patterns at once: re-recorded for each
+    // as it landed, it was recorded and drawn a hundred times over - and re-recorded every fifth of a second while they
+    // came, a heavy page froze the window that often for seconds. It is re-recorded once, when the last lands.
+    private sealed class Waiting
+    {
+        public int Count;
+    }
+
+    private static readonly ConcurrentDictionary<IUIComponent, Waiting> _waiting = new();
+
+    private static void Wait(IUIComponent owner)
+    {
+        if (owner == null)
+        {
+            return;
+        }
+
+        var waiting = _waiting.GetOrAdd(owner, static _ => new Waiting());
+        System.Threading.Interlocked.Increment(ref waiting.Count);
+    }
+
+    // One of the owner's bakes is done, landed or not: whether to re-record it now - the last of them.
+    private static bool Landed(IUIComponent owner)
+    {
+        if (owner == null || !_waiting.TryGetValue(owner, out var waiting))
+        {
+            return owner != null;
+        }
+
+        if (System.Threading.Interlocked.Decrement(ref waiting.Count) > 0)
+        {
+            return false;
+        }
+
+        _waiting.TryRemove(owner, out _);
+        return true;
+    }
+
     private static IVisualRenderer _renderer;
 
     private static IVisualRenderer Renderer => _renderer ??= UIApplication.Current?.Container.Resolve<IVisualRenderer>();
@@ -175,6 +213,7 @@ internal static class DrawingImageRaster
         // filed under is handed to every later ask for that key.
         var palette = _bakedPalette;
         var asked = slice;
+        Wait(owner);
         dispatcher.Post(() => Bake(key, new Size<double>(key.Width, key.Height), owner, palette, asked));
     }
 
@@ -320,6 +359,11 @@ internal static class DrawingImageRaster
         if (renderer == null)
         {
             _pending.TryRemove(key, out _);
+            if (Landed(owner))
+            {
+                owner?.InvalidateRender(false);
+            }
+
             return;
         }
 
@@ -369,17 +413,27 @@ internal static class DrawingImageRaster
     private static void Store((DrawingImage Image, int Width, int Height, int Scale, int Slice) key, ImageSource rendered, IUIComponent owner, int palette)
     {
         _pending.TryRemove(key, out _);
+        var show = Landed(owner);
 
         // Drawn BEFORE the palette was repainted: these are last variant's pixels, and filing them would pin the icon
         // to the color it had when the bake was asked for. Ask again instead.
         if (palette != _bakedPalette)
         {
-            owner?.InvalidateRender(false);
+            if (show)
+            {
+                owner?.InvalidateRender(false);
+            }
+
             return;
         }
 
         if (rendered is not BitmapSource baked)
         {
+            if (show)
+            {
+                owner?.InvalidateRender(false);
+            }
+
             return;
         }
 
@@ -395,6 +449,9 @@ internal static class DrawingImageRaster
         // RE-RECORD, not a paint re-bake: the texture is asked for while the unit is being routed into a batch, and a
         // paint invalidation only re-bakes what was already recorded - it never asks again, so the bake would sit in the
         // cache unused and the fill stay empty for ever.
-        owner?.InvalidateRender(false);
+        if (show)
+        {
+            owner?.InvalidateRender(false);
+        }
     }
 }

@@ -1,12 +1,10 @@
-using System;
 using Adamantium.Mathematics;
-using Adamantium.UI.Core;
-using Adamantium.UI.Core.Media.Curves;
 
-namespace Adamantium.UI.Rendering.Retained;
+namespace Adamantium.UI.Core.Media.Curves;
 
 /// <summary>A fill's curves packed for the curve fill shaders (CurveMath.fxh, CurveTiles.fxh): one buffer of words, the
-/// coordinates as floats relative to the fill's corner, so a fill far from the origin keeps its precision.</summary>
+/// coordinates as floats relative to the fill's corner, so a fill far from the origin keeps its precision. Made once per
+/// <see cref="PathCurves"/> (<see cref="PathCurves.Fill"/>), where it can be made away from the render thread.</summary>
 /// <remarks>Layout, in 32-bit words: a header of <see cref="HeaderWords"/> - the corner and size of the pieces' box (four
 /// floats), the piece count, the fill rule (0 non-zero, 1 even-odd), the root tile's side (a float) and where the tiles
 /// start - then six floats a piece (start, control, end); then the tiles, <see cref="TileWords"/> each, the root first -
@@ -36,10 +34,11 @@ internal sealed class CurveFill
     /// <summary>What identical fills share: a hash of the words.</summary>
     public long Fingerprint { get; }
 
-    /// <summary>The fill of <paramref name="curves"/>, or null when it encloses nothing.</summary>
-    public static CurveFill From(PathCurves curves)
+    /// <summary>The fill of <paramref name="curves"/>, its tiles made on <paramref name="buffers"/> if they are not made
+    /// yet, or null when it encloses nothing.</summary>
+    public static CurveFill From(PathCurves curves, CurveTileBuffers buffers = null)
     {
-        var tiles = curves.FillTiles;
+        var tiles = curves.FillTilesMadeOn(buffers);
         if (tiles == null)
         {
             return null;

@@ -37,6 +37,12 @@ public sealed class RecordingHost : IUniverseHostService
 
     public void AskNewSurface() => Interlocked.Increment(ref _newSurfacesAsked);
 
+    public void DrawAtBreakpoint(bool atBreakpointOrStep)
+    {
+    }
+
+    public Task GoOnAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
     public void MovePointer(float x, float y, bool isOver) => Pointer.Add($"{x},{y},{isOver}");
 
     public void Focus(bool hasKeyboard) => Focuses.Add(hasKeyboard);
