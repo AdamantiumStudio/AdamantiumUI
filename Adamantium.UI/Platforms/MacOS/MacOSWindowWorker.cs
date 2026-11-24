@@ -290,6 +290,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         LeaveOwner();
         NSWindow.OrderFront(_nsWindow);
         NSWindow.Miniaturize(_nsWindow);
+        // At once, not when the delegate is told the window has arrived in the Dock.
+        MacOSPlatform.DispatchInput(StopBeingActive);
     }
 
     private void Present(bool activate)
@@ -618,10 +620,16 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
                 return;
 
             SetStateFromPlatform(miniaturized ? WindowState.Minimized : restored);
-            // The application's only window goes to the Dock without its delegate hearing it resign.
-            if (miniaturized && _window.IsActive)
-                _window.StopBeingActive(UIContext.UIApplication);
+            if (miniaturized)
+                StopBeingActive();
         });
+    }
+
+    // The application's only window goes to the Dock without its delegate hearing it resign.
+    private void StopBeingActive()
+    {
+        if (!_closed && _window.IsActive)
+            _window.StopBeingActive(UIContext.UIApplication);
     }
 
     // What AppKit did reaches the window without being sent back to AppKit as a request.
