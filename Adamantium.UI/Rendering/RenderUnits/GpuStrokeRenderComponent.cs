@@ -922,7 +922,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         opaque = elementAlpha > 0f && c1.W >= 1f && c2.W >= 1f && (c3.W <= 0f || c3.W >= 1f);
     }
 
-    // A picture laid out by ImageTiling over the brush's box: the whole stroke's bounds - the shape's, grown by the half
+    // A picture laid out by TileBrushLayout over the brush's box: the whole stroke's bounds - the shape's, grown by the half
     // width the ribbon reaches past them, or a single copy would leave the stroke's outer half bare - or, along the line,
     // one copy at the stroke's width and the picture's own proportions, repeated end to end.
     private bool SetPicture(TileBrush picture, float alpha, float half, out bool layer)
@@ -943,7 +943,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         _effect.BrushBounds.SetValue(new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height));
         var world = RenderData.TransformMatrix;
-        var layout = ImageTiling.Layout(picture, box, world.M11, world.M22, TextureBatchCollector.SourceIsSlice(picture));
+        var layout = TileBrushLayout.Layout(picture, box, world.M11, world.M22, TextureBatchCollector.SourceIsSlice(picture));
         var tint = picture.Tint.ToVector4();
         tint.W *= alpha;
 

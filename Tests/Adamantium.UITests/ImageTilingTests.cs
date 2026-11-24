@@ -20,7 +20,7 @@ public class ImageTilingTests
 
     private static ImageBrush Brush() => new(new Source());
 
-    private static TileLayout Layout(ImageBrush brush, Rect bounds) => ImageTiling.Layout(brush, bounds, 1.0, 1.0);
+    private static TileLayout Layout(ImageBrush brush, Rect bounds) => TileBrushLayout.Layout(brush, bounds, 1.0, 1.0);
 
     [Test]
     public void FillTakesTheWholeShapeAndTheWholeSource()

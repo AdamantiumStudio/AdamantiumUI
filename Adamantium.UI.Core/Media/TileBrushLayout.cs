@@ -1,13 +1,11 @@
 using System;
 using Adamantium.Mathematics;
-using Adamantium.UI.Core;
-using Adamantium.UI.Core.Media;
 
-namespace Adamantium.UI.Rendering;
+namespace Adamantium.UI.Core.Media;
 
 // Composes a TileBrush's Viewbox, Viewport, Stretch/alignment and TileMode, in that order, into the textured passes'
-// parameters. Pure arithmetic, testable without a device.
-internal static class ImageTiling
+// parameters - and a printed page's tiles. Pure arithmetic, testable without a device.
+internal static class TileBrushLayout
 {
     private static readonly Vector4F WholeTile = new(0, 0, 1, 1);
 
@@ -155,7 +153,7 @@ internal static class ImageTiling
 
     // One tile's rectangle in the SHAPE. Relative units are a fraction of the shape (so the brush survives a resize);
     // absolute units are logical px scaled to the device, so a 32px tile stays 32px whatever it dresses.
-    private static Rect Viewport(TileBrush brush, Rect bounds, double scaleX, double scaleY)
+    public static Rect Viewport(TileBrush brush, Rect bounds, double scaleX, double scaleY)
     {
         var viewport = brush.Viewport;
         if (brush.ViewportUnits == BrushMappingMode.Absolute)

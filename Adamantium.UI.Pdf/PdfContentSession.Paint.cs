@@ -40,11 +40,13 @@ public sealed partial class PdfContentSession
             return;
         }
 
-        var reach = strokes ? pen.Thickness / 2 * StrokeReach(pen, curves) : 0;
+        var width = strokes ? pen.Thickness * PenUnit(pen, transform) : 0;
+        var reach = strokes ? width / 2 * StrokeReach(pen, curves) : 0;
         var wrote = false;
-        if (fills && strokes && brush is SolidColorBrush fill && pen.Brush is SolidColorBrush line)
+        if (fills && strokes && brush is SolidColorBrush fill && pen.Brush is SolidColorBrush line &&
+            StrokesAsIs(pen))
         {
-            wrote = Solid(curves, place, fill, pen, line);
+            wrote = Solid(curves, place, fill, pen, width, line);
         }
         else
         {
@@ -55,7 +57,7 @@ public sealed partial class PdfContentSession
 
             if (strokes)
             {
-                wrote |= Stroke(pen, curves, place, reach, gradientBox ?? curves.Bounds);
+                wrote |= Stroke(pen, width, curves, place, reach, gradientBox ?? curves.Bounds);
             }
         }
 
@@ -72,7 +74,10 @@ public sealed partial class PdfContentSession
         var reach = pen.PenLineJoin == PenLineJoin.Miter
             ? MiterReach(curves, Core.Media.Pen.ClampMiterLimit(pen.MiterLimit))
             : 1;
-        return pen.StartLineCap == PenLineCap.Square || pen.EndLineCap == PenLineCap.Square
+        // Square ends - of the line or of its dashes - reach furthest on the diagonal.
+        return pen.StartLineCap == PenLineCap.Square || pen.EndLineCap == PenLineCap.Square ||
+               (pen.DashStrokeArray?.Count ?? 0) > 0 &&
+               (pen.DashStartCap == PenLineCap.Square || pen.DashEndCap == PenLineCap.Square)
             ? Math.Max(reach, Math.Sqrt(2))
             : reach;
     }
@@ -81,18 +86,20 @@ public sealed partial class PdfContentSession
     {
         SolidColorBrush solid => solid.Color.A > 0 && solid.Opacity > 0,
         LinearGradientBrush or RadialGradientBrush => brush.Opacity > 0 && ((GradientBrush)brush).GradientStops.Count > 0,
+        TileBrush tile => PaintsTiles(tile),
         _ => false,
     };
 
     /// <summary>A shape filled and stroked with solid colors, in one path.</summary>
-    private bool Solid(PathCurves curves, PdfMatrix place, SolidColorBrush fill, Pen pen, SolidColorBrush line)
+    private bool Solid(PathCurves curves, PdfMatrix place, SolidColorBrush fill, Pen pen, double width,
+        SolidColorBrush line)
     {
         var content = Content;
         content.SaveState();
         Opacity(Alpha(line), Alpha(fill));
         content.FillColor(fill.Color.R / 255.0, fill.Color.G / 255.0, fill.Color.B / 255.0);
         Transform(place);
-        Pen(pen, line.Color);
+        Pen(pen, width, line.Color);
         var wrote = Write(curves, false, PdfMatrix.Identity);
         if (wrote)
         {
@@ -127,6 +134,38 @@ public sealed partial class PdfContentSession
             return filled;
         }
 
+        if (brush is TileBrush tile)
+        {
+            var tiles = Tiles(tile, gradientBox);
+            if (tiles == null)
+            {
+                content.RestoreState();
+                return false;
+            }
+
+            Opacity(1, Math.Clamp(brush.Opacity, 0, 1));
+            if (tiles.Repeats)
+            {
+                content.FillPattern(tiles.Pattern(place));
+            }
+
+            Transform(place);
+            var painted = Write(curves, true, PdfMatrix.Identity);
+            if (painted && tiles.Repeats)
+            {
+                content.Fill(evenOdd);
+            }
+            else if (painted)
+            {
+                content.Clip(evenOdd);
+                Transform(tiles.ToShape);
+                content.Draw(tiles.Once());
+            }
+
+            content.RestoreState();
+            return painted;
+        }
+
         var gradient = Gradient((GradientBrush)brush, gradientBox);
         if (gradient == null)
         {
@@ -149,16 +188,28 @@ public sealed partial class PdfContentSession
         return wrote;
     }
 
-    private bool Stroke(Pen pen, PathCurves curves, PdfMatrix place, double reach, Rect gradientBox)
+    private bool Stroke(Pen pen, double width, PathCurves curves, PdfMatrix place, double reach, Rect gradientBox)
     {
         var content = Content;
         content.SaveState();
         Shading gradient = null;
-        if (pen.Brush is SolidColorBrush solid)
+        var solid = pen.Brush as SolidColorBrush;
+        // Ends drawn as shapes are filled with the stroke's own alpha.
+        var alpha = solid != null ? Alpha(solid) : Math.Clamp(pen.Brush.Opacity, 0, 1);
+        var asIs = StrokesAsIs(pen);
+        PdfObject pattern = null;
+        if (pen.Brush is TileBrush tile)
         {
-            Opacity(Alpha(solid), 1);
+            var tiles = Tiles(tile, gradientBox);
+            if (tiles == null)
+            {
+                content.RestoreState();
+                return false;
+            }
+
+            pattern = tiles.Pattern(place);
         }
-        else
+        else if (solid == null)
         {
             gradient = Gradient((GradientBrush)pen.Brush, gradientBox);
             if (gradient == null)
@@ -168,20 +219,45 @@ public sealed partial class PdfContentSession
             }
 
             AlphaMask(gradient, place, Box(curves.Bounds, place, reach));
-            Opacity(Math.Clamp(pen.Brush.Opacity, 0, 1), 1);
-            content.StrokePattern(PdfShadings.Pattern(gradient.Color, gradient.ToShape.Then(place)));
+            pattern = PdfShadings.Pattern(gradient.Color, gradient.ToShape.Then(place));
         }
 
-        Transform(place);
-        Pen(pen, (pen.Brush as SolidColorBrush)?.Color);
-        var wrote = Write(curves, false, PdfMatrix.Identity);
-        if (wrote)
+        if (pattern != null)
         {
-            content.Stroke();
+            content.StrokePattern(pattern);
+        }
+
+        Opacity(alpha, asIs ? 1 : alpha);
+        Transform(place);
+        Pen(pen, width, solid?.Color);
+        bool wrote;
+        if (asIs)
+        {
+            wrote = Write(curves, false, PdfMatrix.Identity);
+            if (wrote)
+            {
+                content.Stroke();
+            }
+            else
+            {
+                content.EndPath();
+            }
         }
         else
         {
-            content.EndPath();
+            wrote = StrokeRuns(pen, curves, width, () =>
+            {
+                if (solid != null)
+                {
+                    content.FillColor(solid.Color.R / 255.0, solid.Color.G / 255.0, solid.Color.B / 255.0);
+                }
+                else
+                {
+                    content.FillPattern(pattern);
+                }
+
+                content.Fill();
+            });
         }
 
         content.RestoreState();
@@ -204,7 +280,9 @@ public sealed partial class PdfContentSession
 
     private static double Alpha(SolidColorBrush brush) => brush.Color.A / 255.0 * Math.Clamp(brush.Opacity, 0, 1);
 
-    private void Pen(Pen pen, Color? color)
+    /// <summary>The pen's width, join and miter, and - for a pen PDF strokes as it is - its cap and dashes; for one
+    /// stroked in runs those are the runs' own.</summary>
+    private void Pen(Pen pen, double width, Color? color)
     {
         var content = Content;
         if (color is { } solid)
@@ -212,7 +290,7 @@ public sealed partial class PdfContentSession
             content.StrokeColor(solid.R / 255.0, solid.G / 255.0, solid.B / 255.0);
         }
 
-        content.LineWidth(pen.Thickness);
+        content.LineWidth(width);
         content.LineJoin(pen.PenLineJoin switch
         {
             PenLineJoin.Round => 1,
@@ -226,10 +304,6 @@ public sealed partial class PdfContentSession
             _ => 0,
         });
         content.MiterLimit(Core.Media.Pen.ClampMiterLimit(pen.MiterLimit));
-        if (pen.DashStrokeArray is { Count: > 0 } dashes)
-        {
-            content.Dash([.. dashes], pen.DashOffset);
-        }
     }
 
     /// <summary>The gradient's shadings over <paramref name="bounds"/>: its colors, its alpha (null when opaque), and the

@@ -22,19 +22,24 @@ namespace Adamantium.UI.Pdf;
 /// piece; text by its glyphs' outlines. Brushes: solid, linear and radial gradients (their alpha a soft mask). Pictures
 /// go in as images, a drawing's picture as the drawing itself; colored meshes as shaded triangles. A group is cut by
 /// its clip and its glyphs; one faded, blended or masked is a transparency group, faded as one.
-/// <para>Not written yet: tile brushes (picture, drawing and visual), a pen's gradient laid along its line, a pen's
-/// trim, its end cap where it differs from its start cap and its dashes' own caps, and what has no shapes - live
-/// surfaces.</para>
+/// <para>Pens are stroked as the stroke shader lays them - trim, dashes fitted or not, every kind of end - and tile
+/// brushes (a picture, a drawing) laid out as the renderer lays them, once or as tiling patterns, tinted.</para>
+/// <para>Not written yet - the raster at print resolution is for them: a visual brush, a brush laid along a pen's line,
+/// live surfaces; and a drawing tile's brightness, contrast and saturation.</para>
 /// </summary>
 public sealed partial class PdfContentSession : IDrawingSession
 {
     private const double Kappa = 0.5522847498307936;
 
-    private readonly PdfMatrix _toPage;
     private readonly PdfPictures _pictures;
     private readonly Level _root;
     private readonly Stack<Level> _levels = new();
-    private readonly Stack<PdfMatrix> _inners = new();
+    private Stack<PdfMatrix> _inners = new();
+
+    /// <summary>From the drawing's root units to the content's: the page's - or, while a tile's cell is drawn, the cell's.
+    /// </summary>
+    private PdfMatrix _base;
+
     private PdfMatrix _through;
 
     /// <param name="content">The content stream written into.</param>
@@ -50,7 +55,7 @@ public sealed partial class PdfContentSession : IDrawingSession
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(pictures);
-        _toPage = toPage;
+        _base = toPage;
         _pictures = pictures;
         _through = toPage;
         _root = new Level(content, null, false);
@@ -737,13 +742,43 @@ public sealed partial class PdfContentSession : IDrawingSession
         var inner = _inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity;
         inner = Matrix(transform).Then(inner);
         _inners.Push(inner);
-        _through = inner.Then(_toPage);
+        _through = inner.Then(_base);
     }
 
     private void PopInner()
     {
         _inners.Pop();
-        _through = (_inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity).Then(_toPage);
+        _through = (_inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity).Then(_base);
+    }
+
+    /// <summary>What <paramref name="draw"/> draws, written into content of its own in the units it draws in - a tile's
+    /// cell - rather than into the page.</summary>
+    private PdfContentBuilder Capture(Action draw)
+    {
+        var savedBase = _base;
+        var savedInners = _inners;
+        var savedThrough = _through;
+        var level = new Level(new PdfContentBuilder(), null, true);
+        _base = PdfMatrix.Identity;
+        _inners = new Stack<PdfMatrix>();
+        _through = PdfMatrix.Identity;
+        _levels.Push(level);
+        try
+        {
+            draw();
+        }
+        finally
+        {
+            while (_levels.Pop() != level)
+            {
+            }
+
+            _base = savedBase;
+            _inners = savedInners;
+            _through = savedThrough;
+        }
+
+        return level.Builder;
     }
 
     private static double MiterReach(PathCurves curves, double limit)

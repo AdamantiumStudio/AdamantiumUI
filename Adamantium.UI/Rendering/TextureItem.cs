@@ -27,7 +27,7 @@ public struct TextureItem
     public Vector4F Tile;
 
     /// <summary>The tile grid's rotation: 2x2 that maps a fragment back into the unturned grid, row-major.
-    /// The inverse, the shape's aspect and the turn's center are folded in by ImageTiling.</summary>
+    /// The inverse, the shape's aspect and the turn's center are folded in by TileBrushLayout.</summary>
     public Vector4F Rotation;
 
     /// <summary>The rectangle the content occupies inside ONE tile: offset x, y and scale w, h, in 0..1 of the tile.

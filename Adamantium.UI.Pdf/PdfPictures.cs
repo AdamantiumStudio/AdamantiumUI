@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Adamantium.Mathematics;
 using Adamantium.Pdf.Objects;
 using Adamantium.Pdf.Writing;
 using Adamantium.UI.Core.Media.Imaging;
@@ -14,6 +15,71 @@ internal sealed class PdfPictures
 {
     private readonly Dictionary<byte[], PdfStream> _smooth = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<byte[], PdfStream> _pixelated = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Recolored, PdfStream> _recolored = [];
+
+    /// <summary>A picture's pixels with their colors changed - by a tile brush's tint and adjustment.</summary>
+    private readonly record struct Recolored(byte[] Pixels, bool Smooth, Color Tint, Vector4<float> Adjust);
+
+    /// <summary>The image of <paramref name="source"/> - of its <paramref name="frame"/>, for an animation; null when
+    /// its pixels cannot be had. <paramref name="adjust"/> (brightness, contrast - 1, saturation - 1) then
+    /// <paramref name="tint"/> change every pixel first, as the renderer's <c>AdjustColor</c> and tint do.</summary>
+    public PdfStream Of(ImageSource source, int frame, Color tint, Vector4<float> adjust)
+    {
+        if (tint == Colors.White && adjust == default)
+        {
+            return Of(source, frame);
+        }
+
+        var bitmap = source as BitmapSource;
+        if (bitmap is not { PixelBytes: { } pixels } || bitmap.PixelWidth == 0 || bitmap.PixelHeight == 0)
+        {
+            return null;
+        }
+
+        var smooth = source.Sampling != ImageSampling.Pixelated;
+        var key = new Recolored(pixels, smooth, tint, adjust);
+        if (_recolored.TryGetValue(key, out var image))
+        {
+            return image;
+        }
+
+        var rgba = Rgba(pixels, (int)bitmap.PixelWidth, (int)bitmap.PixelHeight, (Format)bitmap.SurfaceLayout);
+        if (rgba == null)
+        {
+            return null;
+        }
+
+        Recolor(rgba, tint, adjust);
+        image = PdfImages.FromRgba((int)bitmap.PixelWidth, (int)bitmap.PixelHeight, rgba, smooth);
+        _recolored[key] = image;
+        return image;
+    }
+
+    /// <summary>Brightness, contrast and saturation (the shader's <c>AdjustColor</c>), then the tint multiplied in.
+    /// </summary>
+    internal static void Recolor(byte[] rgba, Color tint, Vector4<float> adjust)
+    {
+        for (var index = 0; index + 3 < rgba.Length; index += 4)
+        {
+            var red = rgba[index] / 255.0;
+            var green = rgba[index + 1] / 255.0;
+            var blue = rgba[index + 2] / 255.0;
+            if (adjust != default)
+            {
+                var gray = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+                var saturation = 1.0 + adjust.Z;
+                var contrast = 1.0 + adjust.Y;
+                red = Math.Clamp(((gray + (red - gray) * saturation) - 0.5) * contrast + 0.5 + adjust.X, 0, 1);
+                green = Math.Clamp(((gray + (green - gray) * saturation) - 0.5) * contrast + 0.5 + adjust.X, 0, 1);
+                blue = Math.Clamp(((gray + (blue - gray) * saturation) - 0.5) * contrast + 0.5 + adjust.X, 0, 1);
+            }
+
+            rgba[index] = (byte)Math.Round(red * tint.R);
+            rgba[index + 1] = (byte)Math.Round(green * tint.G);
+            rgba[index + 2] = (byte)Math.Round(blue * tint.B);
+            rgba[index + 3] = (byte)Math.Round(rgba[index + 3] * tint.A / 255.0);
+        }
+    }
 
     /// <summary>The image of <paramref name="source"/> - of its <paramref name="frame"/>, for an animation; null when
     /// its pixels cannot be had.</summary>
