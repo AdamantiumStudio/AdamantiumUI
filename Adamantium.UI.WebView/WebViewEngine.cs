@@ -785,9 +785,9 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     }
 
     /// <summary>The platform Chromium starts on Linux, drawing off screen: none named - X11, as before - while there is an
-    /// X server; else the Wayland compositor, else none at all. With no X
-    /// server Chromium's X11 does not start, nor CEF with it (measured 24.11: "Missing X server", exit 1, under a
-    /// Wayland-only Mutter); with no display at all a site asking where the user is is not asked (measured).</summary>
+    /// X server; else the Wayland compositor, else none at all. With no X server Chromium's X11 does not start, nor CEF
+    /// with it (measured 24.11: "Missing X server", exit 1, under a Wayland-only Mutter); with no display at all a site
+    /// asking where the user is is not asked (measured).</summary>
     internal static string OzonePlatformFor(string display, string waylandDisplay) =>
         !string.IsNullOrEmpty(display) ? null
         : !string.IsNullOrEmpty(waylandDisplay) ? "wayland"
