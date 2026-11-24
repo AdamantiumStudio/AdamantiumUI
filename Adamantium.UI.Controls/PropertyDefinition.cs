@@ -1254,13 +1254,22 @@ public class ItemsProperty : CompositeProperty
         typeof(BindingBase), typeof(ItemsProperty), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty ItemActionProperty = AdamantiumProperty.Register(nameof(ItemAction),
-        typeof(ICommand), typeof(ItemsProperty), new PropertyMetadata(null));
+        typeof(ICommand), typeof(ItemsProperty), new PropertyMetadata(null, OnItemActionChanged));
 
     public static readonly AdamantiumProperty ItemActionIconProperty = AdamantiumProperty.Register(
         nameof(ItemActionIcon), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty ItemActionTipProperty = AdamantiumProperty.Register(
         nameof(ItemActionTip), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null));
+
+    // Each item's line takes the button as it is built: one that comes or goes after - a bound command found only once
+    // the grid has a data context - builds the lines again. Only then: a command told for each item in turn, nested in
+    // another list, changes on every line built.
+    private static void OnItemActionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is ItemsProperty items && (e.OldValue == null) != (e.NewValue == null))
+            items.Relayout();
+    }
 
     /// <summary>What each item is CALLED, read off the item itself - the socket's own name over its two lines. Nothing
     /// numbers them instead, which is what a list whose items have no names of their own wants.</summary>
