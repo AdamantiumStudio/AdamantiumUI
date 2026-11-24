@@ -24,7 +24,33 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         handler->on_ime_composition_range_changed = &OnImeCompositionRangeChanged;
         handler->start_dragging = &StartDragging;
         handler->update_drag_cursor = &UpdateDragCursor;
+        handler->get_accessibility_handler = &GetAccessibilityHandler;
+        handler->on_scroll_offset_changed = &OnScrollOffsetChanged;
     }
+
+    [UnmanagedCallersOnly]
+    private static void OnScrollOffsetChanged(CefRenderHandler* self, CefBrowser* cefBrowser, double x, double y)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnScrollOffsetChanged(x, y);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+    }
+
+    // Asked by CEF only once the browser's accessibility is switched on (WebViewBrowser.EnableAccessibility).
+    [UnmanagedCallersOnly]
+    private static CefAccessibilityHandler* GetAccessibilityHandler(CefRenderHandler* self) =>
+        (CefAccessibilityHandler*)From<WebViewRenderHandler>(self).browser.AccessibilityHandler.Share();
 
     [UnmanagedCallersOnly]
     private static int StartDragging(CefRenderHandler* self, CefBrowser* cefBrowser, CefDragData* data,
