@@ -989,8 +989,8 @@ public partial class RenderCache
         // A CLONE HOST takes its place in the paint order even when it draws nothing of its own: the clone run
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
         // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once. A
-        // LAYER is the same: its group is where the walk opens the layer.
-        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || WantsLayer(component)))
+        // LAYER is the same: its group is where the walk opens the layer; and a RASTER, where it draws its texture.
+        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || HostsItsSubtree(component)))
         {
             // As below: clean, it did not re-record and its own units stand; dirty, it now draws nothing of its own.
             var hostGroup = wasGeometryValid && _groupById.TryGetValue(component.RenderId, out var held)

@@ -97,6 +97,8 @@ public class RasterDrawingRenderTests
             return new Frame(bytes, drawn);
         }
 
+        public RenderCache Cache => _renderer.Cache;
+
         public void Dispose() => _renderer.Dispose();
     }
 
@@ -151,6 +153,189 @@ public class RasterDrawingRenderTests
         {
             Assert.That(raster.TilesDrawn, Is.GreaterThan(0), "drawn into tiles");
             AssertTheSame(raster, vector, "against its shapes' picture");
+        });
+    }
+
+    private static Frame Turned(DrawingMode mode, Transform transform)
+    {
+        var host = new Canvas
+        {
+            Width = Dim, Height = Dim, RenderTransform = transform, RenderTransformOrigin = new Vector2<double>(0.5, 0.5)
+        };
+        host.Children.Add(new Picture { DrawingMode = mode });
+        using var stand = new Stand(host);
+        return stand.Render();
+    }
+
+    // Mirrored, or turned a quarter, it shows what its shapes show: not laid down the right way round.
+    [TestCase(-1.0, 1.0, 0.0)]
+    [TestCase(1.0, -1.0, 0.0)]
+    [TestCase(1.0, 1.0, 90.0)]
+    public void AMirroredOrTurnedRaster_ShowsWhatItsShapesShow(double scaleX, double scaleY, double angle)
+    {
+        Transform Make() => new() { ScaleX = scaleX, ScaleY = scaleY, RotationAngle = angle };
+
+        AssertTheSame(Turned(DrawingMode.Raster, Make()), Turned(DrawingMode.Vector, Make()), "against its shapes' picture");
+    }
+
+    // What never holds still - a living aura - is drawn anew to the last square again and again, not begun anew each
+    // frame and never finished.
+    [Test]
+    public void WhatNeverHoldsStill_IsDrawnAnewToTheLastSquare()
+    {
+        var host = new Canvas
+        {
+            Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster, RasterTileSize = 64,
+            RasterFrameBudget = TimeSpan.Zero
+        };
+        var part = new Square(Colors.White)
+        {
+            Aura = new Aura { Radius = 12, Turbulence = 1, Flow = 1, Color = Colors.Red }
+        };
+        Canvas.SetLeft(part, 60);
+        Canvas.SetTop(part, 60);
+        host.Children.Add(part);
+        using var stand = new Stand(host);
+        stand.Render();
+        var first = stand.Cache.RasterTexturesFinished;
+        for (var i = 0; i < 20; i++)
+        {
+            stand.Render();
+        }
+
+        Assert.That(stand.Cache.RasterTexturesFinished, Is.GreaterThan(first), "textures drawn to the last square");
+    }
+
+    // The camera coming back to what a raster holds before it is drawn anew to the last square: what was being drawn
+    // goes, and its draws are no longer made ready each frame.
+    [Test]
+    public void TheCameraComingBack_BeforeTheLastSquare_LeavesNothingBeingDrawn()
+    {
+        var picture = new Picture { DrawingMode = DrawingMode.Raster, RasterTileSize = 64, RasterFrameBudget = TimeSpan.Zero };
+        var host = new Canvas
+        {
+            Width = Dim, Height = Dim, IsRenderMotionNode = true, RenderTransform = new Transform { ScaleX = 0.6, ScaleY = 0.6 }
+        };
+        host.Children.Add(picture);
+        using var stand = new Stand(host);
+        stand.Render();
+        host.RenderTransform = new Transform { ScaleX = 1.3, ScaleY = 1.3 };
+        stand.Render();
+        System.Threading.Thread.Sleep(250);
+        stand.Render();
+        stand.Render();
+        var drawing = stand.Cache.RastersDrawingAnew;
+        host.RenderTransform = new Transform { ScaleX = 0.6, ScaleY = 0.6 };
+        stand.Render();
+        stand.Render();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(drawing, Is.EqualTo(1), "being drawn anew at the larger scale");
+            Assert.That(stand.Cache.RastersDrawingAnew, Is.EqualTo(0), "back to what it holds: nothing being drawn");
+        });
+    }
+
+    // A container drawing nothing of its own is drawn as a raster too.
+    [Test]
+    public void AContainerDrawingNothingOfItsOwn_IsDrawnAsARaster()
+    {
+        var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = DrawingMode.Raster };
+        var square = new Square(Colors.Blue);
+        Canvas.SetLeft(square, 100);
+        host.Children.Add(square);
+        using var stand = new Stand(host);
+        var first = stand.Render();
+
+        Assert.That(first.TilesDrawn, Is.GreaterThan(0), "drawn into its texture");
+    }
+
+    // Faded from above after its texture is drawn, it shows faded.
+    [Test]
+    public void FadedFromAboveAfterItIsDrawn_ItShowsFaded()
+    {
+        Frame Faded(DrawingMode mode)
+        {
+            var host = new Canvas { Width = Dim, Height = Dim };
+            host.Children.Add(new Picture { DrawingMode = mode });
+            using var stand = new Stand(host);
+            stand.Render();
+            host.Opacity = 0.3;
+            return stand.Render();
+        }
+
+        AssertTheSame(Faded(DrawingMode.Raster), Faded(DrawingMode.Vector), "against its shapes' picture");
+    }
+
+    // A part of it faded after its texture is drawn shows faded: what fades inside it is drawn anew.
+    [Test]
+    public void APartOfItFadedAfterItIsDrawn_ShowsFaded()
+    {
+        Frame Faded(DrawingMode mode)
+        {
+            var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = mode };
+            var part = new Square(Colors.Red);
+            Canvas.SetLeft(part, 40);
+            Canvas.SetTop(part, 40);
+            host.Children.Add(part);
+            using var stand = new Stand(host);
+            stand.Render();
+            part.Opacity = 0.3;
+            return stand.Render();
+        }
+
+        var raster = Faded(DrawingMode.Raster);
+        var vector = Faded(DrawingMode.Vector);
+        Assert.That(raster.At(60, 60), Is.EqualTo(vector.At(60, 60)), "the faded part");
+    }
+
+    // What inside it melts at its edges melts in its texture too.
+    [Test]
+    public void ASoftEdgedPartOfIt_ShowsWhatItsShapesShow()
+    {
+        Frame Soft(DrawingMode mode)
+        {
+            var host = new Canvas { Width = Dim, Height = Dim, DrawingMode = mode };
+            var part = new Square(Colors.Red) { SoftEdge = 12 };
+            Canvas.SetLeft(part, 40);
+            Canvas.SetTop(part, 40);
+            host.Children.Add(part);
+            using var stand = new Stand(host);
+            stand.Render();
+            return stand.Render();
+        }
+
+        var raster = Soft(DrawingMode.Raster);
+        var vector = Soft(DrawingMode.Vector);
+        Assert.That(raster.At(42, 42), Is.EqualTo(vector.At(42, 42)), "at its melting edge");
+        AssertTheSame(raster, vector, "against its shapes' picture");
+    }
+
+    // Drawn anew square by square, a square a frame: what it held is laid down until the last square is in, then what
+    // it draws now - the whole of it.
+    [Test]
+    public void DrawnAnewSquareBySquare_ShowsWhatItHeldUntilTheLastSquare_ThenWhatItDrawsNow()
+    {
+        var picture = new Picture { DrawingMode = DrawingMode.Raster, RasterTileSize = 64, RasterFrameBudget = TimeSpan.Zero };
+        using var stand = new Stand(picture);
+        stand.Render();
+        picture.Paint = Colors.Yellow;
+        picture.InvalidateRender(false);
+        var next = stand.Render();
+        Frame last = next;
+        for (var i = 0; i < 12; i++)
+        {
+            last = stand.Render();
+        }
+
+        var wanted = new Stand(new Picture { DrawingMode = DrawingMode.Vector, Paint = Colors.Yellow });
+        var vector = wanted.Render();
+        wanted.Dispose();
+        Assert.Multiple(() =>
+        {
+            Assert.That(next.At(40, 40), Is.EqualTo((255, 0, 0)), "the frame after the change: what it held");
+            Assert.That(last.TilesDrawn, Is.EqualTo(0), "every square in: laid down from what it holds");
+            AssertTheSame(last, vector, "once every square is in, against its shapes' picture");
         });
     }
 
@@ -263,9 +448,9 @@ public class RasterDrawingRenderTests
     }
 
     // Two squares overlapping, faded as one: a layer.
-    private static Canvas FadedPair(DrawingMode mode)
+    private static Canvas FadedPair(DrawingMode mode, bool layer = false)
     {
-        var pair = new Canvas { Width = Dim, Height = Dim, Opacity = 0.5, DrawingMode = mode };
+        var pair = new Canvas { Width = Dim, Height = Dim, Opacity = 0.5, DrawingMode = mode, IsLayer = layer };
         var under = new Square(Colors.Red);
         var over = new Square(Colors.Blue);
         Canvas.SetLeft(under, 20);
@@ -277,12 +462,11 @@ public class RasterDrawingRenderTests
         return pair;
     }
 
-    // Faded as one, it is a layer, which a texture drawn as a clone does not open: drawn from its shapes, faded as they
-    // are - in the frame after too, not laid down unfaded.
+    // A raster is faded as one, as a layer is: its texture laid down faded - in the frame after too.
     [Test]
-    public void AFadedRaster_ShowsWhatItsShapesShow()
+    public void AFadedRaster_IsFadedAsOne()
     {
-        var vector = new Stand(FadedPair(DrawingMode.Vector));
+        var vector = new Stand(FadedPair(DrawingMode.Vector, true));
         var wanted = vector.Render();
         vector.Dispose();
         using var stand = new Stand(FadedPair(DrawingMode.Raster));

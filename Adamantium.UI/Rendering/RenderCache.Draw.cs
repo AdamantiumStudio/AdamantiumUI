@@ -1093,7 +1093,7 @@ public partial class RenderCache
                 rasterLaidDown = true;
             }
 
-            if (device != null && !_cloneMatrix.HasValue && OpensLayer(group.Component))
+            if (device != null && !rasterLaidDown && !_cloneMatrix.HasValue && OpensLayer(group.Component))
             {
                 var layer = group.Component;
                 var layerEnd = CloneSubtreeEnd(groupIndex);

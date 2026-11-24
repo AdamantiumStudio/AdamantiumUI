@@ -24,6 +24,10 @@ public partial class RenderCache
     // What each element drawn as a raster holds in its texture, and what it is asked to hold, from frame to frame.
     private readonly Dictionary<Guid, RasterHeld> _rasterParts = new();
 
+    // ---- test observability: how many rasters are being drawn anew, and how many textures were drawn to the last square.
+    internal int RastersDrawingAnew => _rasterWantsDrawing.Count;
+    internal int RasterTexturesFinished { get; private set; }
+
     private sealed class RasterHeld
     {
         // What the texture holds: the part of the element, in its units, at the scale, in texels.
@@ -54,6 +58,7 @@ public partial class RenderCache
         // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
         // the glyphs landed: the same again, it holds.
         public bool DrawsKnown;
+        public ulong DrawsFades;
         public long DrawsRecorded;
         public ulong DrawsGroups;
         public long DrawsPaint;
@@ -121,14 +126,14 @@ public partial class RenderCache
     }
 
     // An element drawn as a raster, starting at its group, or null when it is drawn from its shapes: it turns on the
-    // window, has no size, lies under a rounded clip (the texture is laid down cut square), holds copies of its subtree,
-    // lies outside the window, or would take a texture too large.
+    // window or is mirrored, it or a part of it is a layer, it has no size, lies under a rounded clip (the texture is
+    // laid down cut square), holds copies of its subtree, lies outside the window, or would take a texture too large.
     private RasterRun StartRaster(int groupIndex, Rect2D fullScissor)
     {
         var element = _groups[groupIndex].Component;
         var world = World(element);
         var size = ApplySnap(element).RenderSize;
-        if (!AlongTheAxes(world) || !(size.Width > 0) || !(size.Height > 0) || UnderARoundedClip(element))
+        if (!TheRightWayRound(world) || !(size.Width > 0) || !(size.Height > 0) || UnderARoundedClip(element))
         {
             return null;
         }
@@ -141,11 +146,21 @@ public partial class RenderCache
             return null;
         }
 
+        // A layer is not opened inside its texture: a mask, a soft edge or a reflection in it would be lost.
+        var end = CloneSubtreeEnd(groupIndex);
+        for (var i = groupIndex; i < end; i++)
+        {
+            if (WantsLayer(_groups[i].Component))
+            {
+                return null;
+            }
+        }
+
         var run = new RasterRun
         {
             Element = element,
             Start = groupIndex,
-            End = CloneSubtreeEnd(groupIndex),
+            End = end,
             World = world,
             FromWindow = Matrix4x4F.Invert(world),
             Scale = MathF.Pow(2f, MathF.Ceiling(MathF.Log2(shown))),
@@ -202,6 +217,13 @@ public partial class RenderCache
         _rasterShown.Add(element);
         _offscreenLayers ??= new OffscreenLayers();
         run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
+        if (!run.Draws && held.AnewOrder != null)
+        {
+            // Back to what it holds before the last square was in: what was being drawn goes (LayDownRaster).
+            held.AnewOrder = null;
+            held.AnewMeasured = null;
+            _rasterWantsDrawing.Remove(element);
+        }
         // Only what the camera does waits: another scale or part. What it draws changing is drawn at once.
         var cameraMoved = held.Scale != run.Scale || held.Part != run.Part;
         if (run.Draws && cameraMoved && held.Drawn && run.Still && _offscreenLayers.HoldsAnyTile(element.RenderId)
@@ -260,6 +282,19 @@ public partial class RenderCache
 
         return run;
     }
+
+    // Whether its group stands in the paint order though it draws nothing of its own: the walk opens its layer, or draws
+    // its texture, there.
+    private bool HostsItsSubtree(IUIComponent component) =>
+        WantsLayer(component) || component.DrawingMode == DrawingMode.Raster;
+
+    // Whether this is the element whose texture is being drawn: faded as one, as a layer is - what is above it and its
+    // own opacity fade the texture where it is laid down, not what is drawn into it.
+    private bool DrawnAsRaster(IUIComponent c) => _rasterRun is { } run && ReferenceEquals(run.Element, c);
+
+    // Along the axes, neither mirrored nor turned: the texture is laid down on a box, which keeps no flip or turn.
+    private static bool TheRightWayRound(Matrix4x4F world) =>
+        AlongTheAxes(world) && world.M12 == 0 && world.M21 == 0 && world.M11 > 0 && world.M22 > 0;
 
     // The squares of a texture, the ones nearest the middle of what is seen first.
     private static List<Rect2D> SquaresFrom(int width, int height, int side, float middleX, float middleY)
@@ -326,7 +361,7 @@ public partial class RenderCache
             recorded += _groups[i].Recorded;
         }
 
-        return recorded == held.DrawsRecorded;
+        return recorded == held.DrawsRecorded && FadesIn(element, start, end) == held.DrawsFades;
     }
 
     // The rasters whose draws were not made ready for this frame: they lay down what they hold, or draw nothing.
@@ -534,8 +569,10 @@ public partial class RenderCache
             held.DrawsText = hasText;
         }
 
+        held.DrawsFades = FadesIn(run.Element, run.Start, run.End);
         Mix(ref print, (long)groups);
         Mix(ref print, (long)held.DrawsPrint);
+        Mix(ref print, (long)held.DrawsFades);
         var still = !MovedByTheCompositor(run.Element) && held.DrawsStill;
 
         // Glyphs still on their way are drawn missing: it is drawn again until none is. Not the atlas's version, which any
@@ -553,6 +590,25 @@ public partial class RenderCache
 
     private long _rasterFrames;
 
+    // How what is inside a raster is faded: in its texture. Its own opacity, and what is above it, fade it where it is
+    // laid down; its draws' own fade (SelfOpacity) is inside.
+    private ulong FadesIn(IUIComponent element, int start, int end)
+    {
+        var fades = PrintSeed;
+        for (var i = start; i < end && i < _groups.Count; i++)
+        {
+            var component = _groups[i].Component;
+            var snapshot = ApplySnap(component);
+            Mix(ref fades, snapshot.SelfOpacity);
+            if (!ReferenceEquals(component, element))
+            {
+                Mix(ref fades, snapshot.Opacity);
+            }
+        }
+
+        return fades;
+    }
+
     private static void Mix(ref ulong print, double value) => Mix(ref print, BitConverter.DoubleToInt64Bits(value));
 
     // What of a draw of a raster changes without its group being recorded again: its brushes repainted in place, its
@@ -564,18 +620,34 @@ public partial class RenderCache
             return false;
         }
 
+        // The live brushes' versions: a snapshot is made anew at each repaint, and its own version is always the first.
         switch (unit)
         {
             case RenderUnits.GeometryRenderUnit { Payload: { } shape }:
-                Mix(ref print, shape.Brush?.PaintVersion ?? 0);
-                Mix(ref print, shape.Pen?.Brush?.PaintVersion ?? 0);
+                Mix(ref print, shape.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, shape.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case RectangleRenderUnit { Payload: { } rectangle }:
+                Mix(ref print, rectangle.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, rectangle.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case EllipseRenderUnit { Payload: { } ellipse }:
+                Mix(ref print, ellipse.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, ellipse.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case RegularPolygonRenderUnit { Payload: { } polygon }:
+                Mix(ref print, polygon.LiveBrush?.PaintVersion ?? 0);
+                Mix(ref print, polygon.Pen?.LiveBrush?.PaintVersion ?? 0);
+                break;
+            case LineRenderUnit { Payload: { } line }:
+                Mix(ref print, line.Pen?.LiveBrush?.PaintVersion ?? 0);
                 break;
             case RenderUnits.TextRenderUnit { Payload: { } text }:
                 hasText = true;
                 Mix(ref print, text.Revision);
-                Mix(ref print, text.Foreground?.PaintVersion ?? 0);
-                Mix(ref print, text.Background?.PaintVersion ?? 0);
-                Mix(ref print, text.Stroke?.PaintVersion ?? 0);
+                Mix(ref print, text.LiveForeground?.PaintVersion ?? 0);
+                Mix(ref print, text.LiveBackground?.PaintVersion ?? 0);
+                Mix(ref print, text.LiveStroke?.PaintVersion ?? 0);
                 break;
         }
 
@@ -654,8 +726,9 @@ public partial class RenderCache
             return false;
         }
 
+        // What never holds still is drawn anew each frame: whole, or it would never be finished.
         var spent = System.Diagnostics.Stopwatch.GetTimestamp() - run.SquaresSince;
-        return !held.Drawn
+        return !held.Drawn || !run.Still
             || spent < run.Element.RasterFrameBudget.TotalSeconds * System.Diagnostics.Stopwatch.Frequency;
     }
 
@@ -664,6 +737,7 @@ public partial class RenderCache
     {
         var held = run.Held;
         _offscreenLayers.FinishDrawingAnew(device, run.Element.RenderId);
+        RasterTexturesFinished++;
         _rasterWantsDrawing.Remove(run.Element);
         held.Drawn = true;
         held.Scale = held.AnewScale;
@@ -811,10 +885,21 @@ public partial class RenderCache
     // Lays the texture down where the element stands now.
     private void LayDownRaster(IGraphicsDevice device, RasterRun run)
     {
+        if (_rasterParts.TryGetValue(run.Element.RenderId, out var holding) && holding.AnewOrder == null)
+        {
+            _offscreenLayers.StopDrawingAnew(device, run.Element.RenderId);
+        }
+
         var scale = (float)_renderScale;
         var held = new Rect(run.Part.X, run.Part.Y, run.Width / run.Scale, run.Height / run.Scale);
         var box = held.TransformToAABB(run.World);
+        var alpha = LayerAlpha(run.Element);
+        if (!(alpha > 0))
+        {
+            return;
+        }
+
         _offscreenLayers.LayDownTile(device, run.Element.RenderId, new Vector4F((float)box.X * scale,
-            (float)box.Y * scale, (float)box.Width * scale, (float)box.Height * scale), run.Scissor);
+            (float)box.Y * scale, (float)box.Width * scale, (float)box.Height * scale), run.Scissor, alpha);
     }
 }

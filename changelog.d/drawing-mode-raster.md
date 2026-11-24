@@ -6,7 +6,9 @@
   step further, the camera leaves what it holds or what it draws changes. While the camera zooms the texture held is
   laid down stretched, and drawn anew once, when it stops; a frame that only moves the camera is replayed, not walked.
   For heavy content the camera moves over: on a map sheet of about 12,000 paths a frame moving the camera takes 0.7 ms
-  on the render thread and 0.5 ms on the GPU.
+  on the render thread and 0.5 ms on the GPU. A raster is faded as one, as a layer is: its own opacity and what is
+  above it fade the texture where it is laid down, so a fade draws nothing anew. It is drawn from its shapes when it is
+  mirrored or turned, or holds a layer (an opacity mask, a soft edge, a reflection).
 - `UIComponent.RasterTileSize` and `RasterFrameBudget`: a raster's texture is drawn anew square by square (512 texels
   by default), nearest the middle of what is seen first, as many squares a frame as fit in the budget (4 ms by
   default), the texture it holds laid down until the last square is in. Each square passes over the draws it does not

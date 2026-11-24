@@ -712,7 +712,7 @@ public partial class RenderCache
     {
         if (_opacityChain.TryGetValue(c, out var v)) return v;
         var s = ApplySnap(c);
-        if (OpensLayer(c))
+        if (OpensLayer(c) || DrawnAsRaster(c))
         {
             v = 1f;
         }
@@ -733,7 +733,7 @@ public partial class RenderCache
         if (_opacitySlotCache.TryGetValue(c, out var cached)) return cached;
 
         var s = ApplySnap(c);
-        var layer = OpensLayer(c);
+        var layer = OpensLayer(c) || DrawnAsRaster(c);
         var parent = s.RenderParent != null && !layer ? OpacitySlotOf(device, s.RenderParent) : -1;
         var alpha = layer ? 1f : s.Opacity;
 

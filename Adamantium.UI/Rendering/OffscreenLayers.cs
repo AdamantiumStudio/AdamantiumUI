@@ -679,6 +679,20 @@ internal sealed class OffscreenLayers : IDisposable
         gd.ColorBlendEnabled = true;
     }
 
+    /// <summary>Lets go of the texture being drawn anew under <paramref name="key"/>, if one is: what it was drawn for is
+    /// held again.</summary>
+    public void StopDrawingAnew(IGraphicsDevice gd, object key)
+    {
+        if (gd == null || !_cached.TryGetValue(key, out var entry) || entry.Pending == null)
+        {
+            return;
+        }
+
+        Release(gd, new[] { entry.Pending });
+        entry.Pending = null;
+        entry.Store?.EndPass(gd, _takenGroupTargets);
+    }
+
     /// <summary>The last square of the texture drawn anew under <paramref name="key"/> is in: it is the one laid down from
     /// now, the one before let go, and what the drawing did not need of its store goes.</summary>
     public void FinishDrawingAnew(IGraphicsDevice gd, object key)
@@ -698,7 +712,7 @@ internal sealed class OffscreenLayers : IDisposable
     /// <summary>Lays the tile kept under <paramref name="key"/> over <paramref name="box"/> - window device pixels, not
     /// whole ones: the camera puts a tile anywhere and at any scale - stretched to it, cut by <paramref name="scissor"/>.
     /// False when it holds no drawing.</summary>
-    public bool LayDownTile(IGraphicsDevice gd, object key, Vector4F box, Rect2D scissor)
+    public bool LayDownTile(IGraphicsDevice gd, object key, Vector4F box, Rect2D scissor, float alpha = 1f)
     {
         if (gd == null || gd.CurrentViewports.Length == 0 || !_cached.TryGetValue(key, out var entry) || !entry.Valid
             || entry.Latest < 0 || scissor.Extent.Width == 0 || scissor.Extent.Height == 0)
@@ -734,7 +748,7 @@ internal sealed class OffscreenLayers : IDisposable
         _group.Mask2Texture.SetResource(texture);
         _group.BackdropTexture.SetResource(texture);
         _group.Backdrop.SetValue(texels);
-        _group.GroupAlpha.SetValue(1f);
+        _group.GroupAlpha.SetValue(alpha);
         _group.BlendMode.SetValue(0f);
         _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
         _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
