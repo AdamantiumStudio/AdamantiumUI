@@ -760,6 +760,15 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         if (OperatingSystem.IsLinux())
         {
             switches.Add(new("no-zygote", null));
+
+            // Drawn off screen, Chromium still starts a platform - X11 by default, and with no X server it does not
+            // start at all (measured 24.11: "Missing X server", exit 1, under a Wayland-only Mutter). With one it keeps
+            // X11, whose clipboard needs no window of its own focused; without, the compositor's, or none.
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
+            {
+                var wayland = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
+                switches.Add(new("ozone-platform", wayland ? "wayland" : "headless"));
+            }
         }
 
         // A site or a proxy asking to sign in is asked of the view: Chrome's own prompt is a window of its own, which a
