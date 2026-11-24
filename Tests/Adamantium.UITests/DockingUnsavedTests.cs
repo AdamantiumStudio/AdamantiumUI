@@ -138,6 +138,7 @@ public class DockingUnsavedTests
         public string Key { get; private set; } = "untitled";
         public int Saves { get; private set; }
         public bool Disposed { get; private set; }
+        public int Line { get; private set; }
 
         public string PaneId => Key;
         public string PaneTitle => Key;
@@ -164,6 +165,7 @@ public class DockingUnsavedTests
         public Task OnNavigatedToAsync(NavigationContext context, CancellationToken cancellationToken = default)
         {
             Key = context.Parameters.GetValue(DockingRegion.KeyParameter, Key);
+            Line = context.Parameters.GetValue("line", Line);
             return Task.CompletedTask;
         }
 
@@ -256,6 +258,25 @@ public class DockingUnsavedTests
             Assert.That(resolver.Made, Is.EqualTo(2));
             Assert.That(docking.ActivePane, Is.SameAs(main), "brought to the front");
             Assert.That(area.PaneById("main.cs"), Is.Not.Null, "the key is the pane's id");
+        });
+    }
+
+    [Test]
+    public async Task OpeningAnOpenDocument_HandsItTheNewParameters()
+    {
+        var (_, _, docking, resolver) = Docking();
+
+        var main = await docking.OpenDocumentAsync<Script>("main.cs", new NavigationParameters().Add("line", 3));
+        await docking.OpenDocumentAsync<Script>("other.cs");
+        var again = await docking.OpenDocumentAsync<Script>("main.cs", new NavigationParameters().Add("line", 7));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(again, Is.SameAs(main));
+            Assert.That(resolver.Made, Is.EqualTo(2));
+            Assert.That(main.Line, Is.EqualTo(7), "what it is asked to show now");
+            Assert.That(main.Key, Is.EqualTo("main.cs"));
+            Assert.That(docking.ActivePane, Is.SameAs(main), "brought to the front");
         });
     }
 }

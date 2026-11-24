@@ -93,17 +93,20 @@ public sealed class DockingRegion : IDockingRegion
         return saved;
     }
 
+    /// <summary>Opens the document of this key, or brings it forward if it is open: either way it is navigated to with
+    /// the parameters, so an open one hears what it is asked to show now.</summary>
     public async Task<T> OpenDocumentAsync<T>(string key, NavigationParameters parameters = null,
         CancellationToken cancellationToken = default) where T : class
     {
+        parameters = (parameters ?? new NavigationParameters()).Add(KeyParameter, key);
         if (Find<T>(open => open is IDockablePane pane && pane.PaneId == key) is { } existing)
         {
+            var reached = await Region.NavigateToInstanceAsync(existing, null, parameters, cancellationToken);
             Activate(existing);
-            return existing;
+            return reached.Success ? existing : null;
         }
 
-        var result = await Region.NavigateToAsync<T>((parameters ?? new NavigationParameters()).Add(KeyParameter, key),
-            cancellationToken);
+        var result = await Region.NavigateToAsync<T>(parameters, cancellationToken);
         return result.Success ? result.ViewModel as T : null;
     }
 
