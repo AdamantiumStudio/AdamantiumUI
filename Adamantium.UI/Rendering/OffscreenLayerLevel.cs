@@ -8,8 +8,7 @@ internal sealed class OffscreenLayerLevel
     public uint Width;
     public uint Height;
 
-    // The largest asked of it since AskedSince: what it is made smaller to when it holds far more.
+    // The largest asked of it in the pass: what it is made smaller to when it holds far more.
     public uint AskedWidth;
     public uint AskedHeight;
-    public long AskedSince;
 }

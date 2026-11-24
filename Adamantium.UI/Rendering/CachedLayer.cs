@@ -5,6 +5,9 @@ namespace Adamantium.UI.Rendering;
 internal sealed class CachedLayer
 {
     public IRenderTarget[] Ring = [];
+
+    // A raster's texture: the targets and depth what is drawn into it takes, kept from one drawing of it to the next.
+    public OffscreenTargetStore Store;
     public uint TextureWidth;
     public uint TextureHeight;
     public int Latest = -1;

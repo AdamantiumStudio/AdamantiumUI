@@ -14,7 +14,6 @@ internal sealed class OffscreenLayers : IDisposable
 {
     private const long IdleFrames = 120;
 
-    private readonly List<OffscreenLayerLevel> _levels = [];
     private readonly Stack<OpenOffscreenLayer> _open = new();
     private readonly Dictionary<object, CachedLayer> _cached = new();
     private readonly List<object> _idle = [];
@@ -64,7 +63,6 @@ internal sealed class OffscreenLayers : IDisposable
     public void BeginFrame(IGraphicsDevice gd)
     {
         _frame++;
-        _now = System.Diagnostics.Stopwatch.GetTimestamp();
         Redrawn = 0;
         Reused = 0;
         if (gd == null)
@@ -95,12 +93,13 @@ internal sealed class OffscreenLayers : IDisposable
                 Release(gd, new[] { idle.SoftScratch });
             }
 
+            idle.Store?.Release(gd);
             _cached.Remove(owner);
         }
 
         _idle.Clear();
-        ResetGroupTargets(gd);
-        ShrinkLevels(gd);
+        // The frame before was the window's pass: what it did not need goes.
+        _windowStore.EndPass(gd, _takenGroupTargets);
     }
 
     /// <summary>The space drawing lands in, inside an open layer; outside one it is the caller's own.</summary>
@@ -291,96 +290,28 @@ internal sealed class OffscreenLayers : IDisposable
         return EnterSpace(gd, region, projection, bounds, false);
     }
 
-    // ---- GROUP TARGETS: drawn and laid down within one frame, so they are shared - taken from one store as a group
-    // opens and given back when it is laid down. Kept per group, each held a ring of its own the size of what it covers,
-    // and a page of hundreds of cut groups drawn as a raster held gigabytes.
+    // ---- GROUP TARGETS: drawn and laid down within one frame, so they are shared - taken from a store as a group opens
+    // and given back when it is laid down. Kept per group, each held a ring of its own the size of what it covers, and a
+    // page of hundreds of cut groups drawn as a raster held gigabytes. The window has a store, and so has each raster's
+    // texture, for the groups inside it: each lets go of what its last pass did not need.
 
-    private sealed class PooledTarget
+    private readonly OffscreenTargetStore _windowStore = new();
+
+    // The store of the raster's texture being drawn now, or null.
+    private OffscreenTargetStore _tileStore;
+
+    private OffscreenTargetStore Store => _tileStore ?? _windowStore;
+
+    // Targets out of their stores this frame.
+    private readonly List<OffscreenTargetStore.StoredTarget> _takenGroupTargets = [];
+
+    private OffscreenTargetStore.StoredTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
     {
-        public IRenderTarget Texture;
-        public uint Width;
-        public uint Height;
-        public long LastUsed;
-    }
-
-    private readonly List<PooledTarget> _freeGroupTargets = [];
-    private readonly List<PooledTarget> _takenGroupTargets = [];
-
-    // Sizes are taken up to a step, so a group a few pixels larger than the last does not make a texture of its own.
-    private const uint GroupTargetStep = 256;
-
-    // A target or a level of depth not needed for this long goes: inside a raster as large as the texture, each step of
-    // zoom asked other sizes, and those held for the layers' 120 frames gathered gigabytes. By time, not frames: a raster
-    // waiting for the camera to stop passes frames of its own, and counted in frames, what its next drawing needs was let
-    // go just before it - and made again inside it.
-    private static readonly long GroupTargetIdle = System.Diagnostics.Stopwatch.Frequency * 3;
-
-    // When this frame began.
-    private long _now;
-
-    // The depth of the levels made smaller to what the last few seconds asked, when that is far less: grown for a
-    // raster's texture zoomed in, they kept its size after.
-    private void ShrinkLevels(IGraphicsDevice gd)
-    {
-        foreach (var level in _levels)
-        {
-            if (_now - level.AskedSince < GroupTargetIdle)
-            {
-                continue;
-            }
-
-            if ((ulong)level.Width * level.Height > 4UL * level.AskedWidth * level.AskedHeight && level.Depth.Length > 0)
-            {
-                Release(gd, level.Depth);
-                level.Depth = [];
-                level.Width = 0;
-                level.Height = 0;
-            }
-
-            level.AskedWidth = 0;
-            level.AskedHeight = 0;
-            level.AskedSince = _now;
-        }
-    }
-
-    private PooledTarget TakeGroupTarget(IGraphicsDevice gd, uint width, uint height)
-    {
-        var pick = -1;
-        for (var i = 0; i < _freeGroupTargets.Count; i++)
-        {
-            var free = _freeGroupTargets[i];
-            if (free.Width >= width && free.Height >= height
-                && (pick < 0 || (ulong)free.Width * free.Height
-                    < (ulong)_freeGroupTargets[pick].Width * _freeGroupTargets[pick].Height))
-            {
-                pick = i;
-            }
-        }
-
-        PooledTarget target;
-        if (pick >= 0)
-        {
-            target = _freeGroupTargets[pick];
-            _freeGroupTargets.RemoveAt(pick);
-        }
-        else
-        {
-            // None holds it: one of its own size. Made over to hold both, a tall one and a wide one took a square
-            // texture as large as both together; what is left unused goes once it has not been taken for a while.
-            target = new PooledTarget { Width = StepUp(width), Height = StepUp(height) };
-            target.Texture = gd.CreateRenderTarget(target.Width, target.Height, MSAALevel.None,
-                gd.CurrentRenderTarget.SurfaceFormat, ImageUsageFlagBits.SampledBit | ImageUsageFlagBits.TransferSrcBit,
-                ImageLayout.ShaderReadOnlyOptimal, "GroupTarget");
-        }
-
-        target.LastUsed = _now;
+        var target = Store.Take(gd, width, height);
         _takenGroupTargets.Add(target);
         return target;
     }
 
-    private static uint StepUp(uint size) => (size + GroupTargetStep - 1) / GroupTargetStep * GroupTargetStep;
-
-    // Back to the store: a later group of this frame may draw into it, the device keeping the order of the two.
     private void GiveBack(IRenderTarget texture)
     {
         if (texture == null)
@@ -392,29 +323,10 @@ internal sealed class OffscreenLayers : IDisposable
         {
             if (ReferenceEquals(_takenGroupTargets[i].Texture, texture))
             {
-                _freeGroupTargets.Add(_takenGroupTargets[i]);
+                var target = _takenGroupTargets[i];
                 _takenGroupTargets.RemoveAt(i);
+                target.Store.GiveBack(target);
                 return;
-            }
-        }
-    }
-
-    // A frame starts: what was never laid down - a mask whose group drew nothing - goes back, and what has not been
-    // taken for a while is let go.
-    private void ResetGroupTargets(IGraphicsDevice gd)
-    {
-        _freeGroupTargets.AddRange(_takenGroupTargets);
-        _takenGroupTargets.Clear();
-        for (var i = _freeGroupTargets.Count - 1; i >= 0; i--)
-        {
-            if (_now - _freeGroupTargets[i].LastUsed > GroupTargetIdle)
-            {
-                if (_freeGroupTargets[i].Texture is IDisposable idle)
-                {
-                    gd.AddToDeferDisposeQueue(idle);
-                }
-
-                _freeGroupTargets.RemoveAt(i);
             }
         }
     }
@@ -619,6 +531,14 @@ internal sealed class OffscreenLayers : IDisposable
     {
         var region = new Rect2D
             { Offset = new Offset2D(), Extent = new Extent2D { Width = (uint)width, Height = (uint)height } };
+        if (!_cached.TryGetValue(key, out var entry))
+        {
+            entry = new CachedLayer();
+            _cached[key] = entry;
+        }
+
+        // What is drawn into it - its own depth, the groups inside - comes from its own store.
+        _tileStore = entry.Store ??= new OffscreenTargetStore();
         return Open(gd, key, region, print, true, false, projection, bounds, true, Colors.Transparent, out _, tile: true);
     }
 
@@ -647,6 +567,13 @@ internal sealed class OffscreenLayers : IDisposable
             entry.Valid = true;
             entry.Width = open.Region.Extent.Width;
             entry.Height = open.Region.Extent.Height;
+        }
+
+        // Its drawing was its store's pass: what it did not need goes.
+        if (_tileStore != null)
+        {
+            _tileStore.EndPass(gd, _takenGroupTargets);
+            _tileStore = null;
         }
 
         var outer = _spaces.Peek().Outer;
@@ -1086,38 +1013,8 @@ internal sealed class OffscreenLayers : IDisposable
         }
     }
 
-    private OffscreenLayerLevel LevelAt(IGraphicsDevice gd, int depth, uint width, uint height)
-    {
-        while (_levels.Count <= depth)
-        {
-            _levels.Add(new OffscreenLayerLevel());
-        }
-
-        var level = _levels[depth];
-        level.AskedWidth = Math.Max(level.AskedWidth, width);
-        level.AskedHeight = Math.Max(level.AskedHeight, height);
-        var frames = Math.Max(1, (int)gd.MaxFramesInFlight);
-        var depthFormat = gd.CurrentDepthStencilBuffer is Texture { } windowDepth
-            ? (DepthFormat)windowDepth.Description.Format
-            : (DepthFormat?)null;
-        if (!depthFormat.HasValue
-            || (level.Depth.Length == frames && level.Width >= width && level.Height >= height))
-        {
-            return level;
-        }
-
-        Release(gd, level.Depth);
-        level.Width = Math.Max(level.Width, width);
-        level.Height = Math.Max(level.Height, height);
-        level.Depth = new IDepthStencilBuffer[frames];
-        for (var i = 0; i < frames; i++)
-        {
-            level.Depth[i] = gd.CreateDepthBuffer(level.Width, level.Height, depthFormat.Value, MSAALevel.None,
-                name: $"LayerDepth{depth}:{i}");
-        }
-
-        return level;
-    }
+    private OffscreenLayerLevel LevelAt(IGraphicsDevice gd, int depth, uint width, uint height) =>
+        Store.LevelAt(gd, depth, width, height);
 
     private static void Release<T>(IGraphicsDevice gd, T[] resources)
     {
@@ -1132,16 +1029,16 @@ internal sealed class OffscreenLayers : IDisposable
 
     public void Dispose()
     {
-        foreach (var level in _levels)
+        foreach (var target in _takenGroupTargets)
         {
-            foreach (var depth in level.Depth)
-            {
-                (depth as IDisposable)?.Dispose();
-            }
+            (target.Texture as IDisposable)?.Dispose();
         }
 
+        _takenGroupTargets.Clear();
+        _windowStore.DisposeNow();
         foreach (var entry in _cached.Values)
         {
+            entry.Store?.DisposeNow();
             foreach (var color in entry.Ring)
             {
                 (color as IDisposable)?.Dispose();
@@ -1160,15 +1057,6 @@ internal sealed class OffscreenLayers : IDisposable
             (entry.SoftScratch as IDisposable)?.Dispose();
         }
 
-        _freeGroupTargets.AddRange(_takenGroupTargets);
-        foreach (var target in _freeGroupTargets)
-        {
-            (target.Texture as IDisposable)?.Dispose();
-        }
-
-        _freeGroupTargets.Clear();
-        _takenGroupTargets.Clear();
-        _levels.Clear();
         _cached.Clear();
         _composite?.Dispose();
         _composite = null;
