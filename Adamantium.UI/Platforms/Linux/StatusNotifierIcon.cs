@@ -42,6 +42,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
     private DBusConnection _bus;
     private string _toolTip;
     private string _registeredAs;
+    private bool _displayed;
     private bool _disposed;
 
     internal StatusNotifierIcon(string toolTip, int id, Action<Action> post, string watcher = WatcherName)
@@ -84,9 +85,23 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         set => _menu.Read = value;
     }
 
+    /// <summary>The watcher took the icon and a panel showing the icons is registered with it.</summary>
+    public bool IsDisplayed
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _displayed;
+            }
+        }
+    }
+
     public event EventHandler Clicked;
 
     public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
+
+    public event EventHandler IsDisplayedChanged;
 
     /// <summary>An icon put on the session bus in the background: it is given at once, and shows when the bus answers.
     /// </summary>
@@ -146,6 +161,11 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             _served.Add(bus.Serve(Answer));
             // A watcher starting - the panel did, or restarted: the icon is told to it again.
             _served.Add(bus.Subscribe(BusName, BusPath, BusName, "NameOwnerChanged", OnNameOwnerChanged));
+            // A panel coming or going on the watcher: whichever watcher runs, so from any sender.
+            _served.Add(bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostRegistered",
+                _ => Task.Run(() => CheckDisplayed(bus))));
+            _served.Add(bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostUnregistered",
+                _ => Task.Run(() => CheckDisplayed(bus))));
         }
 
         // Told by way of the loop, after the one the icon was asked on: what the application gives the icon then - its
@@ -240,7 +260,43 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         catch (Exception e) when (e is DBusException or IOException or SocketException or ObjectDisposedException)
         {
             Serilog.Log.Logger.Debug(e, "No panel shows status icons now; the application's icon shows when one starts");
+            SetDisplayed(false);
+            return;
         }
+
+        CheckDisplayed(bus);
+    }
+
+    // Asked of the watcher: whether a panel is registered with it now.
+    private void CheckDisplayed(DBusConnection bus)
+    {
+        bool displayed;
+        try
+        {
+            displayed = StatusNotifierArea.IsShownOn(bus, _watcher);
+        }
+        catch (Exception e) when (e is DBusException or IOException or SocketException or ObjectDisposedException)
+        {
+            Serilog.Log.Logger.Debug(e, "The watcher did not say whether a panel shows the status icons");
+            displayed = false;
+        }
+
+        SetDisplayed(displayed);
+    }
+
+    private void SetDisplayed(bool displayed)
+    {
+        lock (_lock)
+        {
+            if (_disposed || _displayed == displayed)
+            {
+                return;
+            }
+
+            _displayed = displayed;
+        }
+
+        _post(() => IsDisplayedChanged?.Invoke(this, EventArgs.Empty));
     }
 
     private void OnNameOwnerChanged(DBusMessage signal)
@@ -249,8 +305,15 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         var name = reader.ReadString();
         reader.ReadString();
         var owner = reader.ReadString();
-        if (name != _watcher || owner.Length == 0)
+        if (name != _watcher)
         {
+            return;
+        }
+
+        // The watcher went - the panel ended: nothing shows the icon until one starts again.
+        if (owner.Length == 0)
+        {
+            SetDisplayed(false);
             return;
         }
 

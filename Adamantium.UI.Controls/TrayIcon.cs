@@ -66,8 +66,16 @@ public sealed class TrayIcon : FundamentalUIComponent
     /// <summary>Whether the icon is in the notification area now.</summary>
     public bool IsShown => _shown != null;
 
+    /// <summary>Whether the desktop shows the icon now: not while it is not shown, nor on a Linux session whose panel has
+    /// not started yet, or that has none.</summary>
+    public bool IsDisplayed => _shown?.IsDisplayed == true;
+
     /// <summary>The icon clicked, or picked from the keyboard.</summary>
     public event EventHandler Clicked;
+
+    /// <summary>Raised on the loop thread when <see cref="IsDisplayed"/> changes - a Linux panel started after the
+    /// application, say.</summary>
+    public event EventHandler IsDisplayedChanged;
 
     /// <summary>The window its menu is open in; null while it is closed.</summary>
     internal TrayMenuWindow MenuWindow => _menuWindow;
@@ -89,6 +97,7 @@ public sealed class TrayIcon : FundamentalUIComponent
     private void ShowOrTakeAway()
     {
         var wanted = _placed && IsVisible;
+        var displayed = IsDisplayed;
         if (wanted && _shown == null)
         {
             _shown = NotificationArea.AddIcon(ToolTip);
@@ -99,15 +108,30 @@ public sealed class TrayIcon : FundamentalUIComponent
 
             _shown.Clicked += OnClicked;
             _shown.MenuAsked += OnMenuAsked;
+            _shown.IsDisplayedChanged += OnIsDisplayedChanged;
             _shown.Menu = ContextMenu != null ? ReadMenu : null;
         }
         else if (!wanted && _shown != null)
         {
             _shown.Clicked -= OnClicked;
             _shown.MenuAsked -= OnMenuAsked;
+            _shown.IsDisplayedChanged -= OnIsDisplayedChanged;
             _shown.Dispose();
             _shown = null;
             CloseMenuWindow();
+        }
+
+        if (IsDisplayed != displayed)
+        {
+            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnIsDisplayedChanged(object sender, EventArgs e)
+    {
+        if (ReferenceEquals(sender, _shown))
+        {
+            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 

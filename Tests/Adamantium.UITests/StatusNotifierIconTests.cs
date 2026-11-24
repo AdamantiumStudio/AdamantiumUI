@@ -294,6 +294,37 @@ public class StatusNotifierIconTests
         });
     }
 
+    // Displayed once the watcher took it with a panel registered; a panel registering later displays it, the watcher
+    // going takes that back - each change told on the loop.
+    [Test]
+    public void IsDisplayed_FollowsThePanel_OnTheWatcher()
+    {
+        _watcher.HasPanel = false;
+        var told = new List<bool>();
+        _icon.IsDisplayedChanged += (_, _) => told.Add(_icon.IsDisplayed);
+        _icon.Connect(DBusConnection.ConnectSession());
+        RunPosted();
+        Assert.That(SpinWait.SpinUntil(() => _watcher.Registered.Count > 0, Patience), Is.True);
+        var withoutPanel = _icon.IsDisplayed;
+
+        _watcher.HasPanel = true;
+        _watcher.SayPanelRegistered();
+        var displayed = SpinWait.SpinUntil(() => _icon.IsDisplayed, Patience);
+        RunPosted();
+        _watcher.Dispose();
+        _watcher = null;
+        var gone = SpinWait.SpinUntil(() => !_icon.IsDisplayed, Patience);
+        RunPosted();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withoutPanel, Is.False, "taken by a watcher no panel shows");
+            Assert.That(displayed, Is.True, "a panel registered");
+            Assert.That(gone, Is.True, "the watcher went");
+            Assert.That(told, Is.EqualTo(new[] { true, false }));
+        });
+    }
+
     [Test]
     public void TakenAway_ItsBusNameGoes()
     {
@@ -392,6 +423,9 @@ public class StatusNotifierIconTests
 
         /// <summary>A panel showing the icons is registered with it (IsStatusNotifierHostRegistered).</summary>
         public bool HasPanel { get; set; } = true;
+
+        public void SayPanelRegistered() => _bus.Send(DBusMessage.Signal("/StatusNotifierWatcher",
+            "org.kde.StatusNotifierWatcher", "StatusNotifierHostRegistered"));
 
         public void Dispose()
         {

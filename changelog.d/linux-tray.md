@@ -13,6 +13,9 @@
 - `NotificationArea.IsAvailable` asks the desktop whether it shows the icons now (`INotificationAreaPlatform.IsAvailable`,
   true by default): on Linux, whether a StatusNotifierWatcher runs with a panel registered - GNOME without the
   AppIndicator extension has none. An application that lives in the notification area shows its window there instead.
+- `TrayIcon.IsDisplayed` and `IsDisplayedChanged` (`INotificationAreaIcon.IsDisplayed`, true by default): whether the
+  desktop shows the icon now. On Linux it is shown once the watcher took it with a panel registered, and the change is
+  told when a panel registers later - at sign-in, after the application started - or the watcher goes.
 - `INotificationAreaIcon.Menu` and `NotificationAreaMenuItem`: the menu of an icon for a desktop that shows the menu
   itself, read on the loop thread each time it is about to show. Where the application opens the menu, as on Windows,
   `MenuAsked` is raised as before and the menu is not read.

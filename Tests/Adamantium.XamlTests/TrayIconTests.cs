@@ -263,9 +263,35 @@ public class TrayIconTests
         });
     }
 
+    // Displayed as the desktop says: not before it is placed, not until a panel shows it, and told each time it changes.
+    [Test]
+    public void IsDisplayed_IsTheDesktops_AndItsChangesAreTold()
+    {
+        _area.Displays = false;
+        var icon = new TrayIcon();
+        var told = new List<bool>();
+        icon.IsDisplayedChanged += (_, _) => told.Add(icon.IsDisplayed);
+        var beforePlaced = icon.IsDisplayed;
+
+        icon.Place();
+        var noPanel = icon.IsDisplayed;
+        _area.Shown.Single().Display(true);
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(beforePlaced, Is.False);
+            Assert.That(noPanel, Is.False, "placed, but no panel shows it yet");
+            Assert.That(told, Is.EqualTo(new[] { true, false }), "the panel came; then it was taken away");
+        });
+    }
+
     private sealed class Area : INotificationAreaPlatform
     {
         public List<Icon> Shown { get; } = [];
+
+        /// <summary>Whether the icons it takes are shown from the first - a panel runs.</summary>
+        public bool Displays { get; set; } = true;
 
         public INotificationAreaIcon AddIcon(string toolTip)
         {
@@ -284,6 +310,16 @@ public class TrayIconTests
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
 
         public Func<IReadOnlyList<NotificationAreaMenuItem>> Menu { get; set; }
+
+        public bool IsDisplayed { get; private set; } = area.Displays;
+
+        public event EventHandler IsDisplayedChanged;
+
+        public void Display(bool displayed)
+        {
+            IsDisplayed = displayed;
+            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+        }
 
         public void Click() => Clicked?.Invoke(this, EventArgs.Empty);
 

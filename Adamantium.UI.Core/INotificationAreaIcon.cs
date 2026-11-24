@@ -22,6 +22,18 @@ public interface INotificationAreaIcon : IDisposable
         get => null;
         set { }
     }
+
+    /// <summary>Whether the desktop shows the icon now - not on a Linux session whose panel has not started yet, or
+    /// that has none.</summary>
+    bool IsDisplayed => true;
+
+    /// <summary>Raised on the application's loop thread when <see cref="IsDisplayed"/> changes - the panel started.
+    /// </summary>
+    event EventHandler IsDisplayedChanged
+    {
+        add { }
+        remove { }
+    }
 }
 
 /// <summary>Where on the desktop the menu of a <see cref="INotificationAreaIcon"/> was asked for, in physical pixels.
