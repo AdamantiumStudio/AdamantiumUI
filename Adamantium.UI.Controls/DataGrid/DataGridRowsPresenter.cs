@@ -21,8 +21,8 @@ public class DataGridRowsPresenter : StackPanel
         var width = Grid()?.ColumnsWidth ?? 0;
         if (width <= extent.Width) return extent;
 
-        // Wider than the view means a horizontal scrollbar, and the bar is drawn OVER the content: without a tail of
-        // blank the last row is permanently half-covered by it - and with a placeholder at the bottom, that is the row
+        // Wider than the view means a horizontal scrollbar, and most themes draw the bar OVER the content: without a tail
+        // of blank the last row is permanently half-covered by it - and with a placeholder at the bottom, that is the row
         // the table most needs reachable.
         return new Size<double>(width, extent.Height + Math.Max(0, Grid()?.EndPadding ?? 0));
     }

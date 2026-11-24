@@ -317,6 +317,41 @@ public class DataGridThemePartsTests
         });
     }
 
+    // Graphite's vertical bar takes a strip of its own beside the rows: the header and the totals end where the rows are
+    // seen, not over the bar, and a star column fills what is left - the last one ends at the bar, not under it.
+    [Test]
+    public void UnderGraphite_TheStripsAndTheColumnsEndWhereTheRowsAreSeen()
+    {
+        Use(new Adamantium.UI.Themes.GraphiteTheme.Graphite());
+
+        var grid = new TreeDataGrid();
+        grid.Columns.Add(new DataGridTextColumn { Header = "Name", Binding = new Binding("Name"), Width = new GridLength(1, GridUnitType.Star) });
+        grid.Columns.Add(new DataGridTextColumn { Header = "Last", Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.ItemsSource = Enumerable.Range(0, 100).Select(i => new Item { Name = $"row {i}" }).ToArray();
+        grid.Width = 400;
+        grid.Height = 200;
+        var window = new Window { Width = 600, Height = 400, Content = grid };
+        grid.ApplyCurrentTheme();
+        for (var i = 0; i < 6; i++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            BindingUpdateQueue.Flush();
+        }
+
+        var scroll = (ScrollViewer)grid.GetTemplateChild("PART_ScrollHost");
+        var headers = (IUIComponent)grid.GetTemplateChild("PART_Headers");
+        var seen = scroll.ViewportSize.Width;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(seen, Is.LessThan(scroll.RenderSize.Width), "the bar shows, beside the rows");
+            Assert.That(headers.RenderSize.Width, Is.EqualTo(seen).Within(0.5), "the header ends where the rows do");
+            // Laid out against the grid's width - its frame's two pixels included, as before - less the bar's strip.
+            Assert.That(grid.ColumnsWidth, Is.EqualTo(grid.RenderSize.Width - (scroll.RenderSize.Width - seen)).Within(0.5),
+                "the columns give the bar its strip");
+        });
+    }
+
     // Pulled sideways past its first column on the rubber band - the middle button drags any scroll area - the rows give
     // way; the header strip, outside the scroller, has to give way with them, or it stands over the wrong cells.
     [Test]
