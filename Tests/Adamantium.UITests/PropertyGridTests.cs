@@ -764,10 +764,10 @@ public class PropertyGridTests
         });
     }
 
-    // One command for another builds nothing again: a list nested in another, its command told for each item, takes a
-    // new one on every line it builds, and building on each would never end.
+    // One command for another - the panel's view-model replaced - goes on each item's button: the old one would act on
+    // a view-model that is gone.
     [Test]
-    public void AnItemButtonsCommandReplaced_BuildsTheLinesNoMore()
+    public void AnItemButtonsCommandReplaced_GoesOnEachItem()
     {
         var node = new CanvasNode { Inputs = 2, Outputs = 0 };
         node.InputPins[0].Name = "Base";
@@ -782,13 +782,13 @@ public class PropertyGridTests
         };
         sockets.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
         var grid = Built(Section(item, sockets));
-        var row = RowsWhoseHeaderIs(grid, "Base");
 
-        sockets.ItemAction = new Doing();
+        var replaced = new Doing();
+        sockets.ItemAction = replaced;
         grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
 
-        Assert.That(RowsWhoseHeaderIs(grid, "Base"), Is.SameAs(row));
+        Assert.That(ButtonsOf(grid, "Base"), Is.EqualTo(new[] { replaced }));
     }
 
     // The button bound to the panel's view-model, as the editor's layers list has it: one build more when the command is
@@ -825,7 +825,13 @@ public class PropertyGridTests
         var settling = Settled(grid) - before;
         var resting = Settled(grid) - before - settling;
 
-        Assert.That(resting, Is.Zero);
+        Assert.Multiple(() =>
+        {
+            Assert.That(resting, Is.Zero);
+            Assert.That(ButtonsOf(grid, "A"),
+                Is.EqualTo(new[] { shelves.Shelved[0].Remove, shelves.Shelved[1].Remove, shelves.Shelved[2].Remove }),
+                "each shelf's items, their own shelf's button");
+        });
     }
 
     // ...and some outer items with no button: the value comes and goes as the lines are built. The grid has to come to
@@ -845,6 +851,8 @@ public class PropertyGridTests
         {
             Assert.That(settling, Is.LessThanOrEqualTo(2));
             Assert.That(resting, Is.Zero);
+            Assert.That(ButtonsOf(grid, "A"), Is.EqualTo(new[] { shelves.Shelved[0].Remove, null, shelves.Shelved[2].Remove }),
+                "the shelf with no button, its items with none");
         });
     }
 
@@ -1246,6 +1254,23 @@ public class PropertyGridTests
         }
 
         return null;
+    }
+
+    // The command on the button of each line so named, top to bottom: none where a line has no button.
+    private static List<ICommand> ButtonsOf(PropertyGrid grid, string header)
+    {
+        var found = new List<ICommand>();
+        foreach (var section in grid.Sections)
+        {
+            if (section.Content is not IUIComponent host) continue;
+            foreach (var child in host.VisualChildren)
+            {
+                if (child is not PropertyRow row || !Equals(row.Definition?.Header, header)) continue;
+                found.Add(row.Definition.ShowActionButton ? row.Definition.ActionCommand : null);
+            }
+        }
+
+        return found;
     }
 
     private static List<PropertyRow> RowsOf(PropertyGrid grid, PropertyDefinition definition)
