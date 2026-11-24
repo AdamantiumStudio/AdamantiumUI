@@ -13,7 +13,7 @@ namespace Adamantium.UI.Controls;
 
 /// <summary>
 /// The custom-chrome caption bar: an icon + title on the left, optional window commands, and the min / max-restore /
-/// close buttons on the right. Built into the <see cref="Window"/> default ControlTemplate, but a standalone control so
+/// close buttons, on the side the platform keeps them. Built into the <see cref="Window"/> default ControlTemplate, but a standalone control so
 /// it can be reused elsewhere (e.g. a virtual/designer window). It drives the OWNING window it is hosted in - it resolves
 /// that window from the visual tree and calls DragMove / Minimize / ToggleMaximizeRestore / Close on it.
 /// </summary>
@@ -64,7 +64,12 @@ public class TitleBar : Control
     /// control's code knowing which platform that is.</summary>
     public static readonly AdamantiumProperty CaptionButtonPlacementProperty = AdamantiumProperty.Register(
         nameof(CaptionButtonPlacement), typeof(CaptionButtonPlacement), typeof(TitleBar),
-        new PropertyMetadata(CaptionButtonPlacement.Right, PropertyMetadataOptions.AffectsMeasure));
+        new PropertyMetadata(SystemCaptionButtonPlacement, PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>The side the operating system keeps window buttons on: where every theme has them until it, or the
+    /// application, says otherwise.</summary>
+    internal static CaptionButtonPlacement SystemCaptionButtonPlacement =>
+        OperatingSystem.IsMacOS() ? CaptionButtonPlacement.Left : CaptionButtonPlacement.Right;
 
     public CaptionButtonPlacement CaptionButtonPlacement
     {

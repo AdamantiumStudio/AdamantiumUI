@@ -58,7 +58,7 @@
                                             AutomationProperties.AutomationId="Close"
                                             AutomationProperties.Name="{Localize WindowStrings.Close}"/>
                                     <Image x:Name="CloseGlyph" Source="{ResourceReference TrafficLightCloseGlyph}"
-                                            Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
+                                            Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid x:Name="MinimizeCell">
@@ -66,7 +66,7 @@
                                             AutomationProperties.AutomationId="Minimize"
                                             AutomationProperties.Name="{Localize WindowStrings.Minimize}"/>
                                     <Image x:Name="MinimizeGlyph" Source="{ResourceReference TrafficLightMinimizeGlyph}"
-                                            Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
+                                            Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                                 <Grid x:Name="ZoomCell">
@@ -74,7 +74,7 @@
                                             AutomationProperties.AutomationId="Maximize"
                                             AutomationProperties.Name="{Localize WindowStrings.Maximize}"/>
                                     <Image x:Name="ZoomGlyph" Source="{ResourceReference TrafficLightZoomGlyph}"
-                                            Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
+                                            Opacity="0" IsHitTestVisible="False" Width="6" Height="6"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Grid>
                             </StackPanel>
@@ -145,7 +145,7 @@
     </Style>
 
     <!-- All three glyphs light together, and the signal is the CAPTION ZONE - approach the title bar and the lights show
-         what they do, without having to find the 12px group first. -->
+         what they do, without having to find the small group first. -->
     <Style Selector="TitleBar">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="CloseGlyph" Property="Opacity" Value="1"/>

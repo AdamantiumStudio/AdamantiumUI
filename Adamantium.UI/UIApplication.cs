@@ -662,9 +662,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// and the splash window has closed.</summary>
     public bool IsStarting => _splash is { IsRunning: true };
 
-    /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the application's
-    /// own, which is added to the themes. The application's blueprint states it; a value set in code wins over the
-    /// blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
+    /// <summary>The theme the application opens on: Fluent, Graphite, MacOs or one of the application's own, which is added
+    /// to the themes; unset, MacOs on macOS and Fluent elsewhere. The application's blueprint states it; a value set in
+    /// code wins over the blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
     public Type StartupTheme
     {
         get => GetValue<Type>(StartupThemeProperty);
@@ -1130,7 +1130,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // ADAM_THEME wins over StartupTheme: a theme is fully exercised only when current from the first frame.
         var requested = Environment.GetEnvironmentVariable("ADAM_THEME");
         var named = string.IsNullOrEmpty(StartupThemeName) ? null : ThemeManager[StartupThemeName];
-        var startOn = string.IsNullOrEmpty(requested) ? named ?? StartupThemeInstance() ?? fluent : ThemeManager[requested];
+        ITheme platformTheme = OperatingSystem.IsMacOS() ? macOs : fluent;
+        var startOn = string.IsNullOrEmpty(requested)
+            ? named ?? StartupThemeInstance() ?? platformTheme
+            : ThemeManager[requested];
         if (startOn == null)
         {
             throw new InvalidOperationException(
