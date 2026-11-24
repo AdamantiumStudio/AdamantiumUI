@@ -231,8 +231,40 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (window == null || _closed)
             return;
 
+        ReportKey(window, nsEvent, down, down && NSEvent.IsRepeat(nsEvent));
+
+        var flags = NSEvent.ModifierFlagsOf(nsEvent);
+        if (!down || (flags & (NSEventModifierFlags.Command | NSEventModifierFlags.Control)) != 0)
+            return;
+
+        var text = NSEvent.CharactersOf(nsEvent);
+        if (string.IsNullOrEmpty(text) || char.IsControl(text[0]) || (text[0] >= 0xF700 && text[0] <= 0xF8FF))
+            return;
+
+        var modifiers = Modifiers(nsEvent);
+        var time = TimeOf(nsEvent);
+        MacOSPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
+            new RawTextInputEventArgs(text, modifiers, time), window));
+    }
+
+    internal void OnFlagsChanged(IntPtr nsEvent)
+    {
+        var window = _window;
+        if (window == null || _closed)
+            return;
+
+        var flags = NSEvent.ModifierFlagsOf(nsEvent);
+        var changed = flags ^ _flags;
+        _flags = flags;
+        var mask = NSEventModifierFlags.Shift | NSEventModifierFlags.Control | NSEventModifierFlags.Option |
+                   NSEventModifierFlags.Command | NSEventModifierFlags.CapsLock;
+        if ((changed & mask) != 0)
+            ReportKey(window, nsEvent, (flags & changed & mask) != 0, false);
+    }
+
+    private void ReportKey(IWindow window, IntPtr nsEvent, bool down, bool repeated)
+    {
         var code = NSEvent.KeyCodeOf(nsEvent);
-        var repeated = down && NSEvent.IsRepeat(nsEvent);
         var modifiers = Modifiers(nsEvent);
         var time = TimeOf(nsEvent);
         var press = new KeyPressInfo
@@ -247,30 +279,6 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var type = down ? RawKeyboardEventType.KeyDown : RawKeyboardEventType.KeyUp;
         MacOSPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, type, press, modifiers, time), window));
-
-        var flags = NSEvent.ModifierFlagsOf(nsEvent);
-        if (!down || (flags & (NSEventModifierFlags.Command | NSEventModifierFlags.Control)) != 0)
-            return;
-
-        var text = NSEvent.CharactersOf(nsEvent);
-        if (string.IsNullOrEmpty(text) || char.IsControl(text[0]) || (text[0] >= 0xF700 && text[0] <= 0xF8FF))
-            return;
-
-        MacOSPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
-            new RawTextInputEventArgs(text, modifiers, time), window));
-    }
-
-    internal void OnFlagsChanged(IntPtr nsEvent)
-    {
-        var flags = NSEvent.ModifierFlagsOf(nsEvent);
-        var changed = flags ^ _flags;
-        _flags = flags;
-        var mask = NSEventModifierFlags.Shift | NSEventModifierFlags.Control | NSEventModifierFlags.Option |
-                   NSEventModifierFlags.Command | NSEventModifierFlags.CapsLock;
-        if ((changed & mask) == 0)
-            return;
-
-        OnKey(nsEvent, (flags & changed & mask) != 0);
     }
 
     internal void OnCloseRequested()
