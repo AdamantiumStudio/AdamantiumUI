@@ -128,6 +128,10 @@ internal interface IWebViewBrowserView
     /// is to make one of its own at the page's address.</summary>
     void BrowserLost(WebViewBrowser browser);
 
+    /// <summary>The page's accessibility tree changed: <see cref="WebViewBrowser.Accessibility"/> holds it as it is now,
+    /// and what Chromium said happened with the change.</summary>
+    void AccessibilityChanged(WebViewBrowser browser);
+
     /// <summary>The page's file field asks for files: the view model is asked, and answers <paramref name="request"/>;
     /// false leaves it to be answered with none.</summary>
     bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request);

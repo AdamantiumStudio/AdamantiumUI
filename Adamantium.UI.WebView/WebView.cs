@@ -212,8 +212,6 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         base.OnDiscarded();
     }
 
-    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
-
     private static void OnSourceChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
@@ -334,6 +332,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
             browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));
+            KeepAccessibilityWanted();
         }
         catch (Exception exception)
         {

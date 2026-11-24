@@ -31,6 +31,27 @@ public static class AutomationEvents
         }
     }
 
+    /// <summary>Tells that <paramref name="automationEvent"/> happened to <paramref name="part"/> - a part shown inside
+    /// <paramref name="host"/> that is no element of its own, such as a node of a web page.</summary>
+    public static void Raise(IUIComponent host, AutomationPeer part, AutomationEvent automationEvent)
+    {
+        if (Raised is { } raised && part != null)
+        {
+            raised(host, new AutomationEventArgs(host, part, automationEvent));
+        }
+    }
+
+    /// <summary>Tells that <paramref name="property"/> of <paramref name="part"/>, a part shown inside
+    /// <paramref name="host"/>, went from <paramref name="oldValue"/> to <paramref name="newValue"/>.</summary>
+    public static void RaisePropertyChanged(IUIComponent host, AutomationPeer part, AutomationProperty property,
+        object oldValue, object newValue)
+    {
+        if (Raised is { } raised && part != null && !Equals(oldValue, newValue))
+        {
+            raised(host, new AutomationEventArgs(host, part, AutomationEvent.PropertyChanged, property, oldValue, newValue));
+        }
+    }
+
     /// <summary>Tells that <paramref name="element"/> expanded or collapsed.</summary>
     public static void RaiseExpandCollapse(IUIComponent element, bool expanded)
     {
