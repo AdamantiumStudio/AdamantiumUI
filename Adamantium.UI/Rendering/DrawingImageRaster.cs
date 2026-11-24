@@ -35,17 +35,15 @@ internal static class DrawingImageRaster
     // The palette the current bakes were drawn under.
     private static int _bakedPalette = -1;
 
-    // Each owner's bakes on their way, and when it was last re-recorded for one that landed. A page of a map asks for a
-    // hundred and more patterns at once: re-recorded for each as it landed, it was recorded and drawn a hundred times
-    // over - so it is re-recorded when the last lands, or now and then while they keep coming.
+    // Each owner's bakes on their way. A page of a map asks for a hundred and more patterns at once: re-recorded for each
+    // as it landed, it was recorded and drawn a hundred times over - and re-recorded every fifth of a second while they
+    // came, a heavy page froze the window that often for seconds. It is re-recorded once, when the last lands.
     private sealed class Waiting
     {
         public int Count;
-        public long LastShown;
     }
 
     private static readonly ConcurrentDictionary<IUIComponent, Waiting> _waiting = new();
-    private static readonly long ShowAtMost = System.Diagnostics.Stopwatch.Frequency / 5;
 
     private static void Wait(IUIComponent owner)
     {
@@ -54,12 +52,11 @@ internal static class DrawingImageRaster
             return;
         }
 
-        var waiting = _waiting.GetOrAdd(owner, static _ => new Waiting { LastShown = System.Diagnostics.Stopwatch.GetTimestamp() });
+        var waiting = _waiting.GetOrAdd(owner, static _ => new Waiting());
         System.Threading.Interlocked.Increment(ref waiting.Count);
     }
 
-    // One of the owner's bakes is done, landed or not: whether to re-record it now - the last of them, or the first in a
-    // while.
+    // One of the owner's bakes is done, landed or not: whether to re-record it now - the last of them.
     private static bool Landed(IUIComponent owner)
     {
         if (owner == null || !_waiting.TryGetValue(owner, out var waiting))
@@ -67,19 +64,12 @@ internal static class DrawingImageRaster
             return owner != null;
         }
 
-        var now = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (System.Threading.Interlocked.Decrement(ref waiting.Count) <= 0)
-        {
-            _waiting.TryRemove(owner, out _);
-            return true;
-        }
-
-        if (now - waiting.LastShown < ShowAtMost)
+        if (System.Threading.Interlocked.Decrement(ref waiting.Count) > 0)
         {
             return false;
         }
 
-        waiting.LastShown = now;
+        _waiting.TryRemove(owner, out _);
         return true;
     }
 

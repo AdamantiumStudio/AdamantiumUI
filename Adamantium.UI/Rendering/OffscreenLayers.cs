@@ -64,6 +64,7 @@ internal sealed class OffscreenLayers : IDisposable
     public void BeginFrame(IGraphicsDevice gd)
     {
         _frame++;
+        _now = System.Diagnostics.Stopwatch.GetTimestamp();
         Redrawn = 0;
         Reused = 0;
         if (gd == null)
@@ -308,18 +309,22 @@ internal sealed class OffscreenLayers : IDisposable
     // Sizes are taken up to a step, so a group a few pixels larger than the last does not make a texture of its own.
     private const uint GroupTargetStep = 256;
 
-    // A target or a level of depth not needed for this many frames goes: inside a raster as large as the texture, each
-    // step of zoom asked other sizes, and those held for the layers' 120 frames - a minute at a few frames a second -
-    // gathered gigabytes.
-    private const long GroupTargetIdleFrames = 8;
+    // A target or a level of depth not needed for this long goes: inside a raster as large as the texture, each step of
+    // zoom asked other sizes, and those held for the layers' 120 frames gathered gigabytes. By time, not frames: a raster
+    // waiting for the camera to stop passes frames of its own, and counted in frames, what its next drawing needs was let
+    // go just before it - and made again inside it.
+    private static readonly long GroupTargetIdle = System.Diagnostics.Stopwatch.Frequency * 3;
 
-    // The depth of the levels made smaller to what the last few frames asked, when that is far less: grown for a raster's
-    // texture zoomed in, they kept its size after.
+    // When this frame began.
+    private long _now;
+
+    // The depth of the levels made smaller to what the last few seconds asked, when that is far less: grown for a
+    // raster's texture zoomed in, they kept its size after.
     private void ShrinkLevels(IGraphicsDevice gd)
     {
         foreach (var level in _levels)
         {
-            if (_frame - level.AskedSince < GroupTargetIdleFrames)
+            if (_now - level.AskedSince < GroupTargetIdle)
             {
                 continue;
             }
@@ -334,7 +339,7 @@ internal sealed class OffscreenLayers : IDisposable
 
             level.AskedWidth = 0;
             level.AskedHeight = 0;
-            level.AskedSince = _frame;
+            level.AskedSince = _now;
         }
     }
 
@@ -368,7 +373,7 @@ internal sealed class OffscreenLayers : IDisposable
                 ImageLayout.ShaderReadOnlyOptimal, "GroupTarget");
         }
 
-        target.LastUsed = _frame;
+        target.LastUsed = _now;
         _takenGroupTargets.Add(target);
         return target;
     }
@@ -402,7 +407,7 @@ internal sealed class OffscreenLayers : IDisposable
         _takenGroupTargets.Clear();
         for (var i = _freeGroupTargets.Count - 1; i >= 0; i--)
         {
-            if (_frame - _freeGroupTargets[i].LastUsed > GroupTargetIdleFrames)
+            if (_now - _freeGroupTargets[i].LastUsed > GroupTargetIdle)
             {
                 if (_freeGroupTargets[i].Texture is IDisposable idle)
                 {
