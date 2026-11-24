@@ -235,9 +235,8 @@ public class PropertyGrid : Control
     // The row of each item's line built this pass.
     private readonly Dictionary<PropertyDefinition, PropertyRow> _rowOfItemLine = new(ReferenceEqualityComparer.Instance);
 
-    // A build asked of the loop for items' lines changed outside a build: one for however many changed.
-    private readonly Action _rebuildLater;
-    private int _rebuildSoon;
+    // Items' lines changed outside a build: the rows are built again by the next measure, once for however many changed.
+    private bool _rowsStale;
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<PropertySection> _templated = new(ReferenceEqualityComparer.Instance);
     private readonly List<PropertySection> _dropped = [];
@@ -267,7 +266,6 @@ public class PropertyGrid : Control
     {
         Sections.CollectionChanged += OnSectionsChanged;
         _sourceChanges = new CrossThreadChanges<NotifyCollectionChangedEventArgs>(_ => Rebuild());
-        _rebuildLater = RebuildLater;
     }
 
     /// <summary>The sections, in display order. [Content], so an inspector is written as the list of sections it is.</summary>
@@ -463,8 +461,8 @@ public class PropertyGrid : Control
         _rebuilding = true;
         _answeredReading.Clear();
 
-        // This build reads every line as it is now: one asked of the loop meanwhile is not needed.
-        Volatile.Write(ref _rebuildSoon, 0);
+        // This build reads every line as it is now: one asked of the next measure is not needed.
+        _rowsStale = false;
         try
         {
             do
@@ -1400,21 +1398,21 @@ public class PropertyGrid : Control
     // A line changing while the grid builds is the grid's own reading of it - a binding found late, settled as its row
     // is made: one more pass, once for each line. The same line asking again is a value handed out new on every read,
     // which would never let the build end.
-    // Outside a build, a change of an item's line is built on the loop, once for all of them: a list's copies change
-    // together - their choices replaced, a setting of the line as written - and each building at once would be a build
-    // per item.
+    // Outside a build, a change of an item's line is built by the next measure, once for all of them: a list's copies
+    // change together - their choices replaced, a setting of the line as written - and each building at once would be a
+    // build per item.
     private void OnDefinitionLayoutChanged(object sender, EventArgs e)
     {
         // A line let go of says what it gives back as it goes: nothing to build for.
         var line = (PropertyDefinition)sender;
         if (line.IsReleased) return;
 
-        // A list's line as written is not shown; built once on the loop, with the copies it reached, the pass finds
-        // a binding it was given since they were made (ItemsProperty.BeginPass). A copy standing as a list inside an
-        // item's line is only settling its own bindings: nothing to build for.
+        // A list's line as written is not shown; built once by the next measure, with the copies it reached, the pass
+        // finds a binding it was given since they were made (ItemsProperty.BeginPass). A copy standing as a list inside
+        // an item's line is only settling its own bindings: nothing to build for.
         if (_listLines.Contains(line))
         {
-            if (line.Original == null) RebuildSoon();
+            if (line.Original == null) RebuildOnMeasure();
             return;
         }
 
@@ -1425,19 +1423,21 @@ public class PropertyGrid : Control
             return;
         }
 
-        if (line.Original != null || line is ItemHeaderLine) RebuildSoon();
+        if (line.Original != null || line is ItemHeaderLine) RebuildOnMeasure();
         else Rebuild();
     }
 
-    private void RebuildSoon()
+    // The layout's own "once a frame": the rows marked stale, built again when the grid is measured.
+    private void RebuildOnMeasure()
     {
-        if (Interlocked.Exchange(ref _rebuildSoon, 1) == 0) LoopSignal.Post(_rebuildLater);
+        _rowsStale = true;
+        InvalidateMeasure();
     }
 
-    private void RebuildLater()
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        // Let go of meanwhile: nothing to build.
-        if (Interlocked.Exchange(ref _rebuildSoon, 0) == 1 && ReleasedInBatch == 0) Rebuild();
+        if (_rowsStale) Rebuild();
+        return base.MeasureOverride(availableSize);
     }
 
     // An item's line has one row, found at once: a language switched changes every copy's words, and each looking
@@ -1449,7 +1449,7 @@ public class PropertyGrid : Control
 
         if (_listLines.Contains(line))
         {
-            if (line.Original == null) RebuildSoon();
+            if (line.Original == null) RebuildOnMeasure();
             return;
         }
 

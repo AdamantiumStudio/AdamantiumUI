@@ -1766,7 +1766,6 @@ public class PropertyGridTests
     {
         for (var pass = 0; pass < 10; pass++)
         {
-            LoopSignal.Drain();
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
             grid.Measure(new Size<double>(400, 400), force: true);
             grid.Arrange(new Rect(0, 0, 400, 400));
