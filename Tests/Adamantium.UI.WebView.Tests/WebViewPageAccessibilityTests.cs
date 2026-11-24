@@ -38,10 +38,17 @@ public class WebViewPageAccessibilityTests
           ]}]}
         """;
 
+    // Read as off the loop, then taken in, as the browser does.
+    private static bool ApplyTreeChange(WebViewPageAccessibility page, System.ReadOnlySpan<byte> json) =>
+        page.Apply(WebViewAccessibilityReader.ReadTreeChange(json));
+
+    private static bool ApplyLocationChange(WebViewPageAccessibility page, System.ReadOnlySpan<byte> json) =>
+        page.Apply(WebViewAccessibilityReader.ReadMoves(json));
+
     private static WebViewPageAccessibility Read()
     {
         var page = new WebViewPageAccessibility();
-        page.ApplyTreeChange(System.Text.Encoding.UTF8.GetBytes(Page));
+        ApplyTreeChange(page, System.Text.Encoding.UTF8.GetBytes(Page));
         return page;
     }
 
@@ -101,7 +108,7 @@ public class WebViewPageAccessibilityTests
     public void TheFocusMoving_IsTold_AndANodeTakenOutGoes()
     {
         var page = Read();
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"T1","updates":[{"tree_data":{"focus_id":8},
               "nodes":[{"id":5,"role":"paragraph","attributes":{},"child_ids":[],
                 "location":{"x":10,"y":200,"width":300,"height":20},"offset_container_id":1}]}]}
@@ -121,7 +128,7 @@ public class WebViewPageAccessibilityTests
     public void ANewDocument_TakesTheOldOnesPlace()
     {
         var page = Read();
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"T2","updates":[{"root_id":1,"tree_data":{"focus_id":1},
               "nodes":[{"id":1,"role":"rootWebArea","attributes":{"name":"Next"},"child_ids":[]}]}]}
             """u8);
@@ -134,7 +141,7 @@ public class WebViewPageAccessibilityTests
     public void AMovedNode_TakesItsNewPlace()
     {
         var page = Read();
-        page.ApplyLocationChange("""
+        ApplyLocationChange(page, """
             [{"ax_tree_id":"T1","id":3,"new_location":{"offset_container_id":1,
               "bounds":{"x":10,"y":500,"width":300,"height":40}}}]
             """u8);
@@ -147,7 +154,7 @@ public class WebViewPageAccessibilityTests
     public void APartSentAgainWhole_KeepsTheChildrenItNamesAgain()
     {
         var page = Read();
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"T1","updates":[{"node_id_to_clear":5,
               "nodes":[{"id":5,"role":"paragraph","attributes":{},"child_ids":[6],
                         "location":{"x":10,"y":200,"width":300,"height":20},"offset_container_id":1},
@@ -167,12 +174,12 @@ public class WebViewPageAccessibilityTests
     public void ALateUpdateOfADocumentLeft_IsNotTakenIn()
     {
         var page = Read();
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"T2","updates":[{"root_id":1,"tree_data":{"focus_id":1},
               "nodes":[{"id":1,"role":"rootWebArea","attributes":{"name":"Next"},"child_ids":[]}]}]}
             """u8);
 
-        var taken = page.ApplyTreeChange("""
+        var taken = ApplyTreeChange(page, """
             {"ax_tree_id":"T1","updates":[{"tree_data":{"focus_id":8},"nodes":[]}]}
             """u8);
 
@@ -188,11 +195,11 @@ public class WebViewPageAccessibilityTests
     public void AFrameBeforeItsDocument_Stays_AndGoesWithItsHost()
     {
         var page = new WebViewPageAccessibility();
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"F1","updates":[{"root_id":1,"tree_data":{"focus_id":1,"parent_tree_id":"D1"},
               "nodes":[{"id":1,"role":"rootWebArea","attributes":{"name":"Ad"},"child_ids":[]}]}]}
             """u8);
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"D1","updates":[{"root_id":1,"tree_data":{"focus_id":1},
               "nodes":[{"id":1,"role":"rootWebArea","attributes":{"name":"Page"},"child_ids":[2]},
                        {"id":2,"role":"iframe","attributes":{"childTreeId":"F1"},"child_ids":[]}]}]}
@@ -200,7 +207,7 @@ public class WebViewPageAccessibilityTests
         var frameShown = page.ShownChildren(page.Document.Find(2)).Select(node => node.Name).ToList();
         var frameNode = page.ShownChildren(page.Document.Find(2))[0];
 
-        page.ApplyTreeChange("""
+        ApplyTreeChange(page, """
             {"ax_tree_id":"D1","updates":[{"nodes":[{"id":1,"role":"rootWebArea","attributes":{"name":"Page"},"child_ids":[]}]}]}
             """u8);
 

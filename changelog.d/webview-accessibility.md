@@ -11,3 +11,10 @@
 - `AutomationEvents.Raise` and `AutomationEvents.RaisePropertyChanged` for a part shown inside an element that is no
   element of its own, such as a node of a web page.
 - Sandbox: the Web page's address takes `data:` addresses, as other browsers do.
+- The page's accessibility tree is written and read off the UI loop: a heavy page's first tree (20 000 nodes, 9 MB)
+  took the loop half a second, now a few milliseconds.
+
+### Fixed
+
+- `WebView`: a browser closed while CEF was still making it no longer brings CEF down - it is closed from the loop,
+  not inside CEF's own making of it.

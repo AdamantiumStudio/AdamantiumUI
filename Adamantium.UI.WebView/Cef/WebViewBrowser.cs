@@ -68,6 +68,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private string createdWith;
     private bool requested;
     private bool closing;
+    private bool closeOwed;
     private bool keptForDownloads;
     private bool disposed;
     private bool repaintOwed;
@@ -155,9 +156,27 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
-    internal void OnAccessibilityTreeChange(ReadOnlySpan<byte> json)
+    // Read off the loop - a heavy page's first tree stalls it for half a second else - and taken in back on it.
+    internal void OnAccessibilityChange(CefValue* value, bool isTreeChange)
     {
-        if (!closing && Accessibility.ApplyTreeChange(json))
+        if (!closing)
+        {
+            engine.AccessibilityReading.Read(this, value, isTreeChange);
+        }
+    }
+
+    internal void TakeAccessibility(WebViewAccessibilityChange change)
+    {
+        if (!closing && Accessibility.Apply(change))
+        {
+            view.AccessibilityChanged(this);
+        }
+    }
+
+    // Nodes moving - the page scrolled - tell no event, but what waits for a node to come in view is let go on.
+    internal void TakeAccessibility(List<WebViewAccessibilityMove> moves)
+    {
+        if (!closing && Accessibility.Apply(moves))
         {
             view.AccessibilityChanged(this);
         }
@@ -170,16 +189,15 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     {
         if (!closing && accessibilityOn)
         {
-            Accessibility.ScrollDocument(new Vector2<double>(x, y));
-            view.AccessibilityChanged(this);
+            engine.AccessibilityReading.Scrolled(this, new Vector2<double>(x, y));
         }
     }
 
-    // Nodes moving - the page scrolled - tell no event, but what waits for a node to come in view is let go on.
-    internal void OnAccessibilityLocationChange(ReadOnlySpan<byte> json)
+    internal void TakeScroll(Vector2<double> scroll)
     {
-        if (!closing && Accessibility.ApplyLocationChange(json))
+        if (!closing)
         {
+            Accessibility.ScrollDocument(scroll);
             view.AccessibilityChanged(this);
         }
     }
@@ -1716,9 +1734,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             CefRefCounting.ReleaseCef(host);
         }
 
+        // Closed from the loop, not inside CEF's own making of it: closed here, it is gone before CEF has done with it
+        // (measured 24.11 - a null platform delegate in AlloyBrowserHostImpl::CreateInternal, right after this).
         if (closing)
         {
-            Close();
+            closeOwed = true;
+            LoopSignal.Post(CloseIfOwed);
             return;
         }
 
@@ -2067,6 +2088,17 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
     internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);
+
+    /// <summary>Closes the browser made after it was closed, if not yet: from the loop, or from the engine's closing turns,
+    /// which run no loop.</summary>
+    internal void CloseIfOwed()
+    {
+        if (closeOwed)
+        {
+            closeOwed = false;
+            Close();
+        }
+    }
 
     private void Close()
     {

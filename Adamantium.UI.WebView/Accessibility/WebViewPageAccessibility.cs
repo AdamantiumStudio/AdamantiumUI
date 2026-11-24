@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 
@@ -8,16 +7,14 @@ namespace Adamantium.UI.WebView.Accessibility;
 /// The page's accessibility as Chromium tells it, kept up to date from its JSON: the document's tree and its frames',
 /// which nodes are shown and where they stand. Shown are the nodes a reader names - a link, a field, a heading, a run of
 /// text - as Chrome shows them: what Chromium ignores, nameless boxes around other nodes and the text repeating a
-/// node's own name are passed over, their children shown in their place. The JSON is read in one pass as it comes - a
-/// heavy page's first tree is megabytes - each field taken by its name's bytes, what is not needed skipped whole.
+/// node's own name are passed over, their children shown in their place. What it takes in is
+/// read off the UI loop by <see cref="WebViewAccessibilityReader"/>; this, on it, only lays it out.
 /// </summary>
 internal sealed class WebViewPageAccessibility
 {
     private readonly Dictionary<string, WebViewAccessibilityTree> trees = new();
     private readonly Dictionary<string, WebViewAccessibilityNode> frameHosts = new();
     private readonly List<WebViewAccessibilityNode> nodesRead = [];
-    private readonly List<ToldEvent> eventsRead = [];
-    private readonly List<int> idsRead = [];
     private readonly List<LeavingChild> leaving = [];
     private readonly Queue<string> retiredOrder = new();
     private readonly HashSet<string> retired = [];
@@ -53,48 +50,24 @@ internal sealed class WebViewPageAccessibility
     public bool Holds(WebViewAccessibilityNode node) =>
         trees.TryGetValue(node.Tree.Id, out var tree) && ReferenceEquals(tree, node.Tree) && tree.Find(node.Id) == node;
 
-    /// <summary>Takes in a change of a tree, as UTF-8 JSON: <c>ax_tree_id</c>, its <c>updates</c> - each with the nodes as
-    /// they are now - and the <c>events</c> that came with them. False when it changed nothing: late for a tree the
-    /// page has left, or not a change at all.</summary>
-    public bool ApplyTreeChange(ReadOnlySpan<byte> json)
+    /// <summary>Takes in a change of a tree as read: its updates, each with the nodes as they are now, and the events that
+    /// came with them. False when it changed nothing: late for a tree the page has left, or not a change at all.</summary>
+    public bool Apply(WebViewAccessibilityChange change)
     {
         Events.Clear();
-        // Chromium writes the keys in order, the tree's id first; looked for apart, should it ever not.
-        if (TreeIdOf(json) is not { } treeId || retired.Contains(treeId))
-        {
-            return false;
-        }
-
-        var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = 256 });
-        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+        if (change == null || retired.Contains(change.TreeId))
         {
             return false;
         }
 
         var focusedBefore = Focused;
-        var tree = trees.GetValueOrDefault(treeId) ?? (trees[treeId] = new WebViewAccessibilityTree(treeId));
-        eventsRead.Clear();
-
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        var tree = trees.GetValueOrDefault(change.TreeId) ?? (trees[change.TreeId] = new WebViewAccessibilityTree(change.TreeId));
+        foreach (var update in change.Updates)
         {
-            if (reader.ValueTextEquals("updates"u8))
-            {
-                reader.Read();
-                ReadUpdates(ref reader, tree);
-            }
-            else if (reader.ValueTextEquals("events"u8))
-            {
-                reader.Read();
-                ReadEvents(ref reader);
-            }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
+            Apply(update, tree);
         }
 
-        foreach (var told in eventsRead)
+        foreach (var told in change.Events)
         {
             if (tree.Find(told.Id) is { } node)
             {
@@ -111,49 +84,21 @@ internal sealed class WebViewPageAccessibility
         return true;
     }
 
-    /// <summary>Takes in nodes that moved, as UTF-8 JSON: for each, its tree, its id and where it stands now. False when
-    /// it was no list of moves.</summary>
-    public bool ApplyLocationChange(ReadOnlySpan<byte> json)
+    /// <summary>Takes in nodes that moved, as read: for each, its tree, its id and where it stands now. False when it was
+    /// no list of moves.</summary>
+    public bool Apply(List<WebViewAccessibilityMove> moves)
     {
         Events.Clear();
-        var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = 256 });
-        if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
+        if (moves == null)
         {
             return false;
         }
 
-        while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+        foreach (var move in moves)
         {
-            string treeId = null;
-            var id = 0;
-            var place = new Place();
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            if (trees.TryGetValue(move.TreeId, out var tree) && tree.Find(move.Id) is { } node)
             {
-                if (reader.ValueTextEquals("ax_tree_id"u8))
-                {
-                    reader.Read();
-                    treeId = reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
-                }
-                else if (reader.ValueTextEquals("id"u8))
-                {
-                    reader.Read();
-                    id = Int(ref reader);
-                }
-                else if (reader.ValueTextEquals("new_location"u8))
-                {
-                    reader.Read();
-                    ReadPlace(ref reader, ref place, "bounds"u8);
-                }
-                else
-                {
-                    reader.Read();
-                    reader.Skip();
-                }
-            }
-
-            if (treeId != null && trees.TryGetValue(treeId, out var tree) && tree.Find(id) is { } node)
-            {
-                place.ApplyTo(node);
+                Place(node, move.Place);
             }
         }
 
@@ -276,106 +221,61 @@ internal sealed class WebViewPageAccessibility
         node.Role is "genericContainer" or "group" or "section" or "labelText" && node.Name.Length == 0 &&
         !node.IsFocusable && !node.IsEditable;
 
-    private static string TreeIdOf(ReadOnlySpan<byte> json)
+    // In the order CEF writes an update: the node cleared, the nodes, then the root and the tree's data - a new document's
+    // frames are its own before the old document goes.
+    private void Apply(WebViewAccessibilityUpdate update, WebViewAccessibilityTree tree)
     {
-        var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = 256 });
-        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+        nodesRead.Clear();
+        leaving.Clear();
+        if (update.NodeIdToClear != 0 && tree.Find(update.NodeIdToClear) is { } cleared)
         {
-            return null;
+            NoteLeaving(cleared, cleared.ChildIds, []);
+            cleared.ChildIds = [];
         }
 
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        foreach (var said in update.Nodes)
         {
-            var isTreeId = reader.ValueTextEquals("ax_tree_id"u8);
-            reader.Read();
-            if (isTreeId)
-            {
-                return reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
-            }
-
-            reader.Skip();
+            Apply(said, tree);
         }
 
-        return null;
-    }
-
-    private void ReadUpdates(ref Utf8JsonReader reader, WebViewAccessibilityTree tree)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
+        WebViewAccessibilityNode formerRoot = null;
+        if (update.RootId != 0)
         {
-            reader.Skip();
-            return;
+            formerRoot = update.RootId != tree.RootId ? tree.Root : null;
+            tree.RootId = update.RootId;
         }
 
-        while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+        if (update.TreeData != null)
         {
-            nodesRead.Clear();
-            leaving.Clear();
-            WebViewAccessibilityNode formerRoot = null;
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                if (reader.ValueTextEquals("nodes"u8))
-                {
-                    reader.Read();
-                    ReadNodes(ref reader, tree);
-                }
-                else if (reader.ValueTextEquals("node_id_to_clear"u8))
-                {
-                    reader.Read();
-                    if (tree.Find(Int(ref reader)) is { } cleared)
-                    {
-                        NoteLeaving(cleared, cleared.ChildIds, []);
-                        cleared.ChildIds = [];
-                    }
-                }
-                else if (reader.ValueTextEquals("root_id"u8))
-                {
-                    reader.Read();
-                    if (Int(ref reader) is var rootId and not 0)
-                    {
-                        formerRoot = rootId != tree.RootId ? tree.Root : null;
-                        tree.RootId = rootId;
-                    }
-                }
-                else if (reader.ValueTextEquals("tree_data"u8))
-                {
-                    reader.Read();
-                    ReadTreeData(ref reader, tree);
-                }
-                else
-                {
-                    reader.Read();
-                    reader.Skip();
-                }
-            }
+            Apply(update.TreeData, tree);
+        }
 
-            // Once the update's nodes are all in: each child named knows its holder - and a child its holder no longer
-            // names, nor any other node of the update, goes with what it holds.
-            foreach (var holder in nodesRead)
+        // Once the update's nodes are all in: each child named knows its holder - and a child its holder no longer
+        // names, nor any other node of the update, goes with what it holds.
+        foreach (var holder in nodesRead)
+        {
+            foreach (var childId in holder.ChildIds)
             {
-                foreach (var childId in holder.ChildIds)
+                if (tree.Find(childId) is { } child)
                 {
-                    if (tree.Find(childId) is { } child)
-                    {
-                        child.Parent = holder;
-                    }
+                    child.Parent = holder;
                 }
             }
+        }
 
-            foreach (var gone in leaving)
+        foreach (var gone in leaving)
+        {
+            if (tree.Find(gone.ChildId) is { } child && child.Parent == gone.Holder &&
+                Array.IndexOf(gone.Holder.ChildIds, gone.ChildId) < 0)
             {
-                if (tree.Find(gone.ChildId) is { } child && child.Parent == gone.Holder &&
-                    Array.IndexOf(gone.Holder.ChildIds, gone.ChildId) < 0)
-                {
-                    Forget(child);
-                }
+                Forget(child);
             }
+        }
 
-            // A root another took the place of goes too, unless the update put it under a node of its own.
-            if (formerRoot != null && formerRoot != tree.Root && formerRoot.Parent == null && tree.Find(formerRoot.Id) == formerRoot)
-            {
-                Forget(formerRoot);
-            }
+        // A root another took the place of goes too, unless the update put it under a node of its own.
+        if (formerRoot != null && formerRoot != tree.Root && formerRoot.Parent == null && tree.Find(formerRoot.Id) == formerRoot)
+        {
+            Forget(formerRoot);
         }
     }
 
@@ -488,80 +388,10 @@ internal sealed class WebViewPageAccessibility
         }
     }
 
-    private void ReadEvents(ref Utf8JsonReader reader)
+    private void Apply(WebViewAccessibilityTreeData data, WebViewAccessibilityTree tree)
     {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            reader.Skip();
-            return;
-        }
-
-        while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-        {
-            string kind = null;
-            var id = 0;
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                if (reader.ValueTextEquals("event_type"u8))
-                {
-                    reader.Read();
-                    kind = reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
-                }
-                else if (reader.ValueTextEquals("id"u8))
-                {
-                    reader.Read();
-                    id = Int(ref reader);
-                }
-                else
-                {
-                    reader.Read();
-                    reader.Skip();
-                }
-            }
-
-            if (kind != null)
-            {
-                eventsRead.Add(new ToldEvent(kind, id));
-            }
-        }
-    }
-
-    private void ReadTreeData(ref Utf8JsonReader reader, WebViewAccessibilityTree tree)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            reader.Skip();
-            return;
-        }
-
-        string parentTreeId = null, focusedTree = null;
-        var focusId = 0;
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-        {
-            if (reader.ValueTextEquals("focus_id"u8))
-            {
-                reader.Read();
-                focusId = Int(ref reader);
-            }
-            else if (reader.ValueTextEquals("parent_tree_id"u8))
-            {
-                reader.Read();
-                parentTreeId = Text(ref reader);
-            }
-            else if (reader.ValueTextEquals("focused_tree_id"u8))
-            {
-                reader.Read();
-                focusedTree = Text(ref reader);
-            }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
-        }
-
-        tree.FocusId = focusId;
-        tree.ParentTreeId = parentTreeId is { Length: > 0 } ? parentTreeId : null;
+        tree.FocusId = data.FocusId;
+        tree.ParentTreeId = data.ParentTreeId;
         if (tree.ParentTreeId != null)
         {
             return;
@@ -580,318 +410,55 @@ internal sealed class WebViewPageAccessibility
             documentScroll = null;
         }
 
-        focusedTreeId = focusedTree;
+        focusedTreeId = data.FocusedTreeId;
     }
 
-    private void ReadNodes(ref Utf8JsonReader reader, WebViewAccessibilityTree tree)
+    private void Apply(in WebViewAccessibilityNodeData said, WebViewAccessibilityTree tree)
     {
-        if (reader.TokenType != JsonTokenType.StartArray)
+        var node = tree.Take(said.Id);
+        NoteLeaving(node, node.ChildIds, said.ChildIds);
+        // A frame that went somewhere else, or went: the tree it showed goes.
+        var childTreeId = said.ChildTreeId is { Length: > 0 } next ? next : null;
+        if (node.ChildTreeId != null && node.ChildTreeId != childTreeId)
         {
-            reader.Skip();
-            return;
+            ForgetFrame(node.ChildTreeId);
         }
-
-        while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-        {
-            // Its id comes after most of what it says: what is read waits for it.
-            var fields = new NodeFields();
-            var place = new Place();
-            idsRead.Clear();
-            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-            {
-                if (reader.ValueTextEquals("id"u8))
-                {
-                    reader.Read();
-                    fields.Id = Int(ref reader);
-                }
-                else if (reader.ValueTextEquals("role"u8))
-                {
-                    reader.Read();
-                    fields.Role = Role(ref reader);
-                }
-                else if (reader.ValueTextEquals("attributes"u8))
-                {
-                    reader.Read();
-                    ReadAttributes(ref reader, ref fields);
-                }
-                else if (reader.ValueTextEquals("child_ids"u8))
-                {
-                    reader.Read();
-                    ReadIds(ref reader);
-                }
-                else if (reader.ValueTextEquals("state"u8))
-                {
-                    reader.Read();
-                    ReadStates(ref reader, ref fields);
-                }
-                else if (reader.ValueTextEquals("location"u8))
-                {
-                    reader.Read();
-                    place.Bounds = ReadRect(ref reader);
-                }
-                else if (reader.ValueTextEquals("offset_container_id"u8))
-                {
-                    reader.Read();
-                    place.OffsetContainerId = Int(ref reader);
-                }
-                else if (reader.ValueTextEquals("transform"u8))
-                {
-                    reader.Read();
-                    place.Transform = Text(ref reader);
-                }
-                else
-                {
-                    reader.Read();
-                    reader.Skip();
-                }
-            }
-
-            // Chromium numbers no node 0: one said with no id is no node.
-            if (fields.Id == 0)
-            {
-                continue;
-            }
-
-            var node = tree.Take(fields.Id);
-            var childIds = idsRead.ToArray();
-            NoteLeaving(node, node.ChildIds, childIds);
-            // A frame that went somewhere else, or went: the tree it showed goes.
-            if (node.ChildTreeId != null && node.ChildTreeId != (fields.ChildTreeId is { Length: > 0 } next ? next : null))
-            {
-                ForgetFrame(node.ChildTreeId);
-            }
-
-            fields.ApplyTo(node, childIds);
-            place.ApplyTo(node);
-            if (node.ChildTreeId != null)
-            {
-                frameHosts[node.ChildTreeId] = node;
-            }
-
-            nodesRead.Add(node);
-        }
-    }
-
-    private static void ReadAttributes(ref Utf8JsonReader reader, ref NodeFields fields)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            reader.Skip();
-            return;
-        }
-
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-        {
-            if (reader.ValueTextEquals("name"u8)) { reader.Read(); fields.Name = Text(ref reader); }
-            else if (reader.ValueTextEquals("value"u8)) { reader.Read(); fields.Value = Text(ref reader); }
-            else if (reader.ValueTextEquals("description"u8)) { reader.Read(); fields.Description = Text(ref reader); }
-            else if (reader.ValueTextEquals("htmlId"u8)) { reader.Read(); fields.HtmlId = Text(ref reader); }
-            else if (reader.ValueTextEquals("htmlTag"u8)) { reader.Read(); fields.HtmlTag = Text(ref reader); }
-            else if (reader.ValueTextEquals("inputType"u8)) { reader.Read(); fields.InputType = Text(ref reader); }
-            else if (reader.ValueTextEquals("nameFrom"u8)) { reader.Read(); fields.NameFrom = Text(ref reader); }
-            else if (reader.ValueTextEquals("checkedState"u8)) { reader.Read(); fields.CheckedState = Text(ref reader); }
-            else if (reader.ValueTextEquals("restriction"u8)) { reader.Read(); fields.Restriction = Text(ref reader); }
-            else if (reader.ValueTextEquals("childTreeId"u8)) { reader.Read(); fields.ChildTreeId = Text(ref reader); }
-            else if (reader.ValueTextEquals("scrollX"u8)) { reader.Read(); fields.ScrollX = Number(ref reader); }
-            else if (reader.ValueTextEquals("scrollY"u8)) { reader.Read(); fields.ScrollY = Number(ref reader); }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
-        }
-    }
-
-    private static void ReadStates(ref Utf8JsonReader reader, ref NodeFields fields)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            reader.Skip();
-            return;
-        }
-
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-        {
-            if (reader.TokenType != JsonTokenType.String)
-            {
-                reader.Skip();
-            }
-            else if (reader.ValueTextEquals("focusable"u8)) fields.IsFocusable = true;
-            else if (reader.ValueTextEquals("editable"u8)) fields.IsEditable = true;
-            else if (reader.ValueTextEquals("invisible"u8)) fields.IsInvisible = true;
-            else if (reader.ValueTextEquals("ignored"u8)) fields.IsIgnored = true;
-            else if (reader.ValueTextEquals("collapsed"u8)) fields.IsCollapsed = true;
-            else if (reader.ValueTextEquals("expanded"u8)) fields.IsExpanded = true;
-        }
-    }
-
-    private void ReadIds(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType != JsonTokenType.StartArray)
-        {
-            reader.Skip();
-            return;
-        }
-
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-        {
-            idsRead.Add(Int(ref reader));
-        }
-    }
-
-    // A place: its rectangle (under "location" in a node, under "bounds" in a moved one), container and transform.
-    private static void ReadPlace(ref Utf8JsonReader reader, ref Place place, ReadOnlySpan<byte> boundsName)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            reader.Skip();
-            return;
-        }
-
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-        {
-            if (reader.ValueTextEquals(boundsName))
-            {
-                reader.Read();
-                place.Bounds = ReadRect(ref reader);
-            }
-            else if (reader.ValueTextEquals("offset_container_id"u8))
-            {
-                reader.Read();
-                place.OffsetContainerId = Int(ref reader);
-            }
-            else if (reader.ValueTextEquals("transform"u8))
-            {
-                reader.Read();
-                place.Transform = Text(ref reader);
-            }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
-        }
-    }
-
-    private static Rect ReadRect(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            reader.Skip();
-            return Rect.Empty;
-        }
-
-        double x = 0, y = 0, width = 0, height = 0;
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
-        {
-            if (reader.ValueTextEquals("x"u8)) { reader.Read(); x = Number(ref reader); }
-            else if (reader.ValueTextEquals("y"u8)) { reader.Read(); y = Number(ref reader); }
-            else if (reader.ValueTextEquals("width"u8)) { reader.Read(); width = Number(ref reader); }
-            else if (reader.ValueTextEquals("height"u8)) { reader.Read(); height = Number(ref reader); }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
-        }
-
-        return new Rect(x, y, width, height);
-    }
-
-    private static string Text(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType == JsonTokenType.String)
-        {
-            return reader.GetString();
-        }
-
-        reader.Skip();
-        return null;
-    }
-
-    // The roles most nodes have, one string each for the whole page rather than one per node.
-    private static readonly string[] CommonRoles =
-    [
-        "genericContainer", "staticText", "inlineTextBox", "paragraph", "link", "listItem", "list", "image", "heading",
-        "button", "textField", "cell", "row", "table", "group", "section", "labelText", "listMarker", "none",
-        "checkBox", "rootWebArea", "navigation", "main", "article", "banner", "contentInfo", "form", "region"
-    ];
-
-    private static readonly byte[][] CommonRoleBytes = CommonRoles.Select(System.Text.Encoding.UTF8.GetBytes).ToArray();
-
-    private static string Role(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType != JsonTokenType.String)
-        {
-            return Text(ref reader);
-        }
-
-        for (var i = 0; i < CommonRoleBytes.Length; i++)
-        {
-            if (reader.ValueTextEquals(CommonRoleBytes[i]))
-            {
-                return CommonRoles[i];
-            }
-        }
-
-        return reader.GetString();
-    }
-
-    private static double Number(ref Utf8JsonReader reader) =>
-        reader.TokenType == JsonTokenType.Number && reader.TryGetDouble(out var number) ? number : 0;
-
-    private static int Int(ref Utf8JsonReader reader) =>
-        reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out var number) ? number : 0;
-
-    private readonly record struct ToldEvent(string Kind, int Id);
-
-    private readonly record struct LeavingChild(WebViewAccessibilityNode Holder, int ChildId);
-
-    // What a node says, held until its id is read.
-    private struct NodeFields
-    {
-        public int Id;
-        public string Role, Name, Value, Description, HtmlId, HtmlTag, InputType, NameFrom, CheckedState, Restriction,
-            ChildTreeId;
-        public double ScrollX, ScrollY;
-        public bool IsFocusable, IsEditable, IsInvisible, IsIgnored, IsCollapsed, IsExpanded;
 
         // A node is said whole each time: what is not said now is not so any longer.
-        public readonly void ApplyTo(WebViewAccessibilityNode node, int[] childIds)
+        node.Role = said.Role ?? string.Empty;
+        node.Name = said.Name ?? string.Empty;
+        node.Value = said.Value ?? string.Empty;
+        node.Description = said.Description ?? string.Empty;
+        node.HtmlId = said.HtmlId ?? string.Empty;
+        node.HtmlTag = said.HtmlTag ?? string.Empty;
+        node.InputType = said.InputType ?? string.Empty;
+        node.NameFrom = said.NameFrom ?? string.Empty;
+        node.CheckedState = said.CheckedState ?? string.Empty;
+        node.Restriction = said.Restriction ?? string.Empty;
+        node.ChildTreeId = childTreeId;
+        node.Scroll = new Vector2<double>(said.ScrollX, said.ScrollY);
+        node.IsFocusable = said.IsFocusable;
+        node.IsEditable = said.IsEditable;
+        node.IsInvisible = said.IsInvisible;
+        node.IsIgnored = said.IsIgnored;
+        node.IsCollapsed = said.IsCollapsed;
+        node.IsExpanded = said.IsExpanded;
+        node.ChildIds = said.ChildIds;
+        Place(node, said.Place);
+        if (node.ChildTreeId != null)
         {
-            node.Role = Role ?? string.Empty;
-            node.Name = Name ?? string.Empty;
-            node.Value = Value ?? string.Empty;
-            node.Description = Description ?? string.Empty;
-            node.HtmlId = HtmlId ?? string.Empty;
-            node.HtmlTag = HtmlTag ?? string.Empty;
-            node.InputType = InputType ?? string.Empty;
-            node.NameFrom = NameFrom ?? string.Empty;
-            node.CheckedState = CheckedState ?? string.Empty;
-            node.Restriction = Restriction ?? string.Empty;
-            node.ChildTreeId = ChildTreeId is { Length: > 0 } ? ChildTreeId : null;
-            node.Scroll = new Vector2<double>(ScrollX, ScrollY);
-            node.IsFocusable = IsFocusable;
-            node.IsEditable = IsEditable;
-            node.IsInvisible = IsInvisible;
-            node.IsIgnored = IsIgnored;
-            node.IsCollapsed = IsCollapsed;
-            node.IsExpanded = IsExpanded;
-            node.ChildIds = childIds;
+            frameHosts[node.ChildTreeId] = node;
         }
+
+        nodesRead.Add(node);
     }
 
-    private struct Place
+    private static void Place(WebViewAccessibilityNode node, in WebViewAccessibilityPlace place)
     {
-        public Rect Bounds;
-        public int OffsetContainerId;
-        public string Transform;
-
-        public readonly void ApplyTo(WebViewAccessibilityNode node)
-        {
-            node.Location = Bounds;
-            node.OffsetContainerId = OffsetContainerId;
-            node.Transform = WebViewAccessibilityTransform.Parse(Transform);
-        }
+        node.Location = place.Bounds;
+        node.OffsetContainerId = place.OffsetContainerId;
+        node.Transform = WebViewAccessibilityTransform.Parse(place.Transform);
     }
+
+    private readonly record struct LeavingChild(WebViewAccessibilityNode Holder, int ChildId);
 }

@@ -36,6 +36,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
     private WebViewBrowser warmUp;
+    private WebViewAccessibilityReading accessibilityReading;
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
@@ -596,6 +597,9 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     /// <summary>A browser of <see cref="CreateBrowser"/> closed by CEF, or never made by it.</summary>
     internal void BrowserClosed(WebViewBrowser browser) => browsers.Remove(browser);
 
+    /// <summary>Where the browsers' accessibility is read off the UI loop; started when a page first tells of it.</summary>
+    internal WebViewAccessibilityReading AccessibilityReading => accessibilityReading ??= new WebViewAccessibilityReading();
+
     /// <summary>A texture of Chromium's the device did not take: browsers made from now on get pixels in memory.</summary>
     internal void SharedTextureRefused() => sharedTextureRefused = true;
 
@@ -636,6 +640,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
             for (var turn = 0; turn < CloseTurns && browsers.Count > 0; turn++)
             {
+                for (var i = browsers.Count - 1; i >= 0; i--)
+                {
+                    browsers[i].CloseIfOwed();
+                }
+
                 CefInterop.CefDoMessageLoopWork();
                 Thread.Sleep(CloseTurnMs);
             }
@@ -646,6 +655,8 @@ public sealed unsafe partial class WebViewEngine : IDisposable
                 download.LetGo();
             }
 
+            // Chromium's values still being read are let go of while it is there.
+            accessibilityReading?.Dispose();
             CefInterop.CefShutdown();
             for (var i = browsers.Count - 1; i >= 0; i--)
             {
