@@ -22,7 +22,9 @@ namespace Adamantium.UI.Pdf;
 /// piece; text by its glyphs' outlines. Brushes: solid, linear and radial gradients (their alpha a soft mask). Pictures
 /// go in as images, a drawing's picture as the drawing itself; colored meshes as shaded triangles. A group is cut by
 /// its clip and its glyphs; one faded, blended or masked is a transparency group, faded as one.
-/// <para>Not written yet: tile brushes (picture, drawing and visual), and what has no shapes - live surfaces.</para>
+/// <para>Not written yet: tile brushes (picture, drawing and visual), a pen's gradient laid along its line, a pen's
+/// trim, its end cap where it differs from its start cap and its dashes' own caps, and what has no shapes - live
+/// surfaces.</para>
 /// </summary>
 public sealed partial class PdfContentSession : IDrawingSession
 {
@@ -232,13 +234,17 @@ public sealed partial class PdfContentSession : IDrawingSession
             _levels.Push(new Level(Content, options, false));
         }
 
-        if (options.Clip is { } clip && clip.CurvesForDrawing is { } curves)
+        if (options.Clip is { } clip)
         {
+            // A clip with nothing in it lets nothing through, as on screen.
+            var curves = clip.CurvesForDrawing;
             var place = Through(options.ClipPlacement?.Matrix ?? options.ClipTransform);
-            if (Write(curves, true, place))
+            if (curves == null || !Write(curves, true, place))
             {
-                Content.Clip(curves.FillRule == FillRule.EvenOdd);
+                Content.Rectangle(0, 0, 0, 0);
             }
+
+            Content.Clip(curves?.FillRule == FillRule.EvenOdd);
         }
 
         if (options.TextClip is { Count: > 0 } glyphs)
@@ -268,6 +274,11 @@ public sealed partial class PdfContentSession : IDrawingSession
         if (_levels.Count <= 1)
         {
             throw new InvalidOperationException("PopGroup without a group pushed.");
+        }
+
+        if (_levels.Peek().Options == null)
+        {
+            throw new InvalidOperationException("PopGroup past the groups a soft mask's picture pushed.");
         }
 
         var level = _levels.Pop();
@@ -311,8 +322,9 @@ public sealed partial class PdfContentSession : IDrawingSession
         return this;
     }
 
-    /// <summary>Ends the groups left open, as a drawing's end ends them on screen.</summary>
-    internal void CloseGroups()
+    /// <summary>Ends the groups left open, as a drawing's end ends them on screen. A group faded, blended or masked is
+    /// written into the content only as it ends: call this before the content or <see cref="Bounds"/> is used.</summary>
+    public void CloseGroups()
     {
         while (_levels.Count > 1)
         {
@@ -500,6 +512,7 @@ public sealed partial class PdfContentSession : IDrawingSession
         }
 
         var area = parameters?.TextArea ?? default;
+        var runs = new List<GlyphRun>();
         var glyphs = new List<PositionedGlyph>();
         IFont font = null;
         var size = 0.0;
@@ -513,7 +526,7 @@ public sealed partial class PdfContentSession : IDrawingSession
 
             if (!ReferenceEquals(word.Font, font) || word.FontSize != size)
             {
-                Run(font, size, glyphs, foreground, transform);
+                Run(font, size, glyphs, runs);
                 font = word.Font;
                 size = word.FontSize;
             }
@@ -524,19 +537,42 @@ public sealed partial class PdfContentSession : IDrawingSession
                 word.Rect.Y + area.Y + (box.Y + box.Height) * scale));
         }
 
-        Run(font, size, glyphs, foreground, transform);
-    }
+        Run(font, size, glyphs, runs);
 
-    private void Run(IFont font, double size, List<PositionedGlyph> glyphs, Brush foreground, Matrix4x4F transform)
-    {
-        if (font == null || glyphs.Count == 0)
+        // One gradient across the whole text, however many fonts and sizes it is set in.
+        Rect? whole = null;
+        if (foreground is GradientBrush)
         {
-            glyphs.Clear();
-            return;
+            foreach (var run in runs)
+            {
+                if (run.Outline?.CurvesForDrawing is { Figures.Count: > 0 } curves)
+                {
+                    whole = whole is { } sofar ? Union(sofar, curves.Bounds) : curves.Bounds;
+                }
+            }
         }
 
-        Figures(foreground, null, new GlyphRun(font, size, glyphs).Outline, transform);
+        foreach (var run in runs)
+        {
+            Figures(foreground, null, run.Outline, transform, whole);
+        }
+    }
+
+    private static void Run(IFont font, double size, List<PositionedGlyph> glyphs, List<GlyphRun> runs)
+    {
+        if (font != null && glyphs.Count > 0)
+        {
+            runs.Add(new GlyphRun(font, size, [.. glyphs]));
+        }
+
         glyphs.Clear();
+    }
+
+    private static Rect Union(Rect one, Rect other)
+    {
+        var left = Math.Min(one.X, other.X);
+        var top = Math.Min(one.Y, other.Y);
+        return new Rect(left, top, Math.Max(one.Right, other.Right) - left, Math.Max(one.Bottom, other.Bottom) - top);
     }
 
     private bool Write(PathCurves curves, bool filledOnly, PdfMatrix map)

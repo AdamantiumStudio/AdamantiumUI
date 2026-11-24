@@ -304,6 +304,129 @@ public class PdfPrintFileTests
         Assert.That(Content(saved), Does.Contain("/Fm0 Do"));
     }
 
+    // A square end on the diagonal reaches half the width times the root of two past the line; a faded group's box -
+    // which cuts it - holds it.
+    [Test]
+    public void ASquareEnd_IsInsideItsGroupsBox()
+    {
+        var content = new Adamantium.Pdf.Writing.PdfContentBuilder();
+        var session = new PdfContentSession(content, Adamantium.Pdf.Document.PdfMatrix.Identity);
+        session.PushGroup(new DrawingGroupOptions { Opacity = 0.5 });
+        session.DrawLine(new Vector2<double>(0, 0), new Vector2<double>(100, 100),
+            new Pen(new SolidColorBrush(Red), 20, startLineCap: PenLineCap.Square, endLineCap: PenLineCap.Square,
+                penLineJoin: PenLineJoin.Round));
+        session.PopGroup();
+
+        var form = (PdfStream)((PdfDictionary)content.ToResources()["XObject"])["Fm0"];
+        var box = ((PdfArray)form.Dictionary["BBox"]).Cast<PdfReal>().Select(real => real.Value).ToArray();
+        Assert.That(box[2], Is.GreaterThanOrEqualTo(100 + 10 * Math.Sqrt(2) - 1e-6));
+        Assert.That(box[0], Is.LessThanOrEqualTo(-10 * Math.Sqrt(2) + 1e-6));
+    }
+
+    // Repeated, a gradient whose stops do not reach its ends keeps its end colors to them, and the next repeat starts
+    // at a hard edge - as on screen - not a blend from blue back into red.
+    [Test]
+    public void ARepeatedGradient_MeetsItsNextRepeatAtAHardEdge()
+    {
+        var gradient = new LinearGradientBrush([new GradientStop(Red, 0.2), new GradientStop(Blue, 0.8)])
+        {
+            StartPoint = new Vector2<double>(0, 0),
+            EndPoint = new Vector2<double>(0.5, 0),
+            SpreadMethod = GradientSpreadMethod.Repeat,
+        };
+        var saved = Save(session => session.DrawRectangle(gradient, new Rect(0, 0, 100, 50)));
+
+        var function = (PdfDictionary)((PdfDictionary)Resources(saved).Shading("Sh0"))["Function"];
+        var bounds = ((PdfArray)function["Bounds"]).Cast<PdfReal>().Select(real => real.Value).ToList();
+        Assert.That(bounds.Count(bound => Math.Abs(bound - 0.5) < 1e-9), Is.EqualTo(2), "blue up to the seam, red after");
+    }
+
+    // A gradient laid along the line has no PDF paint; it is not written laid across the shape instead.
+    [Test]
+    public void AGradientAlongTheLine_IsNotWrittenAcrossTheShape()
+    {
+        var gradient = new LinearGradientBrush([new GradientStop(Red, 0), new GradientStop(Blue, 1)]);
+        var saved = Save(session => session.DrawRectangle(null, new Rect(10, 10, 50, 30),
+            new Pen(gradient, 4) { BrushMapping = PenBrushMapping.Along }));
+
+        Assert.That(Resources(saved).Dictionary.ContainsKey("Pattern"), Is.False);
+    }
+
+    [Test]
+    public void AClipOfNothing_LetsNothingThrough()
+    {
+        var saved = Save(session =>
+        {
+            session.PushGroup(new DrawingGroupOptions { Clip = new StreamGeometry() });
+            session.DrawRectangle(new SolidColorBrush(Red), new Rect(0, 0, 40, 40));
+            session.PopGroup();
+        });
+
+        Assert.That(Content(saved), Does.Match(@"0 0 0 0 re\nW\*? n"));
+    }
+
+    [Test]
+    public void APictureSampledTwoWays_IsTwoImages()
+    {
+        var smooth = Picture(2, 2, Red);
+        var blocky = new BitmapSource(2, 2, 1, 1, smooth.SurfaceLayout, smooth.PixelBytes)
+        {
+            Sampling = ImageSampling.Pixelated,
+        };
+        var saved = Save(session =>
+        {
+            session.DrawImage(smooth, null, new Rect(0, 0, 10, 10), new CornerRadius(0));
+            session.DrawImage(blocky, null, new Rect(20, 0, 10, 10), new CornerRadius(0));
+        });
+
+        var resources = Resources(saved);
+        Assert.That(resources.XObject("Im0").Dictionary.ContainsKey("Interpolate"), Is.True);
+        Assert.That(resources.XObject("Im1").Dictionary.ContainsKey("Interpolate"), Is.False);
+    }
+
+    [Test]
+    public void ADocumentOfNoPages_IsOneBlankSheet()
+    {
+        var saved = Save(new Pages(0, (_, _) => { }));
+
+        Assert.That(saved.PageCount, Is.EqualTo(1));
+        Assert.That(Content(saved), Is.Empty);
+    }
+
+    // A mask's picture cannot end the group it masks: an extra pop inside it is refused, not a crash halfway.
+    [Test]
+    public void AMaskThatEndsAGroupTooMany_IsRefused()
+    {
+        var session = new PdfContentSession(new Adamantium.Pdf.Writing.PdfContentBuilder(),
+            Adamantium.Pdf.Document.PdfMatrix.Identity);
+        session.PushGroup(new DrawingGroupOptions { Mask = new PoppingDrawing() });
+        session.DrawRectangle(new SolidColorBrush(Red), new Rect(0, 0, 10, 10));
+
+        Assert.Throws<InvalidOperationException>(() => session.PopGroup());
+    }
+
+    // A group faded as one goes into the content as it ends: closed, an open one is written.
+    [Test]
+    public void AnOpenGroup_ClosedByHand_IsWrittenAndBounded()
+    {
+        var content = new Adamantium.Pdf.Writing.PdfContentBuilder();
+        var session = new PdfContentSession(content, Adamantium.Pdf.Document.PdfMatrix.Identity);
+        session.PushGroup(new DrawingGroupOptions { Opacity = 0.5 });
+        session.DrawRectangle(new SolidColorBrush(Red), new Rect(0, 0, 10, 10));
+        session.CloseGroups();
+
+        Assert.That(Encoding.ASCII.GetString(content.ToContent()), Does.Contain("/Fm0 Do"));
+        Assert.That(session.Bounds.IsEmpty, Is.False);
+    }
+
+    private sealed class PoppingDrawing : Drawing
+    {
+        public override Rect Bounds => new(0, 0, 10, 10);
+
+        public override void Render(IDrawingSession session, Matrix4x4<float> transform, Brush currentColor) =>
+            session.PopGroup();
+    }
+
     [Test]
     public void CalledOff_ItStopsBetweenPages()
     {

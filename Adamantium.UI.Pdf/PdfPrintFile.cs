@@ -14,8 +14,9 @@ public static class PdfPrintFile
     private const double PointsPerDip = 72.0 / 96.0;
 
     /// <summary>Lays <paramref name="document"/> out on <paramref name="page"/> and writes every page of it to
-    /// <paramref name="output"/>, which is not closed. Called off, it stops between pages; what was written is not a
-    /// whole file.</summary>
+    /// <paramref name="output"/>, which is not closed; a document of no pages is one blank sheet, as a printer would
+    /// give - a PDF of none is not opened by many readers. Called off, it stops between pages; what was written is not
+    /// a whole file.</summary>
     public static void Save(IPrintDocument document, PrintPage page, Stream output,
         CancellationToken cancellation = default)
     {
@@ -23,6 +24,7 @@ public static class PdfPrintFile
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(output);
         var count = document.Paginate(page);
+        var blank = count <= 0;
         var writer = new PdfDocumentWriter(output)
         {
             Title = document.Title,
@@ -42,6 +44,11 @@ public static class PdfPrintFile
             document.DrawPage(index, session);
             session.CloseGroups();
             writer.AddPage(new PdfRectangle(0, 0, width, height), content);
+        }
+
+        if (blank)
+        {
+            writer.AddPage(new PdfRectangle(0, 0, width, height), new PdfContentBuilder());
         }
 
         writer.Finish();

@@ -6,12 +6,14 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Pdf;
 
-/// <summary>Bitmaps turned into PDF images, each once: by the pixels it holds, so a picture shown on every page of a
-/// document is one image, and a picture whose pixels changed is a new one. Pixels of 8 or 16 bits a channel, gray to
-/// RGBA in either order, are taken; a picture whose pixels are not on the CPU, or of another layout, is not.</summary>
+/// <summary>Bitmaps turned into PDF images, each once: by the pixel buffer it holds and how it is sampled, so a picture
+/// shown on every page of a document is one image, and a picture given new pixels is a new one. The pixels are taken as
+/// they are the first time they are drawn. Pixels of 8 or 16 bits a channel, gray to RGBA in either order, are taken; a
+/// picture whose pixels are not on the CPU, or of another layout, is not.</summary>
 internal sealed class PdfPictures
 {
-    private readonly Dictionary<byte[], PdfStream> _images = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<byte[], PdfStream> _smooth = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<byte[], PdfStream> _pixelated = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The image of <paramref name="source"/> - of its <paramref name="frame"/>, for an animation; null when
     /// its pixels cannot be had.</summary>
@@ -25,7 +27,9 @@ internal sealed class PdfPictures
             return null;
         }
 
-        if (_images.TryGetValue(pixels, out var image))
+        var smooth = source.Sampling != ImageSampling.Pixelated;
+        var images = smooth ? _smooth : _pixelated;
+        if (images.TryGetValue(pixels, out var image))
         {
             return image;
         }
@@ -36,9 +40,8 @@ internal sealed class PdfPictures
             return null;
         }
 
-        image = PdfImages.FromRgba((int)bitmap.PixelWidth, (int)bitmap.PixelHeight, rgba,
-            source.Sampling != ImageSampling.Pixelated);
-        _images[pixels] = image;
+        image = PdfImages.FromRgba((int)bitmap.PixelWidth, (int)bitmap.PixelHeight, rgba, smooth);
+        images[pixels] = image;
         return image;
     }
 

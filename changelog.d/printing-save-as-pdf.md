@@ -16,6 +16,9 @@
   - colored meshes as shaded triangles, their alpha a mask of the same triangles;
   - a group faded, blended or masked is a transparency group laid down as one, as a layer is on screen - before, its
     opacity was multiplied into each thing drawn in it, so overlapping parts came out darker; a group's glyphs cut it;
-  - a border of four widths is the ring between its edges - before, only the left width was drawn, all round.
+  - a border of four widths is the ring between its edges - before, only the left width was drawn, all round;
+  - a group's clip of nothing lets nothing through, as on screen - before, it cut nothing.
 
-  Tile brushes (picture, drawing, visual) and live surfaces are not written yet.
+  `CloseGroups` ends the groups left open: a group drawn apart goes into the content as it ends. Not written yet: tile
+  brushes (picture, drawing, visual), a pen's gradient laid along its line, its trim, an end cap unlike its start cap,
+  dash caps, and live surfaces.

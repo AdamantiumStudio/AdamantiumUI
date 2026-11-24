@@ -21,7 +21,9 @@ public sealed partial class PdfContentSession
     /// <summary>How many repeats of a repeated or reflected gradient are written at most.</summary>
     private const int MaxRepeats = 64;
 
-    private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform)
+    /// <param name="gradientBox">The box a gradient is laid over, in the geometry's units; null for the geometry's own
+    /// bounds.</param>
+    private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform, Rect? gradientBox = null)
     {
         if (geometry?.CurvesForDrawing is not { Figures.Count: > 0 } curves)
         {
@@ -29,16 +31,16 @@ public sealed partial class PdfContentSession
         }
 
         var fills = Paints(brush);
-        var strokes = pen != null && pen.Thickness > 0 && Paints(pen.Brush);
+        // A gradient laid along the line has no PDF paint to go by; it waits for the raster of what has none.
+        var strokes = pen != null && pen.Thickness > 0 && Paints(pen.Brush) &&
+                      (pen.Brush is SolidColorBrush || pen.BrushMapping != PenBrushMapping.Along);
         var place = Through(transform);
         if ((!fills && !strokes) || !Invertible(place))
         {
             return;
         }
 
-        var reach = strokes ? pen.Thickness / 2 * (pen.PenLineJoin == PenLineJoin.Miter
-            ? MiterReach(curves, Core.Media.Pen.ClampMiterLimit(pen.MiterLimit))
-            : 1) : 0;
+        var reach = strokes ? pen.Thickness / 2 * StrokeReach(pen, curves) : 0;
         var wrote = false;
         if (fills && strokes && brush is SolidColorBrush fill && pen.Brush is SolidColorBrush line)
         {
@@ -48,12 +50,12 @@ public sealed partial class PdfContentSession
         {
             if (fills)
             {
-                wrote |= Fill(brush, curves, place);
+                wrote |= Fill(brush, curves, place, gradientBox ?? curves.Bounds);
             }
 
             if (strokes)
             {
-                wrote |= Stroke(pen, curves, place, reach);
+                wrote |= Stroke(pen, curves, place, reach, gradientBox ?? curves.Bounds);
             }
         }
 
@@ -61,6 +63,18 @@ public sealed partial class PdfContentSession
         {
             GrowBox(curves.Bounds, place, reach);
         }
+    }
+
+    /// <summary>How far past the line, in half widths, the stroke reaches: a miter corner within its limit, a square
+    /// end turned on the diagonal.</summary>
+    private static double StrokeReach(Pen pen, PathCurves curves)
+    {
+        var reach = pen.PenLineJoin == PenLineJoin.Miter
+            ? MiterReach(curves, Core.Media.Pen.ClampMiterLimit(pen.MiterLimit))
+            : 1;
+        return pen.StartLineCap == PenLineCap.Square || pen.EndLineCap == PenLineCap.Square
+            ? Math.Max(reach, Math.Sqrt(2))
+            : reach;
     }
 
     private static bool Paints(Brush brush) => brush switch
@@ -93,7 +107,7 @@ public sealed partial class PdfContentSession
         return wrote;
     }
 
-    private bool Fill(Brush brush, PathCurves curves, PdfMatrix place)
+    private bool Fill(Brush brush, PathCurves curves, PdfMatrix place, Rect gradientBox)
     {
         var content = Content;
         var evenOdd = curves.FillRule == FillRule.EvenOdd;
@@ -113,7 +127,7 @@ public sealed partial class PdfContentSession
             return filled;
         }
 
-        var gradient = Gradient((GradientBrush)brush, curves.Bounds);
+        var gradient = Gradient((GradientBrush)brush, gradientBox);
         if (gradient == null)
         {
             content.RestoreState();
@@ -135,7 +149,7 @@ public sealed partial class PdfContentSession
         return wrote;
     }
 
-    private bool Stroke(Pen pen, PathCurves curves, PdfMatrix place, double reach)
+    private bool Stroke(Pen pen, PathCurves curves, PdfMatrix place, double reach, Rect gradientBox)
     {
         var content = Content;
         content.SaveState();
@@ -146,7 +160,7 @@ public sealed partial class PdfContentSession
         }
         else
         {
-            gradient = Gradient((GradientBrush)pen.Brush, curves.Bounds);
+            gradient = Gradient((GradientBrush)pen.Brush, gradientBox);
             if (gradient == null)
             {
                 content.RestoreState();
@@ -388,12 +402,30 @@ public sealed partial class PdfContentSession
     }
 
     /// <summary>The stops laid out over the repeats from <paramref name="first"/> to <paramref name="last"/>, each
-    /// reflected repeat backwards, as offsets 0..1 of the whole.</summary>
+    /// reflected repeat backwards, as offsets 0..1 of the whole. Each repeat holds its end colors to its own ends, so
+    /// one meets the next at a hard edge, as on screen.</summary>
     private static List<Stop> Repeated(List<Stop> stops, GradientSpreadMethod spread, int first, int last)
     {
         if (spread == GradientSpreadMethod.Pad || last - first <= 1 && first == 0)
         {
             return stops;
+        }
+
+        if (stops[0].Offset > 0 || stops[^1].Offset < 1)
+        {
+            var whole = new List<Stop>(stops.Count + 2);
+            if (stops[0].Offset > 0)
+            {
+                whole.Add(stops[0] with { Offset = 0 });
+            }
+
+            whole.AddRange(stops);
+            if (stops[^1].Offset < 1)
+            {
+                whole.Add(stops[^1] with { Offset = 1 });
+            }
+
+            stops = whole;
         }
 
         var span = (double)(last - first);
