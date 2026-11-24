@@ -27,11 +27,12 @@ public class MacOSPlatform : IApplicationPlatform
         _threadId = Environment.CurrentManagedThreadId;
         var pool = ObjCRuntime.PushAutoreleasePool();
         NSApplication.Launch();
+        NSApplication.SetDelegate(NSObject.New(MacOSApplicationDelegate.Class));
         ShowApplicationIcon();
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
         ObjCRuntime.PopAutoreleasePool(pool);
-        Cursor.Platform = new MacOSCursors();
+        Cursor.Platform = new MacOSCursors(this);
     }
 
     /// <summary>The monitors, and the way between AppKit's points and the pixels windows are told.</summary>
@@ -54,8 +55,12 @@ public class MacOSPlatform : IApplicationPlatform
                 if (nsEvent == IntPtr.Zero)
                     continue;
 
-                if (NSEvent.TypeOf(nsEvent) == NSEventType.ApplicationDefined && NSEvent.SubtypeOf(nsEvent) == WakeSubtype)
+                var type = NSEvent.TypeOf(nsEvent);
+                if (type == NSEventType.ApplicationDefined && NSEvent.SubtypeOf(nsEvent) == WakeSubtype)
                     Signaled?.Invoke();
+                else if (type == NSEventType.KeyUp && NSApplication.KeyWindow is var key && key != IntPtr.Zero &&
+                         (NSEvent.ModifierFlagsOf(nsEvent) & NSEventModifierFlags.Command) != 0)
+                    NSWindow.SendEvent(key, nsEvent);   // NSApplication keeps a key's release to itself while Command is held
                 else
                     NSApplication.SendEvent(nsEvent);
             }

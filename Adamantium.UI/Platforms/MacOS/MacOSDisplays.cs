@@ -48,6 +48,13 @@ internal sealed unsafe class MacOSDisplays : IDisplayPlatform
         }
     }
 
+    /// <summary>Pixels per point of the monitor at a physical pixel.</summary>
+    internal double ScaleAt(double left, double top)
+    {
+        var displays = _displays;
+        return displays.Length == 0 ? 1 : Nearest(displays, left, top, true).Scale;
+    }
+
     /// <summary>The physical pixel at a point of AppKit's desktop.</summary>
     internal Vector2<double> ToPixels(double x, double y)
     {
@@ -81,6 +88,9 @@ internal sealed unsafe class MacOSDisplays : IDisplayPlatform
         foreach (var display in displays)
         {
             var area = inPixels ? display.Pixels : display.Points;
+            if (x >= area.X && x < area.Right && y >= area.Y && y < area.Bottom)
+                return display;
+
             var dx = Math.Max(Math.Max(area.X - x, x - area.Right), 0);
             var dy = Math.Max(Math.Max(area.Y - y, y - area.Bottom), 0);
             var distance = dx * dx + dy * dy;

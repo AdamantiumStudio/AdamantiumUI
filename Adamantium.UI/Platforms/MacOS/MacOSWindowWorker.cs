@@ -32,12 +32,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr _layer;
     private IntPtr _owner;
     private double _scale = 1;
-    private NSEventModifierFlags _flags;
+    private volatile Placement _placement = new(Rect.Empty, default);
     private InputModifiers _buttons;
     private IntPtr _pressEvent;
     private CGRect _restoreFrame;
     private bool _topmost;
-    private bool _closed;
+    private volatile bool _closed;
     private readonly List<MacOSWindowWorker> _blockedWindows = [];
     private readonly HashSet<MacOSWindowWorker> _blockers = [];
     private readonly HashSet<MacOSWindowWorker> _exempt = [];
@@ -52,17 +52,18 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public IUIContext UIContext { get; }
 
-    public Rect RestoreBounds
-    {
-        get
-        {
-            if (_nsWindow == IntPtr.Zero)
-                return Rect.Empty;
+    public Rect RestoreBounds => _placement.RestoreBounds;
 
-            var frame = IsMaximized && _restoreFrame.Size.Width > 0 ? _restoreFrame : NSWindow.FrameOf(_nsWindow);
-            var corner = TopLeftOf(frame);
-            return new Rect(corner.X, corner.Y, frame.Size.Width * _scale, frame.Size.Height * _scale);
-        }
+    // Read on the main thread, asked for on any.
+    private void UpdatePlacement()
+    {
+        var frame = NSWindow.FrameOf(_nsWindow);
+        var client = TopLeftOf(NSWindow.ContentRectForFrame(_nsWindow, frame));
+        var restore = IsMaximized && _restoreFrame.Size.Width > 0 ? _restoreFrame : frame;
+        var corner = TopLeftOf(restore);
+        _placement = new Placement(
+            new Rect(corner.X, corner.Y, restore.Size.Width * _scale, restore.Size.Height * _scale),
+            new PixelPoint((int)Math.Round(client.X), (int)Math.Round(client.Y)));
     }
 
     // In physical pixels of the desktop.
@@ -88,21 +89,22 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             double.IsNaN(window.Top) ? 0 : window.Top);
         var content = new CGRect(corner.X, corner.Y - height, width, height);
 
-        var style = StyleFor(window.ResizeMode, window.UseCustomChrome);
+        var style = StyleFor(window);
         _nsWindow = NSWindow.Create(content, style);
         NSWindow.SetAllowsFullScreen(_nsWindow, (style & NSWindowStyleMask.Resizable) != 0);
         MoveTo(corner);
         NSWindow.SetTitle(_nsWindow, window.Title);
-        if (window.UseCustomChrome)
+        if (window.UseCustomChrome && window.ActivateOnShow)
             NSWindow.HideTitleBar(_nsWindow);
         NSWindow.SetContentMinSize(_nsWindow, new CGSize(MinExtent(window.MinWidth, MinWidth),
             MinExtent(window.MinHeight, MinHeight)));
         NSWindow.SetContentMaxSize(_nsWindow, new CGSize(MaxExtent(window.MaxWidth), MaxExtent(window.MaxHeight)));
-        ApplyOverlayTraits(window.Topmost, window.WindowOpacity, window.TransparentToInput);
 
         _view = NSView.Create(MacOSContentView.Class, new CGRect(0, 0, width, height));
         ObjCManagedObject.Attach(_view, this);
+        NSView.TrackMouse(_view);
         _layer = CAMetalLayer.Create();
+        ApplyOverlayTraits(OverlayTraits.Of(window));
         NSView.SetLayer(_view, _layer);
         NSWindow.SetContentView(_nsWindow, _view);
         NSWindow.MakeFirstResponder(_nsWindow, _view);
@@ -113,6 +115,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         _scale = NSWindow.BackingScaleFactorOf(_nsWindow);
         SizeLayer(width, height);
+        UpdatePlacement();
 
         window.SetHandle(_nsWindow);
         window.SetSurfaceHandle(_layer);
@@ -240,10 +243,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void UpdateOverlayTraits()
     {
-        var topmost = _window.Topmost;
-        var opacity = _window.WindowOpacity;
-        var transparent = _window.TransparentToInput;
-        OnMainThread(() => ApplyOverlayTraits(topmost, opacity, transparent));
+        var traits = OverlayTraits.Of(_window);
+        OnMainThread(() => ApplyOverlayTraits(traits));
     }
 
     public void ShowWindow(WindowState windowState)
@@ -322,13 +323,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public PixelPoint ScreenToClient(PixelPoint screen)
     {
-        var origin = ClientOrigin();
+        var origin = _placement.ClientOrigin;
         return new PixelPoint(screen.X - origin.X, screen.Y - origin.Y);
     }
 
     public PixelPoint ClientToScreen(PixelPoint client)
     {
-        var origin = ClientOrigin();
+        var origin = _placement.ClientOrigin;
         return new PixelPoint(client.X + origin.X, client.Y + origin.Y);
     }
 
@@ -342,8 +343,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void BeginMoveDrag() => OnMainThread(() =>
     {
-        if (_pressEvent != IntPtr.Zero)
-            NSWindow.PerformWindowDrag(_nsWindow, _pressEvent);
+        if (_pressEvent == IntPtr.Zero)
+            return;
+
+        // The drag keeps the mouse's release to itself, so the window is told of it here.
+        NSWindow.PerformWindowDrag(_nsWindow, _pressEvent);
+        OnPointer(_pressEvent, RawPointerEventType.Up, MouseButtons.Left);
     });
 
     internal void OnPointer(IntPtr nsEvent, RawPointerEventType type, MouseButtons button)
@@ -352,10 +357,16 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (window == null || _closed)
             return;
 
+        var held = ButtonModifier(button);
         if (type == RawPointerEventType.Down)
-            _buttons |= ButtonModifier(button);
+            _buttons |= held;
         else if (type == RawPointerEventType.Up)
-            _buttons &= ~ButtonModifier(button);
+        {
+            if (held != InputModifiers.None && (_buttons & held) == 0)
+                return;   // told of already, when the window's drag began
+
+            _buttons &= ~held;
+        }
 
         // A release still goes to the window: what was pressed before the modal one opened is let go of.
         if (_inputBlocked && type != RawPointerEventType.Up && type != RawPointerEventType.LeaveWindow)
@@ -375,8 +386,21 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         {
             ChangedButton = button
         };
-        MacOSPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
+        if (type == RawPointerEventType.Up && button == MouseButtons.Left)
+        {
+            NSObject.Release(_pressEvent);
+            _pressEvent = IntPtr.Zero;
+        }
+
+        Report(() => PointerDevice.Current.ProcessEvent(args));
     }
+
+    // What was on its way when the window closed goes nowhere.
+    private void Report(Action raise) => MacOSPlatform.DispatchInput(() =>
+    {
+        if (!_closed)
+            raise();
+    });
 
     internal void OnScroll(IntPtr nsEvent)
     {
@@ -394,13 +418,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (vertical != 0)
         {
             var args = new RawPointerWheelEventArgs(vertical, window, position, modifiers, time, false);
-            MacOSPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
+            Report(() => PointerDevice.Current.ProcessEvent(args));
         }
 
         if (horizontal != 0)
         {
             var args = new RawPointerWheelEventArgs(horizontal, window, position, modifiers, time, true);
-            MacOSPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
+            Report(() => PointerDevice.Current.ProcessEvent(args));
         }
     }
 
@@ -433,7 +457,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         var modifiers = Modifiers(nsEvent);
         var time = TimeOf(nsEvent);
-        MacOSPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
+        Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawTextInputEventArgs(text, modifiers, time), window));
     }
 
@@ -451,17 +475,26 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (window == null || _closed)
             return;
 
-        var flags = NSEvent.ModifierFlagsOf(nsEvent);
-        var changed = flags ^ _flags;
-        _flags = flags;
-        if (_inputBlocked)
-            return;
-
-        var mask = NSEventModifierFlags.Shift | NSEventModifierFlags.Control | NSEventModifierFlags.Option |
-                   NSEventModifierFlags.Command | NSEventModifierFlags.CapsLock;
-        if ((changed & mask) != 0)
-            ReportKey(window, nsEvent, (flags & changed & mask) != 0, false);
+        var held = HeldBy(MacOSKeys.ToKey(NSEvent.KeyCodeOf(nsEvent)));
+        var down = (NSEvent.ModifierFlagsOf(nsEvent) & held) != 0;
+        if (held != 0 && !(down && _inputBlocked))
+            ReportKey(window, nsEvent, down, false);
     }
+
+    // The flag of the one key, left or right: the event says which key changed, the flag whether it is held now.
+    private static NSEventModifierFlags HeldBy(Key key) => key switch
+    {
+        Key.LeftShift => NSEventModifierFlags.LeftShift,
+        Key.RightShift => NSEventModifierFlags.RightShift,
+        Key.LeftCtrl => NSEventModifierFlags.LeftCommand,
+        Key.RightCtrl => NSEventModifierFlags.RightCommand,
+        Key.LeftWin => NSEventModifierFlags.LeftControl,
+        Key.RightWin => NSEventModifierFlags.RightControl,
+        Key.LeftAlt => NSEventModifierFlags.LeftOption,
+        Key.RightAlt => NSEventModifierFlags.RightOption,
+        Key.CapsLock => NSEventModifierFlags.CapsLock,
+        _ => 0
+    };
 
     private void ReportKey(IWindow window, IntPtr nsEvent, bool down, bool repeated)
     {
@@ -478,7 +511,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         };
         var key = MacOSKeys.ToKey(code);
         var type = down ? RawKeyboardEventType.KeyDown : RawKeyboardEventType.KeyUp;
-        MacOSPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
+        Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, type, press, modifiers, time), window));
     }
 
@@ -500,6 +533,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         var bounds = NSView.BoundsOf(_view);
         SizeLayer(bounds.Size.Width, bounds.Size.Height);
+        UpdatePlacement();
         var state = IsMaximized ? WindowState.Maximized : WindowState.Normal;
         var frame = NSWindow.FrameOf(_nsWindow);
         var width = frame.Size.Width * _scale;
@@ -519,6 +553,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnMoved()
     {
+        UpdatePlacement();
         var corner = TopLeftOf(NSWindow.FrameOf(_nsWindow));
         MacOSPlatform.DispatchInput(() =>
         {
@@ -532,14 +567,20 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         _scale = NSWindow.BackingScaleFactorOf(_nsWindow);
         var bounds = NSView.BoundsOf(_view);
         SizeLayer(bounds.Size.Width, bounds.Size.Height);
+        UpdatePlacement();
         var scale = new Vector2<double>(_scale, _scale);
         var rate = RefreshRate();
+        var frame = NSWindow.FrameOf(_nsWindow);
+        var width = frame.Size.Width * _scale;
+        var height = frame.Size.Height * _scale;
         MacOSPlatform.DispatchInput(() =>
         {
             if (_closed)
                 return;
 
             _window.DpiScale = scale;
+            _window.Width = width;
+            _window.Height = height;
             _window.DisplayRefreshRate = rate;
         });
     }
@@ -598,38 +639,47 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private void WindowOnResizeModeChanged(object sender, EventArgs e)
     {
-        var resizeMode = _window.ResizeMode;
-        var customChrome = _window.UseCustomChrome;
+        var style = StyleFor(_window);
+        var hidesTitleBar = _window.UseCustomChrome && _window.ActivateOnShow;
         OnMainThread(() =>
         {
             // The full screen bit is AppKit's: it throws when a style set from outside changes it.
-            var style = StyleFor(resizeMode, customChrome);
             NSWindow.SetStyleMask(_nsWindow, style | (NSWindow.StyleMaskOf(_nsWindow) & NSWindowStyleMask.FullScreen));
             NSWindow.SetAllowsFullScreen(_nsWindow, (style & NSWindowStyleMask.Resizable) != 0);
-            if (customChrome)
+            if (hidesTitleBar)
                 NSWindow.HideTitleBar(_nsWindow);
         });
     }
 
-    private static NSWindowStyleMask StyleFor(WindowResizeMode resizeMode, bool customChrome)
+    // A window that takes no activation - a menu, a drag's compass - is bare: AppKit gives such a window no keyboard.
+    private static NSWindowStyleMask StyleFor(IWindow window)
     {
+        if (window.UseCustomChrome && !window.ActivateOnShow)
+            return NSWindowStyleMask.Borderless;
+
         var style = NSWindowStyleMask.Titled | NSWindowStyleMask.Closable;
-        if (resizeMode != WindowResizeMode.NoResize)
+        if (window.ResizeMode != WindowResizeMode.NoResize)
             style |= NSWindowStyleMask.Miniaturizable;
-        if (resizeMode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip)
+        if (window.ResizeMode is WindowResizeMode.CanResize or WindowResizeMode.CanResizeWithGrip)
             style |= NSWindowStyleMask.Resizable;
-        if (customChrome)
+        if (window.UseCustomChrome)
             style |= NSWindowStyleMask.FullSizeContentView;
 
         return style;
     }
 
-    private void ApplyOverlayTraits(bool topmost, double opacity, bool transparentToInput)
+    private void ApplyOverlayTraits(OverlayTraits traits)
     {
-        _topmost = topmost;
+        _topmost = traits.Topmost;
         ApplyLevel();
-        NSWindow.SetAlphaValue(_nsWindow, double.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1));
-        NSWindow.SetIgnoresMouseEvents(_nsWindow, transparentToInput);
+        NSWindow.SetAlphaValue(_nsWindow, double.IsNaN(traits.Opacity) ? 1 : Math.Clamp(traits.Opacity, 0, 1));
+        NSWindow.SetIgnoresMouseEvents(_nsWindow, traits.TransparentToInput);
+        CAMetalLayer.SetOpaque(_layer, !traits.SeeThrough);
+        if (traits.SeeThrough)
+            NSWindow.MakeTransparent(_nsWindow);
+        else
+            NSWindow.MakeOpaque(_nsWindow);
+        NSWindow.SetHasShadow(_nsWindow, traits.HasShadow);
         if (NSWindow.IsVisible(_nsWindow))
         {
             LeaveOwner();
@@ -710,6 +760,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             NSObject.Release(_view);
             NSObject.Release(_pressEvent);
             NSObject.Release(_nsWindow);
+            _pressEvent = IntPtr.Zero;
+            _view = IntPtr.Zero;
+            _delegate = IntPtr.Zero;
+            _nsWindow = IntPtr.Zero;
         });
     }
 
@@ -730,13 +784,6 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var location = NSEvent.LocationInWindowOf(nsEvent);
         var height = NSView.BoundsOf(_view).Size.Height;
         return new Vector2<double>(location.X, height - location.Y);
-    }
-
-    private PixelPoint ClientOrigin()
-    {
-        var content = NSWindow.ContentRectForFrame(_nsWindow, NSWindow.FrameOf(_nsWindow));
-        var corner = TopLeftOf(content);
-        return new PixelPoint((int)Math.Round(corner.X), (int)Math.Round(corner.Y));
     }
 
     private static InputModifiers ButtonModifier(MouseButtons button) => button switch
@@ -773,9 +820,26 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         return !double.IsNaN(fallback) && fallback > 0 ? fallback : defaultExtent;
     }
 
+    // The window may be gone by the time the main thread comes to it: it is let go of there.
     private void OnMainThread(Action action)
     {
-        if (_nsWindow != IntPtr.Zero)
-            _platform.RunOnMainThread(action);
+        if (_nsWindow == IntPtr.Zero)
+            return;
+
+        _platform.RunOnMainThread(() =>
+        {
+            if (_nsWindow != IntPtr.Zero)
+                action();
+        });
+    }
+
+    private sealed record Placement(Rect RestoreBounds, PixelPoint ClientOrigin);
+
+    private readonly record struct OverlayTraits(bool Topmost, double Opacity, bool TransparentToInput, bool SeeThrough,
+        bool HasShadow)
+    {
+        internal static OverlayTraits Of(IWindow window) => new(window.Topmost, window.WindowOpacity,
+            window.TransparentToInput, window.UseTransparentComposition,
+            window.ShowWindowBorder && !window.UseTransparentComposition);
     }
 }

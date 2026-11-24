@@ -6,7 +6,7 @@ using Adamantium.UI.Core.Input;
 namespace Adamantium.UI.Platforms.MacOS;
 
 /// <summary>AppKit's cursors: the shapes AppKit lacks (wait, help, diagonal resizing) are its nearest.</summary>
-internal sealed class MacOSCursors : INativeCursors
+internal sealed class MacOSCursors(MacOSPlatform platform) : INativeCursors
 {
     private bool _hidden;
 
@@ -15,7 +15,13 @@ internal sealed class MacOSCursors : INativeCursors
         if (cursor == null)
             return;
 
-        if (cursor.Type == CursorType.None)
+        var type = cursor.Type;
+        platform.RunOnMainThread(() => Show(type));
+    }
+
+    private void Show(CursorType type)
+    {
+        if (type == CursorType.None)
         {
             if (!_hidden)
                 NSCursor.Hide();
@@ -26,7 +32,7 @@ internal sealed class MacOSCursors : INativeCursors
         if (_hidden)
             NSCursor.Unhide();
         _hidden = false;
-        NSCursor.Set(Native(cursor.Type));
+        NSCursor.Set(Native(type));
     }
 
     private static IntPtr Native(CursorType type) => type switch

@@ -24,7 +24,14 @@ internal sealed class MacOSDragGhost : IDragGhost
         _platform = (MacOSPlatform)platform;
     }
 
-    public uint Dpi => (uint)Math.Round(96 * NSScreen.BackingScaleFactorOf(NSScreen.Main));
+    public uint Dpi
+    {
+        get
+        {
+            var cursor = Mouse.ScreenCoordinates;
+            return (uint)Math.Round(96 * _platform.Desktop.ScaleAt(cursor.X, cursor.Y));
+        }
+    }
 
     public event Action<uint> DpiChanged
     {
@@ -38,7 +45,7 @@ internal sealed class MacOSDragGhost : IDragGhost
         _platform.RunOnMainThread(() =>
         {
             EnsureWindow();
-            var scale = NSScreen.BackingScaleFactorOf(NSScreen.Main);
+            var scale = _platform.Desktop.ScaleAt(screenX, screenY);
             _width = width / scale;
             _height = height / scale;
             var layer = NSView.LayerOf(_view);
