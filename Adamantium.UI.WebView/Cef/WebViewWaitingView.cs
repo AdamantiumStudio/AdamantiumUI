@@ -43,6 +43,10 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     /// were to - the view that shows the page makes one of its own.</summary>
     public bool IsLost { get; private set; }
 
+    /// <summary>Whether the page closed itself while it waited - <c>window.close()</c>: the view that was to show it shows
+    /// none.</summary>
+    public bool IsClosed { get; private set; }
+
     /// <summary>Where the page went while it waited; null before it said.</summary>
     public string Address => address;
 
@@ -205,6 +209,9 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public bool NewWindowRequested(WebViewBrowser browser, WebViewNewPage page, WebNewWindowKind kind) => false;
 
     public void BrowserLost(WebViewBrowser browser) => IsLost = true;
+
+    // Closed before any view showed it: there is no browser left to hand over, nor a page to make again.
+    public void PageClosed(WebViewBrowser browser) => IsClosed = true;
 
     public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request) => false;
 

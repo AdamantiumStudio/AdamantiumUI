@@ -128,6 +128,10 @@ internal interface IWebViewBrowserView
     /// is to make one of its own at the page's address.</summary>
     void BrowserLost(WebViewBrowser browser);
 
+    /// <summary>The page closed itself - <c>window.close()</c>, where Chromium lets a script close its page: CEF has let
+    /// the browser go, and the view is to say so to the application.</summary>
+    void PageClosed(WebViewBrowser browser);
+
     /// <summary>The page's file field asks for files: the view model is asked, and answers <paramref name="request"/>;
     /// false leaves it to be answered with none.</summary>
     bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request);
