@@ -9,6 +9,7 @@ using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -67,6 +68,12 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
     public static readonly AdamantiumProperty IsCollapsedProperty = AdamantiumProperty.Register(nameof(IsCollapsed),
         typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false, OnIsCollapsedChanged));
+
+    public static readonly AdamantiumProperty MinimizeTemplateProperty = AdamantiumProperty.Register(nameof(MinimizeTemplate),
+        typeof(DataTemplate), typeof(OverlayWindow), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty MaximizeTemplateProperty = AdamantiumProperty.Register(nameof(MaximizeTemplate),
+        typeof(DataTemplate), typeof(OverlayWindow), new PropertyMetadata(null));
 
     static OverlayWindow()
     {
@@ -208,6 +215,22 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         get => GetValue<bool>(IsCollapsedProperty);
         set => SetValue(IsCollapsedProperty, value);
+    }
+
+    /// <summary>What the collapse button shows while the content is shown: any icon. Its data is
+    /// <see cref="IsCollapsed"/>. The theme gives a chevron.</summary>
+    public DataTemplate MinimizeTemplate
+    {
+        get => GetValue<DataTemplate>(MinimizeTemplateProperty);
+        set => SetValue(MinimizeTemplateProperty, value);
+    }
+
+    /// <summary>What the collapse button shows while collapsed - the way back to the content. Its data is
+    /// <see cref="IsCollapsed"/>. The theme gives a chevron.</summary>
+    public DataTemplate MaximizeTemplate
+    {
+        get => GetValue<DataTemplate>(MaximizeTemplateProperty);
+        set => SetValue(MaximizeTemplateProperty, value);
     }
 
     /// <summary>When true (default) the title bar can be dragged to move the window within the parent.</summary>

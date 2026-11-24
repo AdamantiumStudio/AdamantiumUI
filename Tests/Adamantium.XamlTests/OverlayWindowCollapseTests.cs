@@ -1,11 +1,15 @@
+using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
+using Path = Adamantium.UI.Controls.Shapes.Path;
+using Rectangle = Adamantium.UI.Controls.Shapes.Rectangle;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.MacOsTheme;
@@ -150,6 +154,67 @@ public class OverlayWindowCollapseTests
             Assert.That(shown, Is.GreaterThan(window.MinWidth), "the content is wider than the smallest width");
             Assert.That(collapsed, Is.EqualTo(shown), "collapsed, the title bar does not narrow it");
             Assert.That(window.Width, Is.NaN, "expanded, it is sized to its content again");
+        });
+    }
+
+    // The collapse glyph's presenter: the button's own in Fluent and Graphite, the light's overlay on macOS.
+    private static T GlyphOf<T>(OverlayWindow window, string theme) where T : class
+    {
+        var host = (IUIComponent)window.GetTemplateChild(theme == "MacOs" ? "CollapseGlyph" : "PART_CollapseButton");
+        return host.GetVisualDescendants().OfType<T>().FirstOrDefault();
+    }
+
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheThemeGivesTheCollapseButtonAGlyphBothWays(string theme)
+    {
+        Use(theme);
+        var window = Built(canCollapse: true);
+        // A chevron in Fluent and Graphite, the light's picture on macOS.
+        object Glyph() => theme == "MacOs" ? GlyphOf<Image>(window, theme) : GlyphOf<Path>(window, theme);
+        var shown = Glyph();
+
+        window.IsCollapsed = true;
+        Settle(window);
+        var collapsed = Glyph();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.Not.Null, "the content shown, the theme's glyph");
+            Assert.That(collapsed, Is.Not.Null, "collapsed, the theme's glyph");
+            Assert.That(collapsed, Is.Not.SameAs(shown), "another one");
+        });
+    }
+
+    private static DataTemplate Glyph(string name) =>
+        new(() => new TemplateResult { RootComponent = new Rectangle { Name = name, Width = 6, Height = 6 } });
+
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheCollapseButtonShowsTheWindowsOwnTemplates(string theme)
+    {
+        Use(theme);
+        var window = new OverlayWindow
+        {
+            Title = "probe",
+            CanCollapse = true,
+            MinimizeTemplate = Glyph("Minimize"),
+            MaximizeTemplate = Glyph("Maximize"),
+            Content = new TextBlock { Text = "content" }
+        };
+        Settle(window);
+        var shown = GlyphOf<Rectangle>(window, theme)?.Name;
+
+        window.IsCollapsed = true;
+        Settle(window);
+        var collapsed = GlyphOf<Rectangle>(window, theme)?.Name;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.EqualTo("Minimize"), "the content shown, its MinimizeTemplate");
+            Assert.That(collapsed, Is.EqualTo("Maximize"), "collapsed, its MaximizeTemplate");
         });
     }
 
