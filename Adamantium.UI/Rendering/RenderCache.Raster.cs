@@ -33,7 +33,7 @@ public partial class RenderCache
 
         // What the frames ask of it - another scale, part or print - and since when they have asked the same.
         public float WantedScale;
-        public Rect WantedPart;
+        public Rect WantedPart = Rect.Empty;
         public ulong WantedPrint;
         public long WantedSince;
     }
@@ -142,8 +142,10 @@ public partial class RenderCache
             _rasterParts[element.RenderId] = held;
         }
 
-        run.Part = held.Drawn && held.Scale == run.Scale && Holds(held.Part, seen)
-            ? held.Part
+        // The part held, or the part waited for, while either holds what is seen: a zoom eases to its end, the camera
+        // moving by a hair each frame, and a part worked out anew each frame never stayed the same long enough.
+        run.Part = held.Drawn && held.Scale == run.Scale && Holds(held.Part, seen) ? held.Part
+            : held.WantedScale == run.Scale && !held.WantedPart.IsEmpty && Holds(held.WantedPart, seen) ? held.WantedPart
             : Grown(seen, RasterRoom).Intersect(whole);
         run.Width = (int)Math.Ceiling(run.Part.Width * run.Scale);
         run.Height = (int)Math.Ceiling(run.Part.Height * run.Scale);
