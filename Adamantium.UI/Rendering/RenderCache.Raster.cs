@@ -38,9 +38,9 @@ public partial class RenderCache
         public long WantedSince;
     }
 
-    // How long what a raster is asked to hold has to stay the same before its texture is drawn again: while the camera
-    // zooms, a step of scale, a part left or the page drawn at another detail each frame, the texture it holds is laid
-    // down stretched, and drawn anew once, when the camera has stopped.
+    // How long the scale and part a raster is asked to hold have to stay the same before its texture is drawn again:
+    // while the camera zooms, a step of scale or a part left each few frames, the texture it holds is laid down
+    // stretched, and drawn anew once, when the camera has stopped.
     private static readonly long RasterSettles = System.Diagnostics.Stopwatch.Frequency * 150 / 1000;
 
     // A raster laid down stretched this frame waits to be drawn anew: the frames go on until it is.
@@ -167,7 +167,10 @@ public partial class RenderCache
         _rasterShown.Add(element);
         _offscreenLayers ??= new OffscreenLayers();
         run.Draws = !_offscreenLayers.HoldsTile(element.RenderId, run.Print);
-        if (run.Draws && held.Drawn && run.Still && _offscreenLayers.HoldsAnyTile(element.RenderId) && !Settled(held, run))
+        // Only what the camera does waits: another scale or part. What it draws changing is drawn at once.
+        var cameraMoved = held.Scale != run.Scale || held.Part != run.Part;
+        if (run.Draws && cameraMoved && held.Drawn && run.Still && _offscreenLayers.HoldsAnyTile(element.RenderId)
+            && !Settled(held, run))
         {
             // Still moving: what it holds, stretched to where the camera puts it.
             run.Scale = held.Scale;
