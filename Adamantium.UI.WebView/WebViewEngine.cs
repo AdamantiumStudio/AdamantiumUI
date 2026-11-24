@@ -760,14 +760,10 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         if (OperatingSystem.IsLinux())
         {
             switches.Add(new("no-zygote", null));
-
-            // Drawn off screen, Chromium still starts a platform - X11 by default, and with no X server it does not
-            // start at all (measured 24.11: "Missing X server", exit 1, under a Wayland-only Mutter). With one it keeps
-            // X11, whose clipboard needs no window of its own focused; without, the compositor's, or none.
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
+            if (OzonePlatformFor(Environment.GetEnvironmentVariable("DISPLAY"),
+                    Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")) is { } platform)
             {
-                var wayland = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
-                switches.Add(new("ozone-platform", wayland ? "wayland" : "headless"));
+                switches.Add(new("ozone-platform", platform));
             }
         }
 
@@ -787,6 +783,15 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
         return switches;
     }
+
+    /// <summary>The platform Chromium starts on Linux, drawing off screen: none named - X11, as before - while there is an
+    /// X server; else the Wayland compositor, else none at all. With no X
+    /// server Chromium's X11 does not start, nor CEF with it (measured 24.11: "Missing X server", exit 1, under a
+    /// Wayland-only Mutter); with no display at all a site asking where the user is is not asked (measured).</summary>
+    internal static string OzonePlatformFor(string display, string waylandDisplay) =>
+        !string.IsNullOrEmpty(display) ? null
+        : !string.IsNullOrEmpty(waylandDisplay) ? "wayland"
+        : "headless";
 
     private void ReleaseHandlers()
     {
