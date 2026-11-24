@@ -137,6 +137,22 @@ public class SplashWindowTests
         Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).HorizontalAlignment, Is.EqualTo(side));
     }
 
+    [TestCase(CaptionButtonPlacement.Left, 14, 0)]
+    [TestCase(CaptionButtonPlacement.Right, 46, 1)]
+    public async Task OnTheLeft_TheCloseButtonIsALight_ItsCrossNotShown(CaptionButtonPlacement placement, double width, double cross)
+    {
+        var splash = Splash();
+        splash.CaptionButtonPlacement = placement;
+        var session = AutomationSession.InProcess(splash);
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).RenderSize.Width, Is.EqualTo(width).Within(0.5));
+            Assert.That(((UIComponent)splash.GetTemplateChild("Cross")).Opacity, Is.EqualTo(cross));
+        });
+    }
+
     [Test]
     public async Task WithoutTheCloseButton_ThereIsNone()
     {
