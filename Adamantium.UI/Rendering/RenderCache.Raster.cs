@@ -49,7 +49,7 @@ public partial class RenderCache
         public List<Rect2D> AnewOrder;
         public int AnewNext;
         public bool AnewStarted;
-        public Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)> AnewMeasured;
+        public Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)> AnewMeasured;
 
         // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
         // the glyphs landed: the same again, it holds.
@@ -114,6 +114,7 @@ public partial class RenderCache
         public RasterHeld Held;
         public Rect2D Square;
         public Rect SquareIn;
+        public Matrix4x4F ToSquare;
         public long SquaresSince;
 
         public bool RecordingBefore;
@@ -628,6 +629,7 @@ public partial class RenderCache
         toTexture.M41 = (float)((-held.AnewPart.X * held.AnewScale - square.Offset.X) / _renderScale);
         toTexture.M42 = (float)((-held.AnewPart.Y * held.AnewScale - square.Offset.Y) / _renderScale);
         _cloneMatrix = run.FromWindow * toTexture;
+        run.ToSquare = toTexture;
         // Its subtree is cut by its own clip only in here (CumulativeClip): what was worked out for it outside is not.
         _clipCache.Clear();
         return DrawIn(_offscreenLayers.BeginSquare(device, run.Element.RenderId, _projectionMatrix, run.Bounds,
@@ -675,9 +677,9 @@ public partial class RenderCache
     // Where each draw of the run lies, in the element's units, and - at a group's begin mark - where all of the group
     // lies and the unit past its end: a square passes over what it does not reach. A draw whose place is not known, and
     // every other mark, reaches everywhere.
-    private Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)> MeasureDraws(RasterRun run)
+    private Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)> MeasureDraws(RasterRun run)
     {
-        var measured = new Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)>();
+        var measured = new Dictionary<List<IRenderUnit>, (Rect[] Bounds, int[] SkipTo)>();
         var everywhere = new Rect(double.MinValue / 4, double.MinValue / 4, double.MaxValue / 2, double.MaxValue / 2);
         var open = new List<(int Begin, Rect Reach)>();
         for (var i = run.Start; i < run.End; i++)
@@ -721,7 +723,7 @@ public partial class RenderCache
                 CloseMeasured(open, bounds, skipTo, units.Count);
             }
 
-            measured[group] = (bounds, skipTo);
+            measured[units] = (bounds, skipTo);
         }
 
         return measured;
@@ -756,11 +758,24 @@ public partial class RenderCache
         return local.Inflate(grow).TransformToAABB(World(unit.Component) * fromWindow);
     }
 
+    // Drawing a square of a raster, where the unit at `index` draws in the square's space, from where it lies in the
+    // element - worked out once for all its squares; null when not drawing one, or the unit has no element.
+    private Rect? MeasuredInk(List<IRenderUnit> units, int index)
+    {
+        if (units[index].Component == null || _rasterRun is not { Held.AnewMeasured: { } measured } run
+            || !measured.TryGetValue(units, out var drawn) || index >= drawn.Bounds.Length)
+        {
+            return null;
+        }
+
+        return drawn.Bounds[index].TransformToAABB(run.ToSquare);
+    }
+
     // Drawing a square of a raster, the unit past the draw - or the whole group begun - at `index` when the square does
     // not reach it; else `index`.
     private int PastWhatTheSquareMisses(ControlGroup group, int index)
     {
-        if (_rasterRun is not { Held.AnewMeasured: { } measured } run || !measured.TryGetValue(group, out var drawn)
+        if (_rasterRun is not { Held.AnewMeasured: { } measured } run || !measured.TryGetValue(group.Units, out var drawn)
             || index >= drawn.Bounds.Length)
         {
             return index;

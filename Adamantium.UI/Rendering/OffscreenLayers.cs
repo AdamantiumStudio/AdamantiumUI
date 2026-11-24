@@ -600,7 +600,7 @@ internal sealed class OffscreenLayers : IDisposable
 
             // Into the texture being drawn anew, what is in it kept - cleared once, when its first square goes in.
             gd.InsertImageMemoryBarrier(commands, entry.Pending,
-                AccessFlagBits2.ShaderReadBit, AccessFlagBits2.ColorAttachmentWriteBit,
+                AccessFlagBits2.ShaderReadBit, AccessFlagBits2.ColorAttachmentReadBit | AccessFlagBits2.ColorAttachmentWriteBit,
                 entry.PendingCleared ? ImageLayout.ShaderReadOnlyOptimal : ImageLayout.Undefined,
                 ImageLayout.ColorAttachmentOptimal,
                 PipelineStageFlagBits2.FragmentShaderBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);

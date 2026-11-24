@@ -653,7 +653,7 @@ public partial class RenderCache
                 continue;
             }
 
-            if (section == 0 || GroupInk(unit) is not { } ink) continue;
+            if (section == 0 || (MeasuredInk(units, i) ?? GroupInk(unit)) is not { } ink) continue;
 
             if (section == 1)
             {
