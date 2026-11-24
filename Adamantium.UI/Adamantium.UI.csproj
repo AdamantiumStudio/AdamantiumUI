@@ -33,7 +33,7 @@
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<AdamantiumVulkanReference Include="Adamantium.Vulkan" />
-		<PackageReference Include="Adamantium.Vulkan.ShaderObjectLayer" Version="1.0.2" />
+		<PackageReference Include="Adamantium.Vulkan.ShaderObjectLayer" Version="1.0.3" />
 	</ItemGroup>
 
 	<!-- For the applications this package goes into, not for this project: the AUML generator rides in this package -
