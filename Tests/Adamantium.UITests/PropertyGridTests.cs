@@ -732,6 +732,65 @@ public class PropertyGridTests
         Assert.That(Headers(grid), Does.Contain("Base"));
     }
 
+    // The button beside each item given once the lines are built - bound, its command found only when the grid has a
+    // data context: each item's line gets it then, not at the next rebuild.
+    [Test]
+    public void AnItemButtonGivenAfterTheLinesAreBuilt_ShowsOnEachItem()
+    {
+        var node = new CanvasNode { Inputs = 2, Outputs = 0 };
+        node.InputPins[0].Name = "Base";
+        var item = new ElementItem(node, new Rect(0, 0, 190, 110));
+        var sockets = new ItemsProperty
+        {
+            Header = "In",
+            IsExpanded = true,
+            Binding = new Binding("Element.InputPins"),
+            ItemHeader = new Binding("Name")
+        };
+        sockets.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
+        var grid = Built(Section(item, sockets));
+        var before = RowsWhoseHeaderIs(grid, "Base").Definition.ShowActionButton;
+
+        sockets.ItemAction = new Doing();
+        grid.Measure(new Size<double>(400, 400), force: true);
+        grid.Arrange(new Rect(0, 0, 400, 400));
+
+        var line = RowsWhoseHeaderIs(grid, "Base").Definition;
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.False, "no button yet");
+            Assert.That(line.ShowActionButton, Is.True);
+            Assert.That(line.ActionCommand, Is.SameAs(sockets.ItemAction));
+        });
+    }
+
+    // One command for another builds nothing again: a list nested in another, its command told for each item, takes a
+    // new one on every line it builds, and building on each would never end.
+    [Test]
+    public void AnItemButtonsCommandReplaced_BuildsTheLinesNoMore()
+    {
+        var node = new CanvasNode { Inputs = 2, Outputs = 0 };
+        node.InputPins[0].Name = "Base";
+        var item = new ElementItem(node, new Rect(0, 0, 190, 110));
+        var sockets = new ItemsProperty
+        {
+            Header = "In",
+            IsExpanded = true,
+            Binding = new Binding("Element.InputPins"),
+            ItemHeader = new Binding("Name"),
+            ItemAction = new Doing()
+        };
+        sockets.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
+        var grid = Built(Section(item, sockets));
+        var row = RowsWhoseHeaderIs(grid, "Base");
+
+        sockets.ItemAction = new Doing();
+        grid.Measure(new Size<double>(400, 400), force: true);
+        grid.Arrange(new Rect(0, 0, 400, 400));
+
+        Assert.That(RowsWhoseHeaderIs(grid, "Base"), Is.SameAs(row));
+    }
+
     // Writing through one of those lines reaches the ITEM and nothing else - renaming the second socket leaves the
     // first alone, which is the whole point of a line per item.
     [Test]
