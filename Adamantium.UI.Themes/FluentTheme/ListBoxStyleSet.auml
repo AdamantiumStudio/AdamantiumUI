@@ -3,9 +3,12 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- ListBox: a Border around a ScrollViewer that delegates scrolling to the virtualizing ItemsPanel
-         (CanContentScroll). -->
+         (CanContentScroll). Its edge is its own properties: BorderThickness="0" for an edgeless one. -->
     <Style Selector="ListBox" BasedOn="ItemsControl">
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="4"/>
     </Style>
 
     <Style Selector="ListBox">
@@ -13,9 +16,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
                     <Border Background="{TemplateBinding Background}"
-                                     BorderBrush="{ResourceReference ControlStrokeColorDefault}"
-                                     BorderThickness="1"
-                                     CornerRadius="4">
+                                     BorderBrush="{TemplateBinding BorderBrush}"
+                                     BorderThickness="{TemplateBinding BorderThickness}"
+                                     CornerRadius="{TemplateBinding CornerRadius}">
                         <!-- Owner-qualified paths reach the ScrollViewer attached properties set on the list. -->
                         <ScrollViewer x:Name="PART_ScrollHost" CanContentScroll="True"
                                                HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"

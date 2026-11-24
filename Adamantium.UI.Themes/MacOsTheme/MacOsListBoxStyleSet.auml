@@ -2,10 +2,14 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The macOS list: Fluent's parts on the same well surface as text fields, with the theme's corner radius. -->
+    <!-- The macOS list: Fluent's parts on the same well surface as text fields, with the theme's corner radius. Its
+         edge is its own properties: BorderThickness="0" for an edgeless one. -->
 
     <Style Selector="ListBox" BasedOn="ItemsControl">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeControl}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
     </Style>
 
     <Style Selector="ListBox">
@@ -13,9 +17,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
                     <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{ResourceReference ControlStrokeColorSecondary}"
-                            BorderThickness="{ResourceReference StrokeControl}"
-                            CornerRadius="{ResourceReference CornerRadiusDefault}">
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
                         <!-- OWNER-QUALIFIED, so it reaches ScrollViewer's ATTACHED properties: a bare
                              {TemplateBinding HorizontalScrollBarVisibility} is looked up as a property of the LIST,
                              which has none - it resolves to null and throws while the template is being BUILT, which
