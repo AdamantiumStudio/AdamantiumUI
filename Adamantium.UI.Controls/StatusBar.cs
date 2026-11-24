@@ -1,4 +1,5 @@
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 
@@ -12,10 +13,30 @@ namespace Adamantium.UI.Controls;
 /// field acts on a press.</summary>
 public class StatusBar : ItemsControl
 {
+    /// <summary>How long a field stays as the bar narrows: the fields that do not fit go, the lowest priority first, of the
+    /// same priority the one written later. Default 0.</summary>
+    public static readonly AdamantiumProperty PriorityProperty = AdamantiumProperty.RegisterAttached("Priority",
+        typeof(int), typeof(UIComponent),
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsParentMeasure | PropertyMetadataOptions.AffectsParentArrange));
+
+    /// <summary>Whether a field narrows as the bar does - a message cut short - before any field goes; it goes only
+    /// once it has no width left. Default false.</summary>
+    public static readonly AdamantiumProperty ShrinksProperty = AdamantiumProperty.RegisterAttached("Shrinks",
+        typeof(bool), typeof(UIComponent),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsParentMeasure | PropertyMetadataOptions.AffectsParentArrange));
+
     static StatusBar()
     {
         FocusableProperty.OverrideMetadata(typeof(StatusBar), new PropertyMetadata(false));
     }
+
+    public static int GetPriority(IUIComponent field) => field.GetValue<int>(PriorityProperty);
+
+    public static void SetPriority(IUIComponent field, int priority) => field.SetValue(PriorityProperty, priority);
+
+    public static bool GetShrinks(IUIComponent field) => field.GetValue<bool>(ShrinksProperty);
+
+    public static void SetShrinks(IUIComponent field, bool shrinks) => field.SetValue(ShrinksProperty, shrinks);
 
     protected internal override IUIComponent GetContainerForItem(object item)
     {
