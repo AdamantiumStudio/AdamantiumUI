@@ -79,6 +79,10 @@ public sealed class WebViewBridge
     /// goes there itself.</summary>
     public event EventHandler<WebNewWindowRequestedEventArgs> NewWindowRequested;
 
+    /// <summary>The page closed itself - <c>window.close()</c>, which Chromium allows a page opened by a script or never
+    /// gone on from. The view is left with no page until it is given an address again; a browser closes its tab.</summary>
+    public event EventHandler PageClosed;
+
     /// <summary>The page's file field asks for files: the view model asks the user, or the page gets none.</summary>
     public event EventHandler<WebFileDialogRequestedEventArgs> FileDialogRequested;
 
@@ -205,6 +209,8 @@ public sealed class WebViewBridge
     internal void OnDownloadRequested(WebDownloadRequestedEventArgs args) => DownloadRequested?.Invoke(this, args);
 
     internal void OnSignInRequested(WebSignInRequestedEventArgs args) => SignInRequested?.Invoke(this, args);
+
+    internal void OnPageClosed() => PageClosed?.Invoke(this, EventArgs.Empty);
 
     internal bool OnNewWindowRequested(WebViewNewPage page, WebNewWindowKind kind)
     {

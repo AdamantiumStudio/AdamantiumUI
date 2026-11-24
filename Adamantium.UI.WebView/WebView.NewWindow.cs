@@ -32,6 +32,22 @@ public partial class WebView
         }
     }
 
+    // The page closed itself: the view keeps no page, and makes none again until it is given an address - the same page
+    // made again could close itself again.
+    void IWebViewBrowserView.PageClosed(WebViewBrowser from)
+    {
+        if (!ReferenceEquals(browser, from))
+        {
+            return;
+        }
+
+        closedItself = true;
+        StopBrowser();
+        // Its address goes with it: the same one given again opens it again.
+        SetCurrentValue(SourceProperty, null);
+        Bridge?.OnPageClosed();
+    }
+
     // A page the view itself opens - a row of its menu: in a view of the view model's, or here when it shows none.
     private void OpenNewPage(string address, WebNewWindowKind kind)
     {

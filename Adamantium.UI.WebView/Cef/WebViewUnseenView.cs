@@ -139,6 +139,10 @@ internal sealed class WebViewUnseenView : IWebViewBrowserView
     {
     }
 
+    public void PageClosed(WebViewBrowser browser)
+    {
+    }
+
     public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request) => false;
 
     public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
