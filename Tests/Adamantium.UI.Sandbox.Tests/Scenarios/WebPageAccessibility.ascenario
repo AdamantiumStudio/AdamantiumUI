@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The page's insides to automation: under the Web page's view its document, a field with its value, a check box and a button - typed into, unchecked and pressed as a user does it, the page answering in its title.">
+  <Select Target="id=GalleryTabs/id=Web" />
+  <Wait Target="id=WebPage" />
+  <Set Target="id=WebAddress" Value="data:text/html,&lt;title&gt;probe&lt;/title&gt;&lt;input id=name value=Ann&gt;&lt;input type=checkbox id=c checked&gt;&lt;button id=go onclick=document.title='pressed'&gt;Go&lt;/button&gt;" />
+  <Key Keys="Enter" Into="id=WebAddress" />
+  <Wait Target="id=WebPage/type=Document,name=probe" Timeout="15s" />
+  <Wait Target="id=WebPage/type=Document/id=name" Value="Ann" Timeout="10s" />
+  <Expect Target="id=WebPage/type=Document/id=c" Toggle="On" />
+  <Set Target="id=WebPage/type=Document/id=name" Value="Margo" />
+  <Wait Target="id=WebPage/type=Document/id=name" Value="Margo" Timeout="10s" />
+  <Toggle Target="id=WebPage/type=Document/id=c" />
+  <Wait Target="id=WebPage/type=Document/id=c" Toggle="Off" Timeout="10s" />
+  <Invoke Target="id=WebPage/type=Document/id=go" />
+  <Wait Target="id=WebPage/type=Document,name=pressed" Timeout="10s" />
+</Scenario>

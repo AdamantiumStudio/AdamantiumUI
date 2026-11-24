@@ -51,6 +51,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     private WebViewBrowser browser;
     private IWindow window;
     private bool attached;
+    private bool closedItself;   // the page closed itself: no page is made again until an address or a page is given
     private uint frameWidth;
     private uint frameHeight;
 
@@ -212,8 +213,6 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         base.OnDiscarded();
     }
 
-    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
-
     private static void OnSourceChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
@@ -221,13 +220,19 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         {
             view.browser.Navigate(address.AbsoluteUri);
         }
+        else if (view.browser == null && view.closedItself && e.NewValue is Uri)
+        {
+            view.closedItself = false;
+            view.StartBrowser();
+        }
     }
 
     private static void OnPageMakerChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
         view.ShowPageBackground();
-        if (e.NewValue == null && view.browser != null)
+        // Taken away - the page closed, or kept on: nothing to make again.
+        if (e.NewValue == null && (view.browser != null || view.closedItself))
         {
             return;
         }
@@ -249,8 +254,11 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
     }
 
+    // Made again on purpose - a new page maker, a new path for frames, the DevTools opened: a page that closed itself
+    // keeps the view empty no longer.
     private protected void RestartBrowser()
     {
+        closedItself = false;
         StopBrowser();
         StartBrowser();
     }
@@ -309,7 +317,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
                 : null);
         }
 
-        if (browser != null || !attached || surface == null || Engine is not { IsAvailable: true } engine ||
+        if (browser != null || closedItself || !attached || surface == null || Engine is not { IsAvailable: true } engine ||
             PageWidth <= 0 || PageHeight <= 0 || !CanStartBrowser)
         {
             return;
@@ -321,6 +329,14 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             var height = (int)Math.Ceiling(PageHeight);
             if (AdoptNewPage(width, height, Scale()) == null)
             {
+                // The page given closed itself before it was shown: none is made in its place.
+                if (NewPage is { ClosedItself: true })
+                {
+                    closedItself = true;
+                    Bridge?.OnPageClosed();
+                    return;
+                }
+
                 browser = engine.CreateBrowser(AllowSharedTexture, this);
                 // Chromium's own ground is the page's where it paints none, so it stays white in the dark scheme too.
                 browser.Background = PageBackground ?? Colors.White;
@@ -334,6 +350,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
             browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));
+            KeepAccessibilityWanted();
         }
         catch (Exception exception)
         {

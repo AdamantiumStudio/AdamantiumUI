@@ -177,6 +177,16 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void BrowserLost(WebViewBrowser browser) => Lost++;
 
+    /// <summary>How many times the page's accessibility tree changed.</summary>
+    public int AccessibilityChanges { get; private set; }
+
+    public void AccessibilityChanged(WebViewBrowser browser) => AccessibilityChanges++;
+
+    /// <summary>How many times the page closed itself.</summary>
+    public int ClosedItself { get; private set; }
+
+    public void PageClosed(WebViewBrowser browser) => ClosedItself++;
+
     /// <summary>The file dialogs the page asked for, in order.</summary>
     public List<WebViewFileDialogRequest> FileDialogs { get; } = [];
 

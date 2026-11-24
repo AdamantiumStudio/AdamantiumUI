@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.WebView.Accessibility;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -35,6 +36,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewPermissionHandler permissionHandler;
     private readonly WebViewDownloadHandler downloadHandler;
     private readonly WebViewFindHandler findHandler;
+    private readonly WebViewAccessibilityHandler accessibilityHandler;
+    private bool accessibilityOn;
     private readonly WebViewDevTools devTools;
     private IWebViewBrowserView view;
     private WebViewBrowser opener;
@@ -65,6 +68,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private string createdWith;
     private bool requested;
     private bool closing;
+    private bool closeOwed;
     private bool keptForDownloads;
     private bool disposed;
     private bool repaintOwed;
@@ -120,12 +124,83 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         permissionHandler = new WebViewPermissionHandler(this);
         downloadHandler = new WebViewDownloadHandler(this);
         findHandler = new WebViewFindHandler(this);
+        accessibilityHandler = new WebViewAccessibilityHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
             contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler, downloadHandler, findHandler);
     }
 
     /// <summary>The download Chromium numbers <paramref name="id"/>, the engine's one for the profile.</summary>
     internal WebDownload Download(uint id) => engine.Download(id);
+
+    internal WebViewAccessibilityHandler AccessibilityHandler => accessibilityHandler;
+
+    /// <summary>The page's accessibility tree as Chromium last told it - empty until <see cref="EnableAccessibility"/>.
+    /// </summary>
+    public WebViewPageAccessibility Accessibility { get; } = new();
+
+    /// <summary>Asks Chromium to keep the page's accessibility tree and tell it: what costs it work on every change of the
+    /// page, so only once someone - automation, a screen reader - asked for the page's insides.</summary>
+    public void EnableAccessibility()
+    {
+        if (accessibilityOn)
+        {
+            return;
+        }
+
+        accessibilityOn = true;
+        var host = LiveHost();
+        if (host != null)
+        {
+            host->set_accessibility_state(host, CefState.Enabled);
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    // Read off the loop - a heavy page's first tree stalls it for half a second else - and taken in back on it.
+    internal void OnAccessibilityChange(CefValue* value, bool isTreeChange)
+    {
+        if (!closing)
+        {
+            engine.AccessibilityReading.Read(this, value, isTreeChange);
+        }
+    }
+
+    internal void TakeAccessibility(WebViewAccessibilityChange change)
+    {
+        if (!closing && Accessibility.Apply(change))
+        {
+            view.AccessibilityChanged(this);
+        }
+    }
+
+    // Nodes moving - the page scrolled - tell no event, but what waits for a node to come in view is let go on.
+    internal void TakeAccessibility(List<WebViewAccessibilityMove> moves)
+    {
+        if (!closing && Accessibility.Apply(moves))
+        {
+            view.AccessibilityChanged(this);
+        }
+    }
+
+    // The page scrolled: Chromium's accessibility tree does not say so (measured 24.11 - its location changes come empty),
+    // so the document's scroll is taken from here - in the view's pixels, as the tree's places are (measured: 4000 at the
+    // bottom of a page 4700 pixels tall at scale 1.5).
+    internal void OnScrollOffsetChanged(double x, double y)
+    {
+        if (!closing && accessibilityOn)
+        {
+            engine.AccessibilityReading.Scrolled(this, new Vector2<double>(x, y));
+        }
+    }
+
+    internal void TakeScroll(Vector2<double> scroll)
+    {
+        if (!closing)
+        {
+            Accessibility.ScrollDocument(scroll);
+            view.AccessibilityChanged(this);
+        }
+    }
 
     /// <summary>Chromium told of <paramref name="download"/>: one it says no more of is let go of when not saved.</summary>
     internal void DownloadHeard(WebDownload download) => engine.DownloadHeard(download);
@@ -1659,9 +1734,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             CefRefCounting.ReleaseCef(host);
         }
 
+        // Closed from the loop, not inside CEF's own making of it: closed here, it is gone before CEF has done with it
+        // (measured 24.11 - a null platform delegate in AlloyBrowserHostImpl::CreateInternal, right after this).
         if (closing)
         {
-            Close();
+            closeOwed = true;
+            LoopSignal.Post(CloseIfOwed);
             return;
         }
 
@@ -1673,6 +1751,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         if (focused)
         {
             SetFocus(true);
+        }
+
+        // Asked for before the browser was made.
+        if (accessibilityOn)
+        {
+            var accessibleHost = Host();
+            accessibleHost->set_accessibility_state(accessibleHost, CefState.Enabled);
+            CefRefCounting.ReleaseCef(accessibleHost);
         }
 
         if (Math.Abs(zoom - 1) > 1e-6)
@@ -1861,6 +1947,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         browser = null;
         CefRefCounting.ReleaseCef(own);
         engine.BrowserClosed(this);
+        // Not let go of here: the page closed itself. Told after CEF's callback, which the view's answer would re-enter.
+        if (!closing)
+        {
+            LoopSignal.Post(() => view.PageClosed(this));
+        }
     }
 
     public void Dispose()
@@ -1933,6 +2024,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         permissionHandler.Release();
         downloadHandler.Release();
         findHandler.Release();
+        accessibilityHandler.Release();
     }
 
     /// <summary>Whether the view listens to the page's requests: each is asked of it then, else none is - read on
@@ -2001,6 +2093,17 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
     internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);
+
+    /// <summary>Closes the browser made after it was closed, if not yet: from the loop, or from the engine's closing turns,
+    /// which run no loop.</summary>
+    internal void CloseIfOwed()
+    {
+        if (closeOwed)
+        {
+            closeOwed = false;
+            Close();
+        }
+    }
 
     private void Close()
     {
