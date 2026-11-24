@@ -185,7 +185,7 @@ public class PrintDialog : Control
     #region The printer's options
 
     public static readonly AdamantiumProperty CopiesProperty = AdamantiumProperty.Register(nameof(Copies),
-        typeof(int), typeof(PrintDialog), new PropertyMetadata(1, OnOptionChanged));
+        typeof(double), typeof(PrintDialog), new PropertyMetadata(1.0, OnOptionChanged));
 
     public static readonly AdamantiumProperty CollateProperty = AdamantiumProperty.Register(nameof(Collate),
         typeof(bool), typeof(PrintDialog), new PropertyMetadata(true, OnOptionChanged));
@@ -206,7 +206,7 @@ public class PrintDialog : Control
         typeof(string), typeof(PrintDialog), new PropertyMetadata(null, OnOptionChanged));
 
     public static readonly AdamantiumProperty MaxCopiesProperty = AdamantiumProperty.Register(nameof(MaxCopies),
-        typeof(int), typeof(PrintDialog), new PropertyMetadata(1));
+        typeof(double), typeof(PrintDialog), new PropertyMetadata(1.0));
 
     public static readonly AdamantiumProperty DuplexesProperty = AdamantiumProperty.Register(nameof(Duplexes),
         typeof(IReadOnlyList<DuplexMode>), typeof(PrintDialog), new PropertyMetadata(null));
@@ -223,9 +223,10 @@ public class PrintDialog : Control
     public static readonly AdamantiumProperty MediaTypesProperty = AdamantiumProperty.Register(nameof(MediaTypes),
         typeof(IReadOnlyList<string>), typeof(PrintDialog), new PropertyMetadata(null));
 
-    public int Copies
+    /// <summary>How many copies - a number box's value, so a number; printed as the whole number nearest it.</summary>
+    public double Copies
     {
-        get => GetValue<int>(CopiesProperty);
+        get => GetValue<double>(CopiesProperty);
         set => SetValue(CopiesProperty, value);
     }
 
@@ -265,8 +266,8 @@ public class PrintDialog : Control
         set => SetValue(MediaTypeProperty, value);
     }
 
-    /// <summary>The most copies the printer makes.</summary>
-    public int MaxCopies => GetValue<int>(MaxCopiesProperty);
+    /// <summary>The most copies the printer makes - the copies box's maximum.</summary>
+    public double MaxCopies => GetValue<double>(MaxCopiesProperty);
 
     public IReadOnlyList<DuplexMode> Duplexes => GetValue<IReadOnlyList<DuplexMode>>(DuplexesProperty);
 
@@ -519,7 +520,7 @@ public class PrintDialog : Control
         _capabilities = capabilities;
         var file = printer.IsFile;
         SetCurrentValue(PapersProperty, capabilities.Papers.Count > 0 ? capabilities.Papers : PaperSize.Standard);
-        SetCurrentValue(MaxCopiesProperty, Math.Max(1, capabilities.MaxCopies));
+        SetCurrentValue(MaxCopiesProperty, (double)Math.Max(1, capabilities.MaxCopies));
         SetCurrentValue(DuplexesProperty, capabilities.Duplex);
         SetCurrentValue(ColorsProperty, capabilities.Colors);
         SetCurrentValue(QualitiesProperty, capabilities.Qualities);
@@ -552,7 +553,7 @@ public class PrintDialog : Control
             var valid = PageRange.TryParse(RangeText, out var chosen);
             var range = RangeKind switch
             {
-                PageRangeKind.Current => PageRange.Current,
+                PageRangeKind.CurrentPage => PageRange.Current,
                 PageRangeKind.Chosen when valid => chosen,
                 _ => PageRange.All,
             };
@@ -566,7 +567,7 @@ public class PrintDialog : Control
                 Scaling = Scaling,
                 ScalePercent = ScalePercent,
                 PagesPerSheet = PagesPerSheet,
-                Copies = Copies,
+                Copies = double.IsFinite(Copies) ? (int)Math.Round(Copies) : 1,
                 Collate = Collate,
                 Duplex = Duplex,
                 Color = Color,
@@ -585,7 +586,7 @@ public class PrintDialog : Control
             SetCurrentValue(PaperProperty, settings.Paper);
             SetCurrentValue(ScalePercentProperty, settings.ScalePercent);
             SetCurrentValue(PagesPerSheetProperty, settings.PagesPerSheet);
-            SetCurrentValue(CopiesProperty, settings.Copies);
+            SetCurrentValue(CopiesProperty, (double)settings.Copies);
             SetCurrentValue(CollateProperty, settings.Collate);
             SetCurrentValue(DuplexProperty, settings.Duplex);
             SetCurrentValue(ColorProperty, settings.Color);

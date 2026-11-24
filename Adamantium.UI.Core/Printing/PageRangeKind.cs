@@ -7,7 +7,7 @@ public enum PageRangeKind
     All,
 
     /// <summary>The page shown when printing was asked for.</summary>
-    Current,
+    CurrentPage,
 
     /// <summary>The pages written out.</summary>
     Chosen,

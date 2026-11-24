@@ -18,7 +18,7 @@ public sealed class PageRange
 
     public static PageRange All { get; } = new(PageRangeKind.All, string.Empty, []);
 
-    public static PageRange Current { get; } = new(PageRangeKind.Current, string.Empty, []);
+    public static PageRange Current { get; } = new(PageRangeKind.CurrentPage, string.Empty, []);
 
     public PageRangeKind Kind { get; }
 
@@ -88,7 +88,7 @@ public sealed class PageRange
                 }
 
                 break;
-            case PageRangeKind.Current:
+            case PageRangeKind.CurrentPage:
                 if (count > 0)
                 {
                     pages.Add(Math.Clamp(current, 0, count - 1));
