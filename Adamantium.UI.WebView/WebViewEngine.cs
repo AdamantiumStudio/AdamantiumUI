@@ -760,6 +760,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         if (OperatingSystem.IsLinux())
         {
             switches.Add(new("no-zygote", null));
+            if (OzonePlatformFor(Environment.GetEnvironmentVariable("DISPLAY"),
+                    Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")) is { } platform)
+            {
+                switches.Add(new("ozone-platform", platform));
+            }
         }
 
         // A site or a proxy asking to sign in is asked of the view: Chrome's own prompt is a window of its own, which a
@@ -778,6 +783,15 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
         return switches;
     }
+
+    /// <summary>The platform Chromium starts on Linux, drawing off screen: none named - X11, as before - while there is an
+    /// X server; else the Wayland compositor, else none at all. With no X server Chromium's X11 does not start, nor CEF
+    /// with it (measured 24.11: "Missing X server", exit 1, under a Wayland-only Mutter); with no display at all a site
+    /// asking where the user is is not asked (measured).</summary>
+    internal static string OzonePlatformFor(string display, string waylandDisplay) =>
+        !string.IsNullOrEmpty(display) ? null
+        : !string.IsNullOrEmpty(waylandDisplay) ? "wayland"
+        : "headless";
 
     private void ReleaseHandlers()
     {
