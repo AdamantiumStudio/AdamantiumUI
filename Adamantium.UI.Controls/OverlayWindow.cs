@@ -217,16 +217,16 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         set => SetValue(IsCollapsedProperty, value);
     }
 
-    /// <summary>What the collapse button shows while the content is shown: any icon. Its data is
-    /// <see cref="IsCollapsed"/>. The theme gives a chevron.</summary>
+    /// <summary>What the collapse button shows while the content is shown: any icon; null, nothing. The theme gives a
+    /// chevron.</summary>
     public DataTemplate MinimizeTemplate
     {
         get => GetValue<DataTemplate>(MinimizeTemplateProperty);
         set => SetValue(MinimizeTemplateProperty, value);
     }
 
-    /// <summary>What the collapse button shows while collapsed - the way back to the content. Its data is
-    /// <see cref="IsCollapsed"/>. The theme gives a chevron.</summary>
+    /// <summary>What the collapse button shows while collapsed - the way back to the content: any icon; null, nothing.
+    /// The theme gives a chevron.</summary>
     public DataTemplate MaximizeTemplate
     {
         get => GetValue<DataTemplate>(MaximizeTemplateProperty);

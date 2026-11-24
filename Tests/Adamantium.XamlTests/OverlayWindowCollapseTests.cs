@@ -4,8 +4,6 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
-using Path = Adamantium.UI.Controls.Shapes.Path;
-using Rectangle = Adamantium.UI.Controls.Shapes.Rectangle;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -14,6 +12,8 @@ using Adamantium.UI.Themes.FluentTheme;
 using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.MacOsTheme;
 using NUnit.Framework;
+using Path = Adamantium.UI.Controls.Shapes.Path;
+using Rectangle = Adamantium.UI.Controls.Shapes.Rectangle;
 
 namespace Adamantium.XamlTests;
 
@@ -210,12 +210,39 @@ public class OverlayWindowCollapseTests
         window.IsCollapsed = true;
         Settle(window);
         var collapsed = GlyphOf<Rectangle>(window, theme)?.Name;
+        window.IsCollapsed = false;
+        Settle(window);
 
         Assert.Multiple(() =>
         {
             Assert.That(shown, Is.EqualTo("Minimize"), "the content shown, its MinimizeTemplate");
             Assert.That(collapsed, Is.EqualTo("Maximize"), "collapsed, its MaximizeTemplate");
+            Assert.That(GlyphOf<Rectangle>(window, theme)?.Name, Is.EqualTo("Minimize"), "expanded, its MinimizeTemplate again");
         });
+    }
+
+    // No template, no glyph: nothing of the button's own shows in its place.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void WithoutATemplateTheCollapseButtonShowsNothing(string theme)
+    {
+        Use(theme);
+        var window = new OverlayWindow
+        {
+            Title = "probe",
+            CanCollapse = true,
+            MinimizeTemplate = null,
+            MaximizeTemplate = null,
+            Content = new TextBlock { Text = "content" }
+        };
+        Settle(window);
+        window.IsCollapsed = true;
+        Settle(window);
+
+        var texts = GlyphOf<TextBlock>(window, theme)?.Text;
+
+        Assert.That(texts, Is.Null.Or.Empty);
     }
 
     [TestCase("Fluent", 300)]
