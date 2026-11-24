@@ -1,4 +1,3 @@
 <ApplicationBlueprint xmlns="http://adamantium/ui"
                       xmlns:x="http://adamantium/ui/xaml/extensions"
-                      StartupWindow="MainWindow"
-                      StartupTheme="THEME_NAME"/>
+                      StartupWindow="MainWindow" StartupTheme="THEME_NAME"/>

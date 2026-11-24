@@ -6,13 +6,13 @@
     <DrawingImage x:Key="TrafficLightCloseGlyph">
         <GeometryDrawing Geometry="M0,0 L6,6 M6,0 L0,6"
                          Stroke="{ResourceReference TrafficLightGlyph}"
-                         StrokeThickness="1.1"/>
+                         StrokeThickness="1.8"/>
     </DrawingImage>
 
     <DrawingImage x:Key="TrafficLightMinimizeGlyph">
         <GeometryDrawing Geometry="M0,3 L7,3"
                          Stroke="{ResourceReference TrafficLightGlyph}"
-                         StrokeThickness="1.1"/>
+                         StrokeThickness="1.8"/>
     </DrawingImage>
 
     <!-- Zoom: two opposed corner wedges, the shape a Mac uses for "fill the screen". Filled here on purpose - a wedge

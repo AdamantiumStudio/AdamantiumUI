@@ -21,12 +21,27 @@
       "displayName": "Theme",
       "description": "The theme the application opens on.",
       "choices": [
+        { "choice": "Platform", "displayName": "The platform's", "description": "The macOS look on macOS, Fluent elsewhere" },
         { "choice": "Fluent", "displayName": "Fluent", "description": "Fluent design, light and dark" },
         { "choice": "Graphite", "displayName": "Graphite", "description": "An editor's dense look: small type, tight radii, dark and light" },
         { "choice": "MacOs", "displayName": "macOS", "description": "The macOS look, light and dark" }
       ],
-      "defaultValue": "Fluent",
-      "replaces": "THEME_NAME"
+      "defaultValue": "Platform"
+    },
+    "startupTheme": {
+      "type": "generated",
+      "generator": "switch",
+      "replaces": " StartupTheme=\"THEME_NAME\"",
+      "parameters": {
+        "evaluator": "C++",
+        "datatype": "string",
+        "cases": [
+          { "condition": "(theme == 'Fluent')", "value": " StartupTheme=\"Fluent\"" },
+          { "condition": "(theme == 'Graphite')", "value": " StartupTheme=\"Graphite\"" },
+          { "condition": "(theme == 'MacOs')", "value": " StartupTheme=\"MacOs\"" },
+          { "condition": "", "value": "" }
+        ]
+      }
     }
   },
   "primaryOutputs": [
