@@ -583,10 +583,25 @@ public partial class RenderCache
         if (_preRenderWalkVersion != membership || _preRenderMachineryVersion != machinery)
         {
             _preRenderUnits.Clear();
-            foreach (var group in _groups)
-            foreach (var unit in group.Units)
+            _rasterPreRender.Clear();
+            List<IRenderUnit> rasterUnits = null;
+            var rasterEnd = 0;
+            for (var i = 0; i < _groups.Count; i++)
             {
-                if (unit.NeedsPreRender) _preRenderUnits.Add(unit);
+                var group = _groups[i];
+                // The draws of an element drawn as a raster - its subtree - are a list of their own.
+                if (i >= rasterEnd && group.Component?.DrawingMode == DrawingMode.Raster)
+                {
+                    rasterEnd = CloneSubtreeEnd(i);
+                    rasterUnits = [];
+                    _rasterPreRender.Add((group.Component, rasterUnits, i, rasterEnd));
+                }
+
+                var into = i < rasterEnd ? rasterUnits : _preRenderUnits;
+                foreach (var unit in group.Units)
+                {
+                    if (unit.NeedsPreRender) into.Add(unit);
+                }
             }
 
             _preRenderWalkVersion = membership;
@@ -598,6 +613,26 @@ public partial class RenderCache
         {
             unit.PreRender();
             AwaitsFrame |= unit.AwaitsFrame;
+        }
+
+        // A raster laying down the texture it holds draws none of its draws: they are not made ready for this frame -
+        // a page's thousands took more of each frame than drawing it. One that is to be drawn anew this frame lays down
+        // what it holds once more, and has them made ready for the next (see StartRaster).
+        _rasterSkipped.Clear();
+        foreach (var (element, units, start, end) in _rasterPreRender)
+        {
+            if (element.DrawingMode == DrawingMode.Raster && _offscreenLayers?.HoldsAnyTile(element.RenderId) == true
+                && !_rasterWantsDrawing.Contains(element) && DrawsUnchanged(element, start, end))
+            {
+                _rasterSkipped.Add(element);
+                continue;
+            }
+
+            foreach (var unit in units)
+            {
+                unit.PreRender();
+                AwaitsFrame |= unit.AwaitsFrame;
+            }
         }
     }
 
@@ -1048,6 +1083,14 @@ public partial class RenderCache
                     _rasterRun = raster;
                     fullScissor = OpenRasterTile(device, raster);
                 }
+            }
+            else if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
+                     && group.Component is { DrawingMode: DrawingMode.Raster } unready && LeftUnready(unready))
+            {
+                // Drawn from its shapes now, its draws unready: nothing of it this frame - nor a replay of one.
+                _opsReplayable = false;
+                groupIndex = CloneSubtreeEnd(groupIndex) - 1;
+                rasterLaidDown = true;
             }
 
             if (device != null && !_cloneMatrix.HasValue && OpensLayer(group.Component))

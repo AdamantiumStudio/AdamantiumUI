@@ -40,6 +40,7 @@ public partial class RenderCache
         // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
         // the glyphs landed: the same again, it holds.
         public bool DrawsKnown;
+        public long DrawsRecorded;
         public ulong DrawsGroups;
         public long DrawsPaint;
         public int DrawsLanded;
@@ -194,8 +195,27 @@ public partial class RenderCache
             return run;
         }
 
+        // Its draws were not made ready for this frame (PreRender): what it holds once more, and drawn anew in the next.
+        if (run.Draws && _rasterSkipped.Contains(element))
+        {
+            _rasterWantsDrawing.Add(element);
+            _rasterSettling = true;
+            if (!held.Drawn)
+            {
+                return null;
+            }
+
+            run.Scale = held.Scale;
+            run.Part = held.Part;
+            run.Width = held.Width;
+            run.Height = held.Height;
+            run.Draws = false;
+            return run;
+        }
+
         if (run.Draws)
         {
+            _rasterWantsDrawing.Remove(element);
             held.Drawn = true;
             held.Scale = run.Scale;
             held.Part = run.Part;
@@ -221,6 +241,50 @@ public partial class RenderCache
         }
 
         return now - held.WantedSince >= RasterSettles;
+    }
+
+    // ---- MADE READY: what of each raster's draws PreRender made ready for this frame.
+
+    // Each raster's draws that need making ready before a frame, apart from the rest, and its groups: [Start, End).
+    private readonly List<(IUIComponent Element, List<IRenderUnit> Units, int Start, int End)> _rasterPreRender = [];
+
+    // Whether nothing it draws can have changed since its print last went through its draws: no group recorded again,
+    // no brush repainted, no glyph landed. What did change is drawn in the frame it changed in.
+    private bool DrawsUnchanged(IUIComponent element, int start, int end)
+    {
+        if (!_rasterParts.TryGetValue(element.RenderId, out var held) || !held.DrawsKnown
+            || held.DrawsPaint != Core.Media.Brush.PaintEpoch || held.DrawsLanded != FontAtlasStore.LandedVersion)
+        {
+            return false;
+        }
+
+        long recorded = 0;
+        for (var i = start; i < end && i < _groups.Count; i++)
+        {
+            recorded += _groups[i].Recorded;
+        }
+
+        return recorded == held.DrawsRecorded;
+    }
+
+    // The rasters whose draws were not made ready for this frame: they lay down what they hold, or draw nothing.
+    private readonly HashSet<IUIComponent> _rasterSkipped = [];
+
+    // The rasters to be drawn anew: their draws are made ready for the next frame.
+    private readonly HashSet<IUIComponent> _rasterWantsDrawing = [];
+
+    // Whether the raster starting at this group had its draws left unready this frame - and, drawn from its shapes now,
+    // would draw them so: nothing of it this frame, all of it the next.
+    private bool LeftUnready(IUIComponent element)
+    {
+        if (!_rasterSkipped.Contains(element))
+        {
+            return false;
+        }
+
+        _rasterWantsDrawing.Add(element);
+        _rasterSettling = true;
+        return true;
     }
 
     // ---- REPLAY: a frame that only moves the camera is replayed, each raster in the stream laying down what it holds.
@@ -356,6 +420,7 @@ public partial class RenderCache
         Mix(ref print, run.Part.Width);
         Mix(ref print, run.Part.Height);
         var groups = PrintSeed;
+        long recorded = 0;
         for (var i = run.Start; i < run.End; i++)
         {
             var group = _groups[i];
@@ -364,6 +429,7 @@ public partial class RenderCache
                 return false;
             }
 
+            recorded += group.Recorded;
             Mix(ref groups, group.Recorded);
             if (!ReferenceEquals(group.Component, run.Element))
             {
@@ -397,6 +463,7 @@ public partial class RenderCache
 
             // A placement moves without its group recorded again: gone through each frame where there are any.
             held.DrawsKnown = !placed;
+            held.DrawsRecorded = recorded;
             held.DrawsGroups = groups;
             held.DrawsPaint = paint;
             held.DrawsLanded = landed;
