@@ -29,11 +29,11 @@ public interface IRemoteUniverse : IDisposable
     /// <summary>The last frame drawn, as a PNG.</summary>
     Task<byte[]> CaptureFrameAsync(CancellationToken cancellationToken);
 
-    /// <summary>Asks for the world drawn as it stands, with no step of the game: at a stop of a game a debugger holds
-    /// (launched <see cref="UniverseLaunch.IsDebugged"/>), for its view to show where it stands. Not waited for.
-    /// <paramref name="heldAtAStatement"/>: held at a breakpoint or a step - what the game moved so far is drawn where it
-    /// is; paused anywhere, it is drawn as the last frame placed it.</summary>
-    void DrawWhereItStands(bool heldAtAStatement);
+    /// <summary>Asks for the world drawn as it is, with no step of the game: at a stop of a game a debugger holds
+    /// (launched <see cref="UniverseLaunch.IsDebugged"/>), for its view to show the game there. Not waited for.
+    /// <paramref name="atBreakpointOrStep"/>: what the game moved so far is drawn where it is; paused anywhere, it is
+    /// drawn as the last frame placed it.</summary>
+    void DrawAtBreakpoint(bool atBreakpointOrStep);
 
     /// <summary>Tells the host the game is about to be let go on from a stop: done once it draws where it stands no
     /// more, so its drawing never meets a step of the game. Asked before the debugger lets the game go on.</summary>
