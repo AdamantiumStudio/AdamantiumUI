@@ -36,6 +36,14 @@ public interface IUIComponent : IFundamentalUIComponent
     /// the camera moves and scales - see <see cref="Core.DrawingMode"/>.</summary>
     DrawingMode DrawingMode { get; }
 
+    /// <summary>Drawn as a raster, the side of the squares its texture is drawn anew by, in texels - a few a frame, the
+    /// texture it holds laid down meanwhile.</summary>
+    int RasterTileSize { get; }
+
+    /// <summary>Drawn as a raster, how much of a frame drawing its texture anew may take; at least one square a frame.
+    /// </summary>
+    TimeSpan RasterFrameBudget { get; }
+
     /// <summary>How this clip's corners are rounded (TL, TR, BR, BL). A scissor is square, so rounding is applied by the
     /// shaders; zero means the plain rectangular clip. Unset falls back to the container's own CornerRadius, where it
     /// has one - see UIComponent.ClipCornerRadius.</summary>

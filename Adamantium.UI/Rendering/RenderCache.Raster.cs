@@ -5,6 +5,8 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Rendering.Payloads;
+using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UI.Rendering;
@@ -36,6 +38,18 @@ public partial class RenderCache
         public Rect WantedPart = Rect.Empty;
         public ulong WantedPrint;
         public long WantedSince;
+
+        // The texture being drawn anew: what it will hold, its squares in the order they are drawn, the next, whether it
+        // was started, and where each of its draws and groups lies in it - worked out once for all its squares.
+        public ulong AnewPrint;
+        public float AnewScale;
+        public Rect AnewPart;
+        public int AnewWidth;
+        public int AnewHeight;
+        public List<Rect2D> AnewOrder;
+        public int AnewNext;
+        public bool AnewStarted;
+        public Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)> AnewMeasured;
 
         // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
         // the glyphs landed: the same again, it holds.
@@ -94,6 +108,13 @@ public partial class RenderCache
 
         // Whether what it draws can be told apart frame to frame (see PrintRaster).
         public bool Still;
+
+        // Drawn anew: what it holds and is drawn into, the square open now - in texels, and in the units its draws are
+        // placed in, grown by a fringe - and when this frame's squares began.
+        public RasterHeld Held;
+        public Rect2D Square;
+        public Rect SquareIn;
+        public long SquaresSince;
 
         public bool RecordingBefore;
     }
@@ -215,15 +236,55 @@ public partial class RenderCache
 
         if (run.Draws)
         {
-            _rasterWantsDrawing.Remove(element);
-            held.Drawn = true;
-            held.Scale = run.Scale;
-            held.Part = run.Part;
-            held.Width = run.Width;
-            held.Height = run.Height;
+            // Drawn anew square by square, a few a frame, what it holds laid down meanwhile; its draws made ready until
+            // the last square is in.
+            _rasterWantsDrawing.Add(element);
+            if (held.AnewOrder == null || held.AnewPrint != run.Print)
+            {
+                held.AnewPrint = run.Print;
+                held.AnewScale = run.Scale;
+                held.AnewPart = run.Part;
+                held.AnewWidth = run.Width;
+                held.AnewHeight = run.Height;
+                held.AnewNext = 0;
+                held.AnewStarted = false;
+                held.AnewMeasured = null;
+                held.AnewOrder = SquaresFrom(run.Width, run.Height, element.RasterTileSize,
+                    (float)((seen.X + seen.Width / 2 - run.Part.X) * run.Scale),
+                    (float)((seen.Y + seen.Height / 2 - run.Part.Y) * run.Scale));
+            }
+
+            run.Held = held;
         }
 
         return run;
+    }
+
+    // The squares of a texture, the ones nearest the middle of what is seen first.
+    private static List<Rect2D> SquaresFrom(int width, int height, int side, float middleX, float middleY)
+    {
+        var squares = new List<Rect2D>();
+        for (var y = 0; y < height; y += side)
+        {
+            for (var x = 0; x < width; x += side)
+            {
+                squares.Add(new Rect2D
+                {
+                    Offset = new Offset2D { X = x, Y = y },
+                    Extent = new Extent2D { Width = (uint)Math.Min(side, width - x), Height = (uint)Math.Min(side, height - y) }
+                });
+            }
+        }
+
+        squares.Sort((a, b) => DistanceSquared(a, middleX, middleY).CompareTo(DistanceSquared(b, middleX, middleY)));
+        return squares;
+    }
+
+    private static float DistanceSquared(Rect2D square, float x, float y)
+    {
+        var dx = square.Offset.X + square.Extent.Width / 2f - x;
+        var dy = square.Offset.Y + square.Extent.Height / 2f - y;
+        return dx * dx + dy * dy;
     }
 
     // Whether what the frames ask the raster to hold has stayed the same for RasterSettles; asked something else, it
@@ -532,27 +593,184 @@ public partial class RenderCache
         Mix(ref print, (long)Math.Round(relative.M42 * 4096.0));
     }
 
-    // Opens the run's texture, and draws the subtree into it from here: under the matrix from the window to it, a texel
-    // to the device pixel.
-    private Rect2D OpenRasterTile(IGraphicsDevice device, RasterRun run)
+    // Begins drawing the run's texture anew: where each of its draws lies is worked out once, its target made ready, and
+    // its first square of this frame opened.
+    private Rect2D BeginDrawingAnew(IGraphicsDevice device, RasterRun run)
     {
-        var toTexels = (float)(run.Scale / _renderScale);
+        var held = run.Held;
+        if (!_offscreenLayers.DrawsAnew(run.Element.RenderId, held.AnewPrint))
+        {
+            _offscreenLayers.StartDrawingAnew(device, run.Element.RenderId, held.AnewPrint, held.AnewWidth, held.AnewHeight);
+            held.AnewNext = 0;
+            held.AnewMeasured = null;
+        }
+
+        held.AnewMeasured ??= MeasureDraws(run);
+        run.SquaresSince = System.Diagnostics.Stopwatch.GetTimestamp();
+        return OpenRasterSquare(device, run);
+    }
+
+    // Opens the run's next square, and draws the subtree into it from here: under the matrix from the window to it, a
+    // texel to the device pixel.
+    private Rect2D OpenRasterSquare(IGraphicsDevice device, RasterRun run)
+    {
+        var held = run.Held;
+        var square = held.AnewOrder[held.AnewNext];
+        run.Square = square;
+        var fringe = (FringePixels + 1) / held.AnewScale;
+        run.SquareIn = new Rect(held.AnewPart.X + square.Offset.X / held.AnewScale - fringe,
+            held.AnewPart.Y + square.Offset.Y / held.AnewScale - fringe, square.Extent.Width / held.AnewScale + 2 * fringe,
+            square.Extent.Height / held.AnewScale + 2 * fringe);
+        var toTexels = (float)(held.AnewScale / _renderScale);
         var toTexture = Matrix4x4F.Identity;
         toTexture.M11 = toTexels;
         toTexture.M22 = toTexels;
-        toTexture.M41 = (float)(-run.Part.X * toTexels);
-        toTexture.M42 = (float)(-run.Part.Y * toTexels);
+        toTexture.M41 = (float)((-held.AnewPart.X * held.AnewScale - square.Offset.X) / _renderScale);
+        toTexture.M42 = (float)((-held.AnewPart.Y * held.AnewScale - square.Offset.Y) / _renderScale);
         _cloneMatrix = run.FromWindow * toTexture;
         // Its subtree is cut by its own clip only in here (CumulativeClip): what was worked out for it outside is not.
         _clipCache.Clear();
-        return DrawIn(_offscreenLayers.BeginTile(device, run.Element.RenderId, run.Print, _projectionMatrix, run.Bounds,
-            run.Width, run.Height));
+        return DrawIn(_offscreenLayers.BeginSquare(device, run.Element.RenderId, _projectionMatrix, run.Bounds,
+            (int)square.Extent.Width, (int)square.Extent.Height));
     }
 
-    private Rect2D CloseRasterTile(IGraphicsDevice device)
+    // Closes the square open, put into the texture drawn anew.
+    private Rect2D CloseRasterSquare(IGraphicsDevice device, RasterRun run)
     {
         _clipCache.Clear();
-        return DrawIn(_offscreenLayers.EndTile(device));
+        run.Held.AnewNext++;
+        return DrawIn(_offscreenLayers.EndSquare(device, run.Element.RenderId, run.Square));
+    }
+
+    // Whether another square of the run is drawn this frame: until none is left, and within the element's budget once it
+    // holds a texture to lay down meanwhile - the first texture it ever holds is drawn whole.
+    private bool DrawsAnotherSquare(RasterRun run)
+    {
+        var held = run.Held;
+        if (held.AnewNext >= held.AnewOrder.Count)
+        {
+            return false;
+        }
+
+        var spent = System.Diagnostics.Stopwatch.GetTimestamp() - run.SquaresSince;
+        return !held.Drawn
+            || spent < run.Element.RasterFrameBudget.TotalSeconds * System.Diagnostics.Stopwatch.Frequency;
+    }
+
+    // The last square of the run is in: the texture drawn anew is the one held.
+    private void FinishDrawingAnew(IGraphicsDevice device, RasterRun run)
+    {
+        var held = run.Held;
+        _offscreenLayers.FinishDrawingAnew(device, run.Element.RenderId);
+        _rasterWantsDrawing.Remove(run.Element);
+        held.Drawn = true;
+        held.Scale = held.AnewScale;
+        held.Part = held.AnewPart;
+        held.Width = held.AnewWidth;
+        held.Height = held.AnewHeight;
+        held.AnewOrder = null;
+        held.AnewMeasured = null;
+    }
+
+    // Where each draw of the run lies, in the element's units, and - at a group's begin mark - where all of the group
+    // lies and the unit past its end: a square passes over what it does not reach. A draw whose place is not known, and
+    // every other mark, reaches everywhere.
+    private Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)> MeasureDraws(RasterRun run)
+    {
+        var measured = new Dictionary<ControlGroup, (Rect[] Bounds, int[] SkipTo)>();
+        var everywhere = new Rect(double.MinValue / 4, double.MinValue / 4, double.MaxValue / 2, double.MaxValue / 2);
+        var open = new List<(int Begin, Rect Reach)>();
+        for (var i = run.Start; i < run.End; i++)
+        {
+            var group = _groups[i];
+            var units = group.Units;
+            var bounds = new Rect[units.Count];
+            var skipTo = new int[units.Count];
+            open.Clear();
+            for (var u = 0; u < units.Count; u++)
+            {
+                var unit = units[u];
+                skipTo[u] = u + 1;
+                if (unit is GroupMarkRenderUnit mark)
+                {
+                    bounds[u] = everywhere;
+                    if (mark.Kind == GroupMarkKind.Begin)
+                    {
+                        open.Add((u, Rect.Empty));
+                    }
+                    else if (mark.Kind == GroupMarkKind.End && open.Count > 0)
+                    {
+                        CloseMeasured(open, bounds, skipTo, u + 1);
+                    }
+
+                    continue;
+                }
+
+                var reach = UnitReach(unit, run.FromWindow) ?? everywhere;
+                bounds[u] = reach;
+                if (open.Count > 0)
+                {
+                    var top = open[^1];
+                    open[^1] = (top.Begin, Joined(top.Reach, reach));
+                }
+            }
+
+            // Left open by its element: it reaches to the last unit.
+            while (open.Count > 0)
+            {
+                CloseMeasured(open, bounds, skipTo, units.Count);
+            }
+
+            measured[group] = (bounds, skipTo);
+        }
+
+        return measured;
+    }
+
+    private static void CloseMeasured(List<(int Begin, Rect Reach)> open, Rect[] bounds, int[] skipTo, int past)
+    {
+        var closed = open[^1];
+        open.RemoveAt(open.Count - 1);
+        bounds[closed.Begin] = closed.Reach;
+        skipTo[closed.Begin] = past;
+        if (open.Count > 0)
+        {
+            var parent = open[^1];
+            open[^1] = (parent.Begin, Joined(parent.Reach, closed.Reach));
+        }
+    }
+
+    private static Rect Joined(Rect a, Rect b) => a.IsEmpty ? b : b.IsEmpty ? a : Union(a, b);
+
+    // Where a unit draws, in the element's units; null when it has no element.
+    private Rect? UnitReach(IRenderUnit unit, Matrix4x4F fromWindow)
+    {
+        if (unit.Component == null)
+        {
+            return null;
+        }
+
+        var local = DrawnInk(unit, true, out var grow) is { } drawn
+            ? drawn
+            : new Rect(0, 0, ApplySnap(unit.Component).RenderSize.Width, ApplySnap(unit.Component).RenderSize.Height);
+        return local.Inflate(grow).TransformToAABB(World(unit.Component) * fromWindow);
+    }
+
+    // Drawing a square of a raster, the unit past the draw - or the whole group begun - at `index` when the square does
+    // not reach it; else `index`.
+    private int PastWhatTheSquareMisses(ControlGroup group, int index)
+    {
+        if (_rasterRun is not { Held.AnewMeasured: { } measured } run || !measured.TryGetValue(group, out var drawn)
+            || index >= drawn.Bounds.Length)
+        {
+            return index;
+        }
+
+        var reach = drawn.Bounds[index];
+        var square = run.SquareIn;
+        var misses = reach.IsEmpty || reach.Right < square.X || reach.Bottom < square.Y || reach.X > square.Right
+            || reach.Y > square.Bottom;
+        return misses ? drawn.SkipTo[index] : index;
     }
 
     /// <summary>Whether <paramref name="unit"/> was drawn this frame into the texture of an element drawn as a raster - its

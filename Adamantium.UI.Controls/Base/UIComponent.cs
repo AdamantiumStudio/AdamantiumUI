@@ -193,6 +193,30 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         RenderDirty.MarkStructural(component);
     }
 
+    public static readonly AdamantiumProperty RasterTileSizeProperty = AdamantiumProperty.Register(nameof(RasterTileSize),
+        typeof(int), typeof(UIComponent), new PropertyMetadata(512, OnRasterTileSizeChanged,
+            static (_, value) => value is int size ? Math.Clamp(size, 64, 4096) : 512));
+
+    private static void OnRasterTileSizeChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is UIComponent component)
+        {
+            component._rasterTileSize = component.GetValue<int>(RasterTileSizeProperty);
+        }
+    }
+
+    public static readonly AdamantiumProperty RasterFrameBudgetProperty = AdamantiumProperty.Register(
+        nameof(RasterFrameBudget), typeof(TimeSpan), typeof(UIComponent),
+        new PropertyMetadata(TimeSpan.FromMilliseconds(4), OnRasterFrameBudgetChanged));
+
+    private static void OnRasterFrameBudgetChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is UIComponent component)
+        {
+            component._rasterFrameBudget = component.GetValue<TimeSpan>(RasterFrameBudgetProperty);
+        }
+    }
+
     public static readonly AdamantiumProperty OpacityMaskProperty = AdamantiumProperty.Register(nameof(OpacityMask),
         typeof(Brush), typeof(UIComponent),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnOpacityMaskChanged));
@@ -1085,6 +1109,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     private bool _clipToBounds;
     private bool _isLayer;
     private DrawingMode _drawingMode;
+    private int _rasterTileSize = 512;
+    private TimeSpan _rasterFrameBudget = TimeSpan.FromMilliseconds(4);
     private Brush _opacityMask;
     private double _softEdge;
     private Reflection _reflection;
@@ -1111,6 +1137,20 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get => _drawingMode;
         set => SetValue(DrawingModeProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.RasterTileSize"/>; 512 by default, from 64 to 4096.</summary>
+    public int RasterTileSize
+    {
+        get => _rasterTileSize;
+        set => SetValue(RasterTileSizeProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.RasterFrameBudget"/>; 4 ms by default.</summary>
+    public TimeSpan RasterFrameBudget
+    {
+        get => _rasterFrameBudget;
+        set => SetValue(RasterFrameBudgetProperty, value);
     }
 
     /// <summary>See <see cref="IUIComponent.OpacityMask"/>.</summary>

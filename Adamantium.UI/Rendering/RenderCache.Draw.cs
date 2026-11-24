@@ -1081,7 +1081,7 @@ public partial class RenderCache
                     raster.RecordingBefore = _recording;
                     _recording = false;
                     _rasterRun = raster;
-                    fullScissor = OpenRasterTile(device, raster);
+                    fullScissor = BeginDrawingAnew(device, raster);
                 }
             }
             else if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
@@ -1113,6 +1113,13 @@ public partial class RenderCache
 
             for (var unitIndex = 0; !rasterLaidDown && unitIndex < group.Units.Count; unitIndex++)
             {
+            // A square of a raster passes over what it does not reach.
+            if (_rasterRun != null && PastWhatTheSquareMisses(group, unitIndex) is var past && past != unitIndex)
+            {
+                unitIndex = past - 1;
+                continue;
+            }
+
             var unit = group.Units[unitIndex];
             // Group boundary (recording walks): reset this group's spliced-patch records once per group (re-derived by the
             // draw decisions below). Boundary detection instead of an outer block keeps the hot loop flat.
@@ -2135,14 +2142,36 @@ public partial class RenderCache
                 }
             }
 
-            // The last group of an element drawn as a raster: its texture is closed and laid down.
+            // The last group of an element drawn as a raster: its square is closed, and the next one drawn - or the texture
+            // laid down, the one drawn anew once all its squares are in, the one held till then.
             if (_rasterRun is { } rasterRun && groupIndex == rasterRun.End - 1)
             {
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
-                fullScissor = CloseRasterTile(device);
+                fullScissor = CloseRasterSquare(device, rasterRun);
+                if (DrawsAnotherSquare(rasterRun))
+                {
+                    fullScissor = OpenRasterSquare(device, rasterRun);
+                    groupIndex = rasterRun.Start - 1;
+                    continue;
+                }
+
                 _cloneMatrix = null;
                 _recording = rasterRun.RecordingBefore;
                 _rasterRun = null;
+                var held = rasterRun.Held;
+                if (held.AnewNext >= held.AnewOrder.Count)
+                {
+                    FinishDrawingAnew(device, rasterRun);
+                }
+                else
+                {
+                    rasterRun.Scale = held.Scale;
+                    rasterRun.Part = held.Part;
+                    rasterRun.Width = held.Width;
+                    rasterRun.Height = held.Height;
+                    _rasterSettling = true;
+                }
+
                 LayDownRaster(device, rasterRun);
                 RecordRasterMark(rasterRun.Element, _groups[rasterRun.Start].Order);
             }
