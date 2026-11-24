@@ -223,6 +223,9 @@ public class PropertyGrid : Control
     public static long Rebuilds;
     private bool _rebuilding;
     private bool _rebuildAgain;
+
+    // The line being pointed at its item right now: what it says as it changes is this pass's to read.
+    private PropertyDefinition _pointing;
     private Panel _host;
     private TextBox _search;
     private PropertyRow _selected;
@@ -1095,11 +1098,21 @@ public class PropertyGrid : Control
         // very thing it describes - IsVisible="{Self Inspected.HasLabel}" - and that binding has to have been given its
         // object before its answer is read one line below. Nothing for a multiple selection: the line then stands for
         // several things at once and no single one of them is what it is about.
-        definition.Inspected = targets.Count == 1 ? targets[0] : null;
+        // What changes as it is pointed here is read below, by this very pass: it asks for no build of its own. A line
+        // shared by items whose answers differ would otherwise ask on every item, and the pass would never end.
+        _pointing = definition;
+        try
+        {
+            definition.Inspected = targets.Count == 1 ? targets[0] : null;
 
-        // ...and its own bindings settled RIGHT HERE, before the answer is read one line below. This one line only -
-        // flushing the whole queue would push every pending binding in the application through, per row, per pass.
-        if (BindingEngine.HasBindings(definition)) BindingEngine.RefreshBindings(definition);
+            // ...and its own bindings settled RIGHT HERE, before the answer is read one line below. This one line only -
+            // flushing the whole queue would push every pending binding in the application through, per row, per pass.
+            if (BindingEngine.HasBindings(definition)) BindingEngine.RefreshBindings(definition);
+        }
+        finally
+        {
+            _pointing = null;
+        }
 
         if (!definition.IsVisible) return;
 
@@ -1236,7 +1249,10 @@ public class PropertyGrid : Control
         foreach (var child in definition.Children) Watch(child);
     }
 
-    private void OnDefinitionLayoutChanged(object sender, EventArgs e) => Rebuild();
+    private void OnDefinitionLayoutChanged(object sender, EventArgs e)
+    {
+        if (sender != _pointing) Rebuild();
+    }
 
     private void OnDefinitionWordsChanged(object sender, EventArgs e) => Refresh(definition: (PropertyDefinition)sender);
 

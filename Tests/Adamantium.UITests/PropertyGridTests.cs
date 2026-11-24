@@ -791,6 +791,161 @@ public class PropertyGridTests
         Assert.That(RowsWhoseHeaderIs(grid, "Base"), Is.SameAs(row));
     }
 
+    // The button bound to the panel's view-model, as the editor's layers list has it: one build more when the command is
+    // found, then none however many passes follow.
+    [Test]
+    public void AnItemButtonBoundToTheDataContext_BuildsOnceMore_ThenRests()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Items", "Remove");
+        var grid = Built(Section(shelves.Items[0], list));
+        var before = PropertyGrid.Rebuilds;
+
+        grid.DataContext = new Removing();
+        var found = Settled(grid) - before;
+        var resting = Settled(grid) - before - found;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(found, Is.EqualTo(1), "one build more when the command is found");
+            Assert.That(resting, Is.Zero, "nothing after");
+            Assert.That(RowsWhoseHeaderIs(grid, "A").Definition.ShowActionButton, Is.True);
+        });
+    }
+
+    // A list in a list, the inner one's button read off each outer item: the outer items each have one - the value moves
+    // from one command to another, and nothing is built again.
+    [Test]
+    public void AnInnerListsButtonReadOffEachItem_RestsWhenEveryItemHasOne()
+    {
+        var shelves = new Shelves();
+        var grid = Built(Section(shelves, Nested()));
+        var before = PropertyGrid.Rebuilds;
+
+        var settling = Settled(grid) - before;
+        var resting = Settled(grid) - before - settling;
+
+        Assert.That(resting, Is.Zero);
+    }
+
+    // ...and some outer items with no button: the value comes and goes as the lines are built. The grid has to come to
+    // rest all the same.
+    [Test]
+    public void AnInnerListsButtonReadOffEachItem_RestsWhenSomeItemsHaveNone()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Remove = null;
+        var grid = Built(Section(shelves, Nested()));
+        var before = PropertyGrid.Rebuilds;
+
+        var settling = Settled(grid) - before;
+        var resting = Settled(grid) - before - settling;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(settling, Is.LessThanOrEqualTo(2));
+            Assert.That(resting, Is.Zero);
+        });
+    }
+
+    // A line shown only for some items, read off each: the answer comes and goes as the lines are built, and each item
+    // still gets its own.
+    [Test]
+    public void ALineShownOnlyForSomeItems_Rests()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Shown = false;
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        var grid = Built(Section(shelves, list));
+        var before = PropertyGrid.Rebuilds;
+
+        var settling = Settled(grid) - before;
+        var resting = Settled(grid) - before - settling;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(resting, Is.Zero);
+            Assert.That(RowsOf(grid, name), Has.Count.EqualTo(2), "the two items that show it");
+        });
+    }
+
+    // Ten passes of bindings and layout; the rebuild count after them.
+    private static long Settled(PropertyGrid grid)
+    {
+        for (var pass = 0; pass < 10; pass++)
+        {
+            Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+            grid.Measure(new Size<double>(400, 400), force: true);
+            grid.Arrange(new Rect(0, 0, 400, 400));
+        }
+
+        return PropertyGrid.Rebuilds;
+    }
+
+    private static ItemsProperty Listed(string path, string command)
+    {
+        var list = new ItemsProperty
+        {
+            Header = path, IsExpanded = true, Binding = new Binding(path), ItemHeader = new Binding("Name")
+        };
+        list.SetBinding(ItemsProperty.ItemActionProperty, new Binding(command));
+        list.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
+        return list;
+    }
+
+    private static ItemsProperty Nested()
+    {
+        var inner = new ItemsProperty
+        {
+            Header = "Items", IsExpanded = true, Binding = new Binding("Items"), ItemHeader = new Binding("Name")
+        };
+        inner.SetBinding(ItemsProperty.ItemActionProperty, new Self { Path = "Inspected.Remove" });
+        inner.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
+
+        var outer = new ItemsProperty
+        {
+            Header = "Shelved", IsExpanded = true, Binding = new Binding("Shelved"), ItemHeader = new Binding("Name")
+        };
+        outer.Children.Add(inner);
+        return outer;
+    }
+
+    public sealed class Removing
+    {
+        public ICommand Remove { get; } = new Doing();
+    }
+
+    public sealed class Shelf
+    {
+        public string Name { get; set; }
+
+        public ICommand Remove { get; set; } = new Doing();
+
+        public bool Shown { get; set; } = true;
+
+        public TrackingCollection<Shelf> Items { get; } = new();
+    }
+
+    public sealed class Shelves
+    {
+        public Shelves()
+        {
+            for (var index = 0; index < 3; index++)
+            {
+                var shelf = new Shelf { Name = "Shelf " + index };
+                shelf.Items.Add(new Shelf { Name = "A" });
+                shelf.Items.Add(new Shelf { Name = "B" });
+                Shelved.Add(shelf);
+            }
+        }
+
+        public TrackingCollection<Shelf> Shelved { get; } = new();
+
+        public TrackingCollection<Shelf> Items => Shelved;
+    }
+
     // Writing through one of those lines reaches the ITEM and nothing else - renaming the second socket leaves the
     // first alone, which is the whole point of a line per item.
     [Test]
