@@ -1,18 +1,29 @@
+### Changed
+
+- An `ItemsProperty` gives each listed item its own copies of its lines (`PropertyDefinition.CopyFor`), pointed at that
+  item for as long as it is listed, with bindings of their own; a copy names the line it was made from
+  (`PropertyDefinition.Original`, `PropertyDefinition.AsWritten`). One line used to stand for every item, pointed at
+  each in turn and left at the last. A kind of line has to be made without arguments to be listed.
+- An edit through an item's line is reported (`PropertyValuesChangedEventArgs.Property`) as the line as written - one
+  line however many items, still standing when the item is gone - and `PropertyValuesChangedEventArgs.Line` is the row's
+  own copy. `PropertyGrid.Refresh` given the line as written reads every copy's row again.
+
 ### Fixed
 
-- A `PropertyGrid` line shared by a list's items and read off each - `IsVisible="{Self Inspected.Shown}"`, or a nested
-  `ItemsProperty` whose `ItemAction` is bound to its item - hung the grid when the items answered differently: pointing
-  the line at each item asked for another build, every pass. What a line says as it is pointed at its item - its
-  layout and its words - is read by that same pass and asks for nothing more.
-- ...and once built, such a line heard only the item it was pointed at last: another item changing its answer later -
-  `Shown` turned off on the first - left its line as it was. The grid now hears each listed item for the first property
-  of each path its lines read off it (`Shown` of `Inspected.Shown`), of its heading (`ItemHeader`) and of a list inside
-  it; nothing else of the item builds anything. A renamed item's heading says its new name.
-- What a listed item changes is built on the loop, once for however many changed before it: never inside the write
-  that changed it, never on the thread of a game that changed it.
-- An item's lines are given the same targets pass after pass: built again, they are refreshed, not bound anew, so a
-  spinner held on one of them stays one move.
-- An `ItemsProperty` whose `ItemAction` was replaced by another command - the panel's view-model replaced - kept the old
-  one on its items' buttons. What the grid itself reads again while it builds - a binding found late - runs the pass
-  once more, once per line: a view-model handing out a new command, or new choices, on every read no longer builds it
-  without end.
+- A list's line read off each item - `IsVisible="{Self Inspected.Shown}"`, a nested list's `ItemAction` - no longer
+  hangs the grid when the items answer differently, and each item's line follows its own item afterwards: what it shows,
+  its words, read-only state and button, at any depth of path. A write through one item's line leaves the others' lines
+  as they were.
+- An item's heading follows the item - renamed, it says the new name with nothing built again; with no name, its place,
+  counted again as the list changes - and may be a `MultiBinding`. Its button takes the list's `ItemAction`,
+  `ItemActionIcon` and `ItemActionTip` replaced later, the items' lines kept.
+- An object listed twice, or two equal values, is two groups of lines; a list of values keeps its lines pass after pass.
+- A list's line set later reaches every item's copy at once; given or taken a binding, at once where what it says
+  changes and with the next build otherwise; given other lines, the copies are made again. A change reaching every copy
+  builds the grid once.
+- An item taken out of a list, a list folded or no longer shown, and a grid let go of release the lines made for their
+  items, and the items with them.
+- An item's rows keep their targets pass after pass: built again, they are refreshed, not bound anew, so a spinner held
+  on one of them stays one move.
+- A line read again while the grid builds - a binding found late, or a value handed out new on every read - runs the
+  pass once more at most for each line as written and each making of its copies, instead of without end.

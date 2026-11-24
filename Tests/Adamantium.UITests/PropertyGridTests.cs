@@ -164,12 +164,16 @@ public class PropertyGridTests
             if (section.Content is not IUIComponent host) continue;
             foreach (var child in host.VisualChildren)
             {
-                if (child is PropertyRow row && ReferenceEquals(row.Definition, definition)) return row;
+                if (child is PropertyRow row && Shows(row, definition)) return row;
             }
         }
 
         return null;
     }
+
+    // A row shows a line written in the inspector, or an item's copy of one.
+    private static bool Shows(PropertyRow row, PropertyDefinition definition) =>
+        ReferenceEquals(row.Definition, definition) || ReferenceEquals(row.Definition?.AsWritten, definition);
 
     [Test]
     public void RowsReadTheirValueThroughTheirBinding()
@@ -785,10 +789,33 @@ public class PropertyGridTests
 
         var replaced = new Doing();
         sockets.ItemAction = replaced;
-        grid.Measure(new Size<double>(400, 400), force: true);
-        grid.Arrange(new Rect(0, 0, 400, 400));
+        Settled(grid);
 
         Assert.That(ButtonsOf(grid, "Base"), Is.EqualTo(new[] { replaced }));
+    }
+
+    // ...and its picture and words replaced: each item's button takes them too.
+    [Test]
+    public void AnItemButtonsPictureAndWordsReplaced_GoOnEachItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        list.ItemActionIcon = "BinIcon";
+        list.ItemActionTip = "Remove";
+        var grid = Built(Section(shelves, list));
+        grid.DataContext = new Removing();
+        Settled(grid);
+
+        list.ItemActionIcon = "UnlinkIcon";
+        list.ItemActionTip = "Unlink";
+        Settled(grid);
+
+        var heading = RowsWhoseHeaderIs(grid, "Shelf 0").Definition;
+        Assert.Multiple(() =>
+        {
+            Assert.That(heading.ActionIcon, Is.EqualTo("UnlinkIcon"));
+            Assert.That(heading.ActionTip, Is.EqualTo("Unlink"));
+        });
     }
 
     // The button bound to the panel's view-model, as the editor's layers list has it: one build more when the command is
@@ -901,8 +928,7 @@ public class PropertyGridTests
         });
     }
 
-    // ...and later, an item other than the one the line was last pointed at changes its answer: its line comes or goes
-    // all the same. What no line reads builds nothing.
+    // ...and later, any of the items changes its answer: its own line comes or goes. What no line reads builds nothing.
     [Test]
     public void ALineShownOnlyForSomeItems_FollowsEachItemLater()
     {
@@ -934,10 +960,10 @@ public class PropertyGridTests
         });
     }
 
-    // An item renamed after the lines are built: its heading says the new name. Several items changed at once build
-    // the grid once, on the loop - not inside the write that changed them.
+    // An item renamed after the lines are built: its heading says the new name, read by the heading itself - the grid is
+    // not built again for it.
     [Test]
-    public void AnItemRenamedLater_ShowsItsNewName_BuiltOnceOnTheLoop()
+    public void AnItemRenamedLater_ShowsItsNewName_WithNothingBuiltAgain()
     {
         var shelves = new Shelves();
         var grid = Built(Section(shelves, Listed("Shelved", "Remove")));
@@ -946,13 +972,11 @@ public class PropertyGridTests
 
         shelves.Shelved[0].Name = "Top";
         shelves.Shelved[2].Name = "Bottom";
-        var inTheWrite = PropertyGrid.Rebuilds - before;
-        var onTheLoop = Settled(grid) - before;
+        var built = Settled(grid) - before;
 
         Assert.Multiple(() =>
         {
-            Assert.That(inTheWrite, Is.Zero, "nothing built inside the writes");
-            Assert.That(onTheLoop, Is.EqualTo(1), "one build for both");
+            Assert.That(built, Is.Zero);
             Assert.That(RowsWhoseHeaderIs(grid, "Top"), Is.Not.Null);
             Assert.That(RowsWhoseHeaderIs(grid, "Bottom"), Is.Not.Null);
         });
@@ -979,7 +1003,7 @@ public class PropertyGridTests
         });
     }
 
-    // A line's words read off each item - its description - are each item's own, not the last one's.
+    // A line's words read off each item - its description - are each item's own.
     [Test]
     public void ALinesWordsReadOffEachItem_AreEachItemsOwn()
     {
@@ -993,10 +1017,9 @@ public class PropertyGridTests
         Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Is.EqualTo(new[] { "Shelf 0", "Shelf 1", "Shelf 2" }));
     }
 
-    // The last item - the one its lines stay pointed at - changing its answer builds the grid on the loop as the others
-    // do, not inside the write.
+    // A list folded lets go of its items' lines - they hold the items - and an item changing then builds nothing.
     [Test]
-    public void TheLastItemChangingItsAnswer_IsBuiltOnTheLoop()
+    public void AFoldedList_LetsGoOfItsItemsLines()
     {
         var shelves = new Shelves();
         var list = Listed("Shelved", "Remove");
@@ -1004,38 +1027,21 @@ public class PropertyGridTests
         name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
         var grid = Built(Section(shelves, list));
         Settled(grid);
+
+        // As its row folds it: the line folded, the grid built again.
+        list.IsExpanded = false;
+        grid.Rebuild();
+        Settled(grid);
         var before = PropertyGrid.Rebuilds;
 
         shelves.Shelved[2].Shown = false;
-        var inTheWrite = PropertyGrid.Rebuilds - before;
-        var onTheLoop = Settled(grid) - before;
+        var built = Settled(grid) - before;
 
         Assert.Multiple(() =>
         {
-            Assert.That(inTheWrite, Is.Zero);
-            Assert.That(onTheLoop, Is.EqualTo(1));
-            Assert.That(RowsOf(grid, name), Has.Count.EqualTo(2));
+            Assert.That(list.Items, Is.Empty);
+            Assert.That(built, Is.Zero);
         });
-    }
-
-    // ...and the list folded since: its lines are still pointed at that item, and what it changes is still built on the
-    // loop, not inside the write.
-    [Test]
-    public void TheLastItemChangingItsAnswer_IsBuiltOnTheLoop_WithTheListFolded()
-    {
-        var shelves = new Shelves();
-        var list = Listed("Shelved", "Remove");
-        var name = list.Children[0];
-        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
-        var grid = Built(Section(shelves, list));
-        Settled(grid);
-        list.IsExpanded = false;
-        Settled(grid);
-        var before = PropertyGrid.Rebuilds;
-
-        shelves.Shelved[2].Shown = false;
-
-        Assert.That(PropertyGrid.Rebuilds - before, Is.Zero);
     }
 
     // An item's line whose choices the item hands out new on every read: the grid's own reading at the end of a pass is
@@ -1055,6 +1061,671 @@ public class PropertyGridTests
         var resting = Settled(grid) - before - settling;
 
         Assert.That(resting, Is.Zero);
+    }
+
+    // A line read off something the item holds - a step deeper than the item - follows it on every item.
+    [Test]
+    public void ALineReadTwoStepsDeep_FollowsEachItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Inner.Shown" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        shelves.Shelved[0].Inner.Shown = false;
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name), Has.Count.EqualTo(2));
+    }
+
+    // A value written through one item's line leaves the other items' lines as they were: read-only where their item
+    // says so, editable where it does not.
+    [Test]
+    public void AWriteThroughOneItemsLine_LeavesTheOthersOwnState()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[0].Shown = false;
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.IsReadOnly), new Self { Path = "Inspected.Shown", Converter = new Not() });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        grid.Write(RowsOf(grid, name)[1], "Renamed");
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.IsReadOnly), Is.EqualTo(new[] { true, false, false }));
+    }
+
+    // A line's own button read off its item runs that item's command, on every item's row.
+    [Test]
+    public void ALinesButtonReadOffEachItem_RunsThatItemsCommand()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.ShowActionButton = true;
+        name.SetBinding(nameof(PropertyDefinition.ActionCommand), new Self { Path = "Inspected.Remove" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.Definition.ActionCommand),
+            Is.EqualTo(shelves.Shelved.Select(shelf => shelf.Remove)));
+    }
+
+    // A heading made of several of the item's properties shows them, and follows them.
+    [Test]
+    public void AnItemsHeadingOfSeveralParts_ShowsAndFollowsTheItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var heading = new MultiBinding { Converter = new Joined() };
+        heading.Bindings.Add(new Binding("Name"));
+        heading.Bindings.Add(new Binding("Shown"));
+        list.ItemHeader = heading;
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var shown = RowsWhoseHeaderIs(grid, "Shelf 1 True");
+
+        shelves.Shelved[1].Name = "Middle";
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.Not.Null);
+            Assert.That(RowsWhoseHeaderIs(grid, "Middle True"), Is.Not.Null);
+        });
+    }
+
+    // The list's line as written, changed later, changes on every item.
+    [Test]
+    public void AListsLineChangedLater_ChangesOnEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        name.Description = "What the shelf is called";
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Has.All.EqualTo("What the shelf is called"));
+    }
+
+    // An item taken out of the list lets go of its lines, and they of it.
+    [Test]
+    public void AnItemTakenOut_ItsLinesAreLetGo()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var taken = shelves.Shelved[1];
+
+        shelves.Shelved.Remove(taken);
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(list.Items.Select(lines => lines.Item), Has.None.SameAs(taken));
+            Assert.That(list.Items.Count(), Is.EqualTo(2));
+        });
+    }
+
+    // A list of values - a new box for each on every reading - keeps one set of lines per value and comes to rest.
+    [Test]
+    public void AListOfValues_KeepsItsLinesAndRests()
+    {
+        var values = new Values();
+        var list = new ItemsProperty { Header = "Sizes", IsExpanded = true, Binding = new Binding("Sizes") };
+        list.ItemAction = new Doing();
+        list.Children.Add(new StringProperty { Header = "Size", Binding = new Binding(".") });
+        var grid = Built(Section(values, list));
+        Settled(grid);
+        var lines = list.Items.Select(item => item.Heading).ToList();
+        var before = PropertyGrid.Rebuilds;
+
+        grid.Rebuild();
+        var built = Settled(grid) - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(built, Is.EqualTo(1));
+            Assert.That(list.Items.Select(item => item.Heading), Is.EqualTo(lines), "the same lines");
+        });
+    }
+
+    // Another object selected - the section showing the list gone - lets go of the list's items' lines.
+    [Test]
+    public void AListsSectionNoLongerShown_LetsGoOfItsItemsLines()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var section = Section(shelves, list);
+        var grid = Built(section);
+        Settled(grid);
+
+        grid.Sections.Remove(section);
+        Settled(grid);
+
+        Assert.That(list.Items, Is.Empty);
+    }
+
+    // An item whose name reads nothing is numbered, and shows its name once it has one.
+    [Test]
+    public void AnItemWithNoName_IsNumbered_ThenNamed()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Name = null;
+        var grid = Built(Section(shelves, Listed("Shelved", "Remove")));
+        Settled(grid);
+        var numbered = RowsWhoseHeaderIs(grid, "2");
+
+        shelves.Shelved[1].Name = "Middle";
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(numbered, Is.Not.Null);
+            Assert.That(RowsWhoseHeaderIs(grid, "Middle"), Is.Not.Null);
+        });
+    }
+
+    // An edit through an item's line is told as the list's line as written: one line for every item, standing when the
+    // item is gone - what an undo writes back through.
+    [Test]
+    public void AnEditThroughAnItemsLine_IsToldAsTheListsLine()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        PropertyDefinition told = null;
+        grid.ValueCommitted += (_, e) => told = e.Property;
+
+        grid.Write(RowsOf(grid, name)[2], "Bottom");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(told, Is.SameAs(name));
+            Assert.That(shelves.Shelved[2].Name, Is.EqualTo("Bottom"));
+        });
+    }
+
+    // A binding given to the list's line later reaches every item's copy, each reading its own item.
+    [Test]
+    public void ABindingGivenToAListsLineLater_ReachesEveryItem()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[0].Shown = false;
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        name.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        Settled(grid);
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name), Has.Count.EqualTo(2));
+    }
+
+    // A list emptied, then given a line and items again: the new line is the list's, set later on every item too.
+    [Test]
+    public void AListEmptiedThenGivenALine_FollowsTheNewLine()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var all = shelves.Shelved.ToList();
+        shelves.Shelved.Clear();
+        Settled(grid);
+
+        var note = new StringProperty { Header = "Note", Binding = new Binding("Name") };
+        list.Children.Add(note);
+        foreach (var shelf in all) shelves.Shelved.Add(shelf);
+        Settled(grid);
+        grid.Rebuild();
+        note.Description = "A note";
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, note).Select(row => row.ToolTip), Is.EqualTo(new[] { "A note", "A note", "A note" }));
+    }
+
+    // A line added to a list already showing its items shows on every item at once.
+    [Test]
+    public void ALineAddedToAShownList_ShowsOnEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        var note = new StringProperty { Header = "Note", Binding = new Binding("Name") };
+        list.Children.Add(note);
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, note).Select(row => row.Targets[0]), Is.EqualTo(shelves.Shelved));
+    }
+
+    // One object listed twice is two groups of lines, each with its own place.
+    [Test]
+    public void AnObjectListedTwice_IsTwoGroups()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[1].Name = null;
+        shelves.Shelved.Add(shelves.Shelved[1]);
+        var grid = Built(Section(shelves, Listed("Shelved", "Remove")));
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(RowsWhoseHeaderIs(grid, "2"), Is.Not.Null);
+            Assert.That(RowsWhoseHeaderIs(grid, "4"), Is.Not.Null);
+        });
+    }
+
+    // An item with no name is numbered by its place, counted again as the list changes.
+    [Test]
+    public void AnItemWithNoName_IsNumberedAgainWhenTheListChanges()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[2].Name = null;
+        var grid = Built(Section(shelves, Listed("Shelved", "Remove")));
+        Settled(grid);
+        var third = RowsWhoseHeaderIs(grid, "3");
+
+        shelves.Shelved.RemoveAt(0);
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(third, Is.Not.Null);
+            Assert.That(RowsWhoseHeaderIs(grid, "2"), Is.Not.Null);
+        });
+    }
+
+    // A composite inside an item folded open stays open as the list's items are made again - the list folded and opened.
+    [Test]
+    public void ACompositeOpenedInAnItem_StaysOpenWhenTheItemsAreMadeAgain()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var inner = new CompositeProperty { Header = "Inner" };
+        inner.Children.Add(new StringProperty { Header = "Box", Binding = new Binding("Inner.Name") });
+        list.Children.Add(inner);
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        grid.ToggleComposite(RowsOf(grid, inner)[1]);
+        list.IsExpanded = false;
+        grid.Rebuild();
+        list.IsExpanded = true;
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, inner.Children[0]), Has.Count.EqualTo(3));
+    }
+
+    // A change reaching every item's line at once - the list's line given a setting - builds the grid once, not once per
+    // item.
+    [Test]
+    public void AChangeReachingEveryItem_BuildsOnce()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var before = PropertyGrid.Rebuilds;
+
+        name.ShowActionButton = true;
+        var built = Settled(grid) - before;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(built, Is.EqualTo(1));
+            Assert.That(RowsOf(grid, name).Select(row => row.ShowActionButton), Has.All.True);
+        });
+    }
+
+    // The button's words replaced - a language switched - reach every heading, the items' lines kept.
+    [Test]
+    public void TheButtonsWordsReplaced_KeepTheItemsLines()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        list.ItemActionTip = "Remove";
+        var grid = Built(Section(shelves, list));
+        grid.DataContext = new Removing();
+        Settled(grid);
+        var kept = list.Items.Select(lines => lines.Heading).ToList();
+
+        list.ItemActionTip = "Entfernen";
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(list.Items.Select(lines => lines.Heading), Is.EqualTo(kept));
+            Assert.That(kept.Select(heading => heading.ActionTip), Has.All.EqualTo("Entfernen"));
+        });
+    }
+
+    // A list's line given a data context of its own keeps it on every item's copy.
+    [Test]
+    public void AListsLineWithADataContextOfItsOwn_KeepsItOnEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var own = new Removing();
+        name.DataContext = own;
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.Definition.DataContext), Has.All.SameAs(own));
+    }
+
+    // A list whose items are new objects on every reading, its lines finding a binding late: the grid comes to rest.
+    [Test]
+    public void AListOfNewObjectsOnEveryRead_Rests()
+    {
+        var fresh = new FreshShelves();
+        var list = new ItemsProperty { Header = "Fresh", IsExpanded = true, Binding = new Binding("Fresh"), ItemHeader = new Binding("Name") };
+        var kind = new ChoiceProperty { Header = "Kind", Binding = new Binding("Name") };
+        kind.SetBinding(ChoiceProperty.ItemsSourceProperty, new Binding("Kinds"));
+        list.Children.Add(kind);
+        var grid = Built(Section(fresh, list));
+
+        grid.DataContext = new Catalog();
+        Settled(grid);
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, kind), Has.Count.EqualTo(3));
+    }
+
+    // ...a list inside such a list, its button read off its outer item, its lines shown for some items: it rests too.
+    [Test]
+    public void AListWithAButtonInsideAListOfNewObjects_Rests()
+    {
+        var fresh = new FreshShelves();
+        var inner = new ItemsProperty { Header = "Items", IsExpanded = true, Binding = new Binding("Items"), ItemHeader = new Binding("Name") };
+        inner.SetBinding(ItemsProperty.ItemActionProperty, new Self { Path = "Inspected.Remove" });
+        var box = new StringProperty { Header = "Box", Binding = new Binding("Name") };
+        box.SetBinding(nameof(PropertyDefinition.IsVisible), new Self { Path = "Inspected.Shown" });
+        inner.Children.Add(box);
+        var outer = new ItemsProperty { Header = "Fresh", IsExpanded = true, Binding = new Binding("Fresh"), ItemHeader = new Binding("Name") };
+        outer.Children.Add(inner);
+        var grid = Built(Section(fresh, outer));
+
+        Settled(grid);
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, box), Has.Count.EqualTo(6));
+    }
+
+    // ...a list inside such a list too: its lines finding a binding late, the grid comes to rest.
+    [Test]
+    public void AListInsideAListOfNewObjects_Rests()
+    {
+        var fresh = new FreshShelves();
+        var inner = new ItemsProperty { Header = "Items", IsExpanded = true, Binding = new Binding("Items"), ItemHeader = new Binding("Name") };
+        var kind = new ChoiceProperty { Header = "Kind", Binding = new Binding("Name") };
+        kind.SetBinding(ChoiceProperty.ItemsSourceProperty, new Binding("Kinds"));
+        inner.Children.Add(kind);
+        var outer = new ItemsProperty { Header = "Fresh", IsExpanded = true, Binding = new Binding("Fresh"), ItemHeader = new Binding("Name") };
+        outer.Children.Add(inner);
+        var grid = Built(Section(fresh, outer));
+
+        grid.DataContext = new Catalog();
+        Settled(grid);
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, kind), Has.Count.EqualTo(6));
+    }
+
+    // A binding given to the list's line, changing what it says, reaches every item with nothing else asked.
+    [Test]
+    public void ABindingGivenToAListsLine_ChangingItsValue_ReachesEveryItemAtOnce()
+    {
+        var shelves = new Shelves();
+        shelves.Shelved[0].Shown = false;
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        var grid = Built(Section(shelves, list));
+        grid.DataContext = new Catalog();
+        Settled(grid);
+
+        name.SetBinding(nameof(PropertyDefinition.Description), new Binding("Hint"));
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Has.All.EqualTo("Pick one"));
+    }
+
+    // The list's line's binding replaced by another reaches every item's copy too.
+    [Test]
+    public void ABindingOfAListsLineReplaced_ReachesEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.Description), new Binding("Hint"));
+        var grid = Built(Section(shelves, list));
+        grid.DataContext = new Catalog();
+        Settled(grid);
+
+        name.SetBinding(nameof(PropertyDefinition.Description), new Binding("Other"));
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Has.All.EqualTo("Something else"));
+    }
+
+    // A value the list's line holds from a theme or a resource - standing where markup put it, not as a binding - shows
+    // on every item, and follows the theme when it changes.
+    [Test]
+    public void AListsLineValueFromATheme_ShowsAndFollowsOnEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetValue(PropertyDefinition.DescriptionProperty, "Light", ValuePriority.Template);
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+        var shown = RowsOf(grid, name).Select(row => row.ToolTip).ToList();
+
+        name.SetValue(PropertyDefinition.DescriptionProperty, "Dark", ValuePriority.Template);
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Has.All.EqualTo("Light"));
+            Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Has.All.EqualTo("Dark"));
+        });
+    }
+
+    // The list's line given a value of its own over its binding shows it on every item; the value taken away, every item
+    // reads through the binding again.
+    [Test]
+    public void AValueOverABindingOfAListsLine_ComesAndGoesOnEveryItem()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var name = list.Children[0];
+        name.SetBinding(nameof(PropertyDefinition.Description), new Binding("Hint"));
+        var grid = Built(Section(shelves, list));
+        grid.DataContext = new Catalog();
+        Settled(grid);
+
+        name.Description = "Fixed";
+        Settled(grid);
+        var fixedShown = RowsOf(grid, name).Select(row => row.ToolTip).ToList();
+
+        name.ClearValue(PropertyDefinition.DescriptionProperty);
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fixedShown, Has.All.EqualTo("Fixed"));
+            Assert.That(RowsOf(grid, name).Select(row => row.ToolTip), Has.All.EqualTo("Pick one"));
+        });
+    }
+
+    // A composite whose folding is read off its item folds that item alone, written back to it.
+    [Test]
+    public void ACompositeFoldedByItsItem_FoldsThatItemAlone()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var inner = new CompositeProperty { Header = "Inner" };
+        inner.SetBinding(CompositeProperty.IsExpandedProperty, new Self { Path = "Inspected.Open", Mode = BindingMode.TwoWay });
+        inner.Children.Add(new StringProperty { Header = "Box", Binding = new Binding("Inner.Name") });
+        list.Children.Add(inner);
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        grid.ToggleComposite(RowsOf(grid, inner)[1]);
+        Settled(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shelves.Shelved.Select(shelf => shelf.Open), Is.EqualTo(new[] { false, true, false }));
+            Assert.That(RowsOf(grid, inner.Children[0]), Has.Count.EqualTo(1));
+        });
+    }
+
+    // A value replaced by one equal to it as listing goes - the same id - and holding something else shows what the new
+    // one holds.
+    [Test]
+    public void AValueReplacedByAnEqualOne_ShowsWhatTheNewOneHolds()
+    {
+        var slots = new Slots();
+        var list = new ItemsProperty { Header = "Slots", IsExpanded = true, Binding = new Binding("Items") };
+        var label = new StringProperty { Header = "Label", Binding = new Binding("Label") };
+        list.Children.Add(label);
+        var grid = Built(Section(slots, list));
+        Settled(grid);
+
+        slots.Items[0] = new Slot(1, "B");
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, label)[0].Value, Is.EqualTo("B"));
+    }
+
+    // A composite whose folding is read off its item one way only folds the item's line all the same, and it stays.
+    [Test]
+    public void ACompositeFoldedOneWayByItsItem_StaysFolded()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        var inner = new CompositeProperty { Header = "Inner" };
+        inner.SetBinding(CompositeProperty.IsExpandedProperty, new Self { Path = "Inspected.Open" });
+        inner.Children.Add(new StringProperty { Header = "Box", Binding = new Binding("Inner.Name") });
+        list.Children.Add(inner);
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        grid.ToggleComposite(RowsOf(grid, inner)[1]);
+        Settled(grid);
+        grid.Rebuild();
+        Settled(grid);
+
+        Assert.That(RowsOf(grid, inner.Children[0]), Has.Count.EqualTo(1));
+    }
+
+    public readonly struct Slot(int id, string label)
+    {
+        public int Id { get; } = id;
+
+        public string Label { get; } = label;
+
+        public override bool Equals(object other) => other is Slot slot && slot.Id == Id;
+
+        public override int GetHashCode() => Id;
+    }
+
+    public sealed class Slots
+    {
+        public TrackingCollection<Slot> Items { get; } = new() { new Slot(1, "A"), new Slot(2, "C") };
+    }
+
+    // An item's lines let go of are not held by what they took from the list's line - its classes.
+    [Test]
+    public void AnItemsLinesLetGo_AreNotHeldByTheListsLine()
+    {
+        var shelves = new Shelves();
+        var list = Listed("Shelved", "Remove");
+        list.Children[0].Classes = new Classes(new[] { "Wide" });
+        var grid = Built(Section(shelves, list));
+        Settled(grid);
+
+        var gone = LetOneGo(shelves, list, grid);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(gone.IsAlive, Is.False);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference LetOneGo(Shelves shelves, ItemsProperty list, PropertyGrid grid)
+    {
+        var taken = shelves.Shelved[1];
+        var copy = list.Items.First(lines => ReferenceEquals(lines.Item, taken)).Lines[0];
+        shelves.Shelved.Remove(taken);
+        Settled(grid);
+        return new WeakReference(copy);
+    }
+
+    public sealed class Catalog
+    {
+        public string[] Kinds { get; } = { "Wide", "Narrow" };
+
+        public string Hint => "Pick one";
+
+        public string Other => "Something else";
+    }
+
+    public sealed class FreshShelves
+    {
+        public List<Shelf> Fresh => Enumerable.Range(0, 3).Select(index =>
+        {
+            var shelf = new Shelf { Name = "Fresh " + index };
+            shelf.Items.Add(new Shelf { Name = "A" });
+            shelf.Items.Add(new Shelf { Name = "B" });
+            return shelf;
+        }).ToList();
+    }
+
+    public sealed class Values
+    {
+        public TrackingCollection<int> Sizes { get; } = new() { 1, 2, 3 };
+    }
+
+    private sealed class Joined : IMultiValueConverter
+    {
+        public object Convert(object[] value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            String.Join(" ", value);
+
+        public object[] ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class Not : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            value is not true;
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new NotSupportedException();
     }
 
     // Two items equal to each other are still two to hear: the first of them changing its answer is heard too.
@@ -1176,6 +1847,7 @@ public class PropertyGridTests
         private string _name;
         private ICommand _remove = new Doing();
         private bool _shown = true;
+        private bool _open;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -1197,7 +1869,16 @@ public class PropertyGridTests
             set => Set(ref _shown, value);
         }
 
+        public bool Open
+        {
+            get => _open;
+            set => Set(ref _open, value);
+        }
+
         public TrackingCollection<Shelf> Items { get; } = new();
+
+        /// <summary>What the shelf holds, a step deeper.</summary>
+        public Shelf Inner { get; set; }
 
         public string[] Options => new[] { "Wide", "Narrow" };
 
@@ -1214,7 +1895,7 @@ public class PropertyGridTests
         {
             for (var index = 0; index < 3; index++)
             {
-                var shelf = new Shelf { Name = "Shelf " + index };
+                var shelf = new Shelf { Name = "Shelf " + index, Inner = new Shelf { Name = "Box " + index } };
                 shelf.Items.Add(new Shelf { Name = "A" });
                 shelf.Items.Add(new Shelf { Name = "B" });
                 Shelved.Add(shelf);
@@ -1554,7 +2235,7 @@ public class PropertyGridTests
             if (section.Content is not IUIComponent host) continue;
             foreach (var child in host.VisualChildren)
             {
-                if (child is PropertyRow row && ReferenceEquals(row.Definition, definition)) found.Add(row);
+                if (child is PropertyRow row && Shows(row, definition)) found.Add(row);
             }
         }
 
