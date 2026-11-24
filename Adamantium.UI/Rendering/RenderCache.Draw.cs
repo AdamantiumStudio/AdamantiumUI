@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd, Group }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd, Group, Raster }
 
 public partial class RenderCache
 {
@@ -832,7 +832,8 @@ public partial class RenderCache
             && RefreshMovedNodes(device)          // moved nodes first: write their matrices, or the replay draws them where they were
             && RefreshMovedComponents(device, fullScissor)     // ...and the ordinary movers' subtrees, for the same reason
             && RefreshMovedPlacements(device)                  // ...and the placements, last, from the worlds now
-            && GroupsFollow())                    // groups of draws are placed again from those worlds - unless one cannot be
+            && GroupsFollow()                     // groups of draws are placed again from those worlds - unless one cannot be
+            && RastersHold(fullScissor))          // ...and each raster lays down what it holds, none drawn anew
         {
             RefreshMovedScissors(fullScissor);    // the viewports they carried past are world-space rects - derive again
             AcceptPatchedTransforms();
@@ -853,7 +854,7 @@ public partial class RenderCache
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null
-            && TryPartialReplay(device, fullScissor))
+            && RastersHold(fullScissor) && TryPartialReplay(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
         // SPLICED partial patch: a dirty control's unit COUNT changed (hover background 0<->1, a live chart re-recording a
@@ -862,7 +863,7 @@ public partial class RenderCache
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null
-            && TrySplicedPatch(device, fullScissor))
+            && RastersHold(fullScissor) && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
         // Traced: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
@@ -901,7 +902,8 @@ public partial class RenderCache
             _groupsLeftOut.Clear();
             _unitsLeftOutWithGroup.Clear();
             _openLayer = null;
-            _opsReplayable = true; 
+            _opsReplayable = true;
+            _streamHoldsRasters = false;
             _rectSlotByUnit.Clear();
             _sdfSlotByUnit.Clear();
             _textRunByUnit.Clear();
@@ -1032,11 +1034,10 @@ public partial class RenderCache
                 && group.Component?.DrawingMode == DrawingMode.Raster && StartRaster(groupIndex, fullScissor) is { } raster)
             {
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
-                // A replay does not draw a raster yet: a frame showing one is walked.
-                _opsReplayable = false;
                 if (!raster.Draws)
                 {
                     LayDownRaster(device, raster);
+                    RecordRasterMark(raster.Element, group.Order);
                     groupIndex = raster.End - 1;
                     rasterLaidDown = true;
                 }
@@ -2100,6 +2101,7 @@ public partial class RenderCache
                 _recording = rasterRun.RecordingBefore;
                 _rasterRun = null;
                 LayDownRaster(device, rasterRun);
+                RecordRasterMark(rasterRun.Element, _groups[rasterRun.Start].Order);
             }
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)

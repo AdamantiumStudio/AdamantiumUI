@@ -223,6 +223,67 @@ public partial class RenderCache
         return now - held.WantedSince >= RasterSettles;
     }
 
+    // ---- REPLAY: a frame that only moves the camera is replayed, each raster in the stream laying down what it holds.
+
+    // Whether the recorded stream lays a raster down somewhere.
+    private bool _streamHoldsRasters;
+
+    // This frame's run of each raster the stream lays down, worked out before it is replayed.
+    private readonly Dictionary<IUIComponent, RasterRun> _replayedRasters = new();
+
+    private void RecordRasterMark(IUIComponent element, long order)
+    {
+        if (!_recording)
+        {
+            return;
+        }
+
+        // In a stretch of the stream of its own, as a layer's mark is.
+        CloseLayer();
+        RecordOp(new RenderOp { Kind = RenderOpKind.Raster, Layer = element, Order = order, OrderFirst = order });
+        CloseLayer();
+        _streamHoldsRasters = true;
+    }
+
+    // Whether every raster the stream lays down holds what this frame shows of it; one to be drawn anew - or drawn from
+    // its shapes now - has the frame walked.
+    private bool RastersHold(Rect2D fullScissor)
+    {
+        _replayedRasters.Clear();
+        if (!_streamHoldsRasters)
+        {
+            return true;
+        }
+
+        BeginRasterFrame();
+        foreach (var op in _ops)
+        {
+            if (op.Kind != RenderOpKind.Raster)
+            {
+                continue;
+            }
+
+            var index = GroupIndexOf(op.Layer);
+            var run = index >= 0 ? StartRaster(index, fullScissor) : null;
+            if (run == null || run.Draws)
+            {
+                return false;
+            }
+
+            _replayedRasters[op.Layer] = run;
+        }
+
+        return true;
+    }
+
+    private void ReplayRaster(IGraphicsDevice device, IUIComponent element)
+    {
+        if (_replayedRasters.TryGetValue(element, out var run))
+        {
+            LayDownRaster(device, run);
+        }
+    }
+
     // The elements drawn as a raster this frame - laid down or drawn anew; the rest are drawn from their shapes.
     private readonly HashSet<IUIComponent> _rasterShown = [];
 

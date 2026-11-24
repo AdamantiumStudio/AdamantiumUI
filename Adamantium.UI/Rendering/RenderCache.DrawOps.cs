@@ -73,6 +73,9 @@ public partial class RenderCache
                     case RenderOpKind.LayerEnd:
                         fullScissor = CloseLayer(device, op.Layer);
                         break;
+                    case RenderOpKind.Raster:
+                        ReplayRaster(device, op.Layer);
+                        break;
                     case RenderOpKind.BandsBegin:
                         fullScissor = OpenBands(device, op.Layer, fullScissor);
                         break;
