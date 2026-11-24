@@ -351,7 +351,9 @@ public sealed class VisualRenderer : IVisualRenderer
             _device.Submit();
             presenter.Present();      // no-op for the off-screen render-target presenter
             _device.FrameEnded();
-            _device.DeviceWaitIdle(); // the frame is finished -> the texture is safe to read back
+            // Its own frame finished: the texture is safe to read back. Not the whole device - that waited out the
+            // window's frame on every bake as well, and a page of a hundred patterns held the render thread for seconds.
+            _device.WaitForFramesInFlight(ulong.MaxValue);
             if (!_device.FrameWithheld)
             {
                 break;

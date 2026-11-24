@@ -10,7 +10,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>Scrolls content larger than itself with overlay scrollbars. Owns scroll policy and drives an
+/// <summary>Scrolls content larger than itself with scrollbars the theme lays over the content or beside it. Owns scroll
+/// policy and drives an
 /// <see cref="IScrollableContent"/> that owns the mechanism; bars work in pixels.</summary>
 public class ScrollViewer : ContentControl
 {

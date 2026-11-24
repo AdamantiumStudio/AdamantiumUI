@@ -1119,8 +1119,8 @@ public partial class TreeDataGrid : Selector
     /// <summary>Whether the strip for a new record is standing right now.</summary>
     internal bool HasNewItemRow => ShowNewItemRow && CanUserAddRows;
 
-    /// <summary>Blank space after the last row so it scrolls clear of the overlaid horizontal scrollbar; added only when the
-    /// table can scroll sideways.</summary>
+    /// <summary>Blank space after the last row so it scrolls clear of a horizontal scrollbar laid over the rows; added only
+    /// when the table can scroll sideways. A theme whose bar takes a strip of its own below the rows sets it to 0.</summary>
     public static readonly AdamantiumProperty EndPaddingProperty = AdamantiumProperty.Register(
         nameof(EndPadding), typeof(Double), typeof(TreeDataGrid),
         new PropertyMetadata(16.0, PropertyMetadataOptions.AffectsMeasure));
@@ -2632,15 +2632,29 @@ public partial class TreeDataGrid : Selector
 
         _dropIndicator = GetTemplateChild("PART_DropIndicator") as MeasurableUIComponent;
 
-        if (_scroll != null) _scroll.ScrollChanged -= OnScrolled;
+        if (_scroll != null)
+        {
+            _scroll.ScrollChanged -= OnScrolled;
+            _scroll.SizeChanged -= OnScrollHostResized;
+        }
+
         _scroll = GetTemplateChild("PART_ScrollHost") as ScrollViewer;
-        if (_scroll != null) _scroll.ScrollChanged += OnScrolled;
+        if (_scroll != null)
+        {
+            _scroll.ScrollChanged += OnScrolled;
+            _scroll.SizeChanged += OnScrollHostResized;
+        }
     }
 
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
-        if (_scroll != null) _scroll.ScrollChanged -= OnScrolled;
+        if (_scroll != null)
+        {
+            _scroll.ScrollChanged -= OnScrolled;
+            _scroll.SizeChanged -= OnScrollHostResized;
+        }
+
         _scroll = null;
 
         if (_chooserButton != null) _chooserButton.PointerPressed -= OnChooserButtonPressed;
@@ -2653,7 +2667,45 @@ public partial class TreeDataGrid : Selector
     // vertically), so it is moved by hand - and the column window is taken from the same number, so what is realized is
     // what can be seen. Where the rows are SHOWN, a rubber band's stretch past an end included, or the header stands
     // still while the rows give way under it.
-    private void OnScrolled(object sender, EventArgs e) => HorizontalOffset = ShownScrollX();
+    private void OnScrolled(object sender, EventArgs e)
+    {
+        HorizontalOffset = ShownScrollX();
+        EndStripsWhereTheRowsEnd();
+    }
+
+    // The scroller's metrics change while it is arranged, before its own size is: its size, once known, is the other
+    // half of the strip the bar takes. A child's size rising through it is not its own.
+    private void OnScrollHostResized(object sender, SizeChangedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, _scroll)) EndStripsWhereTheRowsEnd();
+    }
+
+    // A theme whose vertical bar takes a strip of its own beside the rows - Graphite's, always on - leaves them narrower
+    // than the grid: the header, new-record and totals strips end where the rows do, not over the bar. Where the bar
+    // lies over the rows the viewport is the scroller's whole width, and nothing moves.
+    // The columns are laid out against the same width the rows are seen in, so a star column fills it and the last one
+    // ends at the bar instead of under it.
+    private void EndStripsWhereTheRowsEnd()
+    {
+        var bar = _scroll == null ? 0 : Math.Max(0, _scroll.RenderSize.Width - _scroll.ViewportSize.Width);
+        if (bar.Equals(_barStrip)) return;
+
+        _barStrip = bar;
+        EndBefore(_headers, bar);
+        EndBefore(_newRow, bar);
+        EndBefore(_footer, bar);
+        InvalidateMeasure();
+    }
+
+    // How much of the grid's width the vertical bar takes beside the rows: nothing where it lies over them.
+    private double _barStrip;
+
+    private static void EndBefore(MeasurableUIComponent strip, double bar)
+    {
+        if (strip == null || (double.IsNaN(strip.MarginRight) ? 0 : strip.MarginRight).Equals(bar)) return;
+
+        strip.SetCurrentValue(MarginRightProperty, bar);
+    }
 
     private double ShownScrollX() => _scroll == null ? 0 : _scroll.ScrollOffset.X + _scroll.OverscrollOffset.X;
 
@@ -3982,12 +4034,14 @@ public partial class TreeDataGrid : Selector
             HorizontalOffset = ShownScrollX();
 
         // ONE width pass for the whole grid, before anything is measured against it: the header and every row read these
-        // same numbers. Two calculations are how a table's header and body drift apart.
-        ColumnsWidth = DataGridColumnLayout.Arrange(Columns, availableSize.Width, out var frozen, out var pinnedRight,
+        // same numbers. Two calculations are how a table's header and body drift apart. The width is the one the rows
+        // are seen in - less the strip a vertical bar beside them takes.
+        var seen = Math.Max(0, availableSize.Width - _barStrip);
+        ColumnsWidth = DataGridColumnLayout.Arrange(Columns, seen, out var frozen, out var pinnedRight,
             LeftStripsLeading);
         FrozenWidth = frozen;
         RightFrozenWidth = pinnedRight;
-        UpdateColumnWindow(availableSize.Width);
+        UpdateColumnWindow(seen);
         RelayRowsAndStripsIfWidthsMoved();
 
         _measuringRows = true;
@@ -4006,7 +4060,7 @@ public partial class TreeDataGrid : Selector
         if (_autoWidthGrew)
         {
             _autoWidthGrew = false;
-            ColumnsWidth = DataGridColumnLayout.Arrange(Columns, availableSize.Width, out var regrown,
+            ColumnsWidth = DataGridColumnLayout.Arrange(Columns, seen, out var regrown,
                 out var regrownRight, LeftStripsLeading);
             FrozenWidth = regrown;
             RightFrozenWidth = regrownRight;

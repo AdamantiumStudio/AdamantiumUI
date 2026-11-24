@@ -138,6 +138,7 @@ public partial class WebView
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+        StopWaitingForView();
         if (browser == null || !IsOverPage(e))
         {
             return;
@@ -228,6 +229,7 @@ public partial class WebView
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        StopWaitingForView();
         if (e.Handled || PageWaits)
         {
             return;
@@ -512,6 +514,7 @@ public partial class WebView
 
     private void OnWheel(object sender, PointerWheelEventArgs e)
     {
+        StopWaitingForView();
         if (browser == null || !IsOverPage(e))
         {
             return;

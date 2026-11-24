@@ -29,6 +29,11 @@ public class TabControlAutomationPeer : ItemsControlAutomationPeer, ISelectionPr
     /// <summary>A tab a virtualizing strip has not made yet is found by the id its tab will have.</summary>
     protected internal override string AutomationIdOfItem(object item) => AutomationIdFromContainerStyle(item);
 
+    /// <summary>...and called by the name its tab will have: the one the container style gives, else the item as text.
+    /// </summary>
+    protected internal override string NameOfItem(object item) =>
+        NameFromContainerStyle(item) is { Length: > 0 } name ? name : base.NameOfItem(item);
+
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {
         var tabs = (TabControl)Owner;

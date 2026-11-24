@@ -31,7 +31,8 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     {
         if (component is not PropertyDefinition definition) return;
 
-        definition.ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue);
+        // An element as the header stays the line's as written: an item's copy shows it, and does not take it.
+        if (definition.Original == null) definition.ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue);
         OnWordsChanged(component, e);
     }
 
@@ -168,6 +169,103 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         get => GetValue(InspectedProperty);
         internal set => SetValue(InspectedProperty, value);
     }
+
+    /// <summary>The line of a list this one is an item's copy of; null for a line written as it is.</summary>
+    public PropertyDefinition Original { get; private set; }
+
+    /// <summary>The line as written in the inspector: this one, or the one an item's copy was made from - a list inside
+    /// a list made from a copy itself. What an edit is reported as: one line however many items it was copied for, still
+    /// standing when the item that was edited is gone.</summary>
+    public PropertyDefinition AsWritten
+    {
+        get
+        {
+            var line = this;
+            while (line.Original != null) line = line.Original;
+            return line;
+        }
+    }
+
+    /// <summary>This line, and the lines under it, for one item of a list: the same settings, bindings of their own, and
+    /// pointed at that item for good - so each item's lines answer for that item alone. A kind of line has to be made
+    /// without arguments to be listed. <paramref name="copies"/> is told each copy, by the line it was made from;
+    /// <paramref name="making"/> is which making of its list's copies it belongs to.</summary>
+    internal PropertyDefinition CopyFor(object item, Dictionary<PropertyDefinition, PropertyDefinition> copies, object making)
+    {
+        var copy = (PropertyDefinition)Activator.CreateInstance(GetType(), nonPublic: true);
+        copy.Original = this;
+        copy.Making = making;
+
+        foreach (var property in AdamantiumPropertyMap.GetRegisteredArray(GetType()))
+        {
+            if (!IsCopied(property)) continue;
+
+            // EVERY SLOT as it stands - set by hand, by a theme's or a resource's expression, by a style - and the binding
+            // under them at its own level: what outranks what is the copy's to work out, as the line's was.
+            foreach (var priority in HeldPriorities)
+            {
+                var value = GetValueAt(property, priority);
+                if (!ReferenceEquals(value, AdamantiumProperty.UnsetValue)) copy.SetValue(property, value, priority);
+            }
+
+            if (BindingEngine.GetBindingExpression(this, property) is { BindingBase: { } bound } expression)
+                copy.SetBinding(property, (BindingBase)bound.Clone(), expression.Priority);
+        }
+
+        copy.Inspected = item;
+        copies[this] = copy;
+
+        foreach (var child in Children) copy.Children.Add(child.CopyFor(item, copies, making));
+
+        // A list inside makes its items' lines as part of this making, until it makes them again itself: an outer list
+        // whose items are new objects on every reading makes a new inner list every pass, of the same making. Taken
+        // once its lines are in: their coming is no reason to make anything again.
+        if (copy is ItemsProperty inner) inner.TakeMaking(making);
+        return copy;
+    }
+
+    /// <summary>Which making of its list's copies an item's line belongs to: the list makes them all again - a line of
+    /// it written again - as another. Null for a line written as it is.</summary>
+    internal object Making { get; set; }
+
+    /// <summary>The slots a copy takes as they stand: set by hand or by markup, by a theme's or a resource's expression
+    /// (Template), by a style.</summary>
+    internal static readonly ValuePriority[] HeldPriorities = [ValuePriority.Local, ValuePriority.Template, ValuePriority.Style];
+
+    /// <summary>What an item's copy takes over: whatever the line is given - its data context and attached settings too -
+    /// but not what it is pointed at, nor its name, which is the line as written's alone.</summary>
+    internal static bool IsCopied(AdamantiumProperty property) =>
+        property != InspectedProperty && property != NameProperty && !property.ReadOnly;
+
+    /// <summary>Lets go of what this line holds once no grid shows it: its bindings, and the lines a list made for its
+    /// items.</summary>
+    internal virtual void Release()
+    {
+        IsReleased = true;
+        BindingEngine.ClearBindings(this);
+
+        // What a copy took over from the line as written, given back: a value shared with it - its Classes - would
+        // otherwise go on holding the copy.
+        if (Original != null)
+        {
+            foreach (var property in AdamantiumPropertyMap.GetRegisteredArray(GetType()))
+            {
+                if (!IsCopied(property)) continue;
+
+                foreach (var priority in HeldPriorities)
+                {
+                    if (IsSet(property, priority)) ClearValue(property, priority);
+                }
+            }
+        }
+
+        Inspected = null;
+        ClearValue(DataContextProperty);
+        foreach (var child in Children) child.Release();
+    }
+
+    /// <summary>Let go of: a grid hearing it lets go of it too.</summary>
+    internal bool IsReleased { get; private set; }
 
     /// <summary>One line about what the property means - a tooltip, and the status line in an editor.</summary>
     public String Description
@@ -362,9 +460,14 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         foreach (var child in e.NewItems?.OfType<PropertyDefinition>() ?? Enumerable.Empty<PropertyDefinition>())
             AddLogicalChild(child);
 
+        OnLinesChanged();
         LayoutChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>The lines under this one changed, just before the grid is told to build again.</summary>
+    private protected virtual void OnLinesChanged()
+    {
+    }
 }
 
 /// <summary>Text. The plain case, and the one everything else is measured against.</summary>
@@ -1247,29 +1350,308 @@ public class CompositeProperty : PropertyDefinition
 }
 
 /// <summary>Repeats its <see cref="Children"/> lines for every item of the collection its
-/// <see cref="PropertyDefinition.Binding"/> reads; child lines bind against the item.</summary>
+/// <see cref="PropertyDefinition.Binding"/> reads; child lines bind against the item. Each item gets its own copies of
+/// them (<see cref="PropertyDefinition.CopyFor"/>), pointed at it for as long as it is listed.</summary>
 public class ItemsProperty : CompositeProperty
 {
     public static readonly AdamantiumProperty ItemHeaderProperty = AdamantiumProperty.Register(nameof(ItemHeader),
-        typeof(BindingBase), typeof(ItemsProperty), new PropertyMetadata(null));
+        typeof(BindingBase), typeof(ItemsProperty), new PropertyMetadata(null, OnItemHeaderChanged));
 
     public static readonly AdamantiumProperty ItemActionProperty = AdamantiumProperty.Register(nameof(ItemAction),
         typeof(ICommand), typeof(ItemsProperty), new PropertyMetadata(null, OnItemActionChanged));
 
     public static readonly AdamantiumProperty ItemActionIconProperty = AdamantiumProperty.Register(
-        nameof(ItemActionIcon), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null));
+        nameof(ItemActionIcon), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null, OnItemButtonChanged));
 
     public static readonly AdamantiumProperty ItemActionTipProperty = AdamantiumProperty.Register(
-        nameof(ItemActionTip), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null));
+        nameof(ItemActionTip), typeof(String), typeof(ItemsProperty), new PropertyMetadata(null, OnItemButtonChanged));
 
-    // Each item's line takes the button as it is built: one that comes or goes after - a bound command found only once
-    // the grid has a data context - builds the lines again. Only then: a command told for each item in turn, nested in
-    // another list, changes on every line built.
+    private readonly Dictionary<object, ItemLines> _items = new(ListedItemComparer.Instance);
+    private readonly List<PropertyDefinition> _templates = new();
+    private readonly List<BindingBase> _templateBindings = new();
+    private long _pass;
+    private bool _makeAgain;
+    private object _making = new();
+
+    // Its lines written again: the copies are made again by the pass the grid is about to build.
+    private protected override void OnLinesChanged() => _makeAgain = true;
+
+    // Each heading reads it: read another way, they are other headings.
+    private static void OnItemHeaderChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as ItemsProperty)?.MakeItemsAgain();
+
+    // The button beside each item's name is the list's, given to each heading at once - another view-model's command,
+    // another picture, the words in another language - with nothing made again. Only a button come or gone (a command
+    // found only once the grid has a data context) changes the shape of the headings: they are made again.
     private static void OnItemActionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
-        if (component is ItemsProperty items && (e.OldValue == null) != (e.NewValue == null))
-            items.Relayout();
+        if (component is not ItemsProperty items) return;
+
+        if ((e.OldValue == null) != (e.NewValue == null))
+        {
+            items.MakeItemsAgain();
+            return;
+        }
+
+        foreach (var lines in items.Items) lines.Heading.ActionCommand = items.ItemAction;
     }
+
+    private static void OnItemButtonChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not ItemsProperty items) return;
+
+        foreach (var lines in items.Items)
+        {
+            lines.Heading.ActionIcon = items.ItemActionIcon;
+            lines.Heading.ActionTip = items.ItemActionTip;
+        }
+    }
+
+    // Made again by the next pass over the list, not now: the rows standing keep lines that still read their items
+    // until it comes, whatever asks for it and when.
+    private void MakeItemsAgain()
+    {
+        _makeAgain = true;
+        Relayout();
+    }
+
+    /// <summary>The items listed by the last pass, with their lines - an item listed twice, twice.</summary>
+    internal IEnumerable<ItemLines> Items
+    {
+        get
+        {
+            foreach (var first in _items.Values)
+            {
+                for (var lines = first; lines != null; lines = lines.Next) yield return lines;
+            }
+        }
+    }
+
+    /// <summary>A pass over the items starts: the ones it does not list are let go of at its <see cref="EndPass"/>. A line
+    /// as written given a binding since its copies were made, or one taken away, makes the copies again.</summary>
+    internal void BeginPass()
+    {
+        _pass++;
+        if (_makeAgain || _items.Count > 0 && !SameBindings()) ForgetItems();
+    }
+
+    // The bindings of the lines as written, in a fixed order: what the copies were made with.
+    private void RememberBindings()
+    {
+        _templateBindings.Clear();
+        foreach (var template in _templates)
+        {
+            foreach (var property in AdamantiumPropertyMap.GetRegisteredArray(template.GetType()))
+            {
+                if (IsCopied(property)) _templateBindings.Add(BindingEngine.GetBindingExpression(template, property)?.BindingBase);
+            }
+        }
+    }
+
+    private bool SameBindings()
+    {
+        var at = 0;
+        foreach (var template in _templates)
+        {
+            foreach (var property in AdamantiumPropertyMap.GetRegisteredArray(template.GetType()))
+            {
+                if (!IsCopied(property)) continue;
+                if (at >= _templateBindings.Count
+                    || !ReferenceEquals(_templateBindings[at++], BindingEngine.GetBindingExpression(template, property)?.BindingBase))
+                    return false;
+            }
+        }
+
+        return at == _templateBindings.Count;
+    }
+
+    /// <summary>The lines of the item's next listing in this pass - one object listed twice is two groups of lines - made
+    /// the first time; <paramref name="made"/> says they were made now.</summary>
+    internal ItemLines LinesFor(object item, out bool made)
+    {
+        // The listings this pass has reached are marked with it: the next one is the first not marked yet.
+        _items.TryGetValue(item, out var lines);
+        ItemLines previous = null;
+        while (lines != null && lines.Pass == _pass)
+        {
+            previous = lines;
+            lines = lines.Next;
+        }
+
+        made = lines == null;
+        if (made)
+        {
+            lines = Make(item);
+            if (previous == null) _items[item] = lines;
+            else previous.Next = lines;
+        }
+        else if (item is ValueType && !ReferenceEquals(lines.Item, item))
+        {
+            // A value read again is a new copy of it, equal as listing goes and maybe not in every field: read this one.
+            lines.PointAt(item);
+        }
+
+        lines.Pass = _pass;
+        return lines;
+    }
+
+    private ItemLines Make(object item)
+    {
+        FollowTemplates();
+
+        var copies = new Dictionary<PropertyDefinition, PropertyDefinition>(ReferenceEqualityComparer.Instance);
+        var own = new PropertyDefinition[Children.Count];
+        for (var index = 0; index < own.Length; index++)
+        {
+            own[index] = Children[index].CopyFor(item, copies, _making);
+            AddLogicalChild(own[index]);
+        }
+
+        var heading = new ItemHeaderLine(this, item) { Making = _making };
+        AddLogicalChild(heading);
+
+        return new ItemLines(item, heading, own, copies);
+    }
+
+    /// <summary>Lets go of the listings this pass did not reach: an item gone, or listed fewer times.</summary>
+    internal void EndPass()
+    {
+        List<object> gone = null;
+        foreach (var pair in _items)
+        {
+            // A pass reaches an item's listings in order, so those it reached come first.
+            ItemLines kept = null;
+            var lines = pair.Value;
+            while (lines != null && lines.Pass == _pass)
+            {
+                kept = lines;
+                lines = lines.Next;
+            }
+
+            if (lines == null) continue;
+
+            if (kept == null) (gone ??= new List<object>()).Add(pair.Key);
+            else kept.Next = null;
+
+            LetGoFrom(lines);
+        }
+
+        if (gone != null)
+        {
+            foreach (var item in gone) _items.Remove(item);
+        }
+
+        // Nothing listed, nothing to keep copies of: the lines as written are followed again with the next item.
+        if (_items.Count == 0) UnfollowTemplates();
+    }
+
+    /// <summary>Lets go of every item: the list is not shown, or its lines were written again.</summary>
+    internal void ForgetItems()
+    {
+        _makeAgain = false;
+
+        // A new making only where lines are let go of: a list with none yet keeps the one it was given.
+        if (_items.Count > 0) _making = new object();
+        foreach (var first in _items.Values) LetGoFrom(first);
+        _items.Clear();
+        UnfollowTemplates();
+    }
+
+    private void LetGoFrom(ItemLines lines)
+    {
+        for (; lines != null; lines = lines.Next) LetGo(lines);
+    }
+
+    internal override void Release()
+    {
+        ForgetItems();
+        base.Release();
+    }
+
+    private void LetGo(ItemLines lines)
+    {
+        // Its bindings closed BEFORE it leaves the tree: taken out first, a line would read its bindings again against no
+        // data context and ask for a build in the middle of being let go of.
+        lines.Heading.Release();
+        RemoveLogicalChild(lines.Heading);
+        foreach (var line in lines.Lines)
+        {
+            line.Release();
+            RemoveLogicalChild(line);
+        }
+    }
+
+    // The lines as written are what each item's copies are made from: one of them set or cleared later is set or
+    // cleared on every copy that does not bind it itself, and one given other lines under it makes the copies again.
+    private void FollowTemplates()
+    {
+        if (_templates.Count > 0) return;
+
+        foreach (var child in Children) FollowTemplate(child);
+        RememberBindings();
+    }
+
+    private void FollowTemplate(PropertyDefinition template)
+    {
+        template.PropertyChanged += OnTemplateChanged;
+        template.Children.CollectionChanged += OnTemplateLinesChanged;
+        _templates.Add(template);
+
+        foreach (var child in template.Children) FollowTemplate(child);
+    }
+
+    private void UnfollowTemplates()
+    {
+        foreach (var template in _templates)
+        {
+            template.PropertyChanged -= OnTemplateChanged;
+            template.Children.CollectionChanged -= OnTemplateLinesChanged;
+        }
+
+        _templates.Clear();
+    }
+
+    private void OnTemplateChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        var template = (PropertyDefinition)sender;
+        var property = e.Property;
+
+        if (!IsCopied(property)) return;
+
+        // Each copy binds on its own, against its own item: a binding given or taken since they were made makes them
+        // again. One still being given says so before it is registered - the grid's next pass (BeginPass) finds it.
+        if (!SameBindings())
+        {
+            MakeItemsAgain();
+            return;
+        }
+
+        // Every slot the template holds - by hand, by a theme's or a resource's expression, by a style - set as it
+        // stands on each copy, and taken off where it no longer stands: what outranks what is the copy's. The slot its
+        // own binding writes is its own.
+        var boundAt = BindingEngine.GetBindingExpression(template, property)?.Priority;
+        foreach (var lines in Items)
+        {
+            if (!lines.Copies.TryGetValue(template, out var copy)) continue;
+
+            foreach (var priority in HeldPriorities)
+            {
+                if (priority == boundAt) continue;
+
+                var value = template.GetValueAt(property, priority);
+                if (!ReferenceEquals(value, AdamantiumProperty.UnsetValue)) copy.SetValue(property, value, priority);
+                else if (copy.IsSet(property, priority)) copy.ClearValue(property, priority);
+            }
+        }
+    }
+
+    internal void TakeMaking(object making)
+    {
+        _making = making;
+        _makeAgain = false;
+    }
+
+    private void OnTemplateLinesChanged(object sender, NotifyCollectionChangedEventArgs e) => MakeItemsAgain();
 
     /// <summary>What each item is CALLED, read off the item itself - the socket's own name over its two lines. Nothing
     /// numbers them instead, which is what a list whose items have no names of their own wants.</summary>
@@ -1304,10 +1686,53 @@ public class ItemsProperty : CompositeProperty
     }
 }
 
-// The line that carries ONE item's name inside an ItemsProperty. Made by the grid as it builds, and holding nothing
-// worth keeping between passes - the item's own lines are the ones that read and write anything.
+// The line that carries ONE item's name inside an ItemsProperty, and the button beside it: the name read off the item
+// by the list's ItemHeader, the button the list's - given again by the list whenever it changes.
 internal sealed class ItemHeaderLine : PropertyDefinition
 {
+    // What the list's ItemHeader reads off the item. The header says it, or the item's place in the list while it reads
+    // nothing - a place counted again by every pass, the name followed as the item changes it.
+    private static readonly AdamantiumProperty ItemNameProperty = AdamantiumProperty.Register("ItemName", typeof(object),
+        typeof(ItemHeaderLine), new PropertyMetadata(null, OnNameChanged));
+
+    private int _number;
+
+    public ItemHeaderLine(ItemsProperty list, object item)
+    {
+        DataContext = item;
+        Inspected = item;
+
+        if (list.ItemHeader is { } heading) SetBinding(ItemNameProperty, (BindingBase)heading.Clone());
+
+        TakeButton(list);
+    }
+
+    /// <summary>Its place in the list, from 1.</summary>
+    public int Number
+    {
+        get => _number;
+        set
+        {
+            if (_number == value) return;
+
+            _number = value;
+            ShowName();
+        }
+    }
+
+    private static void OnNameChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as ItemHeaderLine)?.ShowName();
+
+    private void ShowName() => Header = GetValue(ItemNameProperty) ?? (_number > 0 ? _number.ToString() : null);
+
+    // Before the grid hears the line: a heading made with its button asks for no second pass.
+    private void TakeButton(ItemsProperty list)
+    {
+        ShowActionButton = list.ItemAction != null;
+        ActionCommand = list.ItemAction;
+        ActionIcon = list.ItemActionIcon;
+        ActionTip = list.ItemActionTip;
+    }
 }
 
 // Every editor in an inspector is the SAME HEIGHT, and that height is the row's: they stretch into it rather than

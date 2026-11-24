@@ -73,6 +73,9 @@ public partial class RenderCache
                     case RenderOpKind.LayerEnd:
                         fullScissor = CloseLayer(device, op.Layer);
                         break;
+                    case RenderOpKind.Raster:
+                        ReplayRaster(device, op.Layer);
+                        break;
                     case RenderOpKind.BandsBegin:
                         fullScissor = OpenBands(device, op.Layer, fullScissor);
                         break;
@@ -489,6 +492,12 @@ public partial class RenderCache
             return fullScissor;
         }
 
+        // Inside a raster tile its clip lies where its draws do: in the tile, by the matrix from the window to it.
+        if (_rasterRun != null && _cloneMatrix is { } toTile)
+        {
+            logical = logical.TransformToAABB(toTile);
+        }
+
         // A PERSPECTIVE world (a 3D-rotated tile: M34/M14/M24 carry the w term) can't be AABB-tested by the affine box
         // below (TransformToAABB does no w-divide -> garbage box -> the tilted tile VANISHED mid-flip). Rare and
         // pixel-clipped by the scissor anyway: skip the cull.
@@ -800,6 +809,7 @@ public partial class RenderCache
         // The group's units have been rebuilt - added to, replaced in place, or dropped. Anything keeping a list derived
         // from them (the pre-render sweep) has to know, and this is the one place that mutates them.
         ControlGroup.BumpMembership();
+        group.Recorded++;
         return group;
     }
 
@@ -979,8 +989,8 @@ public partial class RenderCache
         // A CLONE HOST takes its place in the paint order even when it draws nothing of its own: the clone run
         // starts at its group and covers the subtree that follows. A prototype that is a bare container - the visual
         // carried by its children - would otherwise never be seen by the draw walk, and its subtree would draw once. A
-        // LAYER is the same: its group is where the walk opens the layer.
-        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || WantsLayer(component)))
+        // LAYER is the same: its group is where the walk opens the layer; and a RASTER, where it draws its texture.
+        if (drawCommands.Count == 0 && (clones is { Count: > 0 } || HostsItsSubtree(component)))
         {
             // As below: clean, it did not re-record and its own units stand; dirty, it now draws nothing of its own.
             var hostGroup = wasGeometryValid && _groupById.TryGetValue(component.RenderId, out var held)

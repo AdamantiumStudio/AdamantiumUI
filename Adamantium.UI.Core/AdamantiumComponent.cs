@@ -915,6 +915,12 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return Slots(property) is { } container && container.GetValue(priority) != AdamantiumProperty.UnsetValue;
     }
 
+    /// <summary>The value standing in ONE slot of this property, or <see cref="AdamantiumProperty.UnsetValue"/>: what
+    /// <see cref="IsSet(AdamantiumProperty, ValuePriority)"/> asks about - for a copy of an element taking each slot as
+    /// it stands.</summary>
+    internal object GetValueAt(AdamantiumProperty property, ValuePriority priority) =>
+        Slots(property) is { } container ? container.GetValue(priority) : AdamantiumProperty.UnsetValue;
+
     /// <summary>Whether the value comes from the template that made this element - written in it, or handed on by a
     /// template binding from the control it templates - rather than bound to data by the template's markup, whose
     /// <c>{Binding}</c> stands at the same level.</summary>

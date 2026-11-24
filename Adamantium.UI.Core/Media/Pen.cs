@@ -12,6 +12,9 @@ public class Pen : IEquatable<Pen>
    /// <summary>The immutable snapshot of the stroke brush's current appearance (see <see cref="Media.Brush.Snapshot"/>).</summary>
    public Brush Brush => _brush?.Snapshot;
 
+   // The live brush by reference, for the render side to read its paint version - see RectanglePayload.LiveBrush.
+   internal Brush LiveBrush => _brush;
+
    public Double Thickness { get; }
 
    /// <summary>What <see cref="Thickness"/> is measured in. Honored by strokes of geometry.</summary>

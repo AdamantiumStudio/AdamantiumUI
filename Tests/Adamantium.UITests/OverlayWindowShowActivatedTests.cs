@@ -333,6 +333,36 @@ public class OverlayWindowShowActivatedTests
         overlay.Close();
     }
 
+    // A pinned window stays over the others, but not over a modal one: a dialog that holds the window is never covered -
+    // also when the pinned window is pressed after it opened.
+    [Test]
+    public void AModalWindow_StaysOverAPinnedOne()
+    {
+        var (window, _) = WindowWithAButton();
+        var (pinned, _) = Overlay(showActivated: true);
+        pinned.IsPinned = true;
+        window.ShowOverlayWindow(pinned);
+        Settle(window);
+        var (dialog, _) = Overlay(showActivated: true);
+        dialog.IsModal = true;
+        window.ShowOverlayWindow(dialog);
+        Settle(window);
+        OverlayWindow[] opened = [.. OverlayWindowManager.GetFor(window).Windows];
+
+        pinned.IsPinned = false;
+        pinned.IsPinned = true;
+        Settle(window);
+        OverlayWindow[] repinned = [.. OverlayWindowManager.GetFor(window).Windows];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened, Is.EqualTo(new[] { pinned, dialog }), "the dialog over the pinned window");
+            Assert.That(repinned, Is.EqualTo(new[] { pinned, dialog }), "pinned again, still under the dialog");
+        });
+        dialog.Close();
+        pinned.Close();
+    }
+
     private static (Window Window, OverlayWindow Overlay) ShownAt(OverlayStartupLocation corner)
     {
         var (window, _) = WindowWithAButton();

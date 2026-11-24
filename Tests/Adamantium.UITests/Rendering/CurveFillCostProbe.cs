@@ -12,6 +12,7 @@ using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Curves;
 using Adamantium.UI.Rendering;
 using Adamantium.UI.Rendering.Retained;
 using Adamantium.Vulkan.Core;

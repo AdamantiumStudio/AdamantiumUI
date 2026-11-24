@@ -36,6 +36,7 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     private WebViewApp app;
     private WebSiteSchemeHandlerFactory siteFactory;
     private WebViewBrowser warmUp;
+    private WebViewAccessibilityReading accessibilityReading;
     private CefMainArguments mainArguments;
     private IGraphicsDevice device;
     private int pumpPosted;
@@ -596,6 +597,9 @@ public sealed unsafe partial class WebViewEngine : IDisposable
     /// <summary>A browser of <see cref="CreateBrowser"/> closed by CEF, or never made by it.</summary>
     internal void BrowserClosed(WebViewBrowser browser) => browsers.Remove(browser);
 
+    /// <summary>Where the browsers' accessibility is read off the UI loop; started when a page first tells of it.</summary>
+    internal WebViewAccessibilityReading AccessibilityReading => accessibilityReading ??= new WebViewAccessibilityReading();
+
     /// <summary>A texture of Chromium's the device did not take: browsers made from now on get pixels in memory.</summary>
     internal void SharedTextureRefused() => sharedTextureRefused = true;
 
@@ -636,6 +640,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
             for (var turn = 0; turn < CloseTurns && browsers.Count > 0; turn++)
             {
+                for (var i = browsers.Count - 1; i >= 0; i--)
+                {
+                    browsers[i].CloseIfOwed();
+                }
+
                 CefInterop.CefDoMessageLoopWork();
                 Thread.Sleep(CloseTurnMs);
             }
@@ -646,6 +655,8 @@ public sealed unsafe partial class WebViewEngine : IDisposable
                 download.LetGo();
             }
 
+            // Chromium's values still being read are let go of while it is there.
+            accessibilityReading?.Dispose();
             CefInterop.CefShutdown();
             for (var i = browsers.Count - 1; i >= 0; i--)
             {
@@ -749,6 +760,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         if (OperatingSystem.IsLinux())
         {
             switches.Add(new("no-zygote", null));
+            if (OzonePlatformFor(Environment.GetEnvironmentVariable("DISPLAY"),
+                    Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")) is { } platform)
+            {
+                switches.Add(new("ozone-platform", platform));
+            }
         }
 
         // A site or a proxy asking to sign in is asked of the view: Chrome's own prompt is a window of its own, which a
@@ -767,6 +783,15 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
         return switches;
     }
+
+    /// <summary>The platform Chromium starts on Linux, drawing off screen: none named - X11, as before - while there is an
+    /// X server; else the Wayland compositor, else none at all. With no X server Chromium's X11 does not start, nor CEF
+    /// with it (measured 24.11: "Missing X server", exit 1, under a Wayland-only Mutter); with no display at all a site
+    /// asking where the user is is not asked (measured).</summary>
+    internal static string OzonePlatformFor(string display, string waylandDisplay) =>
+        !string.IsNullOrEmpty(display) ? null
+        : !string.IsNullOrEmpty(waylandDisplay) ? "wayland"
+        : "headless";
 
     private void ReleaseHandlers()
     {

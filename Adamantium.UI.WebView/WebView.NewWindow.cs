@@ -41,11 +41,14 @@ public partial class WebView
             return;
         }
 
+        // Its address and title, taken before they go - a browser keeps the closed tab to bring back by them; told last,
+        // so what the application does then - an address of its own - stands.
+        var closed = new WebPageClosedEventArgs(Source, Title);
         closedItself = true;
         StopBrowser();
         // Its address goes with it: the same one given again opens it again.
         SetCurrentValue(SourceProperty, null);
-        Bridge?.OnPageClosed();
+        Bridge?.OnPageClosed(closed);
     }
 
     // A page the view itself opens - a row of its menu: in a view of the view model's, or here when it shows none.

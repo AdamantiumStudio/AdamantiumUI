@@ -2,43 +2,43 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Overlay scrollbars that are always visible, unlike Fluent's hover fade: position is read at a glance, and this
-         theme's thin channel keeps that cheap. -->
+    <!-- Scrollbars that are always visible, unlike Fluent's hover fade: position is read at a glance, and this theme's
+         thin channel keeps that cheap. Being always on, they do not lie over the content: each takes a strip of its own
+         beside it while it shows, so a row's right edge or a line's last word is never under the bar. -->
 
     <Style Selector="ScrollViewer">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ScrollViewer">
-                    <Grid>
+                    <Grid ColumnDefinitions="*,Auto"
+                          RowDefinitions="*,Auto">
                         <ScrollContentPresenter
                                 x:Name="PART_ScrollContentPresenter"
                                 Content="{TemplateBinding Content}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                        <!-- Each bar spans its whole edge and insets only while the other bar shows (see the trigger
-                             below). Both start collapsed, so a bar with nothing to scroll builds nothing; the viewer
-                             shows the one there is something to scroll for. -->
+                        <!-- Each bar's strip is as wide as the bar while it shows and nothing while it is collapsed, and
+                             runs the content's length; with the other bar showing, the corner square ends it. Both
+                             start collapsed, so a bar with nothing to scroll builds nothing; the viewer shows the one
+                             there is something to scroll for. -->
                         <ScrollBar
                                 x:Name="PART_VerticalScrollBar"
+                                Grid.Column="1"
                                 Orientation="Vertical"
-                                HorizontalAlignment="Right"
                                 VerticalAlignment="Stretch"
                                 Visibility="Collapsed"/>
                         <ScrollBar
                                 x:Name="PART_HorizontalScrollBar"
+                                Grid.Row="1"
                                 Orientation="Horizontal"
-                                VerticalAlignment="Bottom"
                                 HorizontalAlignment="Stretch"
                                 Visibility="Collapsed"/>
                         <!-- The square where they cross. A part of its own rather than one bar being let run over it:
                              the vertical bar covering the corner also let its THUMB travel into it, so the thumb could
-                             come to rest beside the horizontal bar instead of stopping above it. These bars are always
-                             on, so the square simply follows them. -->
+                             come to rest beside the horizontal bar instead of stopping above it. -->
                         <Border
                                 x:Name="ScrollBarCorner"
-                                Width="{ResourceReference ScrollBarThickness}"
-                                Height="{ResourceReference ScrollBarThickness}"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
+                                Grid.Row="1"
+                                Grid.Column="1"
                                 Background="{ResourceReference ControlFillColorDefault}"
                                 Visibility="Collapsed"
                                 IsHitTestVisible="False"/>
@@ -53,8 +53,6 @@
          trigger cannot ask a sibling part what its Visibility came out as. -->
     <Style Selector="ScrollViewer">
         <PropertyTrigger Property="IsScrollBarCornerOccupied" Value="true">
-            <Setter TargetName="PART_VerticalScrollBar" Property="MarginBottom" Value="{ResourceReference ScrollBarThickness}"/>
-            <Setter TargetName="PART_HorizontalScrollBar" Property="MarginRight" Value="{ResourceReference ScrollBarThickness}"/>
             <Setter TargetName="ScrollBarCorner" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
