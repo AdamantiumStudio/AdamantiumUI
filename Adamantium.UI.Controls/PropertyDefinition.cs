@@ -460,9 +460,14 @@ public abstract class PropertyDefinition : FundamentalUIComponent
         foreach (var child in e.NewItems?.OfType<PropertyDefinition>() ?? Enumerable.Empty<PropertyDefinition>())
             AddLogicalChild(child);
 
+        OnLinesChanged();
         LayoutChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>The lines under this one changed, just before the grid is told to build again.</summary>
+    private protected virtual void OnLinesChanged()
+    {
+    }
 }
 
 /// <summary>Text. The plain case, and the one everything else is measured against.</summary>
@@ -1368,11 +1373,8 @@ public class ItemsProperty : CompositeProperty
     private bool _makeAgain;
     private object _making = new();
 
-    public ItemsProperty()
-    {
-        // After the line's own handler built the grid again on the copies still there: made again, and built once more.
-        Children.CollectionChanged += (_, _) => MakeItemsAgain();
-    }
+    // Its lines written again: the copies are made again by the pass the grid is about to build.
+    private protected override void OnLinesChanged() => _makeAgain = true;
 
     // Each heading reads it: read another way, they are other headings.
     private static void OnItemHeaderChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
