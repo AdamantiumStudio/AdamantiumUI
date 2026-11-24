@@ -67,6 +67,11 @@ public class TextPayload(
     public Brush Background => _background?.Snapshot;
     public Brush Stroke => _stroke?.Snapshot;
 
+    // The live brushes by reference, for their paint versions - see RectanglePayload.LiveBrush.
+    internal Brush LiveForeground => _foreground;
+    internal Brush LiveBackground => _background;
+    internal Brush LiveStroke => _stroke;
+
     public override int GetHashCode()
     {
         return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Revision, Foreground, Background, Stroke,

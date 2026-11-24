@@ -128,6 +128,12 @@ public partial class RenderCache
         }
 
         CatchUp(unit);
+        if (_rasterRun != null && _cloneMatrix is { } toTile)
+        {
+            slot = 0;
+            return Shown(placement) * World(unit.Component) * toTile;
+        }
+
         slot = AcquireLiveSlot(device, placement.Id);
         _transformTable.SetMatrix(device, slot, Shown(placement) * World(unit.Component));
         return _cloneMatrix ?? Matrix4x4F.Identity;

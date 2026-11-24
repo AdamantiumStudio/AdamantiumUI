@@ -369,9 +369,8 @@ public partial class RenderCache
             case GroupMarkKind.MaskBegin:
                 state.MaskByLuminosity = mark.Payload.MaskKind == MaskKind.Luminosity;
                 var clear = state.MaskByLuminosity ? mark.Payload.MaskBackdrop : Colors.Transparent;
-                var key = state.MaskKeys[Math.Min(state.Masks.Count, CommandGroup.MostMasks - 1)];
                 state.MaskOpen = true;
-                return DrawIn(_offscreenLayers.BeginGroupTarget(device, key, state.Region, clear, _projectionMatrix,
+                return DrawIn(_offscreenLayers.BeginGroupTarget(device, state.Region, clear, _projectionMatrix,
                     fullScissor));
             case GroupMarkKind.MaskEnd:
                 state.MaskOpen = false;
@@ -404,8 +403,8 @@ public partial class RenderCache
         }
 
         _contentOpen.Add(state);
-        var space = DrawIn(_offscreenLayers.BeginGroupTarget(device, state.ContentKey, state.Region, Colors.Transparent,
-            _projectionMatrix, fullScissor));
+        var space = DrawIn(_offscreenLayers.BeginGroupTarget(device, state.Region, Colors.Transparent, _projectionMatrix,
+            fullScissor));
         if (state.StartsFromBackdrop && state.BackdropTaken)
         {
             _offscreenLayers.FillFromBackdrop(device, _groupBackdrops[state.Depth], state.Region);
@@ -654,7 +653,7 @@ public partial class RenderCache
                 continue;
             }
 
-            if (section == 0 || GroupInk(unit) is not { } ink) continue;
+            if (section == 0 || (MeasuredInk(units, i) ?? GroupInk(unit)) is not { } ink) continue;
 
             if (section == 1)
             {

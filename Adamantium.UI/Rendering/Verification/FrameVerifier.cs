@@ -367,7 +367,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         {
             if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun.Count: > 0 } text } && !_textWithRuns.Contains(unit)
                 && unit.Component is { } component && _facts.TryGetValue(component, out var fact) && !fact.Hidden && !fact.Pending
-                && !live.WasCulled(unit) && !live.DrewTextItself(unit) && live.BatchesText(text))
+                && !live.WasCulled(unit) && !live.DrewTextItself(unit) && !live.DrawnIntoTiles(unit) && live.BatchesText(text))
             {
                 Alarm($"{ComponentText.Of(component)}: has {text.GlyphRun.Count} glyphs to draw, but none of them is in the glyph batch" +
                       $" - {live.DescribeTextGroup(unit)}");

@@ -210,6 +210,10 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
 
     public void BrowserLost(WebViewBrowser browser) => IsLost = true;
 
+    public void AccessibilityChanged(WebViewBrowser browser)
+    {
+    }
+
     // Closed before any view showed it: there is no browser left to hand over, nor a page to make again.
     public void PageClosed(WebViewBrowser browser) => IsClosed = true;
 

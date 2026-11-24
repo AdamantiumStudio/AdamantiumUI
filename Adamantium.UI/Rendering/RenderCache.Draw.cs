@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd, Group }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd, Group, Raster }
 
 public partial class RenderCache
 {
@@ -583,10 +583,25 @@ public partial class RenderCache
         if (_preRenderWalkVersion != membership || _preRenderMachineryVersion != machinery)
         {
             _preRenderUnits.Clear();
-            foreach (var group in _groups)
-            foreach (var unit in group.Units)
+            _rasterPreRender.Clear();
+            List<IRenderUnit> rasterUnits = null;
+            var rasterEnd = 0;
+            for (var i = 0; i < _groups.Count; i++)
             {
-                if (unit.NeedsPreRender) _preRenderUnits.Add(unit);
+                var group = _groups[i];
+                // The draws of an element drawn as a raster - its subtree - are a list of their own.
+                if (i >= rasterEnd && group.Component?.DrawingMode == DrawingMode.Raster)
+                {
+                    rasterEnd = CloneSubtreeEnd(i);
+                    rasterUnits = [];
+                    _rasterPreRender.Add((group.Component, rasterUnits, i, rasterEnd));
+                }
+
+                var into = i < rasterEnd ? rasterUnits : _preRenderUnits;
+                foreach (var unit in group.Units)
+                {
+                    if (unit.NeedsPreRender) into.Add(unit);
+                }
             }
 
             _preRenderWalkVersion = membership;
@@ -598,6 +613,26 @@ public partial class RenderCache
         {
             unit.PreRender();
             AwaitsFrame |= unit.AwaitsFrame;
+        }
+
+        // A raster laying down the texture it holds draws none of its draws: they are not made ready for this frame -
+        // a page's thousands took more of each frame than drawing it. One that is to be drawn anew this frame lays down
+        // what it holds once more, and has them made ready for the next (see StartRaster).
+        _rasterSkipped.Clear();
+        foreach (var (element, units, start, end) in _rasterPreRender)
+        {
+            if (element.DrawingMode == DrawingMode.Raster && _offscreenLayers?.HoldsAnyTile(element.RenderId) == true
+                && !_rasterWantsDrawing.Contains(element) && DrawsUnchanged(element, start, end))
+            {
+                _rasterSkipped.Add(element);
+                continue;
+            }
+
+            foreach (var unit in units)
+            {
+                unit.PreRender();
+                AwaitsFrame |= unit.AwaitsFrame;
+            }
         }
     }
 
@@ -652,7 +687,7 @@ public partial class RenderCache
         finally
         {
             DrawReplayed = LastFrameReplayed;
-            Moves = DrewMoving();
+            Moves = DrewMoving() || _rasterSettling;
 
             // Swept here, after the frame is finished, and on replayed frames too, which RenderCore returns early from.
             if (_leftTheOrder.Count > 0 && device != null)
@@ -832,7 +867,8 @@ public partial class RenderCache
             && RefreshMovedNodes(device)          // moved nodes first: write their matrices, or the replay draws them where they were
             && RefreshMovedComponents(device, fullScissor)     // ...and the ordinary movers' subtrees, for the same reason
             && RefreshMovedPlacements(device)                  // ...and the placements, last, from the worlds now
-            && GroupsFollow())                    // groups of draws are placed again from those worlds - unless one cannot be
+            && GroupsFollow()                     // groups of draws are placed again from those worlds - unless one cannot be
+            && RastersHold(fullScissor))          // ...and each raster lays down what it holds, none drawn anew
         {
             RefreshMovedScissors(fullScissor);    // the viewports they carried past are world-space rects - derive again
             AcceptPatchedTransforms();
@@ -853,7 +889,7 @@ public partial class RenderCache
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null
-            && TryPartialReplay(device, fullScissor))
+            && RastersHold(fullScissor) && TryPartialReplay(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
         // SPLICED partial patch: a dirty control's unit COUNT changed (hover background 0<->1, a live chart re-recording a
@@ -862,7 +898,7 @@ public partial class RenderCache
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
             && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null
-            && TrySplicedPatch(device, fullScissor))
+            && RastersHold(fullScissor) && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
         // Traced: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
@@ -901,7 +937,8 @@ public partial class RenderCache
             _groupsLeftOut.Clear();
             _unitsLeftOutWithGroup.Clear();
             _openLayer = null;
-            _opsReplayable = true; 
+            _opsReplayable = true;
+            _streamHoldsRasters = false;
             _rectSlotByUnit.Clear();
             _sdfSlotByUnit.Clear();
             _textRunByUnit.Clear();
@@ -1002,6 +1039,7 @@ public partial class RenderCache
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
         _bandsDrawnUnder = null;
+        BeginRasterFrame();
         ResetGroups();
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
@@ -1024,7 +1062,38 @@ public partial class RenderCache
                 }
             }
 
-            if (device != null && !_cloneMatrix.HasValue && OpensLayer(group.Component))
+            // An element drawn as a raster: a texture still held is laid down and its subtree passed over; else it is drawn
+            // first, by a walk of the subtree into it (OpenRasterTile), the run ending at its last group.
+            var rasterLaidDown = false;
+            if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
+                && group.Component?.DrawingMode == DrawingMode.Raster && StartRaster(groupIndex, fullScissor) is { } raster)
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+                if (!raster.Draws)
+                {
+                    LayDownRaster(device, raster);
+                    RecordRasterMark(raster.Element, group.Order);
+                    groupIndex = raster.End - 1;
+                    rasterLaidDown = true;
+                }
+                else
+                {
+                    raster.RecordingBefore = _recording;
+                    _recording = false;
+                    _rasterRun = raster;
+                    fullScissor = BeginDrawingAnew(device, raster);
+                }
+            }
+            else if (device != null && cloneRun == null && _rasterRun == null && !_cloneMatrix.HasValue
+                     && group.Component is { DrawingMode: DrawingMode.Raster } unready && LeftUnready(unready))
+            {
+                // Drawn from its shapes now, its draws unready: nothing of it this frame - nor a replay of one.
+                _opsReplayable = false;
+                groupIndex = CloneSubtreeEnd(groupIndex) - 1;
+                rasterLaidDown = true;
+            }
+
+            if (device != null && !rasterLaidDown && !_cloneMatrix.HasValue && OpensLayer(group.Component))
             {
                 var layer = group.Component;
                 var layerEnd = CloneSubtreeEnd(groupIndex);
@@ -1042,8 +1111,15 @@ public partial class RenderCache
                 }
             }
 
-            for (var unitIndex = 0; unitIndex < group.Units.Count; unitIndex++)
+            for (var unitIndex = 0; !rasterLaidDown && unitIndex < group.Units.Count; unitIndex++)
             {
+            // A square of a raster passes over what it does not reach.
+            if (_rasterRun != null && PastWhatTheSquareMisses(group, unitIndex) is var past && past != unitIndex)
+            {
+                unitIndex = past - 1;
+                continue;
+            }
+
             var unit = group.Units[unitIndex];
             // Group boundary (recording walks): reset this group's spliced-patch records once per group (re-derived by the
             // draw decisions below). Boundary detection instead of an outer block keeps the hot loop flat.
@@ -2064,6 +2140,40 @@ public partial class RenderCache
                     _cloneMatrix = null;
                     _recording = recordingBeforeClones;
                 }
+            }
+
+            // The last group of an element drawn as a raster: its square is closed, and the next one drawn - or the texture
+            // laid down, the one drawn anew once all its squares are in, the one held till then.
+            if (_rasterRun is { } rasterRun && groupIndex == rasterRun.End - 1)
+            {
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+                fullScissor = CloseRasterSquare(device, rasterRun);
+                if (DrawsAnotherSquare(rasterRun))
+                {
+                    fullScissor = OpenRasterSquare(device, rasterRun);
+                    groupIndex = rasterRun.Start - 1;
+                    continue;
+                }
+
+                _cloneMatrix = null;
+                _recording = rasterRun.RecordingBefore;
+                _rasterRun = null;
+                var held = rasterRun.Held;
+                if (held.AnewNext >= held.AnewOrder.Count)
+                {
+                    FinishDrawingAnew(device, rasterRun);
+                }
+                else
+                {
+                    rasterRun.Scale = held.Scale;
+                    rasterRun.Part = held.Part;
+                    rasterRun.Width = held.Width;
+                    rasterRun.Height = held.Height;
+                    _rasterSettling = true;
+                }
+
+                LayDownRaster(device, rasterRun);
+                RecordRasterMark(rasterRun.Element, _groups[rasterRun.Start].Order);
             }
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)

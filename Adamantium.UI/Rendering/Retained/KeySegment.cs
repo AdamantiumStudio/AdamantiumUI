@@ -21,7 +21,7 @@ internal sealed class KeySegment
     public Buffer RingBuffer;
     public uint RingVertexCount;
 
-    /// <summary>A curve fill's packed curves (see <see cref="CurveFill"/>), in place of a mesh: one quad per instance.
+    /// <summary>A curve fill's packed curves (see <see cref="Core.Media.Curves.CurveFill"/>), in place of a mesh: one quad per instance.
     /// </summary>
     public Buffer CurveBuffer;
 

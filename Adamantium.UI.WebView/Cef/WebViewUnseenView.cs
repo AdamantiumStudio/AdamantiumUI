@@ -135,6 +135,10 @@ internal sealed class WebViewUnseenView : IWebViewBrowserView
     {
     }
 
+    public void AccessibilityChanged(WebViewBrowser browser)
+    {
+    }
+
     public void PageClosed(WebViewBrowser browser)
     {
     }

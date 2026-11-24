@@ -138,7 +138,7 @@ public abstract class Geometry : AdamantiumComponent
       ProcessGeometry(TrianglesAreGiven ? GeometryType.Both : GeometryType.Outlined);
       if (fill != null && !FillsFromTriangles(fill))
       {
-         _ = CurvesForDrawing.FillTilesMadeOn(buffers);
+         _ = CurvesForDrawing.FillMadeOn(buffers);
       }
    }
 

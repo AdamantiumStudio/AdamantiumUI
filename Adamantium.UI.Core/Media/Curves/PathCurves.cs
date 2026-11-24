@@ -63,6 +63,28 @@ internal sealed class PathCurves
         return _fillTiles;
     }
 
+    private CurveFill _fill;
+    private bool _fillMade;
+
+    /// <summary>The fill packed for the shaders (<see cref="CurveFill"/>) - made once, by whichever thread asks first; null
+    /// for a fill of no area. Packed per unit made, a page of thousands of paths spent a second of the render thread on it
+    /// each time it was drawn anew.</summary>
+    public CurveFill Fill => FillMadeOn(null);
+
+    /// <summary>The <see cref="Fill"/>, its tiles made on <paramref name="buffers"/> if they are not made yet.</summary>
+    public CurveFill FillMadeOn(CurveTileBuffers buffers)
+    {
+        if (Volatile.Read(ref _fillMade))
+        {
+            return _fill;
+        }
+
+        var fill = CurveFill.From(this, buffers);
+        Interlocked.CompareExchange(ref _fill, fill, null);
+        Volatile.Write(ref _fillMade, true);
+        return _fill;
+    }
+
     /// <summary>Every curve, the figures' one after another.</summary>
     public IReadOnlyList<QuadraticCurve> Curves { get; }
 
