@@ -115,6 +115,12 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     public static readonly AdamantiumProperty TopProperty = AdamantiumProperty.Register(nameof(Top),
         typeof(double), typeof(OverlayWindow), new PropertyMetadata(0.0, PropertyMetadataOptions.BindsTwoWayByDefault, OnPositionChanged));
 
+    public static readonly AdamantiumProperty OwnerProperty = AdamantiumProperty.Register(nameof(Owner),
+        typeof(UIComponent), typeof(OverlayWindow), new PropertyMetadata(null, (a, _) => ((OverlayWindow)a).FollowOwner()));
+
+    public static readonly AdamantiumProperty StaysInsideOwnerProperty = AdamantiumProperty.Register(nameof(StaysInsideOwner),
+        typeof(bool), typeof(OverlayWindow), new PropertyMetadata(true, (a, _) => ((OverlayWindow)a).FollowOwner()));
+
     /// <summary>True while the window is shown on the overlay. Read-only: the manager owns the lifecycle.</summary>
     public bool IsOpen
     {
@@ -283,6 +289,25 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         set => SetValue(TopProperty, value);
     }
 
+    /// <summary>The element the window belongs to - a control it shows something of, not the parent window as a whole:
+    /// hidden while the element is not shown (its tab switched away, it taken out of the tree), and back where it was as
+    /// the element is shown again; kept inside it while <see cref="StaysInsideOwner"/>. Null for a window of the parent
+    /// window as a whole.</summary>
+    public UIComponent Owner
+    {
+        get => GetValue<UIComponent>(OwnerProperty);
+        set => SetValue(OwnerProperty, value);
+    }
+
+    /// <summary>Whether the window stays inside its <see cref="Owner"/>: dragged and resized only as far as its edges,
+    /// moved in as it shrinks. Otherwise it goes anywhere in the parent window, as a window with no owner. Default true.
+    /// </summary>
+    public bool StaysInsideOwner
+    {
+        get => GetValue<bool>(StaysInsideOwnerProperty);
+        set => SetValue(StaysInsideOwnerProperty, value);
+    }
+
     /// <summary>The result set by the last <see cref="Close(object)"/> - what the awaited Show call returns.</summary>
     public object Result { get; private set; }
 
@@ -295,6 +320,10 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     /// <summary>Raised when the window has been shown on the overlay.</summary>
     public event EventHandler Opened;
 
+    /// <summary>Raised as the window is dragged by its title bar or resized by its corner - by hand, not as it is placed
+    /// by its <see cref="Left"/> and <see cref="Top"/> or kept with its <see cref="Owner"/>.</summary>
+    public event EventHandler PlacedByHand;
+
     private OverlayWindowManager _manager;
     private Button _closeButton;
     private Button _pinButton;
@@ -305,12 +334,12 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     private bool _dragging;
     private Vector2<double> _dragStart;           // pointer at press, in the PARENT WINDOW's space (which does not move)
     private double _dragBaseLeft, _dragBaseTop;   // the card's top-left at press (the anchor the delta is added to)
-    private double _dragParentW, _dragParentH;    // parent window size at press (to clamp the card inside)
+    private Rect _dragRoom;                       // where it may stand, at press (to clamp the card inside)
     private double _dragCardW, _dragCardH;        // card size at press
     private bool _resizing;
     private Vector2<double> _resizeStart;
     private double _resizeBaseW, _resizeBaseH;
-    private double _resizeParentW, _resizeParentH;   // parent window size at resize start
+    private Rect _resizeRoom;                        // where it may stand, at resize start
     private double _resizeLeft, _resizeTop;          // the card's top-left in window space at resize start (kept fixed)
 
     private static void OnIsPinnedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -341,7 +370,11 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     // view model) moves the popup there. Skipped before the popup exists - the manager applies the initial placement.
     private static void OnPositionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        if (a is OverlayWindow w) w.ApplyPositionToPopup();
+        if (a is not OverlayWindow w) return;
+
+        // Placed before it is shown: there, not kept as far from its owner as it was when last shown.
+        if (w.HostPopup == null) w._ownerRoom = default;
+        w.ApplyPositionToPopup();
     }
 
     // A centered card would re-center on its new size, its title bar jumping from under the pointer, and one kept to a
@@ -426,8 +459,143 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     // The overlay layer hosts each window as its OWN card-sized popup (like a menu/tooltip), so a click outside the card
     // falls through to the content behind - a full-window host popup would absorb every click (see OverlayWindowManager).
     // The card is positioned by this popup's offsets (cascade + drag); the manager owns the popup lifecycle.
-    internal Popup HostPopup { get; set; }
+    internal Popup HostPopup
+    {
+        get => _hostPopup;
+        set
+        {
+            // The owner's room is kept: shown again over another window - its owner taken there - it is as far from the
+            // owner as it was.
+            if (_hostPopup != null) _hostPopup.LayerPass -= OnLayerPass;
+            _hostPopup = value;
+            if (_hostPopup != null) _hostPopup.LayerPass += OnLayerPass;
+        }
+    }
+
     internal Popup ScrimPopup { get; set; }   // the dim backdrop popup, only when this window is modal
+
+    private Popup _hostPopup;
+    // Hidden as its owner was not shown: shown again as the owner is - not if hidden by anyone else.
+    private bool _hiddenWithOwner;
+    // The owner's bounds as the window was last kept with it, in the parent window's coordinates, and the window's own
+    // size then.
+    private Rect _ownerRoom;
+    private Size<double> _keptSize;
+
+    private void FollowOwner()
+    {
+        _ownerRoom = default;
+        if (HostPopup != null) OnLayerPass(null, EventArgs.Empty);
+    }
+
+    // Each pass of the layer, before it lays the window out - a hidden one too: hidden while its owner is not shown here,
+    // no longer the active window, the keyboard taken out of it; kept with the owner as it moves or shrinks.
+    private void OnLayerPass(object sender, EventArgs e)
+    {
+        var owner = Owner;
+        var shown = owner == null || IsShownHere(owner);
+        if (!shown && !_hiddenWithOwner && Visibility == Visibility.Visible)
+        {
+            _hiddenWithOwner = true;
+            // Nowhere seen to type into: not the owner, which is not shown either.
+            if (HasKeyboard()) FocusManager.Focus(null);
+            _manager?.LetGoOf(this);
+            SetCurrentValue(VisibilityProperty, Visibility.Collapsed);
+            // A modal one's dim goes with it: nothing behind is held by a dialog not seen.
+            (ScrimPopup?.ChildValue as UIComponent)?.SetCurrentValue(VisibilityProperty, Visibility.Collapsed);
+        }
+        else if (shown && _hiddenWithOwner)
+        {
+            _hiddenWithOwner = false;
+            SetCurrentValue(VisibilityProperty, Visibility.Visible);
+            (ScrimPopup?.ChildValue as UIComponent)?.SetCurrentValue(VisibilityProperty, Visibility.Visible);
+        }
+
+        if (shown)
+        {
+            KeepWithOwner();
+        }
+    }
+
+    // In the tree of the window this one is shown over, and seen there: none of the elements it is in collapsed or
+    // hidden - its tab not switched away, not taken to another window.
+    private bool IsShownHere(UIComponent element)
+    {
+        if (!element.IsAttachedToVisualTree) return false;
+        IUIComponent last = null;
+        for (IUIComponent node = element; node != null; node = node.VisualParent)
+        {
+            if (node.Visibility != Visibility.Visible) return false;
+            last = node;
+        }
+
+        return _window == null || ReferenceEquals(last, _window) || ReferenceEquals(Popup.HostOf(element), _window);
+    }
+
+    private bool HasKeyboard()
+    {
+        for (var node = FocusManager.Focused as IUIComponent; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, this)) return true;
+        }
+
+        return false;
+    }
+
+    // Where it may stand, in the parent window's coordinates: its owner's bounds while it stays inside the owner, else the
+    // parent window's.
+    private Rect Room(IInputComponent frame)
+    {
+        if (Owner is { RenderSize: { Width: > 0, Height: > 0 } size } owner && StaysInsideOwner)
+        {
+            var at = owner.WorldTransform.TranslationVector;
+            return new Rect(at.X, at.Y, size.Width, size.Height);
+        }
+
+        return new Rect(0, 0, frame.RenderSize.Width, frame.RenderSize.Height);
+    }
+
+    // The owner moved: the window goes with it, as far from it as it was. Staying inside it, the window is moved in - and
+    // made smaller where it is larger - as the owner shrinks, or as the window grows, unfolded.
+    private void KeepWithOwner()
+    {
+        if (Owner is not { RenderSize: { Width: > 0, Height: > 0 } ownerSize } owner || RenderSize.Width <= 0)
+        {
+            return;
+        }
+
+        var ownerAt = owner.WorldTransform.TranslationVector;
+        var room = new Rect(ownerAt.X, ownerAt.Y, ownerSize.Width, ownerSize.Height);
+        if (room == _ownerRoom && RenderSize == _keptSize) return;
+
+        var at = WorldTransform.TranslationVector;
+        var moved = _ownerRoom.Width > 0
+            ? new Vector2<double>(room.X - _ownerRoom.X, room.Y - _ownerRoom.Y)
+            : default;
+        _ownerRoom = room;
+        _keptSize = RenderSize;
+        var left = at.X + moved.X;
+        var top = at.Y + moved.Y;
+        var width = RenderSize.Width;
+        var height = RenderSize.Height;
+        if (StaysInsideOwner)
+        {
+            width = Math.Min(width, Math.Max(MinWidth, room.Width));
+            height = Math.Min(height, Math.Max(MinHeight, room.Height));
+            if (width < RenderSize.Width) Width = width;
+            if (height < RenderSize.Height && !IsCollapsed) Height = height;
+            left = Within(left, room.X, room.X + room.Width - width);
+            top = Within(top, room.Y, room.Y + room.Height - height);
+        }
+
+        if (left == at.X && top == at.Y) return;
+        KeepTopLeft();
+        SetCurrentValue(LeftProperty, left);
+        SetCurrentValue(TopProperty, top);
+    }
+
+    // Between low and high - at low where the room is smaller than what is put in it.
+    private static double Within(double value, double low, double high) => Math.Max(low, Math.Min(value, high));
 
     public OverlayWindow()
     {
@@ -611,8 +779,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         _dragStart = e.GetPosition(frame);
         _dragBaseLeft = WorldTransform.TranslationVector.X;
         _dragBaseTop = WorldTransform.TranslationVector.Y;
-        _dragParentW = frame.RenderSize.Width;
-        _dragParentH = frame.RenderSize.Height;
+        _dragRoom = Room(frame);
         _dragCardW = RenderSize.Width;
         _dragCardH = RenderSize.Height;
         e.Pointer.Capture(_dragArea);
@@ -627,11 +794,12 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
         KeepTopLeft();
         // SetCurrentValue (not the CLR setter) so a two-way binding forwards Left/Top to the view model instead of being
-        // masked by a Local write; OnPositionChanged then moves the popup. Clamp the top-left inside the parent window.
-        var x = Math.Clamp(_dragBaseLeft + delta.X, 0, Math.Max(0, _dragParentW - _dragCardW));
-        var y = Math.Clamp(_dragBaseTop + delta.Y, 0, Math.Max(0, _dragParentH - _dragCardH));
+        // masked by a Local write; OnPositionChanged then moves the popup. Clamp the top-left inside where it may stand.
+        var x = Within(_dragBaseLeft + delta.X, _dragRoom.X, _dragRoom.X + _dragRoom.Width - _dragCardW);
+        var y = Within(_dragBaseTop + delta.Y, _dragRoom.Y, _dragRoom.Y + _dragRoom.Height - _dragCardH);
         SetCurrentValue(LeftProperty, x);
         SetCurrentValue(TopProperty, y);
+        PlacedByHand?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnDragRelease(object sender, PointerReleasedEventArgs e)
@@ -667,8 +835,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         _resizeStart = e.GetPosition(frame);
         _resizeBaseW = double.IsNaN(Width) ? RenderSize.Width : Width;
         _resizeBaseH = double.IsNaN(Height) ? RenderSize.Height : Height;
-        _resizeParentW = frame.RenderSize.Width;
-        _resizeParentH = frame.RenderSize.Height;
+        _resizeRoom = Room(frame);
         _resizeLeft = WorldTransform.TranslationVector.X;   // the card's current top-left in window space (stays fixed)
         _resizeTop = WorldTransform.TranslationVector.Y;
         e.Pointer.Capture(_resizeGrip);
@@ -682,15 +849,16 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         if (delta.X == 0 && delta.Y == 0) return;   // a press alone keeps a card at its corner
 
         KeepTopLeft();
-        SizeCard(_resizeBaseW + delta.X, _resizeBaseH + delta.Y, _resizeLeft, _resizeTop, _resizeParentW, _resizeParentH);
+        SizeCard(_resizeBaseW + delta.X, _resizeBaseH + delta.Y, _resizeLeft, _resizeTop, _resizeRoom);
+        PlacedByHand?.Invoke(this, EventArgs.Empty);
     }
 
-    private void SizeCard(double width, double height, double left, double top, double parentWidth, double parentHeight)
+    private void SizeCard(double width, double height, double left, double top, Rect room)
     {
-        // Grow from the fixed top-left; clamp the bottom-right so it can't leave the parent window (the grip stops at the
+        // Grow from the fixed top-left; clamp the bottom-right so it can't leave where it may stand (the grip stops at the
         // edge instead of the opposite side stretching), and not below the minimum.
-        var maxW = Math.Max(MinWidth, parentWidth - left);
-        var maxH = Math.Max(MinHeight, parentHeight - top);
+        var maxW = Math.Max(MinWidth, room.X + room.Width - left);
+        var maxH = Math.Max(MinHeight, room.Y + room.Height - top);
         var newW = Math.Clamp(width, MinWidth, maxW);
         var newH = Math.Clamp(height, MinHeight, maxH);
         Width = newW;
@@ -701,8 +869,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         HostPopup.VerticalOffset = top;
     }
 
-    /// <summary>Moves the card by an offset of the window it is shown over, kept inside it - what a drag by its title bar
-    /// does.</summary>
+    /// <summary>Moves the card by an offset of the window it is shown over, kept inside where it may stand - what a drag
+    /// by its title bar does.</summary>
     internal void MoveCard(Vector2<double> offset)
     {
         if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
@@ -710,18 +878,21 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         // From where the card IS, as a drag starts: a centered card's Left is not its place until it has been moved once.
         KeepTopLeft();
         var at = WorldTransform.TranslationVector;
-        SetCurrentValue(LeftProperty, Math.Clamp(at.X + offset.X, 0, Math.Max(0, frame.RenderSize.Width - RenderSize.Width)));
-        SetCurrentValue(TopProperty, Math.Clamp(at.Y + offset.Y, 0, Math.Max(0, frame.RenderSize.Height - RenderSize.Height)));
+        var room = Room(frame);
+        SetCurrentValue(LeftProperty, Within(at.X + offset.X, room.X, room.X + room.Width - RenderSize.Width));
+        SetCurrentValue(TopProperty, Within(at.Y + offset.Y, room.Y, room.Y + room.Height - RenderSize.Height));
+        PlacedByHand?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Resizes the card from its top-left, kept inside the window it is shown over - what its grip does.</summary>
+    /// <summary>Resizes the card from its top-left, kept inside where it may stand - what its grip does.</summary>
     internal void ResizeCard(double width, double height)
     {
         if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
 
         KeepTopLeft();
         var at = WorldTransform.TranslationVector;
-        SizeCard(width, height, at.X, at.Y, frame.RenderSize.Width, frame.RenderSize.Height);
+        SizeCard(width, height, at.X, at.Y, Room(frame));
+        PlacedByHand?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnResizeRelease(object sender, PointerReleasedEventArgs e)

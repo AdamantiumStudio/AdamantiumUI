@@ -126,7 +126,8 @@ public sealed class OverlayWindowManager
             // return point gets it.
             if (wasActive || _windows.Count == 0)
             {
-                var next = _windows.LastOrDefault(w => w.ShowActivated);
+                // Not one hidden with its owner: nothing seen would have the keyboard.
+                var next = _windows.LastOrDefault(w => w.ShowActivated && w.Visibility == Visibility.Visible);
                 SetActive(next);
                 if (next != null)
                 {
@@ -181,12 +182,25 @@ public sealed class OverlayWindowManager
     /// <summary>Re-sorts the layer after a window's pin state changed (raise it to the top of its new group).</summary>
     internal void OnPinnedChanged(OverlayWindow window) => BringToFront(window);
 
-    // A freshly-raised NON-pinned window sits above the pinned ones; re-raise the pinned windows so they stay on top.
+    /// <summary>A window hidden - its owner not shown - is no longer the active one: the keys pressed elsewhere are not
+    /// its.</summary>
+    internal void LetGoOf(OverlayWindow window)
+    {
+        if (ReferenceEquals(_active, window)) SetActive(null);
+    }
+
+    // A freshly-raised NON-pinned window sits above the pinned ones; re-raise the pinned windows so they stay on top - and
+    // the modal ones over them: a dialog that holds the window is never covered.
     private void KeepPinnedOnTop(OverlayWindow justRaised)
     {
-        if (justRaised.IsPinned) return;
+        if (!justRaised.IsPinned)
+        {
+            foreach (var w in _windows)
+                if (w.IsPinned && !w.IsModal) RaiseInLayer(w);
+        }
+
         foreach (var w in _windows)
-            if (w.IsPinned) RaiseInLayer(w);
+            if (w.IsModal) RaiseInLayer(w);
     }
 
     private void RaiseInLayer(OverlayWindow window)
@@ -199,12 +213,14 @@ public sealed class OverlayWindowManager
         _host.PopupLayer.BringToFront(window.HostPopup);
     }
 
-    // Stable partition: unpinned windows first, pinned last (pinned always on top), each group keeping its relative order.
+    // Stable partition: unpinned windows first, then pinned (on top of them), modal last (on top of all), each group keeping
+    // its relative order.
     private void Normalize()
     {
         var reordered = new List<OverlayWindow>(_windows.Count);
-        foreach (var w in _windows) if (!w.IsPinned) reordered.Add(w);
-        foreach (var w in _windows) if (w.IsPinned) reordered.Add(w);
+        foreach (var w in _windows) if (!w.IsPinned && !w.IsModal) reordered.Add(w);
+        foreach (var w in _windows) if (w.IsPinned && !w.IsModal) reordered.Add(w);
+        foreach (var w in _windows) if (w.IsModal) reordered.Add(w);
         _windows.Clear();
         _windows.AddRange(reordered);
     }
@@ -251,7 +267,9 @@ public sealed class OverlayWindowManager
     /// <summary>The front-most modal window shown over <paramref name="host"/>, which holds its keyboard; null for none.
     /// </summary>
     internal static OverlayWindow FrontModalOver(IPopupHost host) =>
-        host != null && Managers.TryGetValue(host, out var manager) ? manager._windows.LastOrDefault(w => w.IsModal) : null;
+        host != null && Managers.TryGetValue(host, out var manager)
+            ? manager._windows.LastOrDefault(w => w.IsModal && w.Visibility == Visibility.Visible)
+            : null;
 
     // A press inside any overlay (its card - or its modal scrim, which must not deactivate the modal) keeps it active; the
     // overlay's own handler raises it. A press anywhere else is on the window content behind, so deactivate them all.
