@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.MacOS.AppKit;
@@ -16,7 +17,10 @@ public class MacOSPlatform : IApplicationPlatform
 {
     private const short WakeSubtype = 0x4144;
 
+    internal readonly object ModalLock = new();
+
     private readonly int _threadId;
+    private readonly List<MacOSWindowWorker> _windows = [];
 
     public MacOSPlatform()
     {
@@ -24,9 +28,14 @@ public class MacOSPlatform : IApplicationPlatform
         var pool = ObjCRuntime.PushAutoreleasePool();
         NSApplication.Launch();
         ShowApplicationIcon();
+        Desktop = new MacOSDisplays();
+        Displays.Platform = Desktop;
         ObjCRuntime.PopAutoreleasePool(pool);
         Cursor.Platform = new MacOSCursors();
     }
+
+    /// <summary>The monitors, and the way between AppKit's points and the pixels windows are told.</summary>
+    internal MacOSDisplays Desktop { get; }
 
     public bool IsOnUIThread => Environment.CurrentManagedThreadId == _threadId;
 
@@ -67,6 +76,32 @@ public class MacOSPlatform : IApplicationPlatform
     // TODO(macOS): NSWindow.windowNumberAtPoint:belowWindowWithWindowNumber: -> the window number, mapped back to our
     // handle. Zero until then, which makes the drag fall back to client-bounds containment.
     public IntPtr WindowFromScreenPoint(PixelPoint point) => IntPtr.Zero;
+
+    internal void Register(MacOSWindowWorker worker)
+    {
+        lock (ModalLock)
+            _windows.Add(worker);
+    }
+
+    internal void Unregister(MacOSWindowWorker worker)
+    {
+        lock (ModalLock)
+            _windows.Remove(worker);
+    }
+
+    /// <summary>Fills <paramref name="others"/> with the open windows other than <paramref name="worker"/>: those a modal
+    /// window keeps from input.</summary>
+    internal void CollectOthers(MacOSWindowWorker worker, List<MacOSWindowWorker> others)
+    {
+        lock (ModalLock)
+        {
+            foreach (var other in _windows)
+            {
+                if (other != worker)
+                    others.Add(other);
+            }
+        }
+    }
 
     /// <summary>Raises on the loop thread what AppKit told this one, in the order it came: the visual tree is not to
     /// be touched from the main thread.</summary>

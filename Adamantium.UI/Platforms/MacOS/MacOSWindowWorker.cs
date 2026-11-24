@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.CoreGraphics;
 using Adamantium.MacOS.Foundation;
@@ -34,7 +35,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private NSEventModifierFlags _flags;
     private InputModifiers _buttons;
     private IntPtr _pressEvent;
+    private CGRect _restoreFrame;
+    private bool _topmost;
     private bool _closed;
+    private readonly List<MacOSWindowWorker> _blockedWindows = [];
+    private readonly HashSet<MacOSWindowWorker> _blockers = [];
+    private readonly HashSet<MacOSWindowWorker> _exempt = [];
+    private bool _blocking;
+    private volatile bool _inputBlocked;
 
     public MacOSWindowWorker(IUIContext context)
     {
@@ -51,13 +59,23 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             if (_nsWindow == IntPtr.Zero)
                 return Rect.Empty;
 
-            var frame = NSWindow.FrameOf(_nsWindow);
-            var top = MainScreenHeight - (frame.Origin.Y + frame.Size.Height);
-            return new Rect(frame.Origin.X * _scale, top * _scale, frame.Size.Width * _scale, frame.Size.Height * _scale);
+            var frame = IsMaximized && _restoreFrame.Size.Width > 0 ? _restoreFrame : NSWindow.FrameOf(_nsWindow);
+            var corner = TopLeftOf(frame);
+            return new Rect(corner.X, corner.Y, frame.Size.Width * _scale, frame.Size.Height * _scale);
         }
     }
 
-    private static double MainScreenHeight => NSScreen.FrameOf(NSScreen.Main).Size.Height;
+    // In physical pixels of the desktop.
+    private Vector2<double> TopLeftOf(CGRect frame) =>
+        _platform.Desktop.ToPixels(frame.Origin.X, frame.Origin.Y + frame.Size.Height);
+
+    private bool IsFullScreen => (NSWindow.StyleMaskOf(_nsWindow) & NSWindowStyleMask.FullScreen) != 0;
+
+    // AppKit calls every window that cannot be resized zoomed.
+    private bool IsZoomed => (NSWindow.StyleMaskOf(_nsWindow) & NSWindowStyleMask.Resizable) != 0 &&
+                             NSWindow.IsZoomed(_nsWindow);
+
+    private bool IsMaximized => IsFullScreen || IsZoomed;
 
     public void SetWindow(IWindow window)
     {
@@ -66,12 +84,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         var width = InitialExtent(window.ClientWidth, window.Width, DefaultWidth);
         var height = InitialExtent(window.ClientHeight, window.Height, DefaultHeight);
-        var visible = NSScreen.VisibleFrameOf(NSScreen.Main);
-        var left = double.IsNaN(window.Left) ? visible.Origin.X + (visible.Size.Width - width) / 2 : window.Left;
-        var top = double.IsNaN(window.Top) ? (visible.Size.Height - height) / 2 : window.Top;
-        var content = new CGRect(left, MainScreenHeight - top - height, width, height);
+        var corner = _platform.Desktop.ToPoints(double.IsNaN(window.Left) ? 0 : window.Left,
+            double.IsNaN(window.Top) ? 0 : window.Top);
+        var content = new CGRect(corner.X, corner.Y - height, width, height);
 
-        _nsWindow = NSWindow.Create(content, StyleFor(window.ResizeMode));
+        var style = StyleFor(window.ResizeMode, window.UseCustomChrome);
+        _nsWindow = NSWindow.Create(content, style);
+        NSWindow.SetAllowsFullScreen(_nsWindow, (style & NSWindowStyleMask.Resizable) != 0);
+        MoveTo(corner);
         NSWindow.SetTitle(_nsWindow, window.Title);
         if (window.UseCustomChrome)
             NSWindow.HideTitleBar(_nsWindow);
@@ -98,6 +118,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         window.SetSurfaceHandle(_layer);
         window.DpiScale = new Vector2<double>(_scale, _scale);
         window.DisplayRefreshRate = RefreshRate();
+        var frame = NSWindow.FrameOf(_nsWindow);
+        window.Width = frame.Size.Width * _scale;
+        window.Height = frame.Size.Height * _scale;
         window.UpdateClientSizeFromPlatform(width, height);
 
         if (window.Owner != null)
@@ -106,6 +129,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         Input.DragDrop.RegisterNativeDropTarget(window);
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
+        _platform.Register(this);
         window.OnSourceInitialized();
         window.StateChanged += WindowOnStateChanged;
         window.ResizeModeChanged += WindowOnResizeModeChanged;
@@ -119,16 +143,91 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         OnMainThread(() => ParentTo(handle));
     }
 
+    public void UpdateModal()
+    {
+        lock (_platform.ModalLock)
+        {
+            var modal = _window.IsModal && !_closed;
+            if (modal == _blocking)
+                return;
+
+            _blocking = modal;
+            if (modal)
+            {
+                _exempt.UnionWith(_blockers);
+                _platform.CollectOthers(this, _blockedWindows);
+                foreach (var other in _blockedWindows)
+                    other._blockers.Add(this);
+            }
+            else
+            {
+                foreach (var other in _blockedWindows)
+                    other._blockers.Remove(this);
+            }
+
+            Recount();
+            foreach (var other in _blockedWindows)
+                other.Recount();
+
+            if (!modal)
+            {
+                _blockedWindows.Clear();
+                _exempt.Clear();
+            }
+        }
+    }
+
+    private void Recount()
+    {
+        var blocked = false;
+        foreach (var blocker in _blockers)
+        {
+            if (!_blocking || !_exempt.Contains(blocker))
+            {
+                blocked = true;
+                break;
+            }
+        }
+
+        if (blocked == _inputBlocked)
+            return;
+
+        _inputBlocked = blocked;
+        if (blocked)
+            MacOSPlatform.DispatchInput(LetGo);
+    }
+
+    private void LetGo()
+    {
+        if (!_closed)
+            BlockedWindowInput.LetGo(_window);
+    }
+
+    // Of modals opened over modals, the one nothing keeps from input itself.
+    private void ActivateBlocker()
+    {
+        MacOSWindowWorker modal = null;
+        lock (_platform.ModalLock)
+        {
+            foreach (var blocker in _blockers)
+            {
+                if (blocker._blocking && (modal == null || !blocker._inputBlocked))
+                    modal = blocker;
+            }
+        }
+
+        modal?.Activate();
+    }
+
     public void SetTitle(string title) => OnMainThread(() => NSWindow.SetTitle(_nsWindow, title));
 
-    public void SetPosition(double left, double top) => OnMainThread(() =>
+    public void SetPosition(double left, double top) => OnMainThread(() => MoveTo(_platform.Desktop.ToPoints(left, top)));
+
+    private void MoveTo(CGPoint topLeft)
     {
         var frame = NSWindow.FrameOf(_nsWindow);
-        NSWindow.SetFrame(_nsWindow, frame with
-        {
-            Origin = new CGPoint(left, MainScreenHeight - top - frame.Size.Height)
-        });
-    });
+        NSWindow.SetFrame(_nsWindow, frame with { Origin = new CGPoint(topLeft.X, topLeft.Y - frame.Size.Height) });
+    }
 
     public void SetSize(double clientWidth, double clientHeight) => OnMainThread(() =>
     {
@@ -147,33 +246,65 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         OnMainThread(() => ApplyOverlayTraits(topmost, opacity, transparent));
     }
 
-    public void ShowWindow(WindowState windowState) => OnMainThread(() =>
+    public void ShowWindow(WindowState windowState)
     {
-        switch (windowState)
+        var activate = _window.ActivateOnShow;
+        OnMainThread(() =>
         {
-            case WindowState.Minimized:
-                NSWindow.OrderFront(_nsWindow);
-                NSWindow.Miniaturize(_nsWindow);
-                break;
-            case WindowState.Maximized:
-                if (NSWindow.IsMiniaturized(_nsWindow))
-                    NSWindow.Deminiaturize(_nsWindow);
-                NSWindow.MakeKeyAndOrderFront(_nsWindow);
-                if (!NSWindow.IsZoomed(_nsWindow))
-                    NSWindow.Zoom(_nsWindow);
-                break;
-            default:
-                // From the Dock the window comes back as it went, zoomed or not, as a click on its Dock tile brings it.
-                if (NSWindow.IsMiniaturized(_nsWindow))
-                    NSWindow.Deminiaturize(_nsWindow);
-                else if (NSWindow.IsZoomed(_nsWindow))
-                    NSWindow.Zoom(_nsWindow);
-                NSWindow.MakeKeyAndOrderFront(_nsWindow);
-                break;
-        }
-    });
+            switch (windowState)
+            {
+                case WindowState.Minimized:
+                    Minimize();
+                    return;
+                case WindowState.Maximized:
+                    if (NSWindow.IsMiniaturized(_nsWindow))
+                        NSWindow.Deminiaturize(_nsWindow);
+                    Present(activate);
+                    if (!IsMaximized)
+                        NSWindow.Zoom(_nsWindow);
+                    return;
+                default:
+                    // From the Dock the window comes back as it went, zoomed or not, as a click on its Dock tile brings it.
+                    if (NSWindow.IsMiniaturized(_nsWindow))
+                        NSWindow.Deminiaturize(_nsWindow);
+                    else if (IsFullScreen)
+                        NSWindow.ToggleFullScreen(_nsWindow);
+                    else if (IsZoomed)
+                        NSWindow.Zoom(_nsWindow);
+                    Present(activate);
+                    return;
+            }
+        });
+    }
 
-    public void HideWindow() => OnMainThread(() => NSWindow.OrderOut(_nsWindow));
+    private void Minimize()
+    {
+        // A window on a full screen of its own does not go to the Dock.
+        if (IsFullScreen)
+        {
+            MacOSPlatform.DispatchInput(() => SetStateFromPlatform(WindowState.Maximized));
+            return;
+        }
+
+        LeaveOwner();
+        NSWindow.OrderFront(_nsWindow);
+        NSWindow.Miniaturize(_nsWindow);
+    }
+
+    private void Present(bool activate)
+    {
+        if (activate)
+            NSWindow.MakeKeyAndOrderFront(_nsWindow);
+        else
+            NSWindow.OrderFront(_nsWindow);
+        JoinOwner();
+    }
+
+    public void HideWindow() => OnMainThread(() =>
+    {
+        LeaveOwner();
+        NSWindow.OrderOut(_nsWindow);
+    });
 
     public void Activate() => OnMainThread(() =>
     {
@@ -226,6 +357,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         else if (type == RawPointerEventType.Up)
             _buttons &= ~ButtonModifier(button);
 
+        // A release still goes to the window: what was pressed before the modal one opened is let go of.
+        if (_inputBlocked && type != RawPointerEventType.Up && type != RawPointerEventType.LeaveWindow)
+        {
+            if (type == RawPointerEventType.Down)
+                ActivateBlocker();
+            return;
+        }
+
         if (type == RawPointerEventType.Down && button == MouseButtons.Left)
         {
             NSObject.Release(_pressEvent);
@@ -242,7 +381,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnScroll(IntPtr nsEvent)
     {
         var window = _window;
-        if (window == null || _closed)
+        if (window == null || _closed || _inputBlocked)
             return;
 
         var precise = NSEvent.HasPreciseScrollingDeltas(nsEvent);
@@ -268,12 +407,23 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnKey(IntPtr nsEvent, bool down)
     {
         var window = _window;
-        if (window == null || _closed)
+        if (window == null || _closed || _inputBlocked)
             return;
+
+        var flags = NSEvent.ModifierFlagsOf(nsEvent);
+        if (IsFullScreenShortcut(nsEvent, flags))
+        {
+            if (down && !NSEvent.IsRepeat(nsEvent) &&
+                (NSWindow.StyleMaskOf(_nsWindow) & NSWindowStyleMask.Resizable) != 0)
+            {
+                NSWindow.ToggleFullScreen(_nsWindow);
+            }
+
+            return;
+        }
 
         ReportKey(window, nsEvent, down, down && NSEvent.IsRepeat(nsEvent));
 
-        var flags = NSEvent.ModifierFlagsOf(nsEvent);
         if (!down || (flags & (NSEventModifierFlags.Command | NSEventModifierFlags.Control)) != 0)
             return;
 
@@ -287,6 +437,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             new RawTextInputEventArgs(text, modifiers, time), window));
     }
 
+    // ⌃⌘F, as every Mac application has it.
+    private static bool IsFullScreenShortcut(IntPtr nsEvent, NSEventModifierFlags flags)
+    {
+        const NSEventModifierFlags shortcut = NSEventModifierFlags.Command | NSEventModifierFlags.Control;
+        const NSEventModifierFlags held = shortcut | NSEventModifierFlags.Shift | NSEventModifierFlags.Option;
+        return (flags & held) == shortcut && MacOSKeys.ToKey(NSEvent.KeyCodeOf(nsEvent)) == Key.F;
+    }
+
     internal void OnFlagsChanged(IntPtr nsEvent)
     {
         var window = _window;
@@ -296,6 +454,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var flags = NSEvent.ModifierFlagsOf(nsEvent);
         var changed = flags ^ _flags;
         _flags = flags;
+        if (_inputBlocked)
+            return;
+
         var mask = NSEventModifierFlags.Shift | NSEventModifierFlags.Control | NSEventModifierFlags.Option |
                    NSEventModifierFlags.Command | NSEventModifierFlags.CapsLock;
         if ((changed & mask) != 0)
@@ -323,19 +484,33 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnCloseRequested()
     {
-        MacOSPlatform.DispatchInput(() => _window?.Close());
+        if (!_inputBlocked)
+            MacOSPlatform.DispatchInput(() => _window?.Close());
+    }
+
+    /// <summary>The window is about to be zoomed or to take a full screen: where it is now is where it comes back to.
+    /// </summary>
+    internal void OnLeavingNormal()
+    {
+        if (!IsMaximized)
+            _restoreFrame = NSWindow.FrameOf(_nsWindow);
     }
 
     internal void OnResized()
     {
         var bounds = NSView.BoundsOf(_view);
         SizeLayer(bounds.Size.Width, bounds.Size.Height);
-        var state = NSWindow.IsZoomed(_nsWindow) ? WindowState.Maximized : WindowState.Normal;
+        var state = IsMaximized ? WindowState.Maximized : WindowState.Normal;
+        var frame = NSWindow.FrameOf(_nsWindow);
+        var width = frame.Size.Width * _scale;
+        var height = frame.Size.Height * _scale;
         MacOSPlatform.DispatchInput(() =>
         {
             if (_closed)
                 return;
 
+            _window.Width = width;
+            _window.Height = height;
             if (_window.State != WindowState.Minimized)
                 SetStateFromPlatform(state);
             _window.UpdateClientSizeFromPlatform(bounds.Size.Width, bounds.Size.Height);
@@ -344,13 +519,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnMoved()
     {
-        var content = NSWindow.ContentRectForFrame(_nsWindow, NSWindow.FrameOf(_nsWindow));
-        var left = content.Origin.X;
-        var top = MainScreenHeight - content.Origin.Y - content.Size.Height;
+        var corner = TopLeftOf(NSWindow.FrameOf(_nsWindow));
         MacOSPlatform.DispatchInput(() =>
         {
             if (!_closed)
-                _window.UpdatePositionFromPlatform(left, top);
+                _window.UpdatePositionFromPlatform(corner.X, corner.Y);
         });
     }
 
@@ -373,6 +546,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnKeyWindowChanged(bool isKey)
     {
+        // A window a modal one keeps from input is not the active one: the keyboard coming to it is handed on.
+        if (isKey && _inputBlocked)
+        {
+            ActivateBlocker();
+            return;
+        }
+
         MacOSPlatform.DispatchInput(() =>
         {
             if (_closed)
@@ -388,11 +568,18 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnMiniaturized(bool miniaturized)
     {
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, miniaturized);
-        var restored = NSWindow.IsZoomed(_nsWindow) ? WindowState.Maximized : WindowState.Normal;
+        if (!miniaturized)
+            JoinOwner();
+        var restored = IsMaximized ? WindowState.Maximized : WindowState.Normal;
         MacOSPlatform.DispatchInput(() =>
         {
-            if (!_closed)
-                SetStateFromPlatform(miniaturized ? WindowState.Minimized : restored);
+            if (_closed)
+                return;
+
+            SetStateFromPlatform(miniaturized ? WindowState.Minimized : restored);
+            // The application's only window goes to the Dock without its delegate hearing it resign.
+            if (miniaturized && _window.IsActive)
+                _window.StopBeingActive(UIContext.UIApplication);
         });
     }
 
@@ -415,13 +602,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var customChrome = _window.UseCustomChrome;
         OnMainThread(() =>
         {
-            NSWindow.SetStyleMask(_nsWindow, StyleFor(resizeMode, customChrome));
+            // The full screen bit is AppKit's: it throws when a style set from outside changes it.
+            var style = StyleFor(resizeMode, customChrome);
+            NSWindow.SetStyleMask(_nsWindow, style | (NSWindow.StyleMaskOf(_nsWindow) & NSWindowStyleMask.FullScreen));
+            NSWindow.SetAllowsFullScreen(_nsWindow, (style & NSWindowStyleMask.Resizable) != 0);
             if (customChrome)
                 NSWindow.HideTitleBar(_nsWindow);
         });
     }
-
-    private NSWindowStyleMask StyleFor(WindowResizeMode resizeMode) => StyleFor(resizeMode, _window.UseCustomChrome);
 
     private static NSWindowStyleMask StyleFor(WindowResizeMode resizeMode, bool customChrome)
     {
@@ -438,9 +626,15 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private void ApplyOverlayTraits(bool topmost, double opacity, bool transparentToInput)
     {
-        NSWindow.SetLevel(_nsWindow, topmost ? NSWindow.FloatingLevel : NSWindow.NormalLevel);
+        _topmost = topmost;
+        ApplyLevel();
         NSWindow.SetAlphaValue(_nsWindow, double.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1));
         NSWindow.SetIgnoresMouseEvents(_nsWindow, transparentToInput);
+        if (NSWindow.IsVisible(_nsWindow))
+        {
+            LeaveOwner();
+            JoinOwner();
+        }
     }
 
     private void ParentTo(IntPtr owner)
@@ -448,12 +642,37 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (_owner == owner)
             return;
 
-        if (_owner != IntPtr.Zero)
-            NSWindow.RemoveChildWindow(_owner, _nsWindow);
+        LeaveOwner();
+        if (owner != IntPtr.Zero)
+            NSObject.Retain(owner);
+        NSObject.Release(_owner);
         _owner = owner;
-        if (_owner != IntPtr.Zero)
-            NSWindow.AddChildWindow(_owner, _nsWindow);
+        if (NSWindow.IsVisible(_nsWindow))
+            JoinOwner();
     }
+
+    // Only once shown: a child window is put on screen the moment it is added.
+    private void JoinOwner()
+    {
+        if (_owner == IntPtr.Zero)
+            return;
+
+        // It takes its owner's level, and floats over an ordinary owner only when it is itself on top.
+        NSWindow.AddChildWindow(_owner, _nsWindow);
+        if (_topmost)
+            ApplyLevel();
+    }
+
+    private void LeaveOwner()
+    {
+        if (_owner == IntPtr.Zero)
+            return;
+
+        NSWindow.RemoveChildWindow(_owner, _nsWindow);
+        ApplyLevel();
+    }
+
+    private void ApplyLevel() => NSWindow.SetLevel(_nsWindow, _topmost ? NSWindow.FloatingLevel : NSWindow.NormalLevel);
 
     private static double MinExtent(double extent, double fallback) =>
         !double.IsNaN(extent) && extent > 0 ? extent : fallback;
@@ -469,6 +688,14 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         _closed = true;
         _window.StateChanged -= WindowOnStateChanged;
         _window.ResizeModeChanged -= WindowOnResizeModeChanged;
+        _platform.Unregister(this);
+        lock (_platform.ModalLock)
+        {
+            foreach (var blocker in _blockers)
+                blocker._blockedWindows.Remove(this);
+            _blockers.Clear();
+        }
+
         Input.DragDrop.UnregisterNativeDropTarget(_window);
         UIContext.UIApplication.RemoveWindow(_window);
         _window.SetHandle(IntPtr.Zero);
@@ -508,8 +735,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private PixelPoint ClientOrigin()
     {
         var content = NSWindow.ContentRectForFrame(_nsWindow, NSWindow.FrameOf(_nsWindow));
-        var top = MainScreenHeight - content.Origin.Y - content.Size.Height;
-        return new PixelPoint((int)Math.Round(content.Origin.X * _scale), (int)Math.Round(top * _scale));
+        var corner = TopLeftOf(content);
+        return new PixelPoint((int)Math.Round(corner.X), (int)Math.Round(corner.Y));
     }
 
     private static InputModifiers ButtonModifier(MouseButtons button) => button switch

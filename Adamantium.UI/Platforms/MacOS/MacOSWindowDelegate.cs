@@ -1,11 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
+using Adamantium.MacOS.CoreGraphics;
 using Adamantium.MacOS.ObjectiveC;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
 /// <summary>The NSWindowDelegate of a window: it tells the window's worker of a close asked for, a resize, a move, a
-/// change of screen scale, the keyboard coming and going, and the Dock.</summary>
+/// change of screen scale, the keyboard coming and going, the Dock, zooming and the full screen.</summary>
 internal static unsafe class MacOSWindowDelegate
 {
     private const string Notification = "v@:@";
@@ -26,7 +27,27 @@ internal static unsafe class MacOSWindowDelegate
             (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Miniaturized, Notification)
         .AddMethod("windowDidDeminiaturize:",
             (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Deminiaturized, Notification)
+        .AddMethod("windowShouldZoom:toFrame:",
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, CGRect, byte>)&ShouldZoom,
+            "B@:@{CGRect={CGPoint=dd}{CGSize=dd}}")
+        .AddMethod("windowWillEnterFullScreen:",
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&EnteringFullScreen, Notification)
+        .AddMethod("windowDidEnterFullScreen:",
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Resized, Notification)
+        .AddMethod("windowDidExitFullScreen:",
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Resized, Notification)
         .Register();
+
+    [UnmanagedCallersOnly]
+    private static byte ShouldZoom(IntPtr self, IntPtr selector, IntPtr window, CGRect frame)
+    {
+        Worker(self)?.OnLeavingNormal();
+        return 1;
+    }
+
+    [UnmanagedCallersOnly]
+    private static void EnteringFullScreen(IntPtr self, IntPtr selector, IntPtr notification) =>
+        Worker(self)?.OnLeavingNormal();
 
     [UnmanagedCallersOnly]
     private static byte ShouldClose(IntPtr self, IntPtr selector, IntPtr sender)

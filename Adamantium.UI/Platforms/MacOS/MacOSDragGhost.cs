@@ -93,10 +93,7 @@ internal sealed class MacOSDragGhost : IDragGhost
 
     private void Place(int screenX, int screenY)
     {
-        var scale = NSScreen.BackingScaleFactorOf(NSScreen.Main);
-        var screenHeight = NSScreen.FrameOf(NSScreen.Main).Size.Height;
-        var left = screenX / scale;
-        var top = screenY / scale;
-        NSWindow.SetFrame(_window, new CGRect(left, screenHeight - top - _height, _width, _height));
+        var corner = _platform.Desktop.ToPoints(screenX, screenY);
+        NSWindow.SetFrame(_window, new CGRect(corner.X, corner.Y - _height, _width, _height));
     }
 }
