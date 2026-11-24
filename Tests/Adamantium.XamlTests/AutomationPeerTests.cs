@@ -14,6 +14,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.FluentTheme;
 using NUnit.Framework;
@@ -269,11 +270,17 @@ public class AutomationPeerTests
 
     // A virtualizing strip lists the tabs it has not made as stand-ins; a reader hears them by the name their tab will
     // have, not as blanks (24.11: on AT-SPI every gallery tab past the first twelve had no name).
-    [Test]
-    public void TabsAVirtualizingStripHasNotMade_TakeTheirNamesFromTheItemContainerStyle()
+    // ...a binding read off the item, or a phrase whose key is - as the gallery names its tabs.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void TabsAVirtualizingStripHasNotMade_TakeTheirNamesFromTheItemContainerStyle(bool localized)
     {
         var style = new Style { Selector = new StyleSelector { Types = { typeof(TabItem) } } };
-        style.Setters.Add(new Setter("AutomationProperties.Name", new Binding(nameof(Page.Key))));
+        BindingBase name = localized
+            // No table yet: the phrase is its key, said as it is.
+            ? new Localize { TableSource = new Binding { Source = string.Empty }, KeySource = new Binding(nameof(Page.Key)) }
+            : new Binding(nameof(Page.Key));
+        style.Setters.Add(new Setter("AutomationProperties.Name", name));
         var tabs = new TabControl { ItemContainerStyle = style, IsVirtualizing = true, TabWidth = 100 };
         var pages = Enumerable.Range(0, 40).Select(i => new Page { Key = $"Page {i}" }).ToList();
         tabs.ItemsSource = pages;

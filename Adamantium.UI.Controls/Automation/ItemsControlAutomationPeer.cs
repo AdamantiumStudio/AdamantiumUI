@@ -136,11 +136,12 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
                 return declared.Value as string ?? string.Empty;
             }
 
-            var probe = new BoundValue();
+            // The item is the data its element would have: a binding nested in another - a phrase's key - reads it there.
+            var probe = new BoundValue { DataContext = item };
             probe.PointAt(item, binding);
-            var id = probe.Value as string;
+            var value = probe.Value as string;
             probe.Release();
-            return id ?? string.Empty;
+            return value ?? string.Empty;
         }
 
         return string.Empty;
