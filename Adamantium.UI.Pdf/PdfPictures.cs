@@ -1,0 +1,111 @@
+using System.Collections.Generic;
+using Adamantium.Pdf.Objects;
+using Adamantium.Pdf.Writing;
+using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.Vulkan.Core;
+
+namespace Adamantium.UI.Pdf;
+
+/// <summary>Bitmaps turned into PDF images, each once: by the pixels it holds, so a picture shown on every page of a
+/// document is one image, and a picture whose pixels changed is a new one. Pixels of 8 or 16 bits a channel, gray to
+/// RGBA in either order, are taken; a picture whose pixels are not on the CPU, or of another layout, is not.</summary>
+internal sealed class PdfPictures
+{
+    private readonly Dictionary<byte[], PdfStream> _images = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The image of <paramref name="source"/> - of its <paramref name="frame"/>, for an animation; null when
+    /// its pixels cannot be had.</summary>
+    public PdfStream Of(ImageSource source, int frame)
+    {
+        var bitmap = frame >= 0 && source is BitmapImage animated && frame < animated.FrameCount
+            ? animated.GetFrame((uint)frame)
+            : source as BitmapSource;
+        if (bitmap is not { PixelBytes: { } pixels } || bitmap.PixelWidth == 0 || bitmap.PixelHeight == 0)
+        {
+            return null;
+        }
+
+        if (_images.TryGetValue(pixels, out var image))
+        {
+            return image;
+        }
+
+        var rgba = Rgba(pixels, (int)bitmap.PixelWidth, (int)bitmap.PixelHeight, (Format)bitmap.SurfaceLayout);
+        if (rgba == null)
+        {
+            return null;
+        }
+
+        image = PdfImages.FromRgba((int)bitmap.PixelWidth, (int)bitmap.PixelHeight, rgba,
+            source.Sampling != ImageSampling.Pixelated);
+        _images[pixels] = image;
+        return image;
+    }
+
+    /// <summary>The pixels as RGBA, 8 bits a channel; null for a layout not taken.</summary>
+    internal static byte[] Rgba(byte[] pixels, int width, int height, Format format)
+    {
+        int channels;
+        int bytes;
+        var swapped = false;
+        switch (format)
+        {
+            case Format.R8_UNORM or Format.R8_SRGB:
+                (channels, bytes) = (1, 1);
+                break;
+            case Format.R8G8B8_UNORM or Format.R8G8B8_SRGB:
+                (channels, bytes) = (3, 1);
+                break;
+            case Format.B8G8R8_UNORM or Format.B8G8R8_SRGB:
+                (channels, bytes, swapped) = (3, 1, true);
+                break;
+            case Format.R8G8B8A8_UNORM or Format.R8G8B8A8_SRGB:
+                (channels, bytes) = (4, 1);
+                break;
+            case Format.B8G8R8A8_UNORM or Format.B8G8R8A8_SRGB:
+                (channels, bytes, swapped) = (4, 1, true);
+                break;
+            case Format.R16_UNORM:
+                (channels, bytes) = (1, 2);
+                break;
+            case Format.R16G16B16_UNORM:
+                (channels, bytes) = (3, 2);
+                break;
+            case Format.R16G16B16A16_UNORM:
+                (channels, bytes) = (4, 2);
+                break;
+            default:
+                return null;
+        }
+
+        var count = (long)width * height;
+        if (pixels.LongLength < count * channels * bytes)
+        {
+            return null;
+        }
+
+        var rgba = new byte[count * 4];
+        // A 16-bit channel is little-endian: its high byte is the second.
+        var high = bytes - 1;
+        for (long index = 0; index < count; index++)
+        {
+            var from = index * channels * bytes;
+            var to = index * 4;
+            byte Channel(int channel) => pixels[from + channel * bytes + high];
+            if (channels == 1)
+            {
+                var gray = Channel(0);
+                rgba[to] = rgba[to + 1] = rgba[to + 2] = gray;
+                rgba[to + 3] = 255;
+                continue;
+            }
+
+            rgba[to] = Channel(swapped ? 2 : 0);
+            rgba[to + 1] = Channel(1);
+            rgba[to + 2] = Channel(swapped ? 0 : 2);
+            rgba[to + 3] = channels == 4 ? Channel(3) : (byte)255;
+        }
+
+        return rgba;
+    }
+}
