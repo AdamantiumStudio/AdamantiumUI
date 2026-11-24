@@ -36,6 +36,16 @@ public partial class RenderCache
         public Rect WantedPart = Rect.Empty;
         public ulong WantedPrint;
         public long WantedSince;
+
+        // What its draws printed, one by one, and what that was worked out under - its groups, the brushes' repaints,
+        // the glyphs landed: the same again, it holds.
+        public bool DrawsKnown;
+        public ulong DrawsGroups;
+        public long DrawsPaint;
+        public int DrawsLanded;
+        public ulong DrawsPrint;
+        public bool DrawsStill;
+        public bool DrawsText;
     }
 
     // How long the scale and part a raster is asked to hold have to stay the same before its texture is drawn again:
@@ -161,7 +171,7 @@ public partial class RenderCache
             }
         }
 
-        if (run.Width <= 0 || run.Height <= 0 || !PrintRaster(run))
+        if (run.Width <= 0 || run.Height <= 0 || !PrintRaster(run, held))
         {
             return null;
         }
@@ -276,7 +286,7 @@ public partial class RenderCache
     // identity of what they hold, which the walk renews as it draws them (a brush's snapshot, a text's colors) - and by a
     // brush repainted in place, by its paint version. Content that cannot be told apart - a living halo - is drawn anew
     // each frame.
-    private bool PrintRaster(RasterRun run)
+    private bool PrintRaster(RasterRun run, RasterHeld held)
     {
         var print = PrintSeed;
         Mix(ref print, run.Scale);
@@ -284,8 +294,7 @@ public partial class RenderCache
         Mix(ref print, run.Part.Y);
         Mix(ref print, run.Part.Width);
         Mix(ref print, run.Part.Height);
-        var still = !MovedByTheCompositor(run.Element);
-        var hasText = false;
+        var groups = PrintSeed;
         for (var i = run.Start; i < run.End; i++)
         {
             var group = _groups[i];
@@ -294,25 +303,54 @@ public partial class RenderCache
                 return false;
             }
 
-            Mix(ref print, group.Recorded);
+            Mix(ref groups, group.Recorded);
             if (!ReferenceEquals(group.Component, run.Element))
             {
-                MixRelative(ref print, World(group.Component) * run.FromWindow);
-            }
-
-            foreach (var unit in group.Units)
-            {
-                still &= MixRasterUnit(ref print, unit, ref hasText);
-                if (unit.Placement is { } placement)
-                {
-                    MixRelative(ref print, Newest(placement));
-                }
+                MixRelative(ref groups, World(group.Component) * run.FromWindow);
             }
         }
 
+        // Its draws, one by one, only when one of them can have changed: a group recorded again, a brush repainted in
+        // place anywhere, glyphs landed. Gone through each frame, a page of thousands of draws took half of every frame
+        // the camera moved its texture in.
+        var paint = Core.Media.Brush.PaintEpoch;
+        var landed = FontAtlasStore.LandedVersion;
+        if (!held.DrawsKnown || held.DrawsGroups != groups || held.DrawsPaint != paint || held.DrawsLanded != landed)
+        {
+            var draws = PrintSeed;
+            var drawsStill = true;
+            var hasText = false;
+            var placed = false;
+            for (var i = run.Start; i < run.End; i++)
+            {
+                foreach (var unit in _groups[i].Units)
+                {
+                    drawsStill &= MixRasterUnit(ref draws, unit, ref hasText);
+                    if (unit.Placement is { } placement)
+                    {
+                        placed = true;
+                        MixRelative(ref draws, Newest(placement));
+                    }
+                }
+            }
+
+            // A placement moves without its group recorded again: gone through each frame where there are any.
+            held.DrawsKnown = !placed;
+            held.DrawsGroups = groups;
+            held.DrawsPaint = paint;
+            held.DrawsLanded = landed;
+            held.DrawsPrint = draws;
+            held.DrawsStill = drawsStill;
+            held.DrawsText = hasText;
+        }
+
+        Mix(ref print, (long)groups);
+        Mix(ref print, (long)held.DrawsPrint);
+        var still = !MovedByTheCompositor(run.Element) && held.DrawsStill;
+
         // Glyphs still on their way are drawn missing: it is drawn again until none is. Not the atlas's version, which any
         // text anywhere moves - and drawing it asks for glyphs of its own, so it never stood still.
-        if (hasText)
+        if (held.DrawsText)
         {
             still &= !FontAtlasStore.HasPendingGlyphs;
         }
