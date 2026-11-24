@@ -3,7 +3,8 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- StatusBar: the window's own ground under a hairline, small secondary type, as an IDE's. Its fields line up from
-         the left, a field docked right from the right. Built on the keys every theme has, so one set serves them all. -->
+         the left, a field docked right from the right; as it narrows, the fields that do not fit go, the lowest
+         StatusBar.Priority first. Built on the keys every theme has, so one set serves them all. -->
     <Style Selector="StatusBar">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
@@ -13,7 +14,7 @@
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
-                    <DockPanel LastChildFill="False"/>
+                    <StatusBarPanel/>
                 </ItemsPanelTemplate>
             </Setter.Value>
         </Setter>

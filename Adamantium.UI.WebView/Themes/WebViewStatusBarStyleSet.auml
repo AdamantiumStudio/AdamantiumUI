@@ -5,7 +5,7 @@
 
     <!-- The theme's status bar, telling of its view: the link under the pointer from the left; from the right the
          DevTools, then the zoom - a step down, the percentage (pressed, back to 100%), a step up. Its fields read the
-         view itself, its data context. -->
+         view itself, its data context. A long link is cut short, the zoom and the DevTools kept. -->
     <Style Selector="WebViewStatusBar">
         <Setter Property="Template">
             <Setter.Value>
@@ -14,6 +14,9 @@
                                AutomationProperties.AutomationId="WebStatusBar"
                                AutomationProperties.Name="{Localize WebViewStrings.StatusBar}">
                         <StatusBarItem Content="{Binding StatusText}"
+                                       StatusBar.Shrinks="True"
+                                       ClipToBounds="True"
+                                       HorizontalContentAlignment="Left"
                                        AutomationProperties.AutomationId="WebStatus"/>
                         <ToggleButton DockPanel.Dock="Right" Classes="WebViewStatusToggle"
                                       Content="{Localize WebViewStrings.DevTools}"
