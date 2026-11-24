@@ -80,7 +80,8 @@ public sealed class WebViewBridge
     public event EventHandler<WebNewWindowRequestedEventArgs> NewWindowRequested;
 
     /// <summary>The page closed itself - <c>window.close()</c>, which Chromium allows a page opened by a script or never
-    /// gone on from. The view is left with no page until it is given an address again; a browser closes its tab.</summary>
+    /// gone on from. Raised while the view's <c>Source</c> and <c>Title</c> are still the page's, which it lets go of
+    /// after; the view is left with no page until it is given an address again. A browser closes its tab.</summary>
     public event EventHandler PageClosed;
 
     /// <summary>The page's file field asks for files: the view model asks the user, or the page gets none.</summary>

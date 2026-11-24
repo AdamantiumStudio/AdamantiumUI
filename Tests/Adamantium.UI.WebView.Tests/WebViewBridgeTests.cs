@@ -42,4 +42,25 @@ public class WebViewBridgeTests
     {
         Assert.Throws<ArgumentNullException>(() => new WebViewBridge().AddScriptToNewDocument(null));
     }
+
+    // A page that closed itself is told while the view still holds its address - a browser keeps the tab to bring back
+    // by it - and the address goes after, so the same one given again opens it again.
+    [Test]
+    public void APageThatClosedItself_IsToldWhileTheViewStillHoldsItsAddress()
+    {
+        var address = new Uri("https://example.com/closes-itself");
+        var bridge = new WebViewBridge();
+        var view = new WebView { Source = address, Bridge = bridge };
+        Uri heldWhenTold = null;
+        bridge.PageClosed += (_, _) => heldWhenTold = view.Source;
+
+        // No browser made: the view's own, null, is the one closing.
+        ((Cef.IWebViewBrowserView)view).PageClosed(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(heldWhenTold, Is.EqualTo(address));
+            Assert.That(view.Source, Is.Null);
+        });
+    }
 }
