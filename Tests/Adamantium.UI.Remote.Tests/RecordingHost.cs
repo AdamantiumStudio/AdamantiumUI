@@ -41,6 +41,8 @@ public sealed class RecordingHost : IUniverseHostService
     {
     }
 
+    public Task GoOnAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
     public void MovePointer(float x, float y, bool isOver) => Pointer.Add($"{x},{y},{isOver}");
 
     public void Focus(bool hasKeyboard) => Focuses.Add(hasKeyboard);

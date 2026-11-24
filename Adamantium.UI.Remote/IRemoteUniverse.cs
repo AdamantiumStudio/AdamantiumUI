@@ -33,6 +33,10 @@ public interface IRemoteUniverse : IDisposable
     /// (launched <see cref="UniverseLaunch.IsDebugged"/>), for its view to show where it stands. Not waited for.</summary>
     void DrawWhereItStands();
 
+    /// <summary>Tells the host the game is about to be let go on from a stop: done once it draws where it stands no
+    /// more, so its drawing never meets a step of the game. Asked before the debugger lets the game go on.</summary>
+    Task GoOnAsync(CancellationToken cancellationToken);
+
     /// <summary>Done once the universe stopped or the host's process went away.</summary>
     Task Ended { get; }
 }

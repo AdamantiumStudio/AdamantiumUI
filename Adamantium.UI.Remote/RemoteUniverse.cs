@@ -148,6 +148,9 @@ internal sealed class RemoteUniverse : IRemoteUniverse, IUniverseInputTarget
 
     public void DrawWhereItStands() => LiveHost?.DrawWhereItStands();
 
+    public Task GoOnAsync(CancellationToken cancellationToken) =>
+        LiveHost?.GoOnAsync(cancellationToken) ?? Task.CompletedTask;
+
     public void Dispose()
     {
         if (_disposed)
