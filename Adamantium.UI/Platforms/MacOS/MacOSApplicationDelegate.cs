@@ -1,13 +1,12 @@
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
-/// <summary>The NSApplicationDelegate: quitting - from the Dock, at logout - closes the windows, as closing each of them
-/// would, so any of them may refuse; AppKit itself would end the process on the spot.</summary>
+/// <summary>The NSApplicationDelegate: quitting - from the Dock, at logout - is asked of the application, which closes its
+/// windows, any of which may refuse; AppKit itself would end the process on the spot.</summary>
 internal static unsafe class MacOSApplicationDelegate
 {
     private const nint TerminateCancel = 0;
@@ -17,25 +16,19 @@ internal static unsafe class MacOSApplicationDelegate
         .AddProtocol("NSApplicationDelegate")
         .AddMethod("applicationShouldTerminate:",
             (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, nint>)&ShouldTerminate, "q@:@")
+        .AddMethod("applicationDidUnhide:",
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Unhidden, "v@:@")
         .Register();
 
     [UnmanagedCallersOnly]
     private static nint ShouldTerminate(IntPtr self, IntPtr selector, IntPtr application)
     {
-        MacOSPlatform.DispatchInput(CloseWindows);
+        if (UIAppContext.Current is UIApplication running)
+            MacOSPlatform.DispatchInput(running.OnQuitRequested);
         return TerminateCancel;
     }
 
-    private static void CloseWindows()
-    {
-        var application = UIAppContext.Current;
-        if (application == null)
-            return;
-
-        // The main window last: closing it may end the application before the others were asked.
-        var main = application.MainWindow;
-        foreach (var window in application.Windows.Where(window => window != main && window.Owner == null).ToArray())
-            window.Close();
-        main?.Close();
-    }
+    [UnmanagedCallersOnly]
+    private static void Unhidden(IntPtr self, IntPtr selector, IntPtr notification) =>
+        ObjCManagedObject.Get<MacOSPlatform>(self)?.JoinAllOwned();
 }

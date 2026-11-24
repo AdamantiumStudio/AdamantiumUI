@@ -30,7 +30,9 @@ public class MacOSPlatform : IApplicationPlatform
         _threadId = Environment.CurrentManagedThreadId;
         var pool = ObjCRuntime.PushAutoreleasePool();
         NSApplication.Launch();
-        NSApplication.SetDelegate(NSObject.New(MacOSApplicationDelegate.Class));
+        var applicationDelegate = NSObject.New(MacOSApplicationDelegate.Class);
+        ObjCManagedObject.Attach(applicationDelegate, this);
+        NSApplication.SetDelegate(applicationDelegate);
         ShowApplicationIcon();
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
@@ -52,9 +54,19 @@ public class MacOSPlatform : IApplicationPlatform
     /// <summary>The dispatcher of a splash window's side; null for the application's own.</summary>
     internal Threading.Dispatcher Dispatcher { get; set; }
 
-    /// <summary>Takes a splash window's side away from its host.</summary>
+    /// <summary>Takes a splash window's side away from its host: what was asked of it is done first, and a window still
+    /// up goes off screen.</summary>
     internal void Disconnect()
     {
+        _host.RunOnMainThread(() =>
+        {
+            Signaled?.Invoke();
+            MacOSWindowWorker[] windows;
+            lock (ModalLock)
+                windows = [.. _windows];
+            foreach (var window in windows)
+                window.HideWindow();
+        });
         lock (_host._guests)
             _host._guests.Remove(this);
     }
@@ -211,24 +223,41 @@ public class MacOSPlatform : IApplicationPlatform
     /// <summary>The windows a shown <paramref name="owner"/> has, the splash window's side included, join it.</summary>
     internal void JoinOwned(IntPtr owner)
     {
-        var host = _host ?? this;
-        host.JoinOwnedHere(owner);
-        MacOSPlatform[] guests;
-        lock (host._guests)
-            guests = [.. host._guests];
-
-        foreach (var guest in guests)
-            guest.JoinOwnedHere(owner);
+        foreach (var window in AllWindows())
+            window.JoinIfOwnedBy(owner);
     }
 
-    private void JoinOwnedHere(IntPtr owner)
+    /// <summary>The windows of an <paramref name="owner"/> going off screen stay there: AppKit would take a window's
+    /// children with it.</summary>
+    internal void LeaveOwned(IntPtr owner)
     {
-        MacOSWindowWorker[] windows;
-        lock (ModalLock)
-            windows = [.. _windows];
+        foreach (var window in AllWindows())
+            window.LeaveIfOwnedBy(owner);
+    }
 
-        foreach (var window in windows)
-            window.JoinIfOwnedBy(owner);
+    /// <summary>The application is shown again after being hidden: windows opened meanwhile join their owners.</summary>
+    internal void JoinAllOwned()
+    {
+        foreach (var window in AllWindows())
+            window.JoinOwned();
+    }
+
+    private List<MacOSWindowWorker> AllWindows()
+    {
+        var host = _host ?? this;
+        var windows = new List<MacOSWindowWorker>();
+        lock (host.ModalLock)
+            windows.AddRange(host._windows);
+        lock (host._guests)
+        {
+            foreach (var guest in host._guests)
+            {
+                lock (guest.ModalLock)
+                    windows.AddRange(guest._windows);
+            }
+        }
+
+        return windows;
     }
 
     private static void ShowApplicationIcon()

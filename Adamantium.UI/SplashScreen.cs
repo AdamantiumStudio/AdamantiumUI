@@ -163,10 +163,10 @@ internal sealed class SplashScreen : ISplashScreen
     private void End()
     {
         _shown.TrySetResult();
+        (_platform as MacOSPlatform)?.Disconnect();   // does what is still queued on the dispatcher
         _dispatcher?.Detach();
         (_platform as WaylandPlatform)?.Disconnect();
         (_platform as WindowsPlatform)?.Disconnect();
-        (_platform as MacOSPlatform)?.Disconnect();
         _running = false;
         LoopSignal.Request();
     }

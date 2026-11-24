@@ -306,13 +306,23 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void JoinIfOwnedBy(IntPtr owner)
     {
-        if (_owner == owner && _nsWindow != IntPtr.Zero && NSWindow.IsVisible(_nsWindow))
+        if (_owner == owner && _nsWindow != IntPtr.Zero && NSWindow.IsVisible(_nsWindow) &&
+            NSWindow.ParentOf(_nsWindow) != owner)
+        {
             JoinOwner();
+        }
+    }
+
+    internal void LeaveIfOwnedBy(IntPtr owner)
+    {
+        if (_owner == owner && _nsWindow != IntPtr.Zero)
+            LeaveOwner();
     }
 
     public void HideWindow() => OnMainThread(() =>
     {
         LeaveOwner();
+        _platform.LeaveOwned(_nsWindow);
         NSWindow.OrderOut(_nsWindow);
     });
 
@@ -322,6 +332,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             NSWindow.Deminiaturize(_nsWindow);
         NSApplication.Activate();
         NSWindow.MakeKeyAndOrderFront(_nsWindow);
+        _platform.JoinOwned(_nsWindow);
     });
 
     public void RaiseWithoutActivation() => OnMainThread(() => NSWindow.OrderFront(_nsWindow));
@@ -619,7 +630,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, miniaturized);
         if (!miniaturized)
+        {
             JoinOwner();
+            _platform.JoinOwned(_nsWindow);
+        }
+
         var restored = IsMaximized ? WindowState.Maximized : WindowState.Normal;
         MacOSPlatform.DispatchInput(() =>
         {
@@ -716,6 +731,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             JoinOwner();
     }
 
+    internal void JoinOwned()
+    {
+        if (_nsWindow != IntPtr.Zero && NSWindow.IsVisible(_nsWindow))
+            _platform.JoinOwned(_nsWindow);
+    }
+
     // Only once both are shown: a child window is put on screen, or off it, with its owner.
     private void JoinOwner()
     {
@@ -768,6 +789,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         {
             NSWindow.SetDelegate(_nsWindow, IntPtr.Zero);
             ParentTo(IntPtr.Zero);
+            _platform.LeaveOwned(_nsWindow);
             NSWindow.Close(_nsWindow);
             ObjCManagedObject.Release(_view);
             ObjCManagedObject.Release(_delegate);

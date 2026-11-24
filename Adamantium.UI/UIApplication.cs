@@ -963,10 +963,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             devices.GetAwaiter().GetResult();
             EntityWorld.Initialize();
             StartLoop();
-            if (_splash.IsOnApplicationThread)
-            {
-                DesktopPlatform.Wait(_splash.Shown, cancellationTokenSource.Token);
-            }
+            AnswerSplash();
         }
 
         ReadBlueprint();
@@ -1468,6 +1465,26 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         var type = SplashType ?? BlueprintAttribute?.SplashWindow;
         return SplashScreen.IsSupported ? type : null;
+    }
+
+    /// <summary>The system asks the application to quit: one still starting gives its start up, one that runs closes its
+    /// windows, any of which may refuse.</summary>
+    internal void OnQuitRequested()
+    {
+        if (!_startupDone)
+        {
+            _startupCancellation.Cancel();
+            return;
+        }
+
+        // The main window last: closing it may end the application before the others were asked.
+        var main = MainWindow;
+        foreach (var window in Windows.Where(window => window != main && window.Owner == null).ToArray())
+        {
+            window.Close();
+        }
+
+        main?.Close();
     }
 
     private void CancelStartup()
