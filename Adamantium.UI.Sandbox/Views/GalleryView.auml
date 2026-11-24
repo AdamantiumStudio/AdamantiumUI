@@ -75,10 +75,12 @@
             <TabControl.Behaviors>
                 <TabTearOffBehavior WindowTitle="{Localize GalleryStrings, Key={Binding Header}}"/>
             </TabControl.Behaviors>
-            <!-- The same key is the tab's id for automation: English, and not translated. -->
+            <!-- The same key is the tab's id for automation: English, and not translated. Its name is its title - also
+                 for a tab the strip has not made yet, which a screen reader lists all the same. -->
             <TabControl.ItemContainerStyle>
                 <Style Selector="TabItem">
                     <Setter Property="AutomationProperties.AutomationId" Value="{Binding Header}"/>
+                    <Setter Property="AutomationProperties.Name" Value="{Localize GalleryStrings, Key={Binding Header}}"/>
                     <Setter Property="ToolTip" Value="{Localize GalleryStrings, Key={Binding Header}}"/>
                 </Style>
             </TabControl.ItemContainerStyle>

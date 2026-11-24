@@ -109,7 +109,14 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
 
     /// <summary>The automation id the item container style would give an item's element - a binding there read on the
     /// item - for a control whose unmade items are the same ones it shows, made later.</summary>
-    protected string AutomationIdFromContainerStyle(object item)
+    protected string AutomationIdFromContainerStyle(object item) =>
+        FromContainerStyle(item, AutomationProperties.AutomationIdProperty);
+
+    /// <summary>The name the item container style would give an item's element - a binding there read on the item; empty
+    /// when the style names none.</summary>
+    protected string NameFromContainerStyle(object item) => FromContainerStyle(item, AutomationProperties.NameProperty);
+
+    private string FromContainerStyle(object item, AdamantiumProperty property)
     {
         if (((ItemsControl)Owner).ItemContainerStyle is not { } style)
         {
@@ -119,7 +126,7 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         foreach (var setter in style.Setters)
         {
             if (setter is not Setter { Property: { } path } declared ||
-                AdamantiumPropertyMap.ResolveProperty(typeof(UIComponent), path) != AutomationProperties.AutomationIdProperty)
+                AdamantiumPropertyMap.ResolveProperty(typeof(UIComponent), path) != property)
             {
                 continue;
             }

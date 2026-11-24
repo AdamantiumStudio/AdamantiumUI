@@ -267,6 +267,28 @@ public class AutomationPeerTests
         Assert.That(ids, Is.EqualTo(expected));
     }
 
+    // A virtualizing strip lists the tabs it has not made as stand-ins; a reader hears them by the name their tab will
+    // have, not as blanks (24.11: on AT-SPI every gallery tab past the first twelve had no name).
+    [Test]
+    public void TabsAVirtualizingStripHasNotMade_TakeTheirNamesFromTheItemContainerStyle()
+    {
+        var style = new Style { Selector = new StyleSelector { Types = { typeof(TabItem) } } };
+        style.Setters.Add(new Setter("AutomationProperties.Name", new Binding(nameof(Page.Key))));
+        var tabs = new TabControl { ItemContainerStyle = style, IsVirtualizing = true, TabWidth = 100 };
+        var pages = Enumerable.Range(0, 40).Select(i => new Page { Key = $"Page {i}" }).ToList();
+        tabs.ItemsSource = pages;
+        Shown(tabs);
+
+        var listed = tabs.GetAutomationPeer().GetChildren().Where(peer => peer.ControlType == AutomationControlType.TabItem)
+            .ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tabs.ItemContainerGenerator.RealizedCount, Is.LessThan(pages.Count), "some tabs are not made");
+            Assert.That(listed.Select(peer => peer.Name), Is.EqualTo(pages.Select(page => page.Key)));
+        });
+    }
+
     [Test]
     public void ACollapsedElement_IsOffscreen()
     {
