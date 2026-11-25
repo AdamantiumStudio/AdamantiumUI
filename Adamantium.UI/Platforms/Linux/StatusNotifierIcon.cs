@@ -35,6 +35,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
     private static readonly Lazy<List<object>> Pixmaps = new(ReadPixmaps);
 
     private readonly object _lock = new();
+    private readonly object _checking = new();
     private readonly string _watcher;
     private readonly Action<Action> _post;
     private readonly StatusNotifierMenu _menu;
@@ -158,14 +159,34 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             }
 
             _registeredAs = owned == PrimaryOwner ? Name : bus.UniqueName;
-            _served.Add(bus.Serve(Answer));
+        }
+
+        // Not under the lock: a subscription waits for the bus's answer, read on the thread the signals are heard on -
+        // which takes the lock.
+        List<IDisposable> served =
+        [
+            bus.Serve(Answer),
             // A watcher starting - the panel did, or restarted: the icon is told to it again.
-            _served.Add(bus.Subscribe(BusName, BusPath, BusName, "NameOwnerChanged", OnNameOwnerChanged));
+            bus.Subscribe(BusName, BusPath, BusName, "NameOwnerChanged", OnNameOwnerChanged),
             // A panel coming or going on the watcher: whichever watcher runs, so from any sender.
-            _served.Add(bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostRegistered",
-                _ => Task.Run(() => CheckDisplayed(bus))));
-            _served.Add(bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostUnregistered",
-                _ => Task.Run(() => CheckDisplayed(bus))));
+            bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostRegistered",
+                _ => Task.Run(() => CheckDisplayed(bus))),
+            bus.Subscribe(null, WatcherPath, WatcherInterface, "StatusNotifierHostUnregistered",
+                _ => Task.Run(() => CheckDisplayed(bus))),
+        ];
+        lock (_lock)
+        {
+            if (_disposed)
+            {
+                foreach (var each in served)
+                {
+                    each.Dispose();
+                }
+
+                return;
+            }
+
+            _served.AddRange(served);
         }
 
         // Told by way of the loop, after the one the icon was asked on: what the application gives the icon then - its
@@ -260,28 +281,31 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         catch (Exception e) when (e is DBusException or IOException or SocketException or ObjectDisposedException)
         {
             Serilog.Log.Logger.Debug(e, "No panel shows status icons now; the application's icon shows when one starts");
-            SetDisplayed(false);
-            return;
         }
 
         CheckDisplayed(bus);
     }
 
-    // Asked of the watcher: whether a panel is registered with it now.
+    // Asked of the watcher: whether it runs and a panel is registered with it now. One asking at a time, each applying
+    // what it was told: an answer read before another can not land after it. Never on the thread the bus is read on,
+    // which the answer comes through.
     private void CheckDisplayed(DBusConnection bus)
     {
-        bool displayed;
-        try
+        lock (_checking)
         {
-            displayed = StatusNotifierArea.IsShownOn(bus, _watcher);
-        }
-        catch (Exception e) when (e is DBusException or IOException or SocketException or ObjectDisposedException)
-        {
-            Serilog.Log.Logger.Debug(e, "The watcher did not say whether a panel shows the status icons");
-            displayed = false;
-        }
+            bool displayed;
+            try
+            {
+                displayed = StatusNotifierArea.IsShownOn(bus, _watcher);
+            }
+            catch (Exception e) when (e is DBusException or IOException or SocketException or ObjectDisposedException)
+            {
+                Serilog.Log.Logger.Debug(e, "The watcher did not say whether a panel shows the status icons");
+                displayed = false;
+            }
 
-        SetDisplayed(displayed);
+            SetDisplayed(displayed);
+        }
     }
 
     private void SetDisplayed(bool displayed)
@@ -310,23 +334,17 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             return;
         }
 
-        // The watcher went - the panel ended: nothing shows the icon until one starts again.
-        if (owner.Length == 0)
-        {
-            SetDisplayed(false);
-            return;
-        }
-
         DBusConnection bus;
         lock (_lock)
         {
             bus = _disposed ? null : _bus;
         }
 
-        // Not on the thread the bus is read on, which the call's answer has to come through.
+        // Not on the thread the bus is read on, which the calls' answers have to come through. The watcher gone - the
+        // panel ended - nothing shows the icon until one starts again; one started is told of the icon.
         if (bus != null)
         {
-            Task.Run(() => Register(bus));
+            Task.Run(owner.Length == 0 ? () => CheckDisplayed(bus) : () => Register(bus));
         }
     }
 
