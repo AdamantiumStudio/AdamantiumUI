@@ -1752,7 +1752,8 @@ internal static class PropertyEditors
 
     // Press and drag sideways to run the value up and down - what a property panel in a 3D tool does, and the fastest
     // way there is to nudge a position or a mass. On by default HERE and off in a form elsewhere, because it takes the
-    // press over: dragging inside the field no longer selects text (double-click still does).
+    // press over: dragging inside the field no longer selects text (double-click still does). The grid has the last word
+    // (PropertyGrid.IsDragScrubEnabled).
     public static NumericUpDown Number() => new()
     {
         MinWidth = 0,

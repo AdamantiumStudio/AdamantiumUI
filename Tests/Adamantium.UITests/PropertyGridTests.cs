@@ -2398,6 +2398,25 @@ public class PropertyGridTests
         });
     }
 
+    // A number's line runs its value when dragged sideways - unless the grid says its numbers are typed and stepped.
+    [Test]
+    public void ANumbersLine_DragsItsValueOnlyWhileTheGridLetsIt()
+    {
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        var grid = Built(Section(new Target(), scale));
+        TemplateRows(grid);
+        var draggedAtFirst = (RowOf(grid, scale).Editor as NumericUpDown)?.IsDragScrubEnabled;
+
+        grid.IsDragScrubEnabled = false;
+        TemplateRows(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(draggedAtFirst, Is.True, "on by default, as a 3D tool's panel");
+            Assert.That((RowOf(grid, scale).Editor as NumericUpDown)?.IsDragScrubEnabled, Is.False);
+        });
+    }
+
     [Test]
     public void AFlagFlipsOnOneClick()
     {

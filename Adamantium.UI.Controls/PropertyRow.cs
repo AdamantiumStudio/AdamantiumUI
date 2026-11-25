@@ -689,6 +689,10 @@ public class PropertyRow : Control
         try
         {
             Definition.PrepareEditor(_editor, Value);
+            // A grid whose numbers are typed and stepped turns dragging off; it never turns it on in an editor of its own.
+            if (_editor is NumericUpDown { IsDragScrubEnabled: true } numeric && Owner is { IsDragScrubEnabled: false })
+                numeric.IsDragScrubEnabled = false;
+
             MarkMixed();
         }
         finally

@@ -127,6 +127,14 @@ public class PropertyGrid : Control
         typeof(bool), typeof(PropertyGrid),
         new PropertyMetadata(false, static (grid, _) => ((PropertyGrid)grid).Rebuild()));
 
+    /// <summary>Whether a number's line may run its value up and down when pressed and dragged sideways. On by default:
+    /// a number's own editor does, as a 3D tool's property panel; an application whose numbers are typed and stepped
+    /// turns it off, for every number box the lines show. Set as the grid is made: turned back on, editors already turned
+    /// off stay off.</summary>
+    public static readonly AdamantiumProperty IsDragScrubEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsDragScrubEnabled), typeof(bool), typeof(PropertyGrid),
+        new PropertyMetadata(true, static (grid, _) => ((PropertyGrid)grid).Rebuild()));
+
     /// <summary>When lines show their reset button; Always by default (dimmed when nothing to reset), so lines do not
     /// change shape.</summary>
     public static readonly AdamantiumProperty ResetButtonProperty = AdamantiumProperty.Register(nameof(ResetButton),
@@ -387,6 +395,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<bool>(IsReadOnlyProperty);
         set => SetValue(IsReadOnlyProperty, value);
+    }
+
+    public bool IsDragScrubEnabled
+    {
+        get => GetValue<bool>(IsDragScrubEnabledProperty);
+        set => SetValue(IsDragScrubEnabledProperty, value);
     }
 
     public String SearchText
