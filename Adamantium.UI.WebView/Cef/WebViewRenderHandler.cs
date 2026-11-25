@@ -35,7 +35,6 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
 
     protected override void OnFreed() => accessibilityHandler.Release();
 
-
     [UnmanagedCallersOnly]
     private static void OnScrollOffsetChanged(CefRenderHandler* self, CefBrowser* cefBrowser, double x, double y)
     {
