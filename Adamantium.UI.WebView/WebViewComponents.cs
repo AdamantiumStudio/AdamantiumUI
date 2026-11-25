@@ -1,8 +1,8 @@
 namespace Adamantium.UI.WebView;
 
-/// <summary>The parts Chromium fetches from Google after it starts and keeps up to date, which only the application
-/// lets it fetch (<see cref="WebViewOptions.Components"/>). Chromium's other components - its machine learning models,
-/// the lists and prompts of Chrome itself - are never fetched.</summary>
+/// <summary>The parts Chromium fetches from Google after it starts and keeps up to date, as the application lets it
+/// (<see cref="WebViewOptions.Components"/>; hyphenation and revoked certificates by default). Chromium's other
+/// components - its machine learning models, the lists and prompts of Chrome itself - are never fetched.</summary>
 [Flags]
 public enum WebViewComponents
 {

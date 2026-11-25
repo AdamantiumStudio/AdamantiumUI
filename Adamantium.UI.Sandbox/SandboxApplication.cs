@@ -72,9 +72,8 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         containerRegistry.AddWebView(options =>
         {
             options.ColorScheme = WebViewColorScheme.Light;
-            // The web page plays what sites protect, hyphenates their text and refuses revoked certificates.
-            options.Components =
-                WebViewComponents.Widevine | WebViewComponents.Hyphenation | WebViewComponents.RevokedCertificates;
+            // The web page plays what sites protect too, besides the components every web view has.
+            options.Components |= WebViewComponents.Widevine;
         });
         // Register the app's own window shell under "workspace"; the Workspace command opens the second window in it.
         Container.Resolve<IWindowShellRegistry>().Register<WorkspaceWindow>("workspace");

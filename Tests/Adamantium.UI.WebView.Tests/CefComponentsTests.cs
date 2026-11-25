@@ -8,6 +8,15 @@ namespace Adamantium.UI.WebView.Tests;
 [TestFixture]
 public class CefComponentsTests
 {
+    // Data, not code, is fetched unless the application says otherwise: the hyphenation dictionaries and the list of
+    // revoked certificates; Google's Widevine only when named.
+    [Test]
+    public void AWebViewByDefault_FetchesHyphenationAndRevokedCertificates_NotWidevine()
+    {
+        Assert.That(new WebViewOptions().Components,
+            Is.EqualTo(WebViewComponents.Hyphenation | WebViewComponents.RevokedCertificates));
+    }
+
     [Test]
     public void NoComponent_LetsNoneRegister()
     {
