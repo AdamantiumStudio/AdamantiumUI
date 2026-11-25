@@ -34,7 +34,20 @@ public sealed class OverlayService : IOverlayService
             return null;
         }
 
+        // Made for this showing alone, and done with when it ends, as a closed document's is - however it ends.
         var viewModel = _resolver.Resolve(overlayViewModelType);
+        try
+        {
+            return await ShowAsync(host, viewModel, parameters, cancellationToken);
+        }
+        finally
+        {
+            (viewModel as IDisposable)?.Dispose();
+        }
+    }
+
+    private async Task<object> ShowAsync(IPopupHost host, object viewModel, NavigationParameters parameters, CancellationToken cancellationToken)
+    {
         var aware = viewModel as IOverlayAware;
         OverlayWindow window = null;
         var closedWhileOpening = false;
@@ -100,22 +113,26 @@ public sealed class OverlayService : IOverlayService
             // path doesn't resolve, so the binding no-ops). Set up before Show so a Manual window opens at the VM's value.
             window.SetBinding(OverlayWindow.LeftProperty, new Binding(nameof(IOverlayAware.Left)) { Source = aware, Mode = BindingMode.TwoWay });
             window.SetBinding(OverlayWindow.TopProperty, new Binding(nameof(IOverlayAware.Top)) { Source = aware, Mode = BindingMode.TwoWay });
-            window.SetBinding(OverlayWindow.WidthProperty,
-                new Binding(nameof(IOverlayAware.Width)) { Source = aware, Mode = BindingMode.TwoWay });
-            window.SetBinding(OverlayWindow.IsCollapsedProperty,
-                new Binding(nameof(IOverlayAware.IsCollapsed)) { Source = aware, Mode = BindingMode.TwoWay });
+
+            // The width goes one way: the window coerces its own while collapsed, which is not for the view model to keep.
+            BindIfDeclared(OverlayWindow.WidthProperty, nameof(IOverlayAware.Width), BindingMode.OneWay);
+            BindIfDeclared(OverlayWindow.IsCollapsedProperty, nameof(IOverlayAware.IsCollapsed), BindingMode.TwoWay);
             window.Closed += (_, _) => aware.RequestClose -= OnRequestClose;
         }
 
-        // Made for this showing alone: closed, it goes, its view with it - and its view model, resolved for it, as a
-        // closed document's is.
-        window.Closed += (_, _) =>
-        {
-            DiscardedVisuals.PublishSubtree(window);
-            (viewModel as IDisposable)?.Dispose();
-        };
+        // Made for this showing alone: closed, it goes, its view with it.
+        window.Closed += (_, _) => DiscardedVisuals.PublishSubtree(window);
 
         return await OverlayWindowManager.GetFor(host).ShowAsync(window);
+
+        // A path the view model's own type does not have would be reported as a broken binding.
+        void BindIfDeclared(AdamantiumProperty property, string name, BindingMode mode)
+        {
+            if (aware.GetType().GetProperty(name) != null)
+            {
+                window.SetBinding(property, new Binding(name) { Source = aware, Mode = mode });
+            }
+        }
     }
 
     public Task<object> ShowOverlayAsync<TOverlayViewModel>(NavigationParameters parameters = null, CancellationToken cancellationToken = default)

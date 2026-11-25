@@ -6,6 +6,7 @@ using Adamantium.Navigation;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Diagnostics;
+using Adamantium.UI.Sandbox.Behaviors;
 using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -25,7 +26,7 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
     private CancellationTokenRegistration _closeWhenCanceled;
     private long _loopFrames;
     private long _lastLoopFrames, _lastPresented, _lastSample;
-    private bool _titleJustChanged;
+    private long _lastOwn;
 
     // Opened at the window's bottom-left, out of the way of what is watched: the room from its left and bottom edges.
     [Bindable] private double left = 16;
@@ -33,7 +34,7 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
     [Bindable] private bool isCollapsed = true;
 
     // One width collapsed and expanded: sized to its title, the window would follow the rates as they change.
-    [Bindable] private double width = 296;
+    [Bindable] private double width = 300;
     [Bindable] private string title = MainStrings.Diagnostics;
 
     public DiagnosticsOverlayViewModel(IApplicationDiagnostics diagnostics)
@@ -61,7 +62,7 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
         }
 
         _closeWhenCanceled = cancellationToken.Register(() => RequestClose?.Invoke(null));
-        StartRates();
+        if (!cancellationToken.IsCancellationRequested) StartRates();
         return Task.CompletedTask;
     }
 
@@ -69,6 +70,7 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
     {
         _lastPresented = Interlocked.Read(ref RuntimeStats.PresentedFrames);
         _lastSample = System.Diagnostics.Stopwatch.GetTimestamp();
+        _lastOwn = DiagnosticsOverlayBehavior.OwnFrames;
         _diagnostics.CycleFinished += OnCycleFinished;
         _rates.Tick += OnRatesTick;
         _rates.Start();
@@ -83,17 +85,20 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
         var loop = Interlocked.Read(ref _loopFrames);
         var presented = Interlocked.Read(ref RuntimeStats.PresentedFrames);
 
-        // The frame the last title change drew is this window's own, not the application's: counted, an idle
-        // application would read one frame, which changes the title, which draws one more.
-        var own = _titleJustChanged ? 1 : 0;
-        var renderRate = Math.Max(0, presented - _lastPresented - own) / seconds;
-        var loopRate = Math.Max(0, loop - _lastLoopFrames - own) / seconds;
+        // The frames the diagnostics draw for themselves - this title, the plate - are not the application's: counted, an
+        // idle application would read one frame, which changes the title, which draws one more. Nothing else drawn, the
+        // application rests: the loop's idle wakes are no rate of its own either.
+        var own = DiagnosticsOverlayBehavior.OwnFrames;
+        var drawn = Math.Max(0, presented - _lastPresented - (own - _lastOwn));
+        var render = (int)Math.Round(drawn / seconds);
+        var cycles = drawn > 0 ? (int)Math.Round((loop - _lastLoopFrames) / seconds) : 0;
         _lastSample = now;
         _lastLoopFrames = loop;
         _lastPresented = presented;
+        _lastOwn = own;
 
-        var rates = MainStrings.DiagnosticsRates((int)Math.Round(renderRate), (int)Math.Round(loopRate));
-        _titleJustChanged = rates != Title;
+        var rates = MainStrings.DiagnosticsRates(render, cycles);
+        if (rates != Title) DiagnosticsOverlayBehavior.CountOwnFrame();
         Title = rates;
     }
 

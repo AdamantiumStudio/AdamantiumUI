@@ -46,6 +46,12 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private bool _idleShown;
     private int _quietRefreshes;
     private static long _plateWrites;
+
+    /// <summary>How many frames the diagnostics - the plates, the windows' titles - asked for themselves.</summary>
+    internal static long OwnFrames => Interlocked.Read(ref _plateWrites);
+
+    internal static void CountOwnFrame() => Interlocked.Increment(ref _plateWrites);
+
     private long _plateWritesSeen;
     private int _traceWindows;
     private int _peakLayout;     // busiest layout-invalidation second seen so far

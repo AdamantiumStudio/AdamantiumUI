@@ -6,7 +6,8 @@
 
 ### Changed
 
-- An overlay window closed disposes its view model, if it is disposable, as a closed document's is.
+- An overlay's view model, if it is disposable, is disposed when its showing ends, as a closed document's is: an overlay's
+  view model is made for one showing. A window closed closes the overlay windows over it.
 - Fluent: an overlay window's title bar is lower (34) and its buttons narrower (28), as a docked panel's; the sizes are
   theme resources (`OverlayTitleBarHeight`, `DockHeaderButtonSize`).
 - Sandbox: the diagnostics window opens collapsed at the bottom-left, its title showing the render and loop rates.

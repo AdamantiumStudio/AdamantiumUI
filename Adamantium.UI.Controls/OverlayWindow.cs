@@ -617,7 +617,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         {
             width = Math.Min(width, Math.Max(MinWidth, room.Width));
             height = Math.Min(height, Math.Max(MinHeight, room.Height));
-            if (width < RenderSize.Width) Width = width;
+            if (width < RenderSize.Width) SetCurrentValue(WidthProperty, width);
             if (height < RenderSize.Height && !IsCollapsed) Height = height;
             left = Within(left, room.X, room.X + room.Width - width);
             top = Within(top, room.Y, room.Y + room.Height - height);
@@ -854,7 +854,8 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
 
     private void OnPinClick(object sender, RoutedEventArgs e) => IsPinned = !IsPinned;
 
-    private void OnCollapseClick(object sender, RoutedEventArgs e) => IsCollapsed = !IsCollapsed;
+    private void OnCollapseClick(object sender, RoutedEventArgs e) =>
+        SetCurrentValue(IsCollapsedProperty, !IsCollapsed);   // a view model bound to it stays bound
 
     // Resize drags the bottom-right grip, the top-left staying put: a card centered or kept to another corner is placed by
     // its top-left on the first move, or growing it would move that corner too.
@@ -896,7 +897,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
         var maxH = Math.Max(MinHeight, room.Y + room.Height - top);
         var newW = Math.Clamp(width, MinWidth, maxW);
         var newH = Math.Clamp(height, MinHeight, maxH);
-        Width = newW;
+        SetCurrentValue(WidthProperty, newW);
         Height = newH;
 
         // Placed by its top-left before the resize (KeepTopLeft), the card's offset IS its top-left.

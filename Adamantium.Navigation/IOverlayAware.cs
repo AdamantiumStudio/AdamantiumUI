@@ -43,10 +43,9 @@ public interface IOverlayAware
     double Left { get => 0; set { } }
     double Top { get => 0; set { } }
 
-    /// <summary>The window's width; NaN (default) sizes it to its content - collapsed, to its title. TWO-WAY bound like
-    /// <see cref="Left"/>: a width given here holds collapsed and expanded alike, and a resize by the grip updates it.
-    /// </summary>
-    double Width { get => double.NaN; set { } }
+    /// <summary>The window's width; NaN (default) sizes it to its content - collapsed, to its title. A width given here
+    /// holds collapsed and expanded alike; a resize by the grip is the window's own and is not told back.</summary>
+    double Width => double.NaN;
 
     /// <summary>Whether the window is collapsed to its title (with <see cref="CanCollapse"/>). TWO-WAY bound like
     /// <see cref="Left"/>: true when it opens, it opens collapsed; folding it by its button updates it.</summary>

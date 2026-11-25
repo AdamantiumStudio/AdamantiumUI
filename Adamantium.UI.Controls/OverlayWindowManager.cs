@@ -27,7 +27,17 @@ public sealed class OverlayWindowManager
     private bool _hostHooked;
     private PointerPressedEventHandler _previewDown;
 
-    private OverlayWindowManager(IPopupHost host) => _host = host;
+    private OverlayWindowManager(IPopupHost host)
+    {
+        _host = host;
+        // Its windows go with the window they are shown over: whoever awaits one is answered, its view model let go.
+        if (host is IWindow window) window.Closed += (_, _) => CloseAll();
+    }
+
+    private void CloseAll()
+    {
+        foreach (var window in _windows.ToArray()) window.Close();
+    }
 
     /// <summary>Open windows, back-to-front. The last one is the front-most; it is the active one unless it was shown not
     /// activated.</summary>
