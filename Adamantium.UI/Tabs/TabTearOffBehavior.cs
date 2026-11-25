@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Text;
@@ -13,7 +12,7 @@ namespace Adamantium.UI.Tabs;
 
 /// <summary>
 /// Gives a tab dragged off its strip a window of its own, and lets it be carried back. The tab's item leaves the
-/// control's <c>ItemsSource</c> - a list it can change - and becomes the window's content and data context, at the size
+/// control's <c>ItemsSource</c> - a list it can change, or a view of one - and becomes the window's content and data context, at the size
 /// the tab's content had; dragged over the strip of any tab control of the application whose items can take it, the
 /// window goes clear and the tab stands there, and let go there it stays and the window closes. Attach:
 /// <code>&lt;TabControl.Behaviors&gt;&lt;TabTearOffBehavior WindowTitle="{Binding Header}"/&gt;&lt;/TabControl.Behaviors&gt;</code>
@@ -75,7 +74,7 @@ public class TabTearOffBehavior : Behavior<TabControl>
 
     private void OnTornOff(object sender, TabTearOffEventArgs e)
     {
-        if (_tabs?.ItemsSource is not IList { IsReadOnly: false, IsFixedSize: false } items || !items.Contains(e.Item))
+        if (_tabs?.EditableSource is not { } items || !items.Contains(e.Item))
         {
             return;
         }

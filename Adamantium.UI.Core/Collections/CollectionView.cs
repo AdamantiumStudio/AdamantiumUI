@@ -64,6 +64,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
                 observable.CollectionChanged += OnSourceCollectionChanged;
 
             Rebuild();
+            SourceTaken?.Invoke();
         }
     }
 
@@ -467,6 +468,25 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        var nested = IsTaking;
+        IsTaking = true;
+        try
+        {
+            Take(e);
+        }
+        finally
+        {
+            IsTaking = nested;
+        }
+
+        SourceTaken?.Invoke();
+    }
+
+    /// <summary>Whether a change of the source is being taken in: what is shown and the source may not agree yet.</summary>
+    internal bool IsTaking { get; private set; }
+
+    private void Take(NotifyCollectionChangedEventArgs e)
+    {
         // Grouped by more than one level, the view is made again; by one, an item joins its group (GroupedInsertionPoint).
         if (GroupDescriptions.Count > 1)
         {
@@ -560,6 +580,13 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         ShiftSourceIndexes(sourceIndex, -count);
         return false;
     }
+
+    /// <summary>Raised when a change of the source is wholly taken in, whether or not it changed what is shown: the view
+    /// and the source agree. <see cref="CollectionChanged"/> comes on the way.</summary>
+    internal event Action SourceTaken;
+
+    /// <summary>Where the source holds the item shown at <paramref name="index"/>.</summary>
+    internal int SourceIndexOf(int index) => _sourceIndexOfView[IsPaged ? _pageIndex * _pageSize + index : index];
 
     private void ShiftSourceIndexes(int fromSourceIndex, int delta)
     {

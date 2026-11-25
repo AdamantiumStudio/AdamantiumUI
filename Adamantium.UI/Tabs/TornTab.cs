@@ -83,8 +83,13 @@ internal sealed class TornTab
 
     private void Enter(TabControl target, int index)
     {
-        var items = (IList)target.ItemsSource;
-        items.Insert(Math.Min(index, items.Count), _item);
+        var items = target.EditableSource;
+        if (items == null || !target.WouldShow(_item))
+        {
+            return;
+        }
+
+        target.InsertIntoSource(index, _item);
 
         if (!target.Items.Contains(_item))
         {
@@ -159,7 +164,7 @@ internal sealed class TornTab
 
             root.TraverseVisualTree(component =>
             {
-                if (component is TabControl { AllowTabDrag: true, ItemsSource: IList { IsReadOnly: false, IsFixedSize: false } items } tabs
+                if (component is TabControl { AllowTabDrag: true, EditableSource: { } items } tabs
                     && Accepts(items))
                 {
                     _candidates.Add(tabs);

@@ -37,7 +37,7 @@
         <TextBlock AutomationProperties.AutomationId="LastDialog"
                    Text="{Localize MainStrings.LastDialog, result={Binding LastResult}}" FontSize="12"
                    Foreground="{ResourceReference TextFillColorSecondary}"
-                   HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,10,0,0"/>
+                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,0"/>
 
         <!-- Diagnostics toggle - always visible, top-right. Opens the live diagnostics in an overlay window
              (DiagnosticsOverlayView), moved and collapsed to its title by its own bar. Two-way, so the window's close

@@ -3,6 +3,7 @@
     <Phrase Key="ContentSlide" Text="Смена содержимого:"/>
     <Phrase Key="Indicator" Text="Индикатор:"/>
     <Phrase Key="Loading" Text="Загрузка..."/>
+    <Phrase Key="FindTab" Text="Найти вкладку"/>
 
     <Phrase Key="Top" Text="Сверху"/>
     <Phrase Key="Bottom" Text="Снизу"/>

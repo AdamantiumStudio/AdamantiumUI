@@ -82,7 +82,8 @@ public static class HaloBake
         // Switched off = alpha zero, NOT absent - see FromAura.
         var opacity = shadow.IsEnabled ? shadow.Opacity : 0.0;
         return new HaloBand(new Vector2F((float)shadow.OffsetX, (float)shadow.OffsetY), (float)shadow.Spread,
-            (float)System.Math.Max(0.0, shadow.BlurRadius), Premultiplied(shadow.Color, opacity), shadow.Inner);
+            (float)System.Math.Max(0.0, shadow.BlurRadius), Premultiplied(shadow.Color, opacity), shadow.Inner,
+            isShadow: true);
     }
 
     private static Vector4F Premultiplied(Color color, double opacity)

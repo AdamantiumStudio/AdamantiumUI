@@ -7,9 +7,17 @@
       x:CreateInDesignTime="True">
 
     <Grid RowDefinitions="Auto,*" Margin="16">
-        <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->
-        <!-- The members of each enum are said by the page's phrases, a member's name being its key. -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <!-- As wide as a tab: the strip shows the tabs whose title has what is typed. -->
+            <TextBox AutomationProperties.AutomationId="TabSearch"
+                     Width="152"
+                     VerticalAlignment="Center"
+                     Margin="0,0,20,0"
+                     Placeholder="{Localize GalleryStrings.FindTab}"
+                     ShowsClearButton="True"
+                     Text="{Binding TabSearch, Mode=TwoWay}"/>
+            <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->
+            <!-- The members of each enum are said by the page's phrases, a member's name being its key. -->
             <TextBlock x:Name="TabPlacementLabel" Text="{Localize GalleryStrings.TabPlacement}" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <DropDown AutomationProperties.AutomationId="TabPlacement" AutomationProperties.LabeledBy="{Binding ElementName=TabPlacementLabel}"
                       EnumType="{x:Type controls:TabStripPlacement}"
@@ -45,13 +53,13 @@
             </DropDown>
         </StackPanel>
 
-        <!-- Data-driven tabs: the TabControl binds to the root view-model's Tabs collection. Each tab's header comes from
-             the ItemTemplate ({Binding Header}); its body is chosen by the framework's ViewLocatorTemplateSelector, which
+        <!-- Data-driven tabs: the TabControl binds to the root view-model's filtered view of its Tabs. Each tab's header
+             comes from the ItemTemplate ({Binding Header}); its body is chosen by the framework's ViewLocatorTemplateSelector, which
              maps each tab view-model to its View. No per-tab wiring in markup - add a tab by adding its view-model to
              GalleryViewModel.Tabs. -->
         <TabControl Grid.Row="1"
                     AutomationProperties.AutomationId="GalleryTabs"
-                    ItemsSource="{Binding Tabs}"
+                    ItemsSource="{Binding FoundTabs}"
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     TabStripPlacement="{Binding TabPlacement}"
                     SelectionIndicatorPlacement="{Binding IndicatorPlacement}"

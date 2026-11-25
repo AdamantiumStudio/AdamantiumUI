@@ -1,6 +1,10 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.Localization;
+using Adamantium.UI.Core.Collections;
+using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.Canvases.ViewModels;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
@@ -8,7 +12,7 @@ using Adamantium.UI.Controls;
 namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Root view-model of the control gallery: one child view-model per tab, exposed as a single collection the
-/// TabControl binds to (<c>ItemsSource="{Binding Tabs}"</c>). Each tab renders its header via the TabControl's
+/// TabControl binds to through a filtered view (<c>ItemsSource="{Binding FoundTabs}"</c>). Each tab renders its header via the TabControl's
 /// ItemTemplate ({Binding Header}) and its body via a <see cref="TabViewSelector"/> that maps the tab view-model to its
 /// View - so the whole gallery is data-driven, exactly like a real application shell.</summary>
 [ViewModel]
@@ -52,10 +56,16 @@ public partial class GalleryViewModel
         new TransformsViewModel(),
     };
 
+    /// <summary>The tabs the strip shows: those whose title has what <see cref="TabSearch"/> asks for.</summary>
+    public CollectionView FoundTabs { get; }
+
     [Bindable] private TabPageViewModel _selectedTab;
 
+    // What the field over the strip looks for in the tabs' titles; empty shows them all.
+    [Bindable] private string _tabSearch;
+
     // Drives the TabControl.TabStripPlacement from a DropDown (enum-bound) so the strip can move to any edge live.
-    [Bindable] private TabStripPlacement _tabPlacement = TabStripPlacement.Top;
+    [Bindable] private TabStripPlacement _tabPlacement = TabStripPlacement.Left;
 
     // Drives the TabControl.ContentTransition from a DropDown (enum-bound) so the tab-content slide mode switches live.
     [Bindable] private ContentTransition _slideMode = ContentTransition.SlideLeft;
@@ -86,5 +96,15 @@ public partial class GalleryViewModel
         Tabs.Add(resolver.Resolve<WebPageViewModel>());
         Tabs.Add(resolver.Resolve<SceneViewModel>());
         SelectedTab = Tabs[2];
+        FoundTabs = new CollectionView(Tabs) { Filter = tab => IsFound((TabPageViewModel)tab) };
+    }
+
+    partial void OnTabSearchChanged(string value) => FoundTabs.Refresh();
+
+    // In the application's language, as the titles are said.
+    private bool IsFound(TabPageViewModel tab)
+    {
+        var title = Languages.Say(GalleryStrings.Current, tab.Header);
+        return Languages.Culture.CompareInfo.IndexOf(title, TabSearch?.Trim() ?? string.Empty, CompareOptions.IgnoreCase) >= 0;
     }
 }
