@@ -19,10 +19,8 @@ public class Thumb : Control
    public static readonly RoutedEvent DragCompletedEvent = EventManager.RegisterRoutedEvent("DragCompleted",
       RoutingStrategy.Bubble, typeof(DragCompletedEventHandler), typeof(Thumb));
 
-   private static readonly AdamantiumPropertyKey IsDraggingPropertyKey = AdamantiumProperty.RegisterReadOnly(
+   public static readonly AdamantiumProperty IsDraggingProperty = AdamantiumProperty.RegisterReadOnly(
       nameof(IsDragging), typeof (bool), typeof (Thumb), new PropertyMetadata(false));
-
-   public static readonly AdamantiumProperty IsDraggingProperty = IsDraggingPropertyKey.Property;
 
    public event DragStartedEventHandler DragStarted
    {
@@ -45,7 +43,7 @@ public class Thumb : Control
    public bool IsDragging
    {
       get => GetValue<bool>(IsDraggingProperty);
-      private set => SetValue(IsDraggingPropertyKey, value);
+      private set => SetReadOnlyValue(IsDraggingProperty, value);
    }
 
    static Thumb()

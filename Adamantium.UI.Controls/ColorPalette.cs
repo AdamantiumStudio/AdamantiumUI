@@ -38,10 +38,8 @@ public class ColorPalette : Control
         typeof(IReadOnlyList<Color>), typeof(ColorPalette),
         new PropertyMetadata(StandardColors, (a, _) => ((ColorPalette)a).ShowColors()));
 
-    private static readonly AdamantiumPropertyKey ColorPlacesPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ColorPlacesProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ColorPlaces), typeof(IReadOnlyList<ColorPaletteSwatch>), typeof(ColorPalette), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty ColorPlacesProperty = ColorPlacesPropertyKey.Property;
 
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(ColorPalette), new PropertyMetadata(null, OnCommandChanged));
@@ -66,15 +64,11 @@ public class ColorPalette : Control
     public static readonly AdamantiumProperty RecentCountProperty = AdamantiumProperty.Register(nameof(RecentCount),
         typeof(int), typeof(ColorPalette), new PropertyMetadata(10, (a, _) => ((ColorPalette)a).ShowRecent()));
 
-    private static readonly AdamantiumPropertyKey RecentPlacesPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty RecentPlacesProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(RecentPlaces), typeof(IReadOnlyList<ColorPaletteSwatch>), typeof(ColorPalette), new PropertyMetadata(null));
 
-    public static readonly AdamantiumProperty RecentPlacesProperty = RecentPlacesPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey HasRecentColorsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasRecentColorsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasRecentColors), typeof(bool), typeof(ColorPalette), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasRecentColorsProperty = HasRecentColorsPropertyKey.Property;
 
     private CommandSourceListener<ColorPalette> _commandListener;
     private ButtonBase _noColor;
@@ -149,21 +143,21 @@ public class ColorPalette : Control
     public IReadOnlyList<ColorPaletteSwatch> RecentPlaces
     {
         get => GetValue<IReadOnlyList<ColorPaletteSwatch>>(RecentPlacesProperty);
-        private set => SetValue(RecentPlacesPropertyKey, value);
+        private set => SetReadOnlyValue(RecentPlacesProperty, value);
     }
 
     /// <summary>The grid as the template shows it: a swatch of each of <see cref="Colors"/>, the selected one marked.</summary>
     public IReadOnlyList<ColorPaletteSwatch> ColorPlaces
     {
         get => GetValue<IReadOnlyList<ColorPaletteSwatch>>(ColorPlacesProperty);
-        private set => SetValue(ColorPlacesPropertyKey, value);
+        private set => SetReadOnlyValue(ColorPlacesProperty, value);
     }
 
     /// <summary>Whether any color has been applied through "More colors": the row of recent colors is shown only then.</summary>
     public bool HasRecentColors
     {
         get => GetValue<bool>(HasRecentColorsProperty);
-        private set => SetValue(HasRecentColorsPropertyKey, value);
+        private set => SetReadOnlyValue(HasRecentColorsProperty, value);
     }
 
     public override void OnApplyTemplate()

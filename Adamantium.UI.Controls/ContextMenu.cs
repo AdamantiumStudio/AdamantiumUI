@@ -36,10 +36,8 @@ public class ContextMenu : ItemsControl
     public static readonly AdamantiumProperty SelectsRangeProperty = AdamantiumProperty.Register(nameof(SelectsRange),
         typeof(bool), typeof(ContextMenu), new PropertyMetadata(false));
 
-    private static readonly AdamantiumPropertyKey RangeCountPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty RangeCountProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(RangeCount), typeof(int), typeof(ContextMenu), new PropertyMetadata(0));
-
-    public static readonly AdamantiumProperty RangeCountProperty = RangeCountPropertyKey.Property;
 
     public static readonly AdamantiumProperty RangeFormatProperty = AdamantiumProperty.Register(nameof(RangeFormat),
         typeof(string), typeof(ContextMenu), new PropertyMetadata(null));
@@ -91,7 +89,7 @@ public class ContextMenu : ItemsControl
     public int RangeCount
     {
         get => GetValue<int>(RangeCountProperty);
-        private set => SetValue(RangeCountPropertyKey, value);
+        private set => SetReadOnlyValue(RangeCountProperty, value);
     }
 
     /// <summary>What the line under the rows of a menu that selects a range says, <c>{0}</c> standing for

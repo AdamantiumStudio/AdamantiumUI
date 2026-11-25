@@ -35,10 +35,8 @@ public class DropDown : Selector
         typeof(object), typeof(DropDown), new PropertyMetadata(null, OnPlaceholderChanged));
 
     // What the header shows: the selected item, or the placeholder when nothing is selected. Read-only for the template.
-    private static readonly AdamantiumPropertyKey DisplayContentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty DisplayContentProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(DisplayContent), typeof(object), typeof(DropDown), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty DisplayContentProperty = DisplayContentPropertyKey.Property;
 
     // Bind ItemsSource to an enum's values with no ceremony: EnumType="{x:Type local:MyEnum}" (or {x:Enum ...}). Selecting
     // a row sets SelectedItem to the enum value; display is the value's ToString (use ItemTemplate for friendly names).
@@ -295,13 +293,11 @@ public class DropDown : Selector
     public object DisplayContent
     {
         get => GetValue(DisplayContentProperty);
-        private set => SetValue(DisplayContentPropertyKey, value);
+        private set => SetReadOnlyValue(DisplayContentProperty, value);
     }
 
-    private static readonly AdamantiumPropertyKey DisplayContentTemplatePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty DisplayContentTemplateProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(DisplayContentTemplate), typeof(DataTemplate), typeof(DropDown), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty DisplayContentTemplateProperty = DisplayContentTemplatePropertyKey.Property;
 
     /// <summary>How the header presents <see cref="DisplayContent"/>: <see cref="ItemsControl.ItemTemplate"/> for an item,
     /// none for the placeholder. Computed, as WPF's SelectionBoxItemTemplate; the header's presenter asks
@@ -309,7 +305,7 @@ public class DropDown : Selector
     public DataTemplate DisplayContentTemplate
     {
         get => GetValue<DataTemplate>(DisplayContentTemplateProperty);
-        private set => SetValue(DisplayContentTemplatePropertyKey, value);
+        private set => SetReadOnlyValue(DisplayContentTemplateProperty, value);
     }
 
     /// <summary>Set to an enum type to auto-fill the list with its values (SelectedItem becomes the chosen enum value).</summary>

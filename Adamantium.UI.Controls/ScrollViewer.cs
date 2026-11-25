@@ -52,18 +52,15 @@ public class ScrollViewer : ContentControl
 
     // True while both bars show, so a theme can treat the corner where they cross; read-only, since it reports what the
     // metrics produced.
-    private static readonly AdamantiumPropertyKey IsScrollBarCornerOccupiedPropertyKey =
+    public static readonly AdamantiumProperty IsScrollBarCornerOccupiedProperty =
         AdamantiumProperty.RegisterReadOnly(nameof(IsScrollBarCornerOccupied), typeof(bool), typeof(ScrollViewer),
             new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsScrollBarCornerOccupiedProperty =
-        IsScrollBarCornerOccupiedPropertyKey.Property;
 
     /// <summary>Both scrollbars are visible, so the square where they meet is covered by neither.</summary>
     public bool IsScrollBarCornerOccupied
     {
         get => GetValue<bool>(IsScrollBarCornerOccupiedProperty);
-        private set => SetValue(IsScrollBarCornerOccupiedPropertyKey, value);
+        private set => SetReadOnlyValue(IsScrollBarCornerOccupiedProperty, value);
     }
 
     // Changing bar visibility at runtime (e.g. a TextBox toggling wrap) must re-push the CanScroll flags onto the

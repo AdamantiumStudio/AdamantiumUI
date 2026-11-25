@@ -22,18 +22,14 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public class ToolBarItem : ContentControl
 {
-    private static readonly AdamantiumPropertyKey FormPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Form),
+    public static readonly AdamantiumProperty FormProperty = AdamantiumProperty.RegisterReadOnly(nameof(Form),
         typeof(ToolBarItemForm), typeof(ToolBarItem),
         new PropertyMetadata(ToolBarItemForm.Shown, PropertyMetadataOptions.AffectsMeasure,
             static (a, _) => ((ToolBarItem)a).OnFormChanged()));
 
-    public static readonly AdamantiumProperty FormProperty = FormPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey LabelPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Label),
+    public static readonly AdamantiumProperty LabelProperty = AdamantiumProperty.RegisterReadOnly(nameof(Label),
         typeof(object), typeof(ToolBarItem),
         new PropertyMetadata(null, static (a, _) => ((ToolBarItem)a).OnLabelChanged()));
-
-    public static readonly AdamantiumProperty LabelProperty = LabelPropertyKey.Property;
 
     private ToolBarFoldButton _foldButton;
     private IUIComponent _labelSource;
@@ -44,7 +40,7 @@ public class ToolBarItem : ContentControl
     public ToolBarItemForm Form
     {
         get => GetValue<ToolBarItemForm>(FormProperty);
-        private set => SetValue(FormPropertyKey, value);
+        private set => SetReadOnlyValue(FormProperty, value);
     }
 
     /// <summary>The text of the label tied to the command by <c>LabeledBy</c>, while the command stands on a column: the
@@ -52,7 +48,7 @@ public class ToolBarItem : ContentControl
     public object Label
     {
         get => GetValue(LabelProperty);
-        private set => SetValue(LabelPropertyKey, value);
+        private set => SetReadOnlyValue(LabelProperty, value);
     }
 
     /// <summary>The button the command is folded into, once it has been.</summary>

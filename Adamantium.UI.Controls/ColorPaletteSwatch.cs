@@ -15,23 +15,17 @@ public class ColorPaletteSwatch : ButtonBase
     public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
         typeof(Color?), typeof(ColorPaletteSwatch), new PropertyMetadata(null, OnColorChanged));
 
-    private static readonly AdamantiumPropertyKey SwatchBrushPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty SwatchBrushProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(SwatchBrush), typeof(Brush), typeof(ColorPaletteSwatch), new PropertyMetadata(null));
 
-    public static readonly AdamantiumProperty SwatchBrushProperty = SwatchBrushPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey HasColorPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasColorProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasColor), typeof(bool), typeof(ColorPaletteSwatch), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasColorProperty = HasColorPropertyKey.Property;
 
     public static readonly AdamantiumProperty SelectedColorProperty = AdamantiumProperty.Register(nameof(SelectedColor),
         typeof(Color?), typeof(ColorPaletteSwatch), new PropertyMetadata(null, OnSelectedColorChanged));
 
-    private static readonly AdamantiumPropertyKey IsSelectedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsSelected), typeof(bool), typeof(ColorPaletteSwatch), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsSelectedProperty = IsSelectedPropertyKey.Property;
 
     public ColorPaletteSwatch()
     {
@@ -48,14 +42,14 @@ public class ColorPaletteSwatch : ButtonBase
     public Brush SwatchBrush
     {
         get => GetValue<Brush>(SwatchBrushProperty);
-        private set => SetValue(SwatchBrushPropertyKey, value);
+        private set => SetReadOnlyValue(SwatchBrushProperty, value);
     }
 
     /// <summary>Whether it holds a color, or is an empty place.</summary>
     public bool HasColor
     {
         get => GetValue<bool>(HasColorProperty);
-        private set => SetValue(HasColorPropertyKey, value);
+        private set => SetReadOnlyValue(HasColorProperty, value);
     }
 
     /// <summary>The color its palette has selected - <see cref="ColorPalette.SelectedColor"/>.</summary>
@@ -69,7 +63,7 @@ public class ColorPaletteSwatch : ButtonBase
     public bool IsSelected
     {
         get => GetValue<bool>(IsSelectedProperty);
-        private set => SetValue(IsSelectedPropertyKey, value);
+        private set => SetReadOnlyValue(IsSelectedProperty, value);
     }
 
     protected override void OnClick()

@@ -30,10 +30,8 @@ public class PasswordBox : TextBoxBase
         nameof(IsPasswordRevealed), typeof(bool), typeof(PasswordBox), new PropertyMetadata(false, OnShownTextChanged));
 
     /// <summary>Whether the box holds a password. The control keeps it; the theme reads it.</summary>
-    private static readonly AdamantiumPropertyKey HasPasswordPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasPasswordProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasPassword), typeof(bool), typeof(PasswordBox), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasPasswordProperty = HasPasswordPropertyKey.Property;
 
     private const char ContinuesCharacter = (char)0x034F;
     private const char LineSeparator = (char)0x2028;
@@ -261,7 +259,7 @@ public class PasswordBox : TextBoxBase
         if (a is PasswordBox box)
         {
             box.ForgetMask();
-            box.SetCurrentValue(HasPasswordPropertyKey, !string.IsNullOrEmpty(box.Password));
+            box.SetReadOnlyValue(HasPasswordProperty, !string.IsNullOrEmpty(box.Password));
         }
     }
 

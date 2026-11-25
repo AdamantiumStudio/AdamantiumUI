@@ -14,20 +14,14 @@ namespace Adamantium.UI.Controls;
 /// them.</summary>
 public class CalendarMonth : Control
 {
-    private static readonly AdamantiumPropertyKey TitlePropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Title),
+    public static readonly AdamantiumProperty TitleProperty = AdamantiumProperty.RegisterReadOnly(nameof(Title),
         typeof(string), typeof(CalendarMonth), new PropertyMetadata(string.Empty));
 
-    public static readonly AdamantiumProperty TitleProperty = TitlePropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsTitleShownPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsTitleShownProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsTitleShown), typeof(bool), typeof(CalendarMonth), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsTitleShownProperty = IsTitleShownPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey ShowWeekNumbersPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ShowWeekNumbersProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ShowWeekNumbers), typeof(bool), typeof(CalendarMonth), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty ShowWeekNumbersProperty = ShowWeekNumbersPropertyKey.Property;
 
     internal const int Days = Calendar.DayColumns * DayRows;
     private const int DayRows = 6;
@@ -45,21 +39,21 @@ public class CalendarMonth : Control
     public string Title
     {
         get => GetValue<string>(TitleProperty);
-        internal set => SetValue(TitlePropertyKey, value);
+        internal set => SetReadOnlyValue(TitleProperty, value);
     }
 
     /// <summary>Whether the month's name is shown over it - where the calendar shows several months.</summary>
     public bool IsTitleShown
     {
         get => GetValue<bool>(IsTitleShownProperty);
-        internal set => SetValue(IsTitleShownPropertyKey, value);
+        internal set => SetReadOnlyValue(IsTitleShownProperty, value);
     }
 
     /// <summary>Whether the weeks are numbered beside the days - the calendar's <see cref="Calendar.ShowWeekNumbers"/>.</summary>
     public bool ShowWeekNumbers
     {
         get => GetValue<bool>(ShowWeekNumbersProperty);
-        internal set => SetValue(ShowWeekNumbersPropertyKey, value);
+        internal set => SetReadOnlyValue(ShowWeekNumbersProperty, value);
     }
 
     /// <summary>The days in the order they stand, seven a week, six weeks; empty until the template is applied.</summary>
