@@ -60,6 +60,19 @@ public class BorderClipRenderTests
         });
     }
 
+    // The clip's edge is a pixel wide, as a fill's: wider, it faded the whole first row inside a straight side.
+    [Test]
+    public void AlongTheSides_WhatItHoldsKeepsItsColorUpToTheStroke()
+    {
+        var pixels = Render(Root(Box()));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pixels[(45 * Dim + Stroke) * 4 + 1], Is.EqualTo(255), "the first column inside the left side");
+            Assert.That(pixels[(Stroke * Dim + 55) * 4 + 1], Is.EqualTo(255), "the first row inside the top one");
+        });
+    }
+
     [Test]
     public void AStrokeGrown_CutsFurtherIn()
     {

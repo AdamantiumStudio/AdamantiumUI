@@ -286,6 +286,31 @@ public class CommandSourceTests
         });
     }
 
+    [Test]
+    public void ADropDownThatLostItsCommand_DropsTheAnswerItGave()
+    {
+        var box = new DropDown { Command = Bold, Placeholder = "none" };
+        box.Items.Add(12.0);
+        var view = new StackPanel { Children = { box } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(Bold, (_, _) => { }, (_, e) =>
+        {
+            e.CanExecute = true;
+            e.Value = 10.5;
+        }));
+        Shown(view);
+        Requery();
+        var answered = box.DisplayContent;
+
+        box.Command = null;
+        Requery();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(answered, Is.EqualTo(10.5), "the answer shows");
+            Assert.That(box.DisplayContent, Is.EqualTo("none"), "with no command, no answer");
+        });
+    }
+
     // A font box: it shows what the text has - a size it lists, one it does not, none when mixed - and a pick sets it.
     [Test]
     public void ADropDownWithARoutedCommand_ShowsItsValue_AndAPickRunsIt()
