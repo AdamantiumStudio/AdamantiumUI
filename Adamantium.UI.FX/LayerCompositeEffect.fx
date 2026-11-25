@@ -205,11 +205,13 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
     // Only where the element itself leaves room: what it draws solid stays in front of the floor.
     float4 front = shadowsApart ? drawn * cover : self;
     float4 reflected = lerp(front, mirror, Mirror.x * reach * (1.0 - front.a));
-    // Its shadows under it, gone where the reflection lies on them: from where the mirrored element begins - in a gap
-    // above it the floor has no reflection yet - and back where it fades out.
+    // Its shadows under it, seen through the reflection as much as the reflection, opaque, would let them through - its
+    // opacity fades it, not what it hides: none under the mirrored element, and under its mirrored glow as much as the
+    // glow itself lets them through above the floor, so nothing steps at the floor. From where the mirrored element
+    // begins - in a gap above it the floor has no reflection yet - to where it fades out.
     float lies = step(Mirror.y, here.y) * saturate((Mirror.z - here.y) / max(MirrorFade.x, 1.0));
     float4 shadow = shadowsApart
-        ? bands * cover * (1.0 - lies * smoothstep(0.0, 0.25, mirror.a))
+        ? bands * cover * saturate((1.0 - mirror.a * lies) / max(1.0 - reflected.a, 1e-5))
         : float4(0.0, 0.0, 0.0, 0.0);
     float4 below = reflected + shadow * (1.0 - reflected.a);
     if (BandsOn > 0.5 && !shadowsApart)
