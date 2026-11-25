@@ -20,6 +20,9 @@ public class ManipulationEventArgs : InputEventArgs
     /// <summary>How many fingers it has now.</summary>
     public int Contacts { get; init; }
 
+    /// <summary>Whether the fingers are on a trackpad: they press nothing, and the pointer stands still under them.</summary>
+    public bool IsTrackpad { get; init; }
+
     /// <summary>The middle of the fingers, the point a pinch scales and a rotation turns about.</summary>
     public Vector2<double> Origin { get; init; }
 

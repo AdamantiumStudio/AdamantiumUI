@@ -63,6 +63,18 @@ public static class Gestures
     public static void SetStartsFromStillFingers(IAdamantiumComponent element, bool value) =>
         element.SetValue(StartsFromStillFingersProperty, value);
 
+    /// <summary>Whether two fingers moving on a trackpad pan this element, as fingers on a screen do, instead of turning
+    /// the wheel. Off by default, so a trackpad scrolls; a 3D view turns it on. A pinch and a rotation on a trackpad need
+    /// only <see cref="IsManipulationEnabledProperty"/>.</summary>
+    public static readonly AdamantiumProperty IsTrackpadPanEnabledProperty = AdamantiumProperty.RegisterAttached(
+        "IsTrackpadPanEnabled", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
+
+    public static bool GetIsTrackpadPanEnabled(IAdamantiumComponent element) =>
+        element.GetValue<bool>(IsTrackpadPanEnabledProperty);
+
+    public static void SetIsTrackpadPanEnabled(IAdamantiumComponent element, bool value) =>
+        element.SetValue(IsTrackpadPanEnabledProperty, value);
+
     /// <summary>How far, in an element's units, fingers spread or close before they pinch.</summary>
     public static double PinchThreshold { get; set; } = 12;
 

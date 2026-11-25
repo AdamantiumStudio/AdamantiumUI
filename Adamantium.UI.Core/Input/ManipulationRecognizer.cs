@@ -116,7 +116,7 @@ internal sealed class ManipulationRecognizer
 
     private Manipulation Of(Pointer pointer) => _manipulations.Find(m => m.Fingers.Contains(pointer));
 
-    private static IInputComponent TargetOf(IInputComponent hit)
+    internal static IInputComponent TargetOf(IInputComponent hit)
     {
         for (IUIComponent at = hit; at != null; at = at.VisualParent)
         {

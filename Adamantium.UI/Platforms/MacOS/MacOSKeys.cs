@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Platforms.MacOS;
@@ -49,6 +51,54 @@ internal static class MacOSKeys
     /// <summary>The key at <paramref name="keyCode"/>: Command is Control's role here and Control the Windows key's,
     /// so the shortcuts written with Control are Mac's own; None for a code with no key.</summary>
     internal static Key ToKey(ushort keyCode) => Keys.TryGetValue(keyCode, out var key) ? key.Key : Key.None;
+
+    /// <summary>The keys of letters and signs where the keyboard layout has them, as on Windows, given the character it has
+    /// on each; every other key goes by position. No key is at two places: one the layout has a letter of its own on takes
+    /// the key of its position, or, that one being elsewhere, one that is nowhere.</summary>
+    internal static Dictionary<ushort, Key> InLayout(Func<ushort, char> characterOf)
+    {
+        var places = Keys.Where(entry => IsLetterOrSign(entry.Value.Key)).Select(entry => entry.Key).Order().ToList();
+        var inLayout = new Dictionary<ushort, Key>();
+        var given = new HashSet<Key>();
+        foreach (var place in places)
+            Give(place, Named(characterOf(place)));
+        foreach (var place in places)
+            Give(place, ToKey(place));
+        foreach (var place in places)
+        {
+            foreach (var other in places)
+                Give(place, ToKey(other));
+        }
+
+        return inLayout;
+
+        void Give(ushort place, Key key)
+        {
+            if (key != Key.None && !inLayout.ContainsKey(place) && given.Add(key))
+                inLayout.Add(place, key);
+        }
+    }
+
+    private static Key Named(char character) => char.ToLowerInvariant(character) switch
+    {
+        >= 'a' and <= 'z' and var letter => Key.A + (uint)(letter - 'a'),
+        ';' => Key.OemSemicolon,
+        '=' or '+' => Key.OemPlus,
+        ',' => Key.OemComma,
+        '-' => Key.OemMinus,
+        '.' => Key.OemPeriod,
+        '/' => Key.OemQuestion,
+        '`' => Key.OemTilde,
+        '[' => Key.OemOpenBrackets,
+        '\\' => Key.OemPipe,
+        ']' => Key.OemCloseBrackets,
+        '\'' => Key.OemQuotes,
+        _ => Key.None
+    };
+
+    private static bool IsLetterOrSign(Key key) => key is >= Key.A and <= Key.Z or Key.OemSemicolon or Key.OemPlus
+        or Key.OemComma or Key.OemMinus or Key.OemPeriod or Key.OemQuestion or Key.OemTilde or Key.OemOpenBrackets
+        or Key.OemPipe or Key.OemCloseBrackets or Key.OemQuotes;
 
     /// <summary>The HID usage of the physical key at <paramref name="keyCode"/>; 0 for one with none.</summary>
     internal static uint ToHidUsage(ushort keyCode) => Keys.TryGetValue(keyCode, out var key) ? key.Usage : 0;

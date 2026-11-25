@@ -921,6 +921,8 @@ public class Ribbon : Selector
         _keyTipRoot.AddHandler(Keyboard.PreviewKeyUpEvent, _keyTipUp, handledEventsToo: true);
         _keyTipRoot.AddHandler(Keyboard.PreviewTextInputEvent, _keyTipText, handledEventsToo: true);
         _keyTipRoot.AddHandler(PointerEvents.PreviewPointerPressedEvent, _keyTipPress, handledEventsToo: true);
+        _keyTipGesture ??= OnKeyTipGesture;
+        _keyTipRoot.AddHandler(Gestures.ManipulationEvent, _keyTipGesture, handledEventsToo: true);
     }
 
     private void UnhookKeyTips()
@@ -931,6 +933,7 @@ public class Ribbon : Selector
         _keyTipRoot.RemoveHandler(Keyboard.PreviewKeyUpEvent, _keyTipUp);
         _keyTipRoot.RemoveHandler(Keyboard.PreviewTextInputEvent, _keyTipText);
         _keyTipRoot.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _keyTipPress);
+        _keyTipRoot.RemoveHandler(Gestures.ManipulationEvent, _keyTipGesture);
         _keyTipRoot = null;
         _keyTips?.End();
     }
@@ -980,6 +983,11 @@ public class Ribbon : Selector
         _altAlone.Cancel();
         _keyTips?.End();
     }
+
+    // Fingers on a trackpad press nothing, and Alt with them orbits too.
+    private void OnKeyTipGesture(object sender, ManipulationEventArgs e) => _altAlone.Cancel();
+
+    private ManipulationEventHandler _keyTipGesture;
 
     private void OnKeyTipKey(object sender, KeyEventArgs e)
     {
