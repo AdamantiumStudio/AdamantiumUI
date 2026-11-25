@@ -18,7 +18,7 @@
 - An application that states no `StartupTheme` opens on the MacOs theme on macOS; elsewhere on Fluent, as before.
 - The default UI font on macOS is San Francisco, the system's own, instead of Helvetica.
 - On macOS the caption buttons stand on the left in every theme, unless the application sets `CaptionButtonPlacement`.
-- Takes Adamantium.Vulkan 1.4.0, Slang 1.2.0 and ShaderObjectLayer 1.0.3.
+- Takes Adamantium.Vulkan 1.4.1, Slang 1.2.0 and ShaderObjectLayer 1.0.3.
 
 ### Fixed
 
