@@ -8,6 +8,7 @@ internal sealed class HeldBrushes(AdamantiumComponent owner)
 {
     private readonly List<Brush> _wanted = [];
     private readonly List<Brush> _held = [];
+    private int _releases;
 
     public bool Contains(Brush brush) => _wanted.Contains(brush);
 
@@ -23,9 +24,15 @@ internal sealed class HeldBrushes(AdamantiumComponent owner)
 
     public void Take()
     {
+        // Let go of with the rest since: not held any more.
+        if (_releases != owner.RenderAttachmentReleases)
+        {
+            _releases = owner.RenderAttachmentReleases;
+            _held.Clear();
+        }
+
         if (owner.RenderAttachmentsReleased)
         {
-            _held.Clear();
             return;
         }
 

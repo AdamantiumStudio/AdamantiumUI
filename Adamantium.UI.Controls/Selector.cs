@@ -126,7 +126,8 @@ public abstract class Selector : ItemsControl
     internal void SelectValue(object value)
     {
         var index = IndexOfValue(value);
-        if (index < 0 && value != null && ItemsAreArriving)
+        var item = index >= 0 ? Items[index] : value != null ? HiddenItemOf(value) : null;
+        if (item == null && value != null && ItemsAreArriving)
         {
             _pendingValue = value;
             _hasPendingValue = true;
@@ -138,7 +139,7 @@ public abstract class Selector : ItemsControl
         _syncingValue = true;
         try
         {
-            SetCurrentValue(SelectedItemProperty, index >= 0 ? Items[index] : null);
+            SetCurrentValue(SelectedItemProperty, item);
         }
         finally
         {
@@ -150,6 +151,9 @@ public abstract class Selector : ItemsControl
             ShowValueOf(SelectedItem);
         }
     }
+
+    /// <summary>The item whose value this is among those that can be selected though not shown; null for none.</summary>
+    private protected virtual object HiddenItemOf(object value) => null;
 
     private Func<object, object> _readValue;
 
@@ -265,22 +269,63 @@ public abstract class Selector : ItemsControl
         _pendingSelection = null;
         // Compare against our own tracked selection, NOT SelectedIndex/SelectedItem: when this runs from a property
         // callback the DP value is ALREADY updated, so a SelectedIndex==index check would always read "unchanged".
+        SetSelectedProperties(ref index, ref item);
         var changed = !Equals(item, _selectedItemTracked);
         _selectedItemTracked = item;
-        SetSelectedProperties(index, item);
         UpdateContainersSelection();
         if (changed) RaiseSelectionChanged();
     }
 
+    private int _choice;
+
     /// <summary>Writes SelectedIndex/SelectedItem via SetCurrentValue, without re-triggering the external-change
-    /// callbacks or masking a binding.</summary>
-    protected void SetSelectedProperties(int index, object item)
+    /// callbacks or masking a binding. A source bound to them may answer - refuse the choice, name another, change the
+    /// items: <paramref name="index"/> and <paramref name="item"/> come back as what is selected then. The answer is
+    /// taken as it is and not put to the source again: one that never agrees would be asked forever.</summary>
+    protected void SetSelectedProperties(ref int index, ref object item)
     {
+        var choice = ++_choice;
+        var nested = SyncingSelection;
         SyncingSelection = true;
-        SetCurrentValue(SelectedIndexProperty, index);
-        SetCurrentValue(SelectedItemProperty, item);
-        SyncingSelection = false;
+        try
+        {
+            SetCurrentValue(SelectedIndexProperty, index);
+            // Moved by the source itself, and not by a selection made again as it changed the items.
+            if (SelectedIndex != index && choice == _choice)
+            {
+                index = SelectedIndex >= 0 && SelectedIndex < Items.Count ? SelectedIndex : -1;
+                item = index >= 0 ? Items[index] : null;
+            }
+
+            SetCurrentValue(SelectedItemProperty, item);
+            var answered = SelectedItem;
+            if (Equals(answered, item) && (item == null || index >= 0 && index < Items.Count && Equals(Items[index], item)))
+            {
+                SetCurrentValue(SelectedIndexProperty, index);
+                return;
+            }
+
+            index = IndexOfItem(answered);
+            item = index >= 0 || answered != null && IsHiddenItem(answered) ? answered : null;
+            if (item == null && answered != null)
+            {
+                // Named, and not here: it may be coming, or it is gone, and nothing is selected.
+                if (ItemsAreArriving)
+                    _pendingSelection = answered;
+                else
+                    SetCurrentValue(SelectedItemProperty, null);
+            }
+
+            SetCurrentValue(SelectedIndexProperty, index);
+        }
+        finally
+        {
+            SyncingSelection = nested;
+        }
     }
+
+    /// <summary>Whether this can be selected though it is not among the items shown.</summary>
+    private protected virtual bool IsHiddenItem(object item) => false;
 
     protected void RaiseSelectionChanged() => SelectionChanged?.Invoke(this, EventArgs.Empty);
 

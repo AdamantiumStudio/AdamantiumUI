@@ -1808,6 +1808,16 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             var e = new VisualTreeAttachmentEventArgs(RootVisual, this);
             DetachedFromVisualTree(e);
         }
+        else if (!IsParked && parent is null or UIComponent { IsAttachedToVisualTree: false, RenderAttachmentsReleased: true })
+        {
+            _droppedUnshown = true;
+            ReleaseRenderAttachmentsOfSubtree();
+        }
+        else if (_droppedUnshown && parent?.IsAttachedToVisualTree == false && parent is not IRootVisualComponent)
+        {
+            _droppedUnshown = false;
+            TakeBackRenderAttachmentsOfSubtree();
+        }
 
         if (VisualParent is IRootVisualComponent || VisualParent?.IsAttachedToVisualTree == true)
         {
@@ -1824,11 +1834,39 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         OnVisualParentChanged(old, parent);
     }
 
+    // A part dropped from a tree not shown yet - a view built off the loop thread builds some of its parts anew - is told of
+    // no detach, and the brushes it drew with would hold it, and the whole view by its parents. Nor does it take any under a
+    // parent that let go. Given another parent not shown, it takes them back; shown, it takes them as it attaches.
+    private bool _droppedUnshown;
+
+    private void TakeBackRenderAttachmentsOfSubtree()
+    {
+        TakeBackRenderAttachments();
+        if (_visualChildren == null) return;
+
+        foreach (var child in _visualChildren)
+        {
+            (child as UIComponent)?.TakeBackRenderAttachmentsOfSubtree();
+        }
+    }
+
+    private void ReleaseRenderAttachmentsOfSubtree()
+    {
+        ReleaseRenderAttachments();
+        if (_visualChildren == null) return;
+
+        foreach (var child in _visualChildren)
+        {
+            (child as UIComponent)?.ReleaseRenderAttachmentsOfSubtree();
+        }
+    }
+
     private void AttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         // Back in the tree, so alive again; a parked subtree stays parked until ParkedSubtree.Unpark.
         if (!IsParked) Revive();
 
+        _droppedUnshown = false;
         RootVisual = e.Root;
         // Inherited down the subtree, so every node inside overlay content answers with the same owner. Null in the main
         // tree, where the visual root owns layout as it always did.

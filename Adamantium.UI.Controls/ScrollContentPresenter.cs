@@ -647,6 +647,20 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         }
     }
 
+    // Back with its content, as a page kept between visits is, and measured as it left: nothing would find the panel
+    // again.
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (!CanContentScroll || _inner != null) return;
+
+        ResolveInner();
+        if (_inner == null) return;
+
+        if (_inner.Offset != _lastTranslatedInnerOffset) InvalidateArrange();
+        RaiseMetricsChanged();
+    }
+
     private static IScrollableContent FindInner(IUIComponent root) => ScrollableContent.FindIn(root);
 
     private Vector2<double> _lastTranslatedInnerOffset;
