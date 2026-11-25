@@ -6,23 +6,25 @@ using Adamantium.MacOS.ObjectiveC;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
-/// <summary>A motor of a gamepad through Core Haptics: a pattern without end, its strength changed as it plays. The system
-/// stops it by itself - the application goes to the background, say - and it is started anew when run next.</summary>
+/// <summary>A motor of a gamepad through Core Haptics: a pattern without end, its strength changed as it plays.</summary>
 internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality, float sharpness) : IHapticMotor
 {
     private IntPtr _engine;
     private IntPtr _player;
+    private int _stops;
+
+    public bool WasStopped => _player != IntPtr.Zero && _stops != CHHapticEngine.Stops;
 
     public bool Run(float strength)
     {
         var pool = ObjCRuntime.PushAutoreleasePool();
         try
         {
-            if (_player != IntPtr.Zero && CHHapticEngine.SetIntensity(_player, strength))
+            if (_player != IntPtr.Zero && !WasStopped && CHHapticEngine.SetIntensity(_player, strength))
                 return true;
 
-            LetGo();
-            return Start() && CHHapticEngine.SetIntensity(_player, strength);
+            Release();
+            return strength == 0 || Start(strength);
         }
         finally
         {
@@ -30,37 +32,36 @@ internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality, float
         }
     }
 
-    public void Stop()
+    public void LetGo()
     {
         var pool = ObjCRuntime.PushAutoreleasePool();
-        LetGo();
+        Release();
         ObjCRuntime.PopAutoreleasePool(pool);
     }
 
-    private bool Start()
+    private bool Start(float strength)
     {
+        _stops = CHHapticEngine.Stops;
         _engine = GCController.CreateEngine(controller, locality);
-        if (_engine == IntPtr.Zero || !CHHapticEngine.Start(_engine))
-        {
-            LetGo();
-            return false;
-        }
-
-        var pattern = CHHapticEngine.CreateEndlessPattern(sharpness, GCController.InfiniteDuration);
-        if (pattern != IntPtr.Zero)
-        {
-            _player = NSObject.Retain(CHHapticEngine.CreatePlayer(_engine, pattern));
-            NSObject.Release(pattern);
-        }
-
-        if (_player != IntPtr.Zero && CHHapticEngine.Play(_player))
+        if (_engine != IntPtr.Zero && CHHapticEngine.Start(_engine) && Play(strength))
             return true;
 
-        LetGo();
+        Release();
         return false;
     }
 
-    private void LetGo()
+    private bool Play(float strength)
+    {
+        var pattern = CHHapticEngine.CreatePattern(sharpness, strength, GCController.InfiniteDuration);
+        if (pattern == IntPtr.Zero)
+            return false;
+
+        _player = NSObject.Retain(CHHapticEngine.CreatePlayer(_engine, pattern));
+        NSObject.Release(pattern);
+        return _player != IntPtr.Zero && CHHapticEngine.Play(_player);
+    }
+
+    private void Release()
     {
         if (_engine != IntPtr.Zero)
             CHHapticEngine.Stop(_engine);

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.GameController;
@@ -9,6 +10,9 @@ namespace Adamantium.UI.Platforms.MacOS;
 
 internal sealed class MacOSGamepad : Gamepad
 {
+    private static readonly IntPtr GuideProperty = Property("buttonHome");
+    private static readonly IntPtr ShareProperty = Property("buttonShare");
+
     private static readonly (GamepadButton Button, IntPtr Selector)[] Buttons =
     [
         (GamepadButton.A, Property("buttonA")), (GamepadButton.B, Property("buttonB")),
@@ -16,10 +20,10 @@ internal sealed class MacOSGamepad : Gamepad
         (GamepadButton.LeftShoulder, Property("leftShoulder")), (GamepadButton.RightShoulder, Property("rightShoulder")),
         (GamepadButton.Back, Property("buttonOptions")), (GamepadButton.Start, Property("buttonMenu")),
         (GamepadButton.LeftThumb, Property("leftThumbstickButton")),
-        (GamepadButton.RightThumb, Property("rightThumbstickButton")), (GamepadButton.Guide, Property("buttonHome")),
+        (GamepadButton.RightThumb, Property("rightThumbstickButton")), (GamepadButton.Guide, GuideProperty),
         // An Xbox gamepad's. The Elite's paddles are buttons of their own on its default profile only: on another they
         // press what it maps them to.
-        (GamepadButton.Share, Property("buttonShare")),
+        (GamepadButton.Share, ShareProperty),
         (GamepadButton.Paddle1, Property("paddleButton1")), (GamepadButton.Paddle2, Property("paddleButton2")),
         (GamepadButton.Paddle3, Property("paddleButton3")), (GamepadButton.Paddle4, Property("paddleButton4"))
     ];
@@ -37,15 +41,15 @@ internal sealed class MacOSGamepad : Gamepad
     private static readonly IntPtr LeftTriggerProperty = Property("leftTrigger");
     private static readonly IntPtr RightTriggerProperty = Property("rightTrigger");
 
-    private const int LowMotor = 0;
-    private const int HighMotor = 1;
-    private const int LeftTriggerMotor = 2;
-    private const int RightTriggerMotor = 3;
     private const float Deep = 0;
     private const float Fine = 1;
 
+    private readonly Lock _lock = new();
     private readonly (GamepadButton Button, IntPtr Selector)[] _buttons;
-    private readonly MacOSGamepadMotors _motors;
+    private readonly MacOSGamepadMotor _low;
+    private readonly MacOSGamepadMotor _high;
+    private readonly MacOSGamepadMotor _leftTrigger;
+    private readonly MacOSGamepadMotor _rightTrigger;
     private readonly bool _hasMotorsApart;
     private IntPtr _controller;
 
@@ -55,40 +59,37 @@ internal sealed class MacOSGamepad : Gamepad
         Name = GCController.NameOf(controller) ?? string.Empty;
         Face = FaceOf(GCController.CategoryOf(controller));
         var gamepad = GCController.GamepadOf(controller);
-        var supported = GamepadButton.DpadUp | GamepadButton.DpadDown | GamepadButton.DpadLeft | GamepadButton.DpadRight;
         // A property of its kind that is empty now - the Elite's paddles before it is on its default profile - is read all
         // the same.
         _buttons = Array.FindAll(Buttons, entry => GCController.HasProperty(gamepad, entry.Selector));
-        foreach (var (button, selector) in _buttons)
+        foreach (var (_, selector) in _buttons)
         {
-            if (GCController.PartOf(gamepad, selector) != IntPtr.Zero)
-                supported |= button;
+            if (selector == GuideProperty || selector == ShareProperty)
+                GCController.AlwaysReceive(GCController.PartOf(gamepad, selector));
         }
 
-        SupportedButtons = supported;
-
         // One with no motors told by their place runs them together.
-        var low = MotorAt(GCController.LeftHandle, Deep);
-        var high = MotorAt(GCController.RightHandle, Fine);
-        _hasMotorsApart = low != null || high != null;
-        _motors = new MacOSGamepadMotors(_hasMotorsApart ? low : MotorAt(GCController.DefaultLocality, Deep), high,
-            MotorAt(GCController.LeftTrigger, Fine), MotorAt(GCController.RightTrigger, Fine));
+        _hasMotorsApart = GCController.HasMotorAt(controller, GCController.LeftHandle) &&
+            GCController.HasMotorAt(controller, GCController.RightHandle);
+        _low = MotorAt(_hasMotorsApart ? GCController.LeftHandle : GCController.DefaultLocality, Deep);
+        _high = _hasMotorsApart ? MotorAt(GCController.RightHandle, Fine) : new MacOSGamepadMotor(null);
+        _leftTrigger = MotorAt(GCController.LeftTrigger, Fine);
+        _rightTrigger = MotorAt(GCController.RightTrigger, Fine);
     }
 
-    private MacOSHapticMotor MotorAt(IntPtr locality, float sharpness) => GCController.HasMotorAt(_controller, locality)
-        ? new MacOSHapticMotor(_controller, locality, sharpness)
-        : null;
+    private MacOSGamepadMotor MotorAt(IntPtr locality, float sharpness) =>
+        new(GCController.HasMotorAt(_controller, locality) ? new MacOSHapticMotor(_controller, locality, sharpness) : null);
 
     public override void SetVibration(float lowFrequency, float highFrequency)
     {
-        _motors.Run(LowMotor, _hasMotorsApart ? lowFrequency : Math.Max(lowFrequency, highFrequency));
-        _motors.Run(HighMotor, highFrequency);
+        _low.Run(_hasMotorsApart ? lowFrequency : Math.Max(lowFrequency, highFrequency));
+        _high.Run(highFrequency);
     }
 
     public override void SetTriggerVibration(float left, float right)
     {
-        _motors.Run(LeftTriggerMotor, left);
-        _motors.Run(RightTriggerMotor, right);
+        _leftTrigger.Run(left);
+        _rightTrigger.Run(right);
     }
 
     internal IntPtr Controller => _controller;
@@ -97,41 +98,70 @@ internal sealed class MacOSGamepad : Gamepad
 
     public override GamepadFace Face { get; }
 
-    public override GamepadButton SupportedButtons { get; }
+    public override GamepadButton SupportedButtons => Ask(SupportedBy);
 
-    public override GamepadState GetState()
+    public override GamepadState GetState() => Ask(Read);
+
+    internal void Tick()
     {
-        if (_controller == IntPtr.Zero)
-            return default;
-
-        var pool = ObjCRuntime.PushAutoreleasePool();
-        try
-        {
-            return Read(GCController.GamepadOf(_controller));
-        }
-        finally
-        {
-            ObjCRuntime.PopAutoreleasePool(pool);
-        }
+        _low.Tick();
+        _high.Tick();
+        _leftTrigger.Tick();
+        _rightTrigger.Tick();
     }
 
     internal void Disconnect()
     {
-        if (_controller == IntPtr.Zero)
+        IntPtr controller;
+        lock (_lock)
+        {
+            controller = _controller;
+            _controller = IntPtr.Zero;
+        }
+
+        if (controller == IntPtr.Zero)
             return;
 
         // A motor may still be starting on it: the controller goes when the last is let go of.
-        _motors.Close();
-        var controller = _controller;
-        _controller = IntPtr.Zero;
-        _motors.Applying.ContinueWith(_ => NSObject.Release(controller), TaskScheduler.Default);
+        Task.WhenAll(_low.Close(), _high.Close(), _leftTrigger.Close(), _rightTrigger.Close())
+            .ContinueWith(_ => NSObject.Release(controller), TaskScheduler.Default);
+    }
+
+    private T Ask<T>(Func<IntPtr, T> read)
+    {
+        lock (_lock)
+        {
+            if (_controller == IntPtr.Zero)
+                return default;
+
+            var pool = ObjCRuntime.PushAutoreleasePool();
+            try
+            {
+                var gamepad = GCController.GamepadOf(_controller);
+                return gamepad == IntPtr.Zero ? default : read(gamepad);
+            }
+            finally
+            {
+                ObjCRuntime.PopAutoreleasePool(pool);
+            }
+        }
+    }
+
+    // The Elite's paddles come and go with its profile.
+    private GamepadButton SupportedBy(IntPtr gamepad)
+    {
+        var supported = GamepadButton.DpadUp | GamepadButton.DpadDown | GamepadButton.DpadLeft | GamepadButton.DpadRight;
+        foreach (var (button, selector) in _buttons)
+        {
+            if (GCController.PartOf(gamepad, selector) != IntPtr.Zero)
+                supported |= button;
+        }
+
+        return supported;
     }
 
     private GamepadState Read(IntPtr gamepad)
     {
-        if (gamepad == IntPtr.Zero)
-            return default;
-
         var buttons = GamepadButton.None;
         foreach (var (button, selector) in _buttons)
         {
