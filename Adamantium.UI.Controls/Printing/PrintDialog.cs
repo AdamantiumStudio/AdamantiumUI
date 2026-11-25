@@ -40,6 +40,7 @@ public class PrintDialog : Control
     {
         PrintCommand = new PrintDialogCommand(OnPrint, () => RangeIsValid && !IsAsking);
         CancelCommand = new PrintDialogCommand(OnCancel);
+        DriverSettingsCommand = new PrintDialogCommand(OnDriverSettings, () => !IsAsking);
         PreviousSheetCommand = new PrintDialogCommand(() => Sheet--, () => Sheet > 0);
         NextSheetCommand = new PrintDialogCommand(() => Sheet++, () => Sheet < SheetCount - 1);
         SetCurrentValue(PrinterProperty, Printer.Pdf);
@@ -290,6 +291,7 @@ public class PrintDialog : Control
     public static readonly AdamantiumProperty ShowsScaleProperty = Shows(nameof(ShowsScale));
     public static readonly AdamantiumProperty PrintsToFileProperty = Shows(nameof(PrintsToFile));
     public static readonly AdamantiumProperty ShowsPrinterStateProperty = Shows(nameof(ShowsPrinterState));
+    public static readonly AdamantiumProperty ShowsDriverSettingsProperty = Shows(nameof(ShowsDriverSettings));
 
     public static readonly AdamantiumProperty PrinterStateProperty = AdamantiumProperty.Register(nameof(PrinterState),
         typeof(PrinterState), typeof(PrintDialog), new PropertyMetadata(PrinterState.Ready));
@@ -321,6 +323,9 @@ public class PrintDialog : Control
 
     /// <summary>Printing into the PDF file - which is saved, not printed.</summary>
     public bool PrintsToFile => GetValue<bool>(PrintsToFileProperty);
+
+    /// <summary>The printer's driver has a window of its own for what the dialog does not offer.</summary>
+    public bool ShowsDriverSettings => GetValue<bool>(ShowsDriverSettingsProperty);
 
     /// <summary>The printer is held up or busy - its <see cref="PrinterState"/> is worth saying.</summary>
     public bool ShowsPrinterState => GetValue<bool>(ShowsPrinterStateProperty);
@@ -370,6 +375,9 @@ public class PrintDialog : Control
 
     public PrintDialogCommand CancelCommand { get; }
 
+    /// <summary>Opens the printer driver's own settings window.</summary>
+    public PrintDialogCommand DriverSettingsCommand { get; }
+
     public PrintDialogCommand PreviousSheetCommand { get; }
 
     public PrintDialogCommand NextSheetCommand { get; }
@@ -384,6 +392,25 @@ public class PrintDialog : Control
     protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
 
     private void OnPrint() => Print?.Invoke(this, Settings);
+
+    /// <summary>The driver's window: what it is left with becomes the user's choice - the dialog's options as it set
+    /// them, its own kept for the job.</summary>
+    private void OnDriverSettings()
+    {
+        if (Platform is not { } platform || !_capabilities.HasDriverSettings)
+        {
+            return;
+        }
+
+        var edited = platform.EditDriverSettings(_capabilities, Settings);
+        if (edited == null)
+        {
+            return;
+        }
+
+        _wish = edited with { Printer = _wish.Printer, Range = _wish.Range };
+        Compose();
+    }
 
     private void OnCancel()
     {
@@ -522,6 +549,11 @@ public class PrintDialog : Control
             {
                 return;
             }
+            catch (Exception)
+            {
+                // The system could not list its printers: the PDF file is still offered.
+                found = [];
+            }
             finally
             {
                 if (ReferenceEquals(asking, _asking))
@@ -569,6 +601,12 @@ public class PrintDialog : Control
             {
                 return;
             }
+            catch (Exception)
+            {
+                // The system could not say what the printer does: none of its own options are offered, only the
+                // platform's, which every printer takes.
+                capabilities = new PrinterCapabilities();
+            }
             finally
             {
                 if (ReferenceEquals(asking, _asking))
@@ -601,6 +639,7 @@ public class PrintDialog : Control
     {
         SetCurrentValue(IsAskingProperty, asking);
         PrintCommand.RaiseCanExecuteChanged();
+        DriverSettingsCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>Shows what <paramref name="capabilities"/> offer, and fits the choices to them.</summary>
@@ -608,6 +647,9 @@ public class PrintDialog : Control
     {
         _capabilities = capabilities;
         var file = printer.IsFile;
+
+        // The driver's own settings were another printer's.
+        _wish = _wish with { DriverSettings = null };
 
         // The lists change under their choices: whatever a list writes back meanwhile is not the user's.
         _composing = true;
@@ -633,6 +675,7 @@ public class PrintDialog : Control
         SetCurrentValue(ShowsTrayProperty, capabilities.Trays.Count > 1);
         SetCurrentValue(ShowsMediaTypeProperty, capabilities.MediaTypes.Count > 1);
         SetCurrentValue(PrintsToFileProperty, file);
+        SetCurrentValue(ShowsDriverSettingsProperty, !file && capabilities.HasDriverSettings);
         SetCurrentValue(PrinterStateProperty, printer.State);
         SetCurrentValue(ShowsPrinterStateProperty, !file && printer.State != PrinterState.Ready);
         Compose();
