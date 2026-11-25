@@ -285,7 +285,7 @@ public class TabControl : Selector
             if (_openOrderSet.Add(item)) _openOrder.Add(item);
     }
 
-    private void EnforceTabLimit()
+    internal void EnforceTabLimit()
     {
         var max = MaxOpenedTabs;
         if (max <= 0 || _evicting) return;
@@ -454,7 +454,7 @@ public class TabControl : Selector
         ParkedVisuals.ReleaseAbsent(this, content => Holds(open, content));
     }
 
-    // The hidden tabs come and go without a word from the items; and only now may the list be changed again.
+    // The hidden tabs come and go without a word from the items.
     private void OnSourceTaken()
     {
         if (_reordering) return;
@@ -467,12 +467,17 @@ public class TabControl : Selector
         }
 
         LetGoOfClosed();
-        EnforceTabLimit();
+        QueueTabLimit();
     }
 
     // Open, and not in the strip: a view's filter hides it.
     private bool IsHidden(object item) =>
         ViewedSource != null && IndexOfItem(item) < 0 && OpenTabs().Contains(item);
+
+    private protected override bool IsHiddenItem(object item) => IsHidden(item);
+
+    private protected override object HiddenItemOf(object value) =>
+        ViewedSource == null ? null : OpenTabs().FirstOrDefault(tab => Equals(ValueOf(tab), value));
 
     // Chosen while a filter hides it, a tab shows its page, and its place in the strip once the filter lets it.
     protected override void OnSelectedItemSet(object item)
@@ -516,9 +521,32 @@ public class TabControl : Selector
         UpdateSelectedContent();
         SyncStretchedTab();
 
-        // Last: the cap must know which tab is being read. A view may be halfway through a change of its source - the cap
-        // closes tabs in that source - and says when it is done.
-        if (View is not { IsTaking: true }) EnforceTabLimit();
+        // Last: the cap must know which tab is being read.
+        QueueTabLimit();
+    }
+
+    private bool _limitQueued;
+
+    // A bound list is telling of a change: the cap, which changes it again, waits for all its listeners to hear.
+    private void QueueTabLimit()
+    {
+        if (ItemsSource == null)
+        {
+            EnforceTabLimit();
+            return;
+        }
+
+        // Built off the loop, it is the builder's until it is attached.
+        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread) return;
+
+        if (MaxOpenedTabs <= 0 || _limitQueued || _evicting) return;
+
+        _limitQueued = true;
+        LoopSignal.Post(() =>
+        {
+            _limitQueued = false;
+            if (!IsDiscarded) EnforceTabLimit();
+        });
     }
 
     /// <summary>True while one tab fills the whole strip (see <see cref="StretchSingleTab"/>); it wears the accent itself
@@ -555,6 +583,8 @@ public class TabControl : Selector
     {
         return Holds(OpenTabs(), content);
     }
+
+    internal override bool HasItem(object item) => OpenTabs().Contains(item);
 
     private static bool Holds(IReadOnlyList<object> tabs, object content)
     {
@@ -1376,6 +1406,8 @@ public class TabControl : Selector
             _hookedManager = LayoutManager.For(this);
             _hookedManager.LayoutUpdated += OnLayoutSettled;
         }
+
+        if (ItemsSource != null) QueueTabLimit();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

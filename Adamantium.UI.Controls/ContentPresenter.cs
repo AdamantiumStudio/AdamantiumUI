@@ -601,7 +601,7 @@ public class ContentPresenter : InputUIComponent
     // it - the shared card shows one after another, and discarding the last one shown broke it for good. What this
     // presenter built for a tip, the label for a string, is its own all the same.
     private bool IsOwnersOwnItem(IUIComponent visual) =>
-        visual != null && (TemplatedParent is ItemsControl owner && owner.Items.Contains(visual) ||
+        visual != null && (TemplatedParent is ItemsControl owner && owner.HasItem(visual) ||
                            TemplatedParent is ToolTip && IsGivenContent(visual) ||
                            ContentControl.IsLentContent(visual));
 

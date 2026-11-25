@@ -223,6 +223,100 @@ public class TabControlTests
         Assert.That(string.Join(",", vm.Tabs), Is.EqualTo("A,B,C,D,E,F"));
     }
 
+    // A tab that is itself the page: shown, hidden by a filter and another chosen, it is not thrown away.
+    [Test]
+    public void AHiddenTabThatIsItsOwnPage_IsNotDiscarded()
+    {
+        var first = new Border();
+        var second = new Border();
+        var view = new CollectionView(new TrackingCollection<object>([first, second]));
+        ContentPresenter presenter = null;
+        var tabs = new TabControl
+        {
+            ItemsSource = view,
+            Template = new ControlTemplate(() =>
+            {
+                presenter = new ContentPresenter();
+                var result = new TemplateResult { RootComponent = presenter };
+                result.AddTemplateBinding(presenter, "Content", new TemplateBinding { Path = "SelectedContent" });
+                return result;
+            })
+        };
+        tabs.Measure(new Size<double>(100, 100));
+        Assume.That(((IUIComponent)first).VisualParent, Is.SameAs(presenter));
+
+        view.Filter = item => ReferenceEquals(item, second);
+        tabs.SelectedItem = second;
+        tabs.Measure(new Size<double>(101, 100));
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(((IUIComponent)second).VisualParent, Is.SameAs(presenter));
+        Assert.That(first.IsDiscarded, Is.False);
+    }
+
+    [Test]
+    public void AHiddenTabNamedByItsValue_ShowsItsPage()
+    {
+        var (tabs, _, view) = Filtered();
+
+        tabs.SelectedValue = "A";
+
+        Assert.That(tabs.SelectedContent, Is.EqualTo("A"));
+        Assert.That(tabs.SelectedValue, Is.EqualTo("A"));
+        view.Filter = null;
+        Assert.That(tabs.SelectedIndex, Is.Zero);
+    }
+
+    // The bound list tells its listeners one by one: changed by the cap before the last heard of the tab added, it told
+    // that one of the closing first.
+    [Test]
+    public void ATabOpenedPastTheCap_OfAListOthersFollowToo_ClosesTheOldest()
+    {
+        var list = new TrackingCollection<string>(["A", "B", "C"]);
+        var tabs = new TabControl { ItemsSource = new CollectionView(list), MaxOpenedTabs = 3, SelectedItem = "C" };
+        var other = new CollectionView(list);
+
+        Assert.DoesNotThrow(() => list.Add("D"));
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(list, Is.EqualTo(new[] { "B", "C", "D" }));
+            Assert.That(other, Is.EqualTo(list));
+            Assert.That(tabs.Items, Is.EqualTo(list));
+        });
+    }
+
+    [Test]
+    public void ATabPutBackAsTheCapClosesIt_DoesNotHoldTheLoop()
+    {
+        var list = new TrackingCollection<string>(["A", "B", "C"]);
+        var tabs = new TabControl { ItemsSource = list, MaxOpenedTabs = 3, SelectedItem = "C" };
+        var closed = 0;
+        list.CollectionChanged += (_, e) =>
+        {
+            if (e.OldItems is [string gone] && ++closed < 100) list.Add(gone);
+        };
+
+        list.Add("D");
+        LoopSignal.Drain();
+
+        Assert.That(closed, Is.LessThan(100));
+        Assert.That(tabs.Items, Is.EqualTo(list));
+    }
+
+    [Test]
+    public void TabsOfATrackingCollection_AreClosedAndMoved()
+    {
+        var list = new TrackingCollection<string>(["A", "B", "C"]);
+        var tabs = new TabControl { ItemsSource = list };
+
+        tabs.RequestCloseItem("B");
+        tabs.MoveItem(0, 1);
+
+        Assert.That(list, Is.EqualTo(new[] { "C", "A" }));
+    }
+
     [Test]
     public void SeveralTabsAddedAtOncePastTheCap_LeaveTheViewAndItsListAgreeing()
     {
@@ -230,6 +324,8 @@ public class TabControlTests
         var tabs = new TabControl { ItemsSource = new CollectionView(list), MaxOpenedTabs = 3 };
 
         Assert.DoesNotThrow(() => list.AddRange(["C", "D", "E"]));
+        LoopSignal.Drain();
+        Assert.That(list, Has.Count.EqualTo(3));
         Assert.That(tabs.Items, Is.EqualTo(list));
     }
 
@@ -245,6 +341,7 @@ public class TabControlTests
         keep = false;
 
         tabs.RequestCloseItem("A");
+        LoopSignal.Drain();
 
         Assert.That(vm.Tabs, Is.EqualTo(new[] { "C", "D" }));
         Assert.That(tabs.Items, Is.EqualTo(new[] { "C", "D" }));
@@ -257,6 +354,7 @@ public class TabControlTests
         tabs.MaxOpenedTabs = 6;
 
         vm.Tabs.Add("hidden");
+        LoopSignal.Drain();
 
         Assert.That(string.Join(",", vm.Tabs), Is.EqualTo("B,C,D,E,F,hidden"));
     }
@@ -270,6 +368,7 @@ public class TabControlTests
         tabs.MoveItem(0, 1);
 
         vm.Tabs.Add("G");
+        LoopSignal.Drain();
 
         Assert.That(vm.Tabs, Does.Not.Contain("A"));
         Assert.That(vm.Tabs, Does.Contain("B"));

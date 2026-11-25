@@ -113,8 +113,10 @@ public class SegmentedControl : Selector
             return;
         }
 
+        // Taken first: a source bound to the choice may change the items.
+        var segment = SegmentAt(index);
         SelectSingle(index);
-        SegmentAt(index)?.RunCommand();
+        segment?.RunCommand();
     }
 
     private SegmentedControlItem SegmentAt(int index) =>

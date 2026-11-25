@@ -468,22 +468,9 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
-        var nested = IsTaking;
-        IsTaking = true;
-        try
-        {
-            Take(e);
-        }
-        finally
-        {
-            IsTaking = nested;
-        }
-
+        Take(e);
         SourceTaken?.Invoke();
     }
-
-    /// <summary>Whether a change of the source is being taken in: what is shown and the source may not agree yet.</summary>
-    internal bool IsTaking { get; private set; }
 
     private void Take(NotifyCollectionChangedEventArgs e)
     {
