@@ -1,0 +1,17 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- DataContext is PrintingViewModel. -->
+    <StackPanel Orientation="Vertical" Margin="24" MaxWidth="560" HorizontalAlignment="Left">
+        <TextBlock Text="{Localize PrintingStrings.About}" TextWrapping="WrapByWords" MarginBottom="16"/>
+        <StackPanel Orientation="Horizontal" MarginBottom="12">
+            <TextBlock x:Name="PagesLabel" Text="{Localize PrintingStrings.Pages}" VerticalAlignment="Center" MarginRight="12"/>
+            <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PagesLabel}"
+                           Minimum="1" Maximum="40" Width="120" Value="{Binding Pages, Mode=TwoWay}"/>
+        </StackPanel>
+        <CheckBox Content="{Localize PrintingStrings.SamplePrinters}" IsChecked="{Binding SamplePrinters, Mode=TwoWay}"
+                  MarginBottom="16"/>
+        <Button x:Name="PrintSample" Classes="Accent" Content="{Localize PrintingStrings.Print}"
+                Command="{Binding PrintCommand}" HorizontalAlignment="Left" MinWidth="120" MarginBottom="12"/>
+        <TextBlock x:Name="PrintOutcome" Text="{Binding Outcome}" TextWrapping="WrapByWords"/>
+    </StackPanel>
+</View>

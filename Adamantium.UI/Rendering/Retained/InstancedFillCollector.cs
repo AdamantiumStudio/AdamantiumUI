@@ -665,13 +665,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     }
 
     // Pack an ImageBrush + world + local bounds into one textured instance. The tiling arithmetic is the SAME one the
-    // SDF textured batch uses (ImageTiling), fed the shape's LOCAL box - the geometry PS works in local mesh coords, so
+    // SDF textured batch uses (TileBrushLayout), fed the shape's LOCAL box - the geometry PS works in local mesh coords, so
     // the drawn rect is expressed as a fraction of that box rather than in device pixels.
     private static TextureGeometryInstance BuildTexturedInstance(TileBrush brush, Matrix4x4F local, Rect localBounds,
         double opacity, int transformSlot, int fadeSlot, int clipSlot)
     {
         var box = localBounds.Width > 0 && localBounds.Height > 0 ? localBounds : new Rect(0, 0, 1, 1);
-        var layout = ImageTiling.Layout(brush, box, local.M11, local.M22, TextureBatchCollector.SourceIsSlice(brush));
+        var layout = TileBrushLayout.Layout(brush, box, local.M11, local.M22, TextureBatchCollector.SourceIsSlice(brush));
 
         var tint = RectBatchCollector.WithOpacity(brush.Tint, opacity * brush.Opacity);
 

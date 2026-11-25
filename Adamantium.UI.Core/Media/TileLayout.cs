@@ -1,9 +1,9 @@
 using Adamantium.Mathematics;
 
-namespace Adamantium.UI.Rendering;
+namespace Adamantium.UI.Core.Media;
 
-/// <summary>Everything the textured passes need to draw one <see cref="Core.Media.TileBrush"/>, in the form the shader
-/// reads it. Produced by <see cref="ImageTiling"/>; a plain result rather than four out-parameters because the four
+/// <summary>Everything the textured passes need to draw one <see cref="TileBrush"/>, in the form the shader
+/// reads it. Produced by <see cref="TileBrushLayout"/>; a plain result rather than four out-parameters because the four
 /// numbers only mean anything together.</summary>
 internal readonly struct TileLayout
 {

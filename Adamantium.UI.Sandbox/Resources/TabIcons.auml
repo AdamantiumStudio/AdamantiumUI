@@ -235,6 +235,17 @@
         </DrawingGroup>
     </DrawingImage>
 
+    <!-- A printer: a sheet going in at the top, the body, a sheet coming out. -->
+    <DrawingImage x:Key="PrintingTabIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M4.5,5.5 L4.5,1.5 L11.5,1.5 L11.5,5.5" Stroke="CurrentColor" StrokeThickness="1"/>
+            <GeometryDrawing Geometry="M4.5,11.5 L1.5,11.5 L1.5,5.5 L14.5,5.5 L14.5,11.5 L11.5,11.5"
+                             Stroke="CurrentColor" StrokeThickness="1"/>
+            <GeometryDrawing Geometry="M4.5,9.5 L11.5,9.5 L11.5,14.5 L4.5,14.5 Z" Stroke="CurrentColor" StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- A solid circle under a clear one. -->
     <DrawingImage x:Key="OpacityTabIcon">
         <DrawingGroup>
