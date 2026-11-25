@@ -48,6 +48,10 @@ public interface IRegion : INotifyPropertyChanged
     /// object that owns the region needs: asking the container for its own type while its constructor is still running
     /// either recurses or hands back a second copy, and the caller already holds the one it means.</summary>
     Task<NavigationResult> NavigateToInstanceAsync(object viewModel, string viewKey, NavigationParameters parameters = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Hands a view-model the region shows already new parameters: it hears them in OnNavigatedToAsync with
+    /// <see cref="NavigationMode.Refresh"/>. Nothing is left, journaled or cancelled - it is not a move.</summary>
+    Task<NavigationResult> RefreshAsync(object viewModel, NavigationParameters parameters = null, CancellationToken cancellationToken = default);
     Task<NavigationResult> GoBackAsync(CancellationToken cancellationToken = default);
     Task<NavigationResult> GoForwardAsync(CancellationToken cancellationToken = default);
 

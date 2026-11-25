@@ -48,9 +48,10 @@ public interface IDockingRegion
     /// <summary>Saves every <see cref="Unsaved"/> one, asking nobody; false when one of them could not be saved.</summary>
     Task<bool> SaveAllAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>The document for <paramref name="key"/> - a file path, say - brought to the front, or opened by navigation
-    /// with the key among the parameters (<see cref="DockingRegion.KeyParameter"/>). The key is its pane's id, so the same
-    /// thing is never open twice. Null when the navigation did not happen.</summary>
+    /// <summary>The document for <paramref name="key"/> - a file path, say - navigated to with the key among the
+    /// parameters (<see cref="DockingRegion.KeyParameter"/>): opened, or, open already, navigated to again with the new
+    /// parameters and brought to the front. The key is its pane's id, so the same thing is never open twice. Null when
+    /// the navigation did not happen.</summary>
     Task<T> OpenDocumentAsync<T>(string key, NavigationParameters parameters = null,
         CancellationToken cancellationToken = default) where T : class;
 
