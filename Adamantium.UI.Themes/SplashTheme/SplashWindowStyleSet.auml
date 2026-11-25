@@ -25,20 +25,9 @@
                                     Foreground="{TemplateBinding Foreground}"
                                     AutomationProperties.AutomationId="Close"
                                     AutomationProperties.Name="Close">
-                                <Grid>
-                                    <Path x:Name="Cross" Data="M0,0 L10,10 M10,0 L0,10"
-                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    <Image x:Name="LightCross" Visibility="Collapsed" Opacity="0" Width="8" Height="8"
-                                            HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Image.Source>
-                                            <DrawingImage>
-                                                <GeometryDrawing Geometry="M0,0 L6,6 M6,0 L0,6" Stroke="#99000000"
-                                                                 StrokeThickness="1.8"/>
-                                            </DrawingImage>
-                                        </Image.Source>
-                                    </Image>
-                                </Grid>
+                                <Path Data="M0,0 L10,10 M10,0 L0,10"
+                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                         </Grid>
                     </Border>
@@ -52,23 +41,7 @@
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="CaptionButtonPlacement" Value="Left">
-            <!-- As the MacOs theme's close light, whose metrics do not reach here: its cross shows under the pointer. -->
             <Setter TargetName="PART_CloseButton" Property="HorizontalAlignment" Value="Left"/>
-            <Setter TargetName="PART_CloseButton" Property="Margin" Value="11,11,0,0"/>
-            <Setter TargetName="PART_CloseButton" Property="Width" Value="14"/>
-            <Setter TargetName="PART_CloseButton" Property="Height" Value="14"/>
-            <Setter TargetName="PART_CloseButton" Property="MinWidth" Value="0"/>
-            <Setter TargetName="PART_CloseButton" Property="MinHeight" Value="0"/>
-            <Setter TargetName="PART_CloseButton" Property="Padding" Value="0"/>
-            <Setter TargetName="PART_CloseButton" Property="CornerRadius" Value="7"/>
-            <Setter TargetName="PART_CloseButton" Property="Background" Value="#FF5F57"/>
-            <Setter TargetName="PART_CloseButton" Property="BackgroundPointerOver" Value="#FF5F57"/>
-            <Setter TargetName="PART_CloseButton" Property="BackgroundPressed" Value="#E0443E"/>
-            <Setter TargetName="Cross" Property="Visibility" Value="Collapsed"/>
-            <Setter TargetName="LightCross" Property="Visibility" Value="Visible"/>
-        </PropertyTrigger>
-        <PropertyTrigger SourceName="PART_CloseButton" Property="IsPointerOver" Value="true">
-            <Setter TargetName="LightCross" Property="Opacity" Value="1"/>
         </PropertyTrigger>
     </Style>
 
@@ -125,8 +98,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Chrome" Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}">
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Content="{TemplateBinding Content}"/>
                     </Border>

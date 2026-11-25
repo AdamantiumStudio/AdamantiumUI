@@ -137,10 +137,53 @@ public class SplashWindowTests
         Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).HorizontalAlignment, Is.EqualTo(side));
     }
 
-    [TestCase(CaptionButtonPlacement.Left, 14, Visibility.Collapsed, Visibility.Visible)]
-    [TestCase(CaptionButtonPlacement.Right, 46, Visibility.Visible, Visibility.Collapsed)]
-    public async Task OnTheLeft_TheCloseButtonIsALight_ItsCrossNotShown(CaptionButtonPlacement placement, double width,
-        Visibility cross, Visibility lightCross)
+    // Whichever side the buttons are on: the MacOs theme's are on the left.
+    [TestCase(CaptionButtonPlacement.Left)]
+    [TestCase(CaptionButtonPlacement.Right)]
+    public async Task InTheMacOsSplashTheme_TheCloseButtonIsALight_ItsCrossNotShown(CaptionButtonPlacement placement)
+    {
+        var splash = Splash();
+        ThemeContext.SetTheme(splash, new MacOsSplash());
+        splash.CaptionButtonPlacement = placement;
+        var session = AutomationSession.InProcess(splash);
+        await session.WaitForIdleAsync();
+
+        var close = (MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton");
+        Assert.Multiple(() =>
+        {
+            Assert.That(close.RenderSize.Width, Is.EqualTo(14).Within(0.5));
+            Assert.That(close.HorizontalAlignment, Is.EqualTo(HorizontalAlignment.Left));
+            Assert.That(((UIComponent)splash.GetTemplateChild("LightCross")).Opacity, Is.Zero);
+        });
+    }
+
+    [Test]
+    public async Task TheMacOsSplashThemesLight_ClosesTheWindow_AndIsHidden()
+    {
+        var hidden = Splash();
+        ThemeContext.SetTheme(hidden, new MacOsSplash());
+        hidden.ShowCloseButton = false;
+        await AutomationSession.InProcess(hidden).WaitForIdleAsync();
+        var splash = Splash();
+        ThemeContext.SetTheme(splash, new MacOsSplash());
+        var closed = false;
+        splash.Closed += (_, _) => closed = true;
+        var session = AutomationSession.InProcess(splash);
+        await session.WaitForIdleAsync();
+        session.AllowErrors = true;
+
+        await session.Find(By.Id("Close")).InvokeAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((UIComponent)hidden.GetTemplateChild("PART_CloseButton")).Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(closed, Is.True);
+        });
+    }
+
+    [TestCase(CaptionButtonPlacement.Left)]
+    [TestCase(CaptionButtonPlacement.Right)]
+    public async Task InTheSplashTheme_TheCloseButtonIsACross(CaptionButtonPlacement placement)
     {
         var splash = Splash();
         splash.CaptionButtonPlacement = placement;
@@ -149,10 +192,8 @@ public class SplashWindowTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).RenderSize.Width, Is.EqualTo(width).Within(0.5));
-            Assert.That(((UIComponent)splash.GetTemplateChild("Cross")).Visibility, Is.EqualTo(cross));
-            Assert.That(((UIComponent)splash.GetTemplateChild("LightCross")).Visibility, Is.EqualTo(lightCross));
-            Assert.That(((UIComponent)splash.GetTemplateChild("LightCross")).Opacity, Is.Zero);
+            Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).RenderSize.Width, Is.EqualTo(46).Within(0.5));
+            Assert.That(splash.GetTemplateChild("LightCross"), Is.Null);
         });
     }
 

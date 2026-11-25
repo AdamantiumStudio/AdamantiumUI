@@ -78,6 +78,7 @@ public class AumlSourceGenerator : IAumlSourceGenerator
             var named = new StringBuilder();
             if (early.SplashWindow != null) named.Append($", SplashWindow = typeof({early.SplashWindow})");
             if (early.StartupWindow != null) named.Append($", StartupWindow = typeof({early.StartupWindow})");
+            if (early.StartupTheme != null) named.Append($", StartupTheme = typeof({early.StartupTheme})");
             if (early.MaxInstances != 0)
                 named.Append($", MaxInstances = {early.MaxInstances.ToString(CultureInfo.InvariantCulture)}");
             if (early.EnableGraphicsDebug) named.Append(", EnableGraphicsDebug = true");

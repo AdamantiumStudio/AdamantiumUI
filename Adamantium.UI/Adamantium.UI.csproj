@@ -121,6 +121,7 @@
 	<ItemGroup>
 		<!-- Lets the render-cache test harness construct the internal DrawingContext directly. -->
 		<InternalsVisibleTo Include="Adamantium.UITests" />
+		<InternalsVisibleTo Include="Adamantium.XamlTests" />
 		<!-- The input of a universe shown in its panel, the same for one of another process. -->
 		<InternalsVisibleTo Include="Adamantium.UI.Remote" />
 	</ItemGroup>

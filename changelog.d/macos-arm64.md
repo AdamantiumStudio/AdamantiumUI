@@ -9,8 +9,8 @@
 - The splash window on macOS: drawn throughout the start, its mouse answered between the start's steps - AppKit lives
   on the application's own thread.
 - `OverlayWindow.CaptionButtonPlacement`: which side of the caption the buttons sit on, in Fluent and Graphite.
-- A splash window's close button stands on the side of `CaptionButtonPlacement`: on the left, as on macOS, it is a red
-  light.
+- A splash window's close button stands on the side of `CaptionButtonPlacement`, on macOS the left; for an application on
+  the MacOs theme it is that theme's red light.
 - The application template's theme may be the platform's, which is its default.
 
 ### Changed

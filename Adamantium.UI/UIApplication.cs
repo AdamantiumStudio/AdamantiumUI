@@ -1119,6 +1119,13 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         OnLoop(() => Languages.Current = language);
     }
 
+    // The names the built-in themes give themselves, known before they are made.
+    internal const string FluentName = "Fluent";
+    internal const string GraphiteName = "Graphite";
+    internal const string MacOsName = "macOS";
+
+    private volatile bool _themesLoaded;
+
     private void LoadThemes()
     {
         // One theme with light and dark variants: two themes rebuilt every template just to change the colors.
@@ -1157,6 +1164,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     (variant.FollowsSystem ? "; System needs a light and a dark one." : "."));
             }
         });
+        _themesLoaded = true;
     }
 
     private void SubscribeToEvents()
@@ -1447,7 +1455,37 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return splash;
     }
 
-    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement());
+    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement(), WearsMacOsTheme());
+
+    private bool WearsMacOsTheme() => _themesLoaded
+        ? ThemeManager.CurrentTheme is Themes.MacOsTheme.MacOs
+        : WillOpenOnMacOs(ThemeManager, Environment.GetEnvironmentVariable("ADAM_THEME"), StartupThemeName,
+            StartupTheme ?? BlueprintAttribute?.StartupTheme);
+
+    /// <summary>Whether <see cref="LoadThemes"/> will choose the MacOs theme, or one made from it: told before the built-in
+    /// themes are made, when <paramref name="themes"/> holds only what the application itself added.</summary>
+    internal static bool WillOpenOnMacOs(IThemeManager themes, string requested, string named, Type startup)
+    {
+        if (!string.IsNullOrEmpty(requested))
+        {
+            return themes[requested] is { } asked ? asked is Themes.MacOsTheme.MacOs : requested == MacOsName;
+        }
+
+        if (!string.IsNullOrEmpty(named))
+        {
+            if (themes[named] is { } chosen)
+            {
+                return chosen is Themes.MacOsTheme.MacOs;
+            }
+
+            if (named is FluentName or GraphiteName or MacOsName)
+            {
+                return named == MacOsName;
+            }
+        }
+
+        return startup == null ? OperatingSystem.IsMacOS() : typeof(Themes.MacOsTheme.MacOs).IsAssignableFrom(startup);
+    }
 
     private WindowPlacement StartupPlacement()
     {

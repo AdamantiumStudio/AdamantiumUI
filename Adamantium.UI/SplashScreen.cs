@@ -31,9 +31,14 @@ internal sealed class SplashScreen : ISplashScreen
     private volatile bool _running;
     private readonly TaskCompletionSource _shown = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private readonly bool _wearsMacOsTheme;
+
     /// <param name="startupPlacement">Where the startup window was remembered: the splash window appears over it.</param>
-    public SplashScreen(UIApplication application, Type windowType, WindowPlacement startupPlacement)
+    /// <param name="wearsMacOsTheme">Whether the application is, or is to be, on the MacOs theme, whose close light the
+    /// splash window then has.</param>
+    public SplashScreen(UIApplication application, Type windowType, WindowPlacement startupPlacement, bool wearsMacOsTheme)
     {
+        _wearsMacOsTheme = wearsMacOsTheme;
         _application = application;
         _windowType = windowType;
         _startupPlacement = startupPlacement;
@@ -187,7 +192,7 @@ internal sealed class SplashScreen : ISplashScreen
         var window = (SplashWindow)Activator.CreateInstance(_windowType);
         if (ThemeContext.GetTheme(window) == null)
         {
-            ThemeContext.SetTheme(window, new Themes.SplashTheme.Splash());
+            ThemeContext.SetTheme(window, _wearsMacOsTheme ? new Themes.SplashTheme.MacOsSplash() : new Themes.SplashTheme.Splash());
         }
 
         window.StartupPlacement = _startupPlacement;
