@@ -69,7 +69,7 @@
                                 <Button x:Name="PART_CollapseButton" Grid.Column="1" Visibility="Collapsed"
                                         AutomationProperties.AutomationId="Collapse"
                                         AutomationProperties.Name="{Localize WindowStrings.Collapse}"
-                                        Content=""
+                                        Content="{Localize WindowStrings.Collapse}"
                                         ContentTemplate="{TemplateBinding MinimizeTemplate}"
                                         Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch"/>
 

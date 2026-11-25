@@ -221,11 +221,11 @@ public class OverlayWindowCollapseTests
         });
     }
 
-    // No template, no glyph: nothing of the button's own shows in its place.
+    // No template, no glyph: the button shows what it holds, its label.
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
-    public void WithoutATemplateTheCollapseButtonShowsNothing(string theme)
+    public void WithoutATemplateTheCollapseButtonShowsItsLabel(string theme)
     {
         Use(theme);
         var window = new OverlayWindow
@@ -240,9 +240,9 @@ public class OverlayWindowCollapseTests
         window.IsCollapsed = true;
         Settle(window);
 
-        var texts = GlyphOf<TextBlock>(window, theme)?.Text;
+        var label = GlyphOf<TextBlock>(window, theme)?.Text;
 
-        Assert.That(texts, Is.Null.Or.Empty);
+        Assert.That(label, Is.EqualTo("Collapse to title"));
     }
 
     [TestCase("Fluent", 300)]
