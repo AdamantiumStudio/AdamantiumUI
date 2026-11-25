@@ -49,8 +49,29 @@ public partial class RenderCache
                 : 0f);
     }
 
-    // A soft-edged layer keeps its own outer bands apart from what it draws: they are laid down under it, with it.
-    private bool DrawsOwnBandsUnder(IUIComponent layer) => SoftOf(layer) > 0f;
+    // A soft-edged layer keeps its own outer bands apart from what it draws: they are laid down under it, with it. So
+    // does a reflected one that has any: its reflection lies on the floor over its shadow, under what it draws.
+    private bool DrawsOwnBandsUnder(IUIComponent layer) =>
+        SoftOf(layer) > 0f || layer.Reflection is { Shows: true } && HasOwnBands(layer);
+
+    // Whether the layer's own element wears a glow or a shadow.
+    private bool HasOwnBands(IUIComponent layer)
+    {
+        if (!_groupById.TryGetValue(layer.RenderId, out var group))
+        {
+            return false;
+        }
+
+        foreach (var unit in group.Units)
+        {
+            if (HaloRectCollector.WantsBatch(unit.RenderData) || HaloLivingCollector.WantsBatch(unit.RenderData))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // A reflected layer holds its subtree whole, not cut by the clips above it - what a scroll hides of the element may
     // still show in its reflection; those clips cut what it lays down instead.

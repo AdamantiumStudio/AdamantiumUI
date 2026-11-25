@@ -113,9 +113,10 @@ float MaskAt(float2 pixel)
     return MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5)))) * covered;
 }
 
-// What the layer drew at a point of its region (0..1 across it), with its mask and soft edge: premultiplied, nothing
-// outside the region.
-float4 LayerAt(float2 inRegion, float2 pixel)
+// What the layer drew at a point of its region (0..1 across it), with its soft edge - premultiplied, nothing outside the
+// region - and, apart, its own bands (its glow, its shadow) where they were drawn apart from it; and how much of it its
+// mask lets show there. The bands hide behind what it drew by what it drew, not by what its mask leaves of it.
+void LayerPartsAt(float2 inRegion, float2 pixel, out float4 drawn, out float4 bands, out float cover)
 {
     float inside = all(inRegion >= 0.0) && all(inRegion < 1.0) ? 1.0 : 0.0;
     float2 uv = saturate(inRegion) * LayerTexels.xy;
@@ -126,9 +127,20 @@ float4 LayerAt(float2 inRegion, float2 pixel)
         soft = saturate(2.0 * SoftTexture.SampleLevel(SourceSampler, uv, 0).r - 1.0);
     }
 
-    float4 drawn = SourceTexture.SampleLevel(SourceSampler, uv, 0) * soft;
-    float4 bands = BandsOn > 0.5 ? BandsTexture.SampleLevel(SourceSampler, uv, 0) : float4(0.0, 0.0, 0.0, 0.0);
-    return (drawn + bands * (1.0 - drawn.a)) * (MaskAt(pixel) * inside);
+    // Outside the region nothing was drawn: its parts are none there, not its edge's texels stretched out.
+    cover = MaskAt(pixel);
+    drawn = SourceTexture.SampleLevel(SourceSampler, uv, 0) * (soft * inside);
+    bands = (BandsOn > 0.5 ? BandsTexture.SampleLevel(SourceSampler, uv, 0) : float4(0.0, 0.0, 0.0, 0.0)) * inside;
+}
+
+// What the layer drew, its bands under it, as its mask leaves it.
+float4 LayerAt(float2 inRegion, float2 pixel)
+{
+    float4 drawn;
+    float4 bands;
+    float cover;
+    LayerPartsAt(inRegion, pixel, drawn, bands, cover);
+    return (drawn + bands * (1.0 - drawn.a)) * cover;
 }
 
 // The reflection's strength on a window row: none above the floor, gathering to full by where the mirrored element
@@ -164,22 +176,36 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
 // The layer was blended onto transparent black, so its color already carries its alpha: scaled here as a whole, and by
 // the mask and the soft edge where there are, and laid down with the premultiplied "over".
 //
-// Below the floor, where the reflection lies, ONE draw lays down both: what the element itself draws there (its glow,
-// its shadow) and the mirror image, mixed by the reflection's strength. Laid one over the other they added up, and the
-// glow came out brighter below the floor than above it - a seam along it.
+// Below the floor, where the reflection lies, ONE draw lays down all of it, back to front: the element's own bands drawn
+// apart (its shadow on the floor, its glow), the mirror image mixed over them by the reflection's strength, and what the
+// element itself draws there in front. The reflection lies on the floor, over the shadow - a shadow takes the light the
+// floor scatters, not what it mirrors. Mixed rather than laid one over the other, nothing adds up into a seam where the
+// reflection begins.
 [shader("fragment")]
 float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 {
     float2 here = SurfacePixel(input.Position.xy);
     float2 hereInRegion = (here - SourceRegion.xy) / max(SourceRegion.zw, float2(1.0, 1.0));
     float role = Role();
-    float4 self = LayerAt(hereInRegion, here);
+    float4 drawn;
+    float4 bands;
+    float cover;
+    LayerPartsAt(hereInRegion, here, drawn, bands, cover);
+    float4 self = (drawn + bands * (1.0 - drawn.a)) * cover;
     float4 mirror = LayerAt(input.Uv, SourceRegion.xy + input.Uv * SourceRegion.zw);
     float under = role > 0.5 && here.y >= Mirror.w && here.y < MirrorQuad.z
                   && here.x >= MirrorQuad.x && here.x < MirrorQuad.y ? 1.0 : 0.0;
-    // Only where the element itself leaves room: what it draws solid stays in front of the floor.
+    // The reflection lies over the bands - over the shadow, which takes only the light the floor scatters - taking their
+    // place as far as it covers them: whole where they have nothing, none where it shows nothing. Mixed rather than laid
+    // over, the glow and its own mirror image do not add up into a seam; and where the mix thins the bands below their
+    // own strength - a translucent reflection over a solid shadow - the bands are made up again, so none shows through
+    // that was not there. What the element draws stays in front of the floor.
+    float4 lying = bands * cover;
+    float covers = mirror.a / max(max(mirror.a, lying.a), 1e-5);
+    float4 mixed = lerp(lying, mirror, MirrorStrength(here.y) * covers);
+    float4 ground = mixed + lying * (saturate(lying.a - mixed.a) / max(lying.a, 1e-5));
     float4 laid = role < 1.5 ? self * (1.0 - under)
-                             : lerp(self, mirror, MirrorStrength(here.y) * (1.0 - self.a)) * under;
+                             : (drawn * cover + ground * (1.0 - drawn.a)) * under;
     return laid * (LayerAlpha * ClipCoverage(input.Position.xy, ClipBox, ClipRadii));
 }
 

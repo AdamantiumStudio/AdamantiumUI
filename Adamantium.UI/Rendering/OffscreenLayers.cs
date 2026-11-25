@@ -892,7 +892,8 @@ internal sealed class OffscreenLayers : IDisposable
             ReleaseSoft(gd, entry);
         }
 
-        if (soft <= 0f && entry.BandsRing != null)
+        // Its bands' textures are given up once it no longer draws them apart - whatever made it draw them so.
+        if (entry.BandsFrame != _frame && entry.BandsRing != null)
         {
             Release(gd, entry.BandsRing);
             entry.BandsRing = null;
