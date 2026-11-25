@@ -12,6 +12,7 @@
   theme resources (`OverlayTitleBarHeight`, `DockHeaderButtonSize`).
 - Fluent: an overlay window's title bar, and its buttons, go to the card's edges, over its outline.
 - Sandbox: the diagnostics window opens collapsed at the bottom-left, its title showing the render and loop rates.
+  The slide panel no longer repeats its statistics.
 
 ### Fixed
 
