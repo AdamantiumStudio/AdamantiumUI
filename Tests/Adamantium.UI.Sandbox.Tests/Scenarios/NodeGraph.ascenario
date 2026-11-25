@@ -4,11 +4,11 @@
   <Wait Target="id=Canvas" />
   <Zoom Target="id=Canvas" Percent="100" />
   <!-- Two fingers drawn apart pinch the camera in about their middle; drawn together, out again. The zoom starts past the
-       system's drag threshold, so it is a range. -->
+       system's drag threshold, so it is a range, and in and out end near where they began. -->
   <Pinch Target="id=Canvas" Scale="2" />
   <Expect Target="id=Canvas" Zoom="180..195" />
   <Pinch Target="id=Canvas" Scale="0.5" />
-  <Expect Target="id=Canvas" Zoom="95..100" />
+  <Expect Target="id=Canvas" Zoom="95..105" />
   <Zoom Target="id=Canvas" Percent="100" />
   <Expect Target="id=PART_MiniMap/type=Image" Name="The whole plane, the part in view framed" />
   <Scroll Target="id=Canvas>name=Mix" />

@@ -1,15 +1,84 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels"
+      xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
       xmlns:controls="clr-namespace:Adamantium.UI.Controls;assembly=Adamantium.UI.Controls"
       x:ViewModel="{x:Type vm:GalleryViewModel}"
       x:CreateInDesignTime="True">
 
     <Grid RowDefinitions="Auto,*" Margin="16">
-        <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->
-        <!-- The members of each enum are said by the page's phrases, a member's name being its key. -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <!-- As wide as a tab: the tabs whose title has what is typed drop below it; a click opens one, or
+                 the arrows choose it and Enter opens it, the keyboard staying in the field. -->
+            <TextBox x:Name="TabSearchBox"
+                     AutomationProperties.AutomationId="TabSearch"
+                     Width="152"
+                     VerticalAlignment="Center"
+                     Margin="0,0,20,0"
+                     Placeholder="{Localize GalleryStrings.FindTab}"
+                     ShowsClearButton="True"
+                     Text="{Binding TabSearch, Mode=TwoWay}">
+                <TextBox.InputBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding OpenFoundCommand}" Reach="FocusWithin"/>
+                    <KeyBinding Gesture="DownArrow" Command="{Binding NextFoundCommand}" Reach="FocusWithin"/>
+                    <KeyBinding Gesture="UpArrow" Command="{Binding PreviousFoundCommand}" Reach="FocusWithin"/>
+                </TextBox.InputBindings>
+            </TextBox>
+            <Popup PlacementTarget="{Binding ElementName=TabSearchBox}"
+                   Placement="Bottom"
+                   PlacementAlignment="Start"
+                   VerticalOffset="4"
+                   KeepOpen="False"
+                   IgnoreTargetPress="True"
+                   StaysBesideTarget="True"
+                   IsOpen="{Binding IsTabSearchOpen, Mode=TwoWay}">
+                <Border Width="240"
+                        MaxHeight="400"
+                        Padding="4"
+                        CornerRadius="8"
+                        Background="{ResourceReference FlyoutSurfaceFill}"
+                        BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                        BorderThickness="1">
+                    <ListBox AutomationProperties.AutomationId="FoundTabs"
+                             AutomationProperties.Name="{Localize GalleryStrings.FindTab}"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             ItemsSource="{Binding FoundTabs}"
+                             SelectedItem="{Binding FoundTab, Mode=TwoWay}">
+                        <ListBox.Behaviors>
+                            <behaviors:ScrollToSelectedBehavior/>
+                        </ListBox.Behaviors>
+                        <ListBox.ItemContainerStyle>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="AutomationProperties.Name" Value="{Localize GalleryStrings, Key={Binding Header}}"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Ancestor ListBox, DataContext.OpenTabCommand}"
+                                        CommandParameter="{Binding}"
+                                        AutomationProperties.Name="{Localize GalleryStrings, Key={Binding Header}}"
+                                        Focusable="False"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="8,6"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <IconPresenter Icon="{ObservableResource Key={Binding Icon}}" Width="16" Height="16" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Localize GalleryStrings, Key={Binding Header}}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Popup>
+            <!-- Enum-bound DropDown that moves the tab strip to any edge live (exercises TabControl.TabStripPlacement). -->
+            <!-- The members of each enum are said by the page's phrases, a member's name being its key. -->
             <TextBlock x:Name="TabPlacementLabel" Text="{Localize GalleryStrings.TabPlacement}" VerticalAlignment="Center" Margin="0,0,8,0"/>
             <DropDown AutomationProperties.AutomationId="TabPlacement" AutomationProperties.LabeledBy="{Binding ElementName=TabPlacementLabel}"
                       EnumType="{x:Type controls:TabStripPlacement}"

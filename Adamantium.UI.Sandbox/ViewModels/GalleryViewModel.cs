@@ -1,6 +1,12 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
+using Adamantium.Core.Commands;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.Localization;
+using Adamantium.UI.Core.Collections;
+using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.Canvases.ViewModels;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
@@ -52,10 +58,22 @@ public partial class GalleryViewModel
         new TransformsViewModel(),
     };
 
+    /// <summary>The tabs whose title has what <see cref="TabSearch"/> asks for. A list of its own: a tab taken out of the
+    /// strip's would be a tab closed, its page let go of.</summary>
+    public CollectionView FoundTabs { get; }
+
     [Bindable] private TabPageViewModel _selectedTab;
 
+    // What the field over the strip looks for in the tabs' titles.
+    [Bindable] private string _tabSearch;
+
+    [Bindable] private bool _isTabSearchOpen;
+
+    // The one among the found that Enter opens.
+    [Bindable] private TabPageViewModel _foundTab;
+
     // Drives the TabControl.TabStripPlacement from a DropDown (enum-bound) so the strip can move to any edge live.
-    [Bindable] private TabStripPlacement _tabPlacement = TabStripPlacement.Top;
+    [Bindable] private TabStripPlacement _tabPlacement = TabStripPlacement.Left;
 
     // Drives the TabControl.ContentTransition from a DropDown (enum-bound) so the tab-content slide mode switches live.
     [Bindable] private ContentTransition _slideMode = ContentTransition.SlideLeft;
@@ -86,5 +104,56 @@ public partial class GalleryViewModel
         Tabs.Add(resolver.Resolve<WebPageViewModel>());
         Tabs.Add(resolver.Resolve<SceneViewModel>());
         SelectedTab = Tabs[2];
+        FoundTabs = new CollectionView(Tabs) { Filter = tab => IsFound((TabPageViewModel)tab) };
+    }
+
+    partial void OnTabSearchChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            IsTabSearchOpen = false;
+            return;
+        }
+
+        FoundTabs.Refresh();
+        IsTabSearchOpen = FoundTabs.Count > 0;
+        FoundTab = IsTabSearchOpen ? (TabPageViewModel)FoundTabs[0] : null;
+    }
+
+    [Command] private void NextFound() => StepFound(1);
+
+    [Command] private void PreviousFound() => StepFound(-1);
+
+    [Command] private void OpenFound()
+    {
+        if (IsTabSearchOpen && FoundTab != null && FoundTabs.Contains(FoundTab)) OpenTab(FoundTab);
+    }
+
+    [Command] private void OpenTab(TabPageViewModel tab)
+    {
+        SelectedTab = tab;
+        TabSearch = string.Empty;
+    }
+
+    // Closed by Escape or a press elsewhere, the list drops again, found anew: the language may have changed meanwhile.
+    private void StepFound(int step)
+    {
+        if (!IsTabSearchOpen)
+        {
+            OnTabSearchChanged(TabSearch);
+            return;
+        }
+
+        if (FoundTabs.Count == 0) return;
+
+        var found = FoundTabs.Cast<TabPageViewModel>().ToList();
+        FoundTab = found[Math.Clamp(found.IndexOf(FoundTab) + step, 0, found.Count - 1)];
+    }
+
+    // In the application's language, as the titles are said.
+    private bool IsFound(TabPageViewModel tab)
+    {
+        var title = Languages.Say(GalleryStrings.Current, tab.Header);
+        return Languages.Culture.CompareInfo.IndexOf(title, TabSearch?.Trim() ?? string.Empty, CompareOptions.IgnoreCase) >= 0;
     }
 }
