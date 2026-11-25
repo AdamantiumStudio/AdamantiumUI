@@ -82,6 +82,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     {
         if (_renderAttachmentsReleased) return;
         _renderAttachmentsReleased = true;
+        RenderAttachmentReleases++;
 
         // Copied out and the list emptied in place - an element that leaves and returns keeps its array - then let go of
         // outside the gate, as each value takes its own lock to let go.
@@ -115,20 +116,26 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         _renderAttachmentsReleased = false;
     }
 
+    /// <summary>How many times it let go of everything it paints with, so what else it holds a brush for can tell.</summary>
+    internal int RenderAttachmentReleases { get; private set; }
+
     /// <summary>As <see cref="TakeRenderAttachments"/>, of the values last read: an inherited one is not resolved anew, so a
     /// change to come still starts from what was shown.</summary>
     internal void TakeBackRenderAttachments()
     {
         if (!_renderAttachmentsReleased) return;
+
+        // First, so that a sweep a brush makes as it is taken - this element is in no tree - releases all of them again.
+        _renderAttachmentsReleased = false;
         Walk(values);
         Walk(attachedValues);
-        _renderAttachmentsReleased = false;
 
         void Walk(ConcurrentDictionary<AdamantiumProperty, ValueContainer> map)
         {
             if (map == null) return;
             foreach (var (property, container) in map)
             {
+                if (_renderAttachmentsReleased) return;
                 if (property.CanAttachToOwner) (container.Effective as IRenderAttachable)?.AttachTo(this);
             }
         }

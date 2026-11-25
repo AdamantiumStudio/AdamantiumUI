@@ -63,6 +63,44 @@ public class BrushOwnerReleaseTests
         Assert.That(shared.IsOwnedBy(part), Is.True);
     }
 
+    [Test]
+    public void WhatIsAddedToAPartDropped_IsNotOwnedByItsBrush()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var part = new Border();
+        var holder = new StackPanel();
+        holder.Children.Add(part);
+        holder.Children.Clear();
+        var late = new Border { Background = shared };
+
+        part.Child = late;
+
+        Assert.That(shared.IsOwnedBy(late), Is.False);
+    }
+
+    // A sweep the brush makes as it takes the part back drops it again: in no tree, it counts as gone.
+    [Test]
+    public void APartPutBackAsItsBrushSweeps_PaintsWithItOnceShown()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var part = new Border { Background = shared };
+        var holder = new StackPanel();
+        holder.Children.Add(part);
+        holder.Children.Clear();
+        for (var i = 0; i < 40; i++)
+        {
+            _ = new Border { Background = shared };
+            holder.Children.Add(part);
+            holder.Children.Clear();
+        }
+
+        holder.Children.Add(part);
+        var window = new Window { Width = 200, Height = 100, Content = holder };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.That(shared.IsOwnedBy(part), Is.True);
+    }
+
     // ...however it took the brush. Leaving gave up what the element's properties held at that moment, so a brush taken
     // by any other way kept the element - a theme brush held a thrown-away slider's thumb, and with it the page.
     [Test]

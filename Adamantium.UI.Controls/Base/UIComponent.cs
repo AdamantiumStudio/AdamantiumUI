@@ -1795,12 +1795,12 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             var e = new VisualTreeAttachmentEventArgs(RootVisual, this);
             DetachedFromVisualTree(e);
         }
-        else if (parent == null && !IsParked && !RenderAttachmentsReleased)
+        else if (!IsParked && parent is null or UIComponent { IsAttachedToVisualTree: false, RenderAttachmentsReleased: true })
         {
             _droppedUnshown = true;
             ReleaseRenderAttachmentsOfSubtree();
         }
-        else if (parent != null && _droppedUnshown)
+        else if (_droppedUnshown && parent?.IsAttachedToVisualTree == false && parent is not IRootVisualComponent)
         {
             _droppedUnshown = false;
             TakeBackRenderAttachmentsOfSubtree();
@@ -1822,8 +1822,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     // A part dropped from a tree not shown yet - a view built off the loop thread builds some of its parts anew - is told of
-    // no detach, and the brushes it drew with would hold it, and the whole view by its parents. Given a parent again, it
-    // takes them again.
+    // no detach, and the brushes it drew with would hold it, and the whole view by its parents. Nor does it take any under a
+    // parent that let go. Given another parent not shown, it takes them back; shown, it takes them as it attaches.
     private bool _droppedUnshown;
 
     private void TakeBackRenderAttachmentsOfSubtree()
@@ -1853,6 +1853,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         // Back in the tree, so alive again; a parked subtree stays parked until ParkedSubtree.Unpark.
         if (!IsParked) Revive();
 
+        _droppedUnshown = false;
         RootVisual = e.Root;
         // Inherited down the subtree, so every node inside overlay content answers with the same owner. Null in the main
         // tree, where the visual root owns layout as it always did.
