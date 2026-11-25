@@ -376,6 +376,13 @@ public class DropDown : Selector
         CoerceValue(IsEnabledProperty);
         if (Command is not RoutedCommand)
         {
+            // An answer belongs to the command that gave it.
+            if (_answer != null)
+            {
+                _answer = null;
+                UpdateDisplayContent();
+            }
+
             return;
         }
 
