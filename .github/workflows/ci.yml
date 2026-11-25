@@ -124,6 +124,10 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         shell: bash
         run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            sysctl hw.memsize hw.ncpu hw.physicalcpu machdep.cpu.brand_string kern.hv_vmm_present
+            (while sleep 15; do echo "SAMPLE $(date +%T) $(sysctl -n vm.swapusage) load $(sysctl -n vm.loadavg) $(memory_pressure -Q | tail -1) $(vm_stat | awk '/Pageouts|Swapouts|occupied by compressor|stored in compressor/{printf "%s ", $NF}')"; ps -Ao rss,pcpu,time,command -r | head -10 | cut -c1-110; done) &
+          fi
           pids=(); logs=()
           run() {
             local log="$RUNNER_TEMP/$1.log"; shift
