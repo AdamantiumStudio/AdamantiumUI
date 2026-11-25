@@ -72,6 +72,25 @@ public class GridStarMaxSizeTests
     }
 
     [Test]
+    public void AStarShortOfItsMinWidth_HoldsIt_AndTheOthersShareTheRest()
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 300 });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var held = Cell(grid, 0);
+        var other = Cell(grid, 1);
+
+        Lay(grid, 400, 40);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(held.Bounds.Width, Is.EqualTo(300).Within(0.5));
+            Assert.That(other.Bounds.X, Is.EqualTo(300).Within(0.5));
+            Assert.That(other.Bounds.Width, Is.EqualTo(100).Within(0.5));
+        });
+    }
+
+    [Test]
     public void AStarRow_StopsAtItsMaxHeight()
     {
         var grid = new Grid();

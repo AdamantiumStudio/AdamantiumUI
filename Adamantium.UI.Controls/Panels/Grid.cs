@@ -366,6 +366,7 @@ public class Grid: Panel
 
             segment.Min = minSize;
             segment.Max = maxSize;
+            segment.Floor = Math.Min(Math.Max(def.MinHeight - padding, 0), maxSize);
             segment.Margin = margin;
             segment.Padding = padding;
 
@@ -421,6 +422,7 @@ public class Grid: Panel
 
             segment.Min = minSize;
             segment.Max = maxSize;
+            segment.Floor = Math.Min(Math.Max(def.MinWidth - padding, 0), maxSize);
             segment.Margin = margin;
             segment.Padding = padding;
 
@@ -984,13 +986,14 @@ public class Grid: Panel
       }
    }
 
-   // The stars share the space by their weights, none past its definition's Max: one that would be holds its Max, and
-   // the others share what is left, again until none is over. Written into MeasuredSize, or Min when arranging.
+   // The stars share the space by their weights, each within its definition's bounds: one whose share would pass its
+   // Max, or fall short of its MinWidth/MinHeight, is held there, and the others share what is left, again until none
+   // is out. Written into MeasuredSize, or Min when arranging.
    private static void ShareAmongStars(GridSegment[] segments, double space, bool intoMeasured)
    {
       for (int i = 0; i < segments.Length; ++i)
       {
-         segments[i].IsCapped = false;
+         segments[i].IsHeld = false;
       }
 
       while (true)
@@ -1000,27 +1003,30 @@ public class Grid: Panel
          for (int i = 0; i < segments.Length; ++i)
          {
             if (!segments[i].IsStar) continue;
-            if (segments[i].IsCapped) left -= segments[i].Max;
+            if (segments[i].IsHeld) left -= segments[i].HeldSize;
             else stars += segments[i].Stars;
          }
 
          var share = stars > 0 ? Math.Max(left, 0) / stars : 0;   // a "0*" track alone makes stars 0
-         var cappedOne = false;
+         var heldOne = false;
          for (int i = 0; i < segments.Length; ++i)
          {
-            if (segments[i].IsStar && !segments[i].IsCapped && share * segments[i].Stars > segments[i].Max)
+            if (!segments[i].IsStar || segments[i].IsHeld) continue;
+            var size = share * segments[i].Stars;
+            if (size > segments[i].Max || size < segments[i].Floor)
             {
-               segments[i].IsCapped = true;
-               cappedOne = true;
+               segments[i].IsHeld = true;
+               segments[i].HeldSize = size > segments[i].Max ? segments[i].Max : segments[i].Floor;
+               heldOne = true;
             }
          }
 
-         if (cappedOne) continue;
+         if (heldOne) continue;
 
          for (int i = 0; i < segments.Length; ++i)
          {
             if (!segments[i].IsStar) continue;
-            var size = segments[i].IsCapped ? segments[i].Max : Math.Max(share * segments[i].Stars, 0);
+            var size = segments[i].IsHeld ? segments[i].HeldSize : Math.Max(share * segments[i].Stars, 0);
             if (intoMeasured) segments[i].MeasuredSize = size;
             else segments[i].Min = size;
          }
@@ -1037,8 +1043,11 @@ public class Grid: Panel
       public double Min;
       //Last Measured size value. Used for storing temp values
       public double MeasuredSize;
-      //A star held at its Max while the stars share the space
-      public bool IsCapped;
+      //The definition's own minimum, excluding padding: a star is not shared less
+      public double Floor;
+      //A star held at its Max or Floor while the stars share the space, and the size it is held at
+      public bool IsHeld;
+      public double HeldSize;
 
       public double FullSize => Min + Padding;
 
@@ -1071,6 +1080,7 @@ public class Grid: Panel
       {
          Min = min;
          Max = max;
+         Floor = 0;
          MeasuredSize = size;
          Stars = 0;
          OriginalType = originalType;
