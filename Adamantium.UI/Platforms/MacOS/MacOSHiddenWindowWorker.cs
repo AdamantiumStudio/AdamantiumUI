@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Adamantium.MacOS.CoreGraphics;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.QuartzCore;
@@ -18,11 +19,13 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
     private const int DefaultWidth = 800;
     private const int DefaultHeight = 600;
 
+    private readonly object _placementLock = new();
     private readonly MacOSPlatform _platform;
     private IWindow _window;
+    private MacOSModality _modality;
     private IntPtr _layer;
-    private double _scale = 1;
-    private Rect _restore;
+    private Placement _placement;
+    private volatile bool _shown;
     private volatile bool _closed;
 
     public MacOSHiddenWindowWorker(IUIContext context)
@@ -33,9 +36,18 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
     public IUIContext UIContext { get; }
 
-    public Rect RestoreBounds => _restore;
+    public Rect RestoreBounds => Current?.Restore ?? Rect.Empty;
 
     public bool AppliesWindowOpacity => true;
+
+    private Placement Current
+    {
+        get
+        {
+            lock (_placementLock)
+                return _placement;
+        }
+    }
 
     public void SetWindow(IWindow window)
     {
@@ -43,29 +55,27 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
             throw new Exceptions.DispatcherException("A window is made on the main thread: use IUIApplication.ExecuteOnUIThread");
 
         _window = window;
+        _modality = new MacOSModality(_platform, window, Activate);
         window.Closed += OnWindowClosed;
 
         var left = double.IsNaN(window.Left) ? 0 : window.Left;
         var top = double.IsNaN(window.Top) ? 0 : window.Top;
         var width = Extent(window.ClientWidth, window.Width, DefaultWidth);
         var height = Extent(window.ClientHeight, window.Height, DefaultHeight);
-        _scale = _platform.Desktop.ScaleAt(left, top);
-        _restore = new Rect(left, top, width * _scale, height * _scale);
+        var scale = _platform.Desktop.ScaleAt(left, top);
+        var bounds = new Rect(left, top, width * scale, height * scale);
+        _placement = new Placement(bounds, bounds, scale, false, false);
 
         _layer = NSObject.Retain(CAMetalLayer.Create());
-        SizeLayer(width, height);
+        SizeLayer();
         window.SetHandle(_layer);
         window.SetSurfaceHandle(_layer);
-        window.DpiScale = new Vector2<double>(_scale, _scale);
-        window.DisplayRefreshRate = ScreenOf(_restore)?.RefreshRate ?? 60;
-        window.Width = _restore.Width;
-        window.Height = _restore.Height;
-        window.UpdateClientSizeFromPlatform(width, height);
-        window.UpdatePositionFromPlatform(left, top);
+        Tell();
 
         Input.DragDrop.RegisterNativeDropTarget(window);
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
+        _platform.Register(_modality);
         window.OnSourceInitialized();
         window.StateChanged += OnStateChanged;
     }
@@ -74,17 +84,17 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
     {
     }
 
-    public void SetPosition(double left, double top)
-    {
-        _restore = new Rect(left, top, _restore.Width, _restore.Height);
-        OnLoop(() => _window.UpdatePositionFromPlatform(left, top));
-    }
+    public void UpdateModal() => _modality.Update();
 
-    public void SetSize(double clientWidth, double clientHeight)
+    public void SetPosition(double left, double top) => Move(placement =>
     {
-        _restore = new Rect(_restore.X, _restore.Y, clientWidth * _scale, clientHeight * _scale);
-        Resize(clientWidth, clientHeight);
-    }
+        var scale = _platform.Desktop.ScaleAt(left, top);
+        return new Rect(left, top, placement.Bounds.Width / placement.Scale * scale,
+            placement.Bounds.Height / placement.Scale * scale);
+    });
+
+    public void SetSize(double clientWidth, double clientHeight) => Move(placement =>
+        new Rect(placement.Bounds.X, placement.Bounds.Y, clientWidth * placement.Scale, clientHeight * placement.Scale));
 
     public void UpdateOverlayTraits()
     {
@@ -92,44 +102,53 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
     public void ShowWindow(WindowState windowState)
     {
-        switch (windowState)
+        _shown = true;
+        if (windowState == WindowState.Minimized)
         {
-            case WindowState.Minimized:
-                ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, true);
-                OnLoop(() => SetActive(false));
-                return;
-            case WindowState.Maximized:
-                var area = ScreenOf(_restore)?.WorkArea ?? _restore;
-                Place(area);
-                break;
-            default:
-                Place(_restore);
-                break;
+            lock (_placementLock)
+                _placement = _placement with { IsMinimized = true };
+            ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, true);
+            OnLoop(GiveUpActivation);
+            return;
         }
 
+        bool wasMinimized;
+        lock (_placementLock)
+        {
+            wasMinimized = _placement.IsMinimized;
+            // From the Dock the window comes back as it went, maximized or not.
+            var maximized = windowState == WindowState.Maximized || wasMinimized && _placement.IsMaximized;
+            var bounds = maximized ? ScreenOf(_placement.Restore)?.WorkArea ?? _placement.Restore : _placement.Restore;
+            _placement = new Placement(_placement.Restore, bounds, ScaleOf(bounds), maximized, false);
+        }
+
+        Apply();
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, false);
-        if (_window.ActivateOnShow)
-            Activate();
-    }
-
-    public void HideWindow() => OnLoop(() => SetActive(false));
-
-    public void Activate()
-    {
-        if (_window.State == WindowState.Minimized)
-            _window.State = WindowState.Normal;
-
         OnLoop(() =>
         {
-            foreach (var other in UIContext.UIApplication.Windows)
-            {
-                if (!ReferenceEquals(other, _window) && other.IsActive && other is not SplashWindow)
-                    other.StopBeingActive(UIContext.UIApplication);
-            }
-
-            SetActive(true);
+            _platform.HiddenWindows.Remove(this);
+            _platform.HiddenWindows.Add(this);
         });
+        if (_window.ActivateOnShow || wasMinimized)
+            OnLoop(() =>
+            {
+                if (_window.ActivateOnShow || !TakesNoActivation)
+                    BecomeActive();
+            });
     }
+
+    public void HideWindow()
+    {
+        _shown = false;
+        OnLoop(GiveUpActivation);
+    }
+
+    public void Activate() => OnLoop(() =>
+    {
+        if (Current.IsMinimized)
+            _window.State = WindowState.Normal;
+        BecomeActive();
+    });
 
     public void RaiseWithoutActivation()
     {
@@ -141,14 +160,14 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
     public PixelPoint ScreenToClient(PixelPoint screen)
     {
-        var corner = _window.LivePosition;
-        return new PixelPoint(screen.X - (int)corner.X, screen.Y - (int)corner.Y);
+        var bounds = Current.Bounds;
+        return new PixelPoint(screen.X - (int)Math.Round(bounds.X), screen.Y - (int)Math.Round(bounds.Y));
     }
 
     public PixelPoint ClientToScreen(PixelPoint client)
     {
-        var corner = _window.LivePosition;
-        return new PixelPoint(client.X + (int)corner.X, client.Y + (int)corner.Y);
+        var bounds = Current.Bounds;
+        return new PixelPoint(client.X + (int)Math.Round(bounds.X), client.Y + (int)Math.Round(bounds.Y));
     }
 
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen)
@@ -165,42 +184,109 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
     private void OnStateChanged(object sender, StateChangedEventArgs e) => ShowWindow(e.State);
 
-    private void SetActive(bool active)
+    // An overlay - a menu, a drag's compass - says so itself; automation only takes the default from the others.
+    private bool TakesNoActivation => _window is SplashWindow ||
+        _window is WindowBase { ActivateOnShow: false } window &&
+        window.GetValueSource(WindowBase.ActivateOnShowProperty) < ValuePriority.TypeDefault;
+
+    private void BecomeActive()
     {
-        if (_window.IsActive == active)
+        if (_modality.IsBlocked)
+        {
+            _modality.ActivateBlocker();
+            return;
+        }
+
+        _platform.HiddenWindows.Remove(this);
+        _platform.HiddenWindows.Add(this);
+        var active = UIContext.UIApplication.Windows
+            .Where(other => other.IsActive && other is not SplashWindow && !ReferenceEquals(other, _window)).ToList();
+        foreach (var other in active)
+            other.StopBeingActive(UIContext.UIApplication);
+        if (!_closed && !_window.IsActive)
+            _window.BecomeActive(UIContext.UIApplication);
+    }
+
+    // As AppKit does when the key window goes: its owner becomes active, else the one active before it.
+    private void GiveUpActivation()
+    {
+        if (!_window.IsActive)
             return;
 
-        if (active)
-            _window.BecomeActive(UIContext.UIApplication);
-        else
-            _window.StopBeingActive(UIContext.UIApplication);
+        _window.StopBeingActive(UIContext.UIApplication);
+        var candidates = _platform.HiddenWindows.Where(other => other != this && other.CanTakeActivation).ToList();
+        var next = candidates.LastOrDefault(other => ReferenceEquals(other._window, _window.Owner)) ??
+                   candidates.LastOrDefault();
+        next?.BecomeActive();
     }
 
-    private void Place(Rect bounds)
+    private bool CanTakeActivation =>
+        _shown && !_closed && !Current.IsMinimized && !_modality.IsBlocked && !TakesNoActivation;
+
+    // Moving or sizing a maximized window leaves it in no maximized state, as AppKit's zoomed one.
+    private void Move(Func<Placement, Rect> move)
     {
-        OnLoop(() => _window.UpdatePositionFromPlatform(bounds.X, bounds.Y));
-        Resize(bounds.Width / _scale, bounds.Height / _scale);
+        bool wasMaximized;
+        lock (_placementLock)
+        {
+            // Placed before the window is made: SetWindow reads it from the window.
+            if (_placement == null)
+                return;
+
+            wasMaximized = _placement.IsMaximized;
+            var bounds = move(_placement);
+            _placement = new Placement(bounds, bounds, ScaleOf(bounds), false, _placement.IsMinimized);
+        }
+
+        Apply();
+        if (wasMaximized)
+            OnLoop(TellState);
     }
 
-    private void Resize(double clientWidth, double clientHeight)
+    private void Apply()
     {
         _platform.RunOnMainThread(() =>
         {
             if (_layer != IntPtr.Zero)
-                SizeLayer(clientWidth, clientHeight);
+                SizeLayer();
         });
-        OnLoop(() =>
-        {
-            _window.Width = clientWidth * _scale;
-            _window.Height = clientHeight * _scale;
-            _window.UpdateClientSizeFromPlatform(clientWidth, clientHeight);
-        });
+        OnLoop(Tell);
     }
 
-    private void SizeLayer(double width, double height)
+    // The placement as it is when this runs, not as it was when it was asked for: a newer one may have come meanwhile.
+    private void Tell()
     {
-        CAMetalLayer.SetContentsScale(_layer, _scale);
-        CAMetalLayer.SetDrawableSize(_layer, new CGSize(width * _scale, height * _scale));
+        var placement = Current;
+        var bounds = placement.Bounds;
+        _window.DpiScale = new Vector2<double>(placement.Scale, placement.Scale);
+        _window.DisplayRefreshRate = ScreenOf(bounds)?.RefreshRate ?? 60;
+        _window.Width = bounds.Width;
+        _window.Height = bounds.Height;
+        _window.UpdatePositionFromPlatform(bounds.X, bounds.Y);
+        _window.UpdateClientSizeFromPlatform(bounds.Width / placement.Scale, bounds.Height / placement.Scale);
+        TellState();
+    }
+
+    private void TellState()
+    {
+        var placement = Current;
+        if (!_shown || placement.IsMinimized)
+            return;
+
+        var state = placement.IsMaximized ? WindowState.Maximized : WindowState.Normal;
+        if (_window.State == state)
+            return;
+
+        _window.StateChanged -= OnStateChanged;
+        _window.State = state;
+        _window.StateChanged += OnStateChanged;
+    }
+
+    private void SizeLayer()
+    {
+        var placement = Current;
+        CAMetalLayer.SetContentsScale(_layer, placement.Scale);
+        CAMetalLayer.SetDrawableSize(_layer, new CGSize(placement.Bounds.Width, placement.Bounds.Height));
     }
 
     private void OnWindowClosed(object sender, EventArgs e)
@@ -210,9 +296,16 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
         _closed = true;
         _window.StateChanged -= OnStateChanged;
+        _platform.Unregister(_modality);
+        _modality.Close();
         Input.DragDrop.UnregisterNativeDropTarget(_window);
         UIContext.UIApplication.RemoveWindow(_window);
         _window.SetHandle(IntPtr.Zero);
+        MacOSPlatform.DispatchInput(() =>
+        {
+            _platform.HiddenWindows.Remove(this);
+            GiveUpActivation();
+        });
         _platform.RunOnMainThread(() =>
         {
             NSObject.Release(_layer);
@@ -226,6 +319,8 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
             action();
     });
 
+    private double ScaleOf(Rect bounds) => _platform.Desktop.ScaleAt(bounds.X, bounds.Y);
+
     private static ScreenInfo ScreenOf(Rect bounds) =>
         Displays.Screens.Count == 0 ? null : WindowPlacer.ScreenOf(bounds, Displays.Screens);
 
@@ -236,4 +331,7 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
         return !double.IsNaN(fallback) && fallback > 0 ? fallback : defaultExtent;
     }
+
+    // In physical pixels of the desktop.
+    private sealed record Placement(Rect Restore, Rect Bounds, double Scale, bool IsMaximized, bool IsMinimized);
 }

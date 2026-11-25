@@ -26,6 +26,7 @@ public class MacOSPlatform : IApplicationPlatform
 
     private readonly int _threadId;
     private readonly List<MacOSWindowWorker> _windows = [];
+    private readonly List<MacOSModality> _modalities = [];
     private readonly List<MacOSPlatform> _guests = [];
     private readonly MacOSPlatform _host;
 
@@ -185,19 +186,35 @@ public class MacOSPlatform : IApplicationPlatform
             _windows.Remove(worker);
     }
 
-    /// <summary>Fills <paramref name="others"/> with the open windows other than <paramref name="worker"/>: those a modal
-    /// window keeps from input.</summary>
-    internal void CollectOthers(MacOSWindowWorker worker, List<MacOSWindowWorker> others)
+    internal void Register(MacOSModality modality)
+    {
+        lock (ModalLock)
+            _modalities.Add(modality);
+    }
+
+    internal void Unregister(MacOSModality modality)
+    {
+        lock (ModalLock)
+            _modalities.Remove(modality);
+    }
+
+    /// <summary>Fills <paramref name="others"/> with the open windows other than that of <paramref name="modality"/>: those
+    /// a modal window keeps from input.</summary>
+    internal void CollectOthers(MacOSModality modality, List<MacOSModality> others)
     {
         lock (ModalLock)
         {
-            foreach (var other in _windows)
+            foreach (var other in _modalities)
             {
-                if (other != worker)
+                if (other != modality)
                     others.Add(other);
             }
         }
     }
+
+    /// <summary>The hidden application's open windows (<see cref="IsHidden"/>), the one activated last at the end; the loop
+    /// thread's.</summary>
+    internal List<MacOSHiddenWindowWorker> HiddenWindows { get; } = [];
 
     /// <summary>Raises on the loop thread what AppKit told this one, in the order it came: the visual tree is not to
     /// be touched from the main thread.</summary>
