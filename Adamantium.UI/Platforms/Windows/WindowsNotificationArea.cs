@@ -185,7 +185,8 @@ internal sealed partial class WindowsNotificationArea : INotificationAreaPlatfor
 
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
 
-        /// <summary>The task bar took the icon, when it was put there last.</summary>
+        /// <summary>The task bar took the icon, when it was put there last. A task bar that ends says nothing; the one
+        /// that starts again does, and the icon is put there anew.</summary>
         public bool IsDisplayed
         {
             get
@@ -227,18 +228,16 @@ internal sealed partial class WindowsNotificationArea : INotificationAreaPlatfor
             var data = Data(NotifyIconFlags.Message | NotifyIconFlags.Icon | NotifyIconFlags.Tip | NotifyIconFlags.ShowTip);
             data.CallbackMessage = IconMessage;
             data.Icon = ApplicationIcon();
-            if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data))
+            // Not taken because it is there still - "TaskbarCreated" heard while the icons stayed, or an Add the shell
+            // answered late: changed instead.
+            if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data) &&
+                !Win32Interop.ShellNotifyIcon(NotifyIconMessage.Modify, ref data))
             {
-                // Not taken because it is there still - "TaskbarCreated" heard while the icons stayed: changed instead.
-                if (Win32Interop.ShellNotifyIcon(NotifyIconMessage.Modify, ref data))
-                {
-                    return true;
-                }
-
                 Log.Logger.Information("The notification area took no icon now; it is put there when the task bar starts");
                 return false;
             }
 
+            // The version 4 form, which OnMessage reads, whichever way the icon came to be there.
             var version = Data(default);
             version.Version = NOTIFYICONDATA.NotifyIconVersion4;
             Win32Interop.ShellNotifyIcon(NotifyIconMessage.SetVersion, ref version);

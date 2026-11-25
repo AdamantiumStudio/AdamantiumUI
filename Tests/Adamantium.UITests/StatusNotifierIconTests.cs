@@ -126,6 +126,26 @@ public class StatusNotifierIconTests
         });
     }
 
+    // Whether it offers a menu is asked each time the panel reads the icon: a menu given later is there for the next read.
+    [Test]
+    public void AMenuOfferedLater_IsThereForThePanelsNextRead()
+    {
+        var rows = new Rows(() => [new NotificationAreaMenuItem { Text = "Show" }]) { IsOffered = false };
+        _icon.Dispose();
+        _icon = new StatusNotifierIcon("Keyboard", rows, 1, Post, _watcherName);
+        _icon.Connect(DBusConnection.ConnectSession());
+
+        var before = ((DBusObjectPath)All(ItemPath, ItemInterface)["Menu"].Value).Value;
+        rows.IsOffered = true;
+        var after = ((DBusObjectPath)All(ItemPath, ItemInterface)["Menu"].Value).Value;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo("/NO_DBUSMENU"));
+            Assert.That(after, Is.EqualTo(MenuPath));
+        });
+    }
+
     [Test]
     public void ToolTipChanged_IsSaid_AndReadAnew()
     {
@@ -344,6 +364,8 @@ public class StatusNotifierIconTests
 
     private sealed class Rows(Func<IReadOnlyList<NotificationAreaMenuItem>> read) : INotificationAreaMenu
     {
+        public bool IsOffered { get; set; } = true;
+
         public IReadOnlyList<NotificationAreaMenuItem> ReadRows() => read();
     }
 

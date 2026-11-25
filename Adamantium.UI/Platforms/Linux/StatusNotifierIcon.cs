@@ -39,7 +39,8 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
     private readonly string _watcher;
     private readonly Action<Action> _post;
     private readonly StatusNotifierMenu _menu;
-    private readonly bool _hasMenu;
+    // Asked whether it offers a menu each time a panel reads the icon's properties.
+    private readonly INotificationAreaMenu _menuSource;
     private readonly List<IDisposable> _served = [];
     private DBusConnection _bus;
     private string _toolTip;
@@ -53,7 +54,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         _toolTip = toolTip;
         _post = post;
         _watcher = watcher;
-        _hasMenu = menu != null;
+        _menuSource = menu;
         _menu = new StatusNotifierMenu(menu, post, Say);
         Name = $"org.kde.StatusNotifierItem-{Environment.ProcessId}-{id}";
     }
@@ -94,6 +95,9 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             }
         }
     }
+
+    // A panel that took a menu path keeps it until it reads the icon again: SNI says no menu changed.
+    private bool OffersMenu => _menuSource?.IsOffered == true;
 
     public event EventHandler Clicked;
 
@@ -377,7 +381,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
                 // A panel that leaves the menu to the application: where it was asked for, as the panel says.
                 var reader = call.Reader();
                 var point = new PixelPoint(reader.ReadInt32(), reader.ReadInt32());
-                if (!_hasMenu)
+                if (!OffersMenu)
                 {
                     _post(() => MenuAsked?.Invoke(this, new NotificationAreaMenuEventArgs(point)));
                 }
@@ -417,7 +421,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             ["ToolTip"] = new DBusVariant("(sa(iiay)ss)",
                 new object[] { string.Empty, new List<object>(), toolTip, string.Empty }),
             ["ItemIsMenu"] = DBusVariant.Boolean(false),
-            ["Menu"] = DBusVariant.ObjectPath(_hasMenu ? MenuPath : NoMenuPath),
+            ["Menu"] = DBusVariant.ObjectPath(OffersMenu ? MenuPath : NoMenuPath),
         };
     }
 

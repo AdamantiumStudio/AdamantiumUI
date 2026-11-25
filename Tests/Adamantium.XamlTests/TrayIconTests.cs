@@ -244,34 +244,48 @@ public class TrayIconTests
         });
     }
 
-    // No ContextMenu, no menu offered - a panel shows no empty one on a right click. The desktop reads whether an icon
-    // has a menu as it is put there: a menu given later, or taken away, puts the icon there anew; another menu in place
-    // of one does not.
+    // No ContextMenu, no menu offered - a panel shows no empty one on a right click; one given later is offered, by the
+    // same icon - not put there anew, which would flash it and what it says of being displayed.
     [Test]
-    public void WithoutAContextMenu_NoMenuIsOffered_AndOneGivenPutsTheIconAnew()
+    public void WithoutAContextMenu_NoMenuIsOffered_UntilOneIsGiven_OnTheSameIcon()
     {
         var icon = new TrayIcon();
         icon.Place();
-        var without = _area.Shown.Single();
+        var shown = _area.Shown.Single();
+        var offeredWithout = shown.Menu.IsOffered;
 
         icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Show" } } };
-        var given = _area.Shown.Single();
+        var offeredWith = shown.Menu.IsOffered;
         icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Exit" } } };
-        var replaced = _area.Shown.Single();
-        var replacedRows = replaced.Menu.ReadRows();
+        var rows = shown.Menu.ReadRows();
         icon.ContextMenu = null;
-        var takenAway = _area.Shown.Single();
+        var offeredAfter = shown.Menu.IsOffered;
+        var stillShown = _area.Shown.Single();
         icon.TakeAway();
 
         Assert.Multiple(() =>
         {
-            Assert.That(without.Menu, Is.Null);
-            Assert.That(given, Is.Not.SameAs(without), "put there anew, with a menu");
-            Assert.That(replaced, Is.SameAs(given));
-            Assert.That(replacedRows.Select(row => row.Text), Is.EqualTo(new[] { "Exit" }), "read as it stands");
-            Assert.That(takenAway, Is.Not.SameAs(given));
-            Assert.That(takenAway.Menu, Is.Null);
+            Assert.That(offeredWithout, Is.False);
+            Assert.That(offeredWith, Is.True);
+            Assert.That(rows.Select(row => row.Text), Is.EqualTo(new[] { "Exit" }), "read as it stands");
+            Assert.That(offeredAfter, Is.False);
+            Assert.That(stillShown, Is.SameAs(shown), "the same icon all along");
         });
+    }
+
+    // A change told by the desktop is told once, though the icon told it again with nothing changed.
+    [Test]
+    public void IsDisplayed_ToldAgainUnchanged_IsNotToldTwice()
+    {
+        var icon = new TrayIcon();
+        var told = 0;
+        icon.IsDisplayedChanged += (_, _) => told++;
+
+        icon.Place();
+        _area.Shown.Single().Display(true);
+        icon.TakeAway();
+
+        Assert.That(told, Is.EqualTo(2), "displayed as placed, then taken away - not the repeat between");
     }
 
     // Displayed as the desktop says: not before it is placed, not until a panel shows it, and told each time it changes.

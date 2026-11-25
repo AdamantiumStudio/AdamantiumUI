@@ -14,6 +14,8 @@ public sealed class TrayIcon : FundamentalUIComponent
     private INotificationAreaIcon _shown;
     private TrayMenuWindow _menuWindow;
     private bool _placed;
+    // IsDisplayed as last told: a change comes from more than one place, each told once.
+    private bool _toldDisplayed;
 
     public TrayIcon()
     {
@@ -72,15 +74,17 @@ public sealed class TrayIcon : FundamentalUIComponent
     /// <summary>Whether the icon is in the notification area now.</summary>
     public bool IsShown => _shown != null;
 
-    /// <summary>Whether the desktop shows the icon now: not while it is not shown, nor on a Linux session whose panel has
-    /// not started yet, or that has none.</summary>
+    /// <summary>Whether the desktop shows the icon now: not while it is not shown; on Windows, not before the task bar took
+    /// it - at sign-in, before Explorer starts; on Linux, not on a session whose panel has not started yet, or that has
+    /// none.</summary>
     public bool IsDisplayed => _shown?.IsDisplayed == true;
 
     /// <summary>The icon clicked, or picked from the keyboard.</summary>
     public event EventHandler Clicked;
 
-    /// <summary>Raised on the loop thread when <see cref="IsDisplayed"/> changes - a Linux panel started after the
-    /// application, say.</summary>
+    /// <summary>Raised on the loop thread when <see cref="IsDisplayed"/> changes - the task bar or a Linux panel started
+    /// after the application, or the panel went. Windows says nothing of a task bar that ends; it says when one starts
+    /// again.</summary>
     public event EventHandler IsDisplayedChanged;
 
     /// <summary>The window its menu is open in; null while it is closed.</summary>
@@ -102,7 +106,6 @@ public sealed class TrayIcon : FundamentalUIComponent
 
     private void ShowOrTakeAway()
     {
-        var displayed = IsDisplayed;
         if (_placed && IsVisible)
         {
             Show();
@@ -112,16 +115,7 @@ public sealed class TrayIcon : FundamentalUIComponent
             Remove();
         }
 
-        TellIfDisplayedChanged(displayed);
-    }
-
-    // A menu given where there was none, or taken away: the desktop reads whether an icon has one as it is put there.
-    private void ShowAnew()
-    {
-        var displayed = IsDisplayed;
-        Remove();
-        Show();
-        TellIfDisplayedChanged(displayed);
+        TellIfDisplayedChanged();
     }
 
     private void Show()
@@ -131,8 +125,7 @@ public sealed class TrayIcon : FundamentalUIComponent
             return;
         }
 
-        // An icon without a menu offers none: a panel shows no empty one on a right click.
-        _shown = NotificationArea.AddIcon(ToolTip, ContextMenu != null ? _menuRows : null);
+        _shown = NotificationArea.AddIcon(ToolTip, _menuRows);
         if (_shown == null)
         {
             return;
@@ -158,19 +151,23 @@ public sealed class TrayIcon : FundamentalUIComponent
         CloseMenuWindow();
     }
 
-    private void TellIfDisplayedChanged(bool before)
+    private void TellIfDisplayedChanged()
     {
-        if (IsDisplayed != before)
+        var displayed = IsDisplayed;
+        if (displayed == _toldDisplayed)
         {
-            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+            return;
         }
+
+        _toldDisplayed = displayed;
+        IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnIsDisplayedChanged(object sender, EventArgs e)
     {
         if (ReferenceEquals(sender, _shown))
         {
-            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+            TellIfDisplayedChanged();
         }
     }
 
@@ -288,16 +285,22 @@ public sealed class TrayIcon : FundamentalUIComponent
             icon.AddLogicalChild(menu);
         }
 
-        if (icon._shown != null && (e.OldValue == null) != (e.NewValue == null))
-        {
-            icon.ShowAnew();
-        }
+        icon._menuRows.IsOffered = e.NewValue != null;
     }
 
     // For a desktop that shows the menu itself - a Linux panel: the rows of ContextMenu as they stand now, each picked as
-    // a click on it would pick it. Read on the loop thread, each time the menu is about to show.
+    // a click on it would pick it. Read on the loop thread, each time the menu is about to show. An icon without a
+    // ContextMenu offers none: a panel shows no empty one on a right click.
     private sealed class ContextMenuRows(TrayIcon icon) : INotificationAreaMenu
     {
+        private volatile bool _isOffered;
+
+        public bool IsOffered
+        {
+            get => _isOffered;
+            set => _isOffered = value;
+        }
+
         public IReadOnlyList<NotificationAreaMenuItem> ReadRows() => icon.ContextMenu is { } menu ? RowsOf(menu) : [];
     }
 }
