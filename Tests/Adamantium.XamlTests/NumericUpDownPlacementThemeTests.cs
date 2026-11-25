@@ -166,6 +166,34 @@ public class NumericUpDownPlacementThemeTests
             Assert.That(down.RenderSize.Width, Is.LessThan(along.RenderSize.Width), "down, as narrow as its number");        });
     }
 
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheUnit_DimsWithTheNumber_WhenDisabled_AndComesBack(string theme)
+    {
+        Use(theme);
+        var box = new NumericUpDown { Value = 5.08, Unit = "cm" };
+        var window = new Window { Width = 400, Height = 400, Content = box };
+        Show(window);
+        var unit = (TextBlock)box.GetTemplateChild("UnitText");
+        var number = (TextBox)box.GetTemplateChild("PART_TextBox");
+        var lit = unit.Foreground;
+
+        box.IsEnabled = false;
+        WindowExtension.UpdateTree(window);
+        var dimmed = unit.Foreground;
+        var numberDimmed = number.Foreground;
+        box.IsEnabled = true;
+        WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dimmed, Is.Not.EqualTo(lit));
+            Assert.That(dimmed, Is.EqualTo(numberDimmed), "as the number");
+            Assert.That(unit.Foreground, Is.EqualTo(lit));
+        });
+    }
+
     // Down the side of a bar the box stands vertically, as narrow as the column; set to stand along, it stays so, and is
     // folded as too wide.
     [TestCase("Fluent")]
