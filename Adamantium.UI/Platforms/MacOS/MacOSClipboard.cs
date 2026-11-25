@@ -170,7 +170,9 @@ internal sealed class MacOSClipboard(IntPtr pasteboard) : IClipboard
         (DataFormats.Text, string text) => (Text, Encoding.UTF8.GetBytes(text)),
         (DataFormats.Html, string html) => (Html, Encoding.UTF8.GetBytes(html)),
         (DataFormats.Rtf, string rtf) => (Rtf, Encoding.UTF8.GetBytes(rtf)),
-        (DataFormats.Image, byte[] picture) => PictureType(picture) is { } type ? (type, picture) : null,
+        (DataFormats.Image, byte[] picture) => PictureType(picture) is { } type
+            ? (type, picture)
+            : DragPicture.Convert(picture, ImageFileType.Png) is { } png ? (Png, png) : null,
         (DataFormats.Text or DataFormats.Html or DataFormats.Rtf or DataFormats.Image, _) => null,
         (_, byte[] own) => (OwnType(format), own),
         _ => null

@@ -14,7 +14,7 @@ namespace Adamantium.UI.Platforms.MacOS;
 internal sealed class MacOSDragDrop : INativeDragDrop
 {
     // Marks a drag of ours: one of nothing other applications take is told to our own windows all the same.
-    private const string OwnType = "com.adamantium.drag";
+    private static readonly string OwnType = $"com.adamantium.drag.p{Environment.ProcessId}";
 
     private readonly MacOSPlatform _platform;
     private readonly Dictionary<IWindow, INativeDropSink> _sinks = new();
@@ -29,6 +29,7 @@ internal sealed class MacOSDragDrop : INativeDragDrop
 
     // What the drag over a window of ours carries; main thread.
     private IDataPackage _over;
+    private IWindow _overWindow;
 
     public MacOSDragDrop(IApplicationPlatform platform) => _platform = (MacOSPlatform)platform;
 
@@ -46,8 +47,25 @@ internal sealed class MacOSDragDrop : INativeDragDrop
 
     public void UnregisterDropTarget(IWindow window)
     {
+        INativeDropSink sink;
         lock (_lock)
-            _sinks.Remove(window);
+        {
+            if (window == null || !_sinks.Remove(window, out sink))
+                return;
+        }
+
+        _platform.RunOnMainThread(() =>
+        {
+            if (ReferenceEquals(_overWindow, window))
+                Leave(window, sink);
+        });
+    }
+
+    /// <summary>A window of ours is closing, with the view of its content: a drag out of it ends.</summary>
+    internal void SourceClosed(IntPtr view)
+    {
+        if (view != IntPtr.Zero && view == _sourceView)
+            Complete(DragDropEffects.None);
     }
 
     public bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost,
@@ -70,6 +88,10 @@ internal sealed class MacOSDragDrop : INativeDragDrop
 
     private bool Begin(MacOSWindowWorker worker, DragGhostImage ghost)
     {
+        // Let go of already: what is promised would be kept for nothing.
+        if (!worker.IsPressed)
+            return false;
+
         var items = MacOSClipboard.CreateItems(_data, keepsPromises: true);
         if (items.Length == 0)
             items = [NSPasteboard.CreateItem()];
@@ -94,11 +116,19 @@ internal sealed class MacOSDragDrop : INativeDragDrop
         return _sourceView != IntPtr.Zero;
     }
 
-    /// <summary>What the drag from a window of ours may do.</summary>
-    internal NSDragOperation AllowedOperations => Operations(_allowed);
+    /// <summary>What the drag from a window of ours may do. Another application is not left to decide: what it only copied
+    /// would be taken for moved.</summary>
+    internal NSDragOperation AllowedOperations(bool withinApplication) => withinApplication
+        ? Operations(_allowed)
+        : Operations(_allowed) & ~NSDragOperation.Generic;
 
     /// <summary>The drag from a window of ours ended.</summary>
-    internal void Ended(NSDragOperation operation) => Complete(Effects(operation));
+    internal void Ended(NSDragOperation operation)
+    {
+        Complete(Effects(operation));
+        // What woke the loop meanwhile went to the drag.
+        _platform.Signal();
+    }
 
     private void Complete(DragDropEffects effects)
     {
@@ -119,8 +149,14 @@ internal sealed class MacOSDragDrop : INativeDragDrop
 
         var offered = NSDragging.OperationsOf(info);
         var allowed = Effects(offered);
-        if (entered || _over == null)
+        // Come over one that a modal window kept from it, too.
+        entered |= !ReferenceEquals(_overWindow, window);
+        if (entered)
+        {
             _over = Read(info);
+            _overWindow = window;
+        }
+
         var effects = entered
             ? sink.DragEnter(window, _over, Point, InputModifiers.None, allowed)
             : sink.DragOver(window, Point, InputModifiers.None, allowed);
@@ -130,8 +166,15 @@ internal sealed class MacOSDragDrop : INativeDragDrop
     /// <summary>A drag left a window.</summary>
     internal void Leave(IWindow window)
     {
+        if (window != null && ReferenceEquals(_overWindow, window) && SinkOf(window) is { } sink)
+            Leave(window, sink);
+    }
+
+    private void Leave(IWindow window, INativeDropSink sink)
+    {
         _over = null;
-        SinkOf(window)?.DragLeave(window);
+        _overWindow = null;
+        sink.DragLeave(window);
     }
 
     /// <summary>What a drag carries was dropped on a window; false when it is not taken.</summary>
@@ -143,6 +186,7 @@ internal sealed class MacOSDragDrop : INativeDragDrop
         // A source may have filled it only now.
         var data = Read(info);
         _over = null;
+        _overWindow = null;
         return sink.Drop(window, data, Point, InputModifiers.None, Effects(NSDragging.OperationsOf(info))) != DragDropEffects.None;
     }
 

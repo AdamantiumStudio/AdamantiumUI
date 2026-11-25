@@ -10,6 +10,8 @@ namespace Adamantium.UI.Platforms.MacOS;
 /// NSDraggingSource). Main thread.</summary>
 internal static unsafe class MacOSDragMethods
 {
+    private const nint WithinApplication = 1;
+
     internal static ObjCClassBuilder AddDragging(this ObjCClassBuilder view) => view
         .AddMethod("draggingEntered:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, ulong>)&Entered, "Q@:@")
         .AddMethod("draggingUpdated:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, ulong>)&Updated, "Q@:@")
@@ -40,7 +42,7 @@ internal static unsafe class MacOSDragMethods
 
     [UnmanagedCallersOnly]
     private static ulong Allowed(IntPtr self, IntPtr selector, IntPtr session, nint context) =>
-        (ulong)(Worker(self)?.AllowedDragOperations ?? NSDragOperation.None);
+        (ulong)(Worker(self)?.AllowedDragOperations(context == WithinApplication) ?? NSDragOperation.None);
 
     [UnmanagedCallersOnly]
     private static void Ended(IntPtr self, IntPtr selector, IntPtr session, CGPoint point, ulong operation) =>

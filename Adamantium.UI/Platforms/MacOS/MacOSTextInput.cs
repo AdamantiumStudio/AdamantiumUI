@@ -151,7 +151,8 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
     // be typed again.
     private string Erase(NSRange replaced)
     {
-        if (!replaced.IsFound || replaced.Length <= 0 || replaced.Location < 0 || replaced.Location >= _typed.Length)
+        // While composing, the input method replaces what it composes.
+        if (!replaced.IsFound || replaced.Length <= 0 || _composed.Length > 0 || replaced.Location < 0 || replaced.Location >= _typed.Length)
             return string.Empty;
 
         var erased = _typed[(int)replaced.Location..];
@@ -165,7 +166,7 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
     // A key that types nothing may come as a character of AppKit's own.
     private static string Printable(string text) => string.IsNullOrEmpty(text)
         ? string.Empty
-        : string.Concat(text.Where(character => !char.IsControl(character) && character is < '' or > ''));
+        : string.Concat(text.Where(character => !char.IsControl(character) && character is < '' or > ''));
 
     private void EndComposing()
     {
