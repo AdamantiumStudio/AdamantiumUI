@@ -16,28 +16,39 @@ namespace Adamantium.UI.Platforms.MacOS;
 /// application-defined event.</summary>
 public class MacOSPlatform : IApplicationPlatform
 {
+    /// <summary>The environment variable that, set to 1, keeps the application off the desktop: see <see cref="IsHidden"/>.
+    /// </summary>
+    public const string HiddenVariable = "ADAM_HIDDEN_WINDOWS";
+
     private const short WakeSubtype = 0x4144;
 
     internal readonly object ModalLock = new();
 
     private readonly int _threadId;
     private readonly List<MacOSWindowWorker> _windows = [];
+    private readonly List<MacOSModality> _modalities = [];
     private readonly List<MacOSPlatform> _guests = [];
     private readonly MacOSPlatform _host;
+
+    /// <summary>Whether the application runs where nobody sees it - driven by automation: in no Dock, never active, with
+    /// windows that are on no desktop.</summary>
+    internal static bool IsHidden { get; } = Environment.GetEnvironmentVariable(HiddenVariable) == "1";
 
     public MacOSPlatform()
     {
         _threadId = Environment.CurrentManagedThreadId;
         var pool = ObjCRuntime.PushAutoreleasePool();
-        NSApplication.Launch();
+        NSApplication.Launch(IsHidden ? NSApplication.ProhibitedActivationPolicy : NSApplication.RegularActivationPolicy);
         var applicationDelegate = NSObject.New(MacOSApplicationDelegate.Class);
         ObjCManagedObject.Attach(applicationDelegate, this);
         NSApplication.SetDelegate(applicationDelegate);
-        ShowApplicationIcon();
+        if (!IsHidden)
+            ShowApplicationIcon();
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
         ObjCRuntime.PopAutoreleasePool(pool);
-        Cursor.Platform = new MacOSCursors(this);
+        if (!IsHidden)
+            Cursor.Platform = new MacOSCursors(this);
     }
 
     /// <summary>The splash window's side of <paramref name="host"/>: the same thread and event loop, with signals and
@@ -81,7 +92,8 @@ public class MacOSPlatform : IApplicationPlatform
     public void Run(CancellationToken token)
     {
         using var wake = token.Register(Signal);
-        NSApplication.Activate();
+        if (!IsHidden)
+            NSApplication.Activate();
         Signal();   // what was asked for while a wait took the wake
         while (!token.IsCancellationRequested)
             AnswerNext(NSDate.DistantFuture, true);
@@ -174,19 +186,35 @@ public class MacOSPlatform : IApplicationPlatform
             _windows.Remove(worker);
     }
 
-    /// <summary>Fills <paramref name="others"/> with the open windows other than <paramref name="worker"/>: those a modal
-    /// window keeps from input.</summary>
-    internal void CollectOthers(MacOSWindowWorker worker, List<MacOSWindowWorker> others)
+    internal void Register(MacOSModality modality)
+    {
+        lock (ModalLock)
+            _modalities.Add(modality);
+    }
+
+    internal void Unregister(MacOSModality modality)
+    {
+        lock (ModalLock)
+            _modalities.Remove(modality);
+    }
+
+    /// <summary>Fills <paramref name="others"/> with the open windows other than that of <paramref name="modality"/>: those
+    /// a modal window keeps from input.</summary>
+    internal void CollectOthers(MacOSModality modality, List<MacOSModality> others)
     {
         lock (ModalLock)
         {
-            foreach (var other in _windows)
+            foreach (var other in _modalities)
             {
-                if (other != worker)
+                if (other != modality)
                     others.Add(other);
             }
         }
     }
+
+    /// <summary>The hidden application's open windows (<see cref="IsHidden"/>), the one activated last at the end; the loop
+    /// thread's.</summary>
+    internal List<MacOSHiddenWindowWorker> HiddenWindows { get; } = [];
 
     /// <summary>Raises on the loop thread what AppKit told this one, in the order it came: the visual tree is not to
     /// be touched from the main thread.</summary>
