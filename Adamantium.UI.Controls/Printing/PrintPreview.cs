@@ -1,6 +1,8 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -54,6 +56,8 @@ public class PrintPreview : MeasurableUIComponent
 
     /// <summary>The room left round the paper, in DIPs.</summary>
     private const double Room = 12;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new PrintPreviewAutomationPeer(this);
 
     protected override void OnRender(IDrawingContext context)
     {

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Adamantium.Core.Collections;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Printing;
 using Adamantium.UI.Core.RoutedEvents;
@@ -29,7 +32,6 @@ public class PrintDialog : Control
         CancelCommand = new PrintDialogCommand(OnCancel);
         PreviousSheetCommand = new PrintDialogCommand(() => Sheet--, () => Sheet > 0);
         NextSheetCommand = new PrintDialogCommand(() => Sheet++, () => Sheet < SheetCount - 1);
-        SetCurrentValue(PrintersProperty, (IReadOnlyList<Printer>)[Printer.Pdf]);
         SetCurrentValue(PrinterProperty, Printer.Pdf);
         Compose();
     }
@@ -44,9 +46,6 @@ public class PrintDialog : Control
 
     public static readonly AdamantiumProperty CurrentPageProperty = AdamantiumProperty.Register(nameof(CurrentPage),
         typeof(int), typeof(PrintDialog), new PropertyMetadata(0, OnOptionChanged));
-
-    public static readonly AdamantiumProperty PrintersProperty = AdamantiumProperty.Register(nameof(Printers),
-        typeof(IReadOnlyList<Printer>), typeof(PrintDialog), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty PrinterProperty = AdamantiumProperty.Register(nameof(Printer),
         typeof(Printer), typeof(PrintDialog), new PropertyMetadata(null, OnPrinterChanged));
@@ -72,8 +71,9 @@ public class PrintDialog : Control
         set => SetValue(CurrentPageProperty, value);
     }
 
-    /// <summary>The PDF file, then the system's printers.</summary>
-    public IReadOnlyList<Printer> Printers => GetValue<IReadOnlyList<Printer>>(PrintersProperty);
+    /// <summary>The PDF file, then the system's printers - one list, filled in as the system answers, so the printer
+    /// chosen in it stays among its items.</summary>
+    public TrackingCollection<Printer> Printers { get; } = [Printer.Pdf];
 
     /// <summary>Where it is printed.</summary>
     public Printer Printer
@@ -383,6 +383,9 @@ public class PrintDialog : Control
     /// <summary>The dialog was left without printing.</summary>
     public event EventHandler Canceled;
 
+    /// <summary>A pane: the preview and the options on it say what they are.</summary>
+    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
+
     private void OnPrint() => Print?.Invoke(this, Settings);
 
     private void OnCancel()
@@ -466,10 +469,19 @@ public class PrintDialog : Control
             return;
         }
 
-        var printers = new List<Printer> { Printer.Pdf };
-        printers.AddRange(found ?? []);
-        SetCurrentValue(PrintersProperty, (IReadOnlyList<Printer>)printers);
-        Printer = printers.FirstOrDefault(printer => printer.IsDefault) ?? Printer.Pdf;
+        // The PDF file stays first and chosen while the system's printers come in after it.
+        Printer = Printer.Pdf;
+        while (Printers.Count > 1)
+        {
+            Printers.RemoveAt(Printers.Count - 1);
+        }
+
+        foreach (var printer in found ?? [])
+        {
+            Printers.Add(printer);
+        }
+
+        Printer = Printers.FirstOrDefault(printer => printer.IsDefault) ?? Printer.Pdf;
     }
 
     /// <summary>Asks what the printer chosen can do, then shows only that.</summary>

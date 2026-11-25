@@ -1,0 +1,9 @@
+<Language>
+    <Phrase Key="About" Text="Образец документа печатается через сервис печати: в файл PDF или - с примерами принтеров - на выдуманные принтеры, у каждого свои возможности."/>
+    <Phrase Key="Pages" Text="Страниц"/>
+    <Phrase Key="SamplePrinters" Text="Примеры принтеров"/>
+    <Phrase Key="Print" Text="Печать…"/>
+    <Phrase Key="Printed" Text="Отправлено:"/>
+    <Phrase Key="Saved" Text="Сохранено в PDF."/>
+    <Phrase Key="Canceled" Text="Не напечатано."/>
+</Language>

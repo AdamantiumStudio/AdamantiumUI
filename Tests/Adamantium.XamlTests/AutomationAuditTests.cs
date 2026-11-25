@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Controls.Printing;
 using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -70,6 +71,8 @@ public class AutomationAuditTests
         [typeof(NumericUpDown)] = (T.Spinner, null),
         [typeof(OverlayWindow)] = (T.Window, null),
         [typeof(Popup)] = (null, "what it shows is a child of whatever opened it"),
+        [typeof(PrintDialog)] = (T.Pane, null),
+        [typeof(PrintPreview)] = (T.Image, null),
         [typeof(ProgressBar)] = (T.ProgressBar, null),
         [typeof(PropertyGrid)] = (T.Pane, null),
         [typeof(PropertyRow)] = (T.DataItem, null),

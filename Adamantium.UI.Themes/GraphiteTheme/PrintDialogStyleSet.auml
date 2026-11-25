@@ -53,7 +53,7 @@
                                     <TextBlock x:Name="PrinterLabel" Classes="Label" Text="{Localize PrintStrings.Printer}"/>
                                     <DropDown x:Name="PART_Printer" Grid.Column="1" HorizontalAlignment="Stretch"
                                               AutomationProperties.LabeledBy="{Binding ElementName=PrinterLabel}"
-                                              ItemsSource="{TemplateBinding Printers}"
+                                              ItemsSource="{Ancestor PrintDialog, Printers}"
                                               SelectedItem="{TemplateBinding Printer, Mode=TwoWay}">
                                         <DropDown.ItemTemplate>
                                             <DataTemplate>

@@ -25,6 +25,8 @@ public sealed record PaperSize(string Name, double Width, double Height)
     /// <summary>The sizes offered where no printer says what it takes - saving to PDF.</summary>
     public static IReadOnlyList<PaperSize> Standard { get; } = [A3, A4, A5, B5, Letter, Legal, Tabloid];
 
+    public override string ToString() => Name;
+
     /// <summary>A sheet of <paramref name="width"/> by <paramref name="height"/> millimeters.</summary>
     public static PaperSize Millimeters(string name, double width, double height) =>
         new(name, width * PerMillimeter, height * PerMillimeter);

@@ -1,0 +1,54 @@
+<Scenario xmlns="http://adamantium/automation/scenario"
+          Description="The print dialog: the PDF file alone without printers; with the sample printers, each printer's rows come and go with what it offers, a range that is no pages stops printing, and printing reaches the printer.">
+    <Select Target="id=GalleryTabs/name=Printing" />
+
+    <!-- No system printers: the PDF file alone, saved, with its raster resolution and no printer's rows. -->
+    <Invoke Target="id=PrintSample" />
+    <Wait Target="id=PART_Printer" />
+    <Expect Target="id=PART_Printer" Value="Save as PDF" />
+    <Expect Target="id=PART_Print" Name="Save" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 6" />
+    <Expect Target="id=PART_Raster" Offscreen="False" />
+    <Expect Target="id=PART_Copies" Offscreen="True" />
+    <Expect Target="id=PART_Duplex" Offscreen="True" />
+    <Invoke Target="name=Next sheet" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 2 of 6" />
+    <Invoke Target="id=PART_Cancel" />
+    <Absent Target="id=PART_Printer" />
+    <Expect Target="id=PrintOutcome" Name="Not printed." />
+
+    <!-- The sample printers: the default comes up chosen, with what it offers. -->
+    <Toggle Target="name=Sample printers" />
+    <Invoke Target="id=PrintSample" />
+    <Wait Target="id=PART_Printer" Value="Office laser (sample)" />
+    <Expect Target="id=PART_Print" Name="Print" />
+    <Expect Target="id=PART_Copies" Offscreen="False" />
+    <Expect Target="id=PART_Duplex" Offscreen="False" />
+    <Expect Target="id=PART_Tray" Offscreen="False" />
+    <Expect Target="id=PART_Color" Offscreen="True" />
+    <Expect Target="id=PART_Raster" Offscreen="True" />
+
+    <!-- Four pages to a landscape sheet: six pages fill two sheets. -->
+    <Select Target="id=PART_PagesPerSheet/name=4" />
+    <Select Target="id=PART_Orientation/name=Landscape" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 2" />
+
+    <!-- The photo printer: color and paper types; its state said. -->
+    <Select Target="id=PART_Printer/name=Photo inkjet (sample)" />
+    <Wait Target="id=PART_Color" Offscreen="False" />
+    <Expect Target="id=PART_MediaType" Offscreen="False" />
+    <Expect Target="id=PART_PrinterState" Name="Printing other jobs" />
+
+    <!-- Pages written out that are no pages: printing waits until they are. -->
+    <Set Target="id=PART_RangeText" Value="4-2" />
+    <Expect Target="id=PART_Print" Enabled="False" />
+    <Set Target="id=PART_RangeText" Value="1-3" />
+    <Expect Target="id=PART_Print" Enabled="True" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 1" />
+
+    <!-- Printed: the job reaches the printer. -->
+    <Invoke Target="id=PART_Print" />
+    <Absent Target="id=PART_Printer" />
+    <Expect Target="id=PrintOutcome" Name="Sent to Photo inkjet (sample): 1 × 1" />
+    <Toggle Target="name=Sample printers" />
+</Scenario>
