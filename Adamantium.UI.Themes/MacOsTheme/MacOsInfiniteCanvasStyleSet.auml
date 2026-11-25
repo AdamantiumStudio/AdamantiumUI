@@ -31,20 +31,20 @@
                         <Grid>
                             <Grid x:Name="Open" Margin="12">
                                 <CanvasInspector ShowsDrawingActions="{Ancestor InfiniteCanvas, ShowsDrawingActions}"/>
-                                <Button x:Name="FoldButton" Width="30" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                                <Button x:Name="FoldButton" Width="26" Height="22" MinWidth="0" MinHeight="0" Padding="0"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top" MarginTop="2"
                                         ToolTip="{Localize CanvasStrings.FoldInspector}"
                                         Command="{Ancestor InfiniteCanvas, FoldInspectorCommand}">
-                                    <Image Source="{ObservableResource ChevronRightIcon}" Width="10" Height="10"/>
+                                    <Image Source="{ObservableResource CanvasFoldInspectorIcon}" Width="12" Height="12"/>
                                 </Button>
                             </Grid>
                             <StackPanel x:Name="Folded" Orientation="Vertical" Width="40" MinWidth="0" Margin="0 12"
                                         Visibility="Collapsed">
-                                <Button x:Name="UnfoldButton" Width="30" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                        HorizontalAlignment="Center"
+                                <Button x:Name="UnfoldButton" Width="26" Height="22" MinWidth="0" MinHeight="0" Padding="0"
+                                        HorizontalAlignment="Center" MarginTop="2"
                                         ToolTip="{Localize CanvasStrings.UnfoldInspector}"
                                         Command="{Ancestor InfiniteCanvas, FoldInspectorCommand}">
-                                    <Image Source="{ObservableResource ChevronLeftIcon}" Width="10" Height="10"/>
+                                    <Image Source="{ObservableResource CanvasUnfoldInspectorIcon}" Width="12" Height="12"/>
                                 </Button>
                                 <TextBlock Text="{Localize CanvasStrings.Inspector}" HorizontalAlignment="Center"
                                            MarginTop="12" Foreground="{ObservableResource TextFillColorSecondary}">
@@ -433,12 +433,12 @@
                         <!-- The faces, at the far end of their row: the panel's fold button stands at the near one. -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" MarginBottom="8">
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
-                                         Height="24" MinWidth="0" MinHeight="0" Padding="12 0"
+                                         Height="26" MinWidth="0" MinHeight="0" Padding="12 0"
                                          Content="{Localize CanvasStrings.PropertiesFace}"
                                          ToolTip="{Localize CanvasStrings.Properties}"
                                          IsChecked="{TemplateBinding ShowsProperties, Mode=TwoWay}"/>
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace" MarginLeft="4"
-                                         Height="24" MinWidth="0" MinHeight="0" Padding="12 0"
+                                         Height="26" MinWidth="0" MinHeight="0" Padding="12 0"
                                          Content="{Localize CanvasStrings.LayersFace}"
                                          ToolTip="{Localize CanvasStrings.Layers}"
                                          IsChecked="{TemplateBinding ShowsStructure, Mode=TwoWay}"/>
