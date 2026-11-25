@@ -10,6 +10,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -145,6 +146,7 @@ public class TabControl : Selector
         SelectionChanged += (_, _) =>
         {
             UpdateSelectedContent();
+            SyncStretchedTab();
             // Pending: a view-model can select before the container exists. A collection-driven reselection snaps from
             // PlaceIndicator instead of sliding, since the strip is about to reflow.
             _scrollPending = true;
@@ -153,6 +155,7 @@ public class TabControl : Selector
             if (_overflow?.IsChecked == true) _overflow.IsChecked = false;
         };
         Items.CollectionChanged += OnItemsChanged;
+        Items.SourceTaken += OnSourceTaken;
 
         PinnedItems = [];
         UnpinnedItems = [];
@@ -270,14 +273,15 @@ public class TabControl : Selector
     // Reconciled rather than journalled: a bound collection reports a Reset that names nothing.
     private void SyncOpenOrder()
     {
-        var live = new HashSet<object>(Items);
+        var open = OpenTabs();
+        var live = new HashSet<object>(open);
         if (_openOrder.RemoveAll(i => !live.Contains(i)) > 0)
         {
             _openOrderSet.Clear();
             foreach (var known in _openOrder) _openOrderSet.Add(known);
         }
 
-        foreach (var item in Items)
+        foreach (var item in open)
             if (_openOrderSet.Add(item)) _openOrder.Add(item);
     }
 
@@ -289,15 +293,15 @@ public class TabControl : Selector
         _evicting = true;
         try
         {
-            while (Items.Count(i => i is not TabItem { IsPinned: true }) > max)
+            for (var open = OpenTabs(); open.Count(i => i is not TabItem { IsPinned: true }) > max; open = OpenTabs())
             {
-                var victim = _openOrder.FirstOrDefault(i => IndexOfItem(i) >= 0
+                var victim = _openOrder.FirstOrDefault(i => open.Contains(i)
                                                             && i is not TabItem { IsPinned: true }
-                                                            && !ReferenceEquals(i, SelectedItem));
+                                                            && !Equals(i, SelectedItem));
                 if (victim == null) break;
 
                 RequestCloseItem(victim);
-                if (IndexOfItem(victim) >= 0) break;   // vetoed: do not spin on it
+                if (OpenTabs().Contains(victim)) break;   // vetoed: do not spin on it
             }
         }
         finally { _evicting = false; }
@@ -443,13 +447,48 @@ public class TabControl : Selector
     // Set while MoveItem removes and re-inserts the same item: it restores the selection itself.
     private bool _reordering;
 
-    private void OnItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    private void LetGoOfClosed()
     {
         SyncOpenOrder();
+        var open = OpenTabs();
+        ParkedVisuals.ReleaseAbsent(this, content => Holds(open, content));
+    }
 
+    // The hidden tabs come and go without a word from the items; and only now may the list be changed again.
+    private void OnSourceTaken()
+    {
         if (_reordering) return;
 
-        ParkedVisuals.ReleaseAbsent(this, HoldsContent);
+        // The selected one, hidden, was closed; one that waits to come is not it.
+        if (SelectedItem != null && !AwaitsSelection && IndexOfItem(SelectedItem) < 0 && !IsHidden(SelectedItem))
+        {
+            OnItemsChanged(Items, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            return;
+        }
+
+        LetGoOfClosed();
+        EnforceTabLimit();
+    }
+
+    // Open, and not in the strip: a view's filter hides it.
+    private bool IsHidden(object item) =>
+        ViewedSource != null && IndexOfItem(item) < 0 && OpenTabs().Contains(item);
+
+    // Chosen while a filter hides it, a tab shows its page, and its place in the strip once the filter lets it.
+    protected override void OnSelectedItemSet(object item)
+    {
+        if (item != null && IsHidden(item))
+            SelectHidden(item);
+        else
+            base.OnSelectedItemSet(item);
+    }
+
+    private void OnItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Between a tab taken out and put back it is still open, as old as it was.
+        if (_reordering) return;
+
+        LetGoOfClosed();
 
         // Re-run the selection, not just clamp the index: closing the selected tab leaves the index valid but on another
         // item. A tab named before the strip had any wins over the first one.
@@ -465,14 +504,21 @@ public class TabControl : Selector
             : SelectedIndex < 0 ? (RequiresSelection ? 0 : -1)
             : SelectedIndex >= Items.Count ? Items.Count - 1
             : SelectedIndex;
+        // Hidden by a view's filter, the selected tab is still the one read: nothing else is opened in its place.
+        var hidden = pending < 0 && SelectedItem != null && IsHidden(SelectedItem);
+        if (e.Action == NotifyCollectionChangedAction.Reset) _scrollPending = true;   // it may stand out of view now
         _reselecting = true;
-        SelectSingle(index);
+        if (hidden)
+            SelectHidden(SelectedItem);
+        else
+            SelectSingle(index);
         _reselecting = false;
         UpdateSelectedContent();
         SyncStretchedTab();
 
-        // Last: the cap must know which tab is being read.
-        EnforceTabLimit();
+        // Last: the cap must know which tab is being read. A view may be halfway through a change of its source - the cap
+        // closes tabs in that source - and says when it is done.
+        if (View is not { IsTaking: true }) EnforceTabLimit();
     }
 
     /// <summary>True while one tab fills the whole strip (see <see cref="StretchSingleTab"/>); it wears the accent itself
@@ -492,7 +538,8 @@ public class TabControl : Selector
         // The base constructor fires this before ItemsControl has made the collection.
         if (Items == null) return;
 
-        var stretched = StretchSingleTab && Items.Count == 1;
+        // Not the one left by a filter while the page of a hidden tab is read.
+        var stretched = StretchSingleTab && Items.Count == 1 && (SelectedItem == null || SelectedIndex == 0);
         HasStretchedTab = stretched;
 
         for (var i = 0; i < Items.Count; i++)
@@ -506,15 +553,63 @@ public class TabControl : Selector
     // A tab authored as a TabItem shows its Content, not itself.
     internal override bool HoldsContent(object content)
     {
-        if (Items.Contains(content)) return true;
+        return Holds(OpenTabs(), content);
+    }
 
-        foreach (var item in Items)
+    private static bool Holds(IReadOnlyList<object> tabs, object content)
+    {
+        foreach (var item in tabs)
         {
-            if (item is TabItem tab && Equals(tab.Content, content)) return true;
+            if (Equals(item, content) || item is TabItem tab && Equals(tab.Content, content)) return true;
         }
 
         return false;
     }
+
+    // The same item, not one equal to it; a value is boxed anew each time it is read.
+    private static bool IsSame(object item, object other) =>
+        item is ValueType ? Equals(item, other) : ReferenceEquals(item, other);
+
+    private CollectionView View => ItemsSource as CollectionView;
+
+    // What the view the tabs are bound through looks at, the tabs its filter hides among it.
+    private IEnumerable ViewedSource => View?.Source;
+
+    // The tabs of the strip and those a view's filter hides: hidden, a tab is still open, its page waiting.
+    private IReadOnlyList<object> OpenTabs()
+    {
+        if (ViewedSource is not { } source) return Items;
+
+        using (SourceGate.Hold(source))
+        {
+            return source.Cast<object>().ToList();
+        }
+    }
+
+    /// <summary>The bound list the tabs are closed in, moved in and torn out of - the one a <see cref="CollectionView"/>
+    /// looks at when they are bound through it; null when there is none to change.</summary>
+    internal IList EditableSource =>
+        (ViewedSource ?? ItemsSource) is IList { IsReadOnly: false, IsFixedSize: false } list
+        && (View == null || list is INotifyCollectionChanged) ? list : null;
+
+    /// <summary>Whether the strip would show <paramref name="item"/>: a view's filter may hide it.</summary>
+    internal bool WouldShow(object item) => View?.Filter?.Invoke(item) ?? true;
+
+    /// <summary>Puts <paramref name="item"/> into the bound list where it stands at <paramref name="index"/> of the strip:
+    /// before the tab shown there, whatever the view hides around it.</summary>
+    internal void InsertIntoSource(int index, object item)
+    {
+        var source = EditableSource;
+        if (ViewedSource == null || Items.Count == 0)
+        {
+            source.Insert(ViewedSource == null ? Math.Min(index, source.Count) : source.Count, item);
+        }
+        else
+        {
+            source.Insert(index < Items.Count ? View.SourceIndexOf(index) : View.SourceIndexOf(Items.Count - 1) + 1, item);
+        }
+    }
+
     private void UpdateSelectedContent()
     {
         var item = SelectedItem;
@@ -643,6 +738,7 @@ public class TabControl : Selector
     private double _grabOffset;
     private double _draggedExtent;
     private int _dragStartIndex;
+    private object _draggedItem;
     private int _targetIndex;
     private object _carried;
     private object _selectedBeforeCarry;
@@ -677,6 +773,7 @@ public class TabControl : Selector
         _dragged = tab;
         _draggedPinned = tab.IsPinned;
         _dragStartIndex = _targetIndex = IndexOfTab(tab);
+        _draggedItem = ItemAt(_dragStartIndex);
         _grabOffset = along - SlotStart(tab);
         _draggedExtent = Extent(tab);
         tab.ZIndex = 1;
@@ -795,6 +892,7 @@ public class TabControl : Selector
         }
 
         _dragStartIndex = _targetIndex = -1;
+        _draggedItem = null;
         tab.ZIndex = 0;
 
         // A torn-off tab never sees button-up, so its own drag state would tear it out again after docking back.
@@ -965,9 +1063,17 @@ public class TabControl : Selector
         _dragged = null;
         var start = _dragStartIndex;
         var target = _targetIndex;
+        var dragged = _draggedItem;
+        _draggedItem = null;
+        var landsOn = ItemAt(target);
         AnimateOffsetTo(tab, GapShift(start, target), () =>
         {
-            MoveItem(start, target);
+            // The strip may have changed while the tab slid - a filter, a tab closed: its places are others' then.
+            if (dragged == null || !IsSame(ItemAt(start), dragged) || !IsSame(ItemAt(target), landsOn)
+                || !MoveItem(start, target))
+            {
+                target = start;
+            }
 
             // The offsets hold the tabs where the move puts them until a layout pass does: cleared before it, the tab
             // showed at its old slot for a frame or two and then jumped to the new one.
@@ -1121,15 +1227,30 @@ public class TabControl : Selector
         return transform;
     }
 
-    private void MoveItem(int from, int to)
+    private object ItemAt(int index) => index >= 0 && index < Items.Count ? Items[index] : null;
+
+    // Whether it moved.
+    internal bool MoveItem(int from, int to)
     {
-        if (from == to) return;
+        if (from == to) return false;
         var selected = SelectedItem;
 
         _reordering = true;
         try
         {
-            if (ItemsSource is IList { IsReadOnly: false, IsFixedSize: false } src && to < src.Count)
+            if (ViewedSource != null)
+            {
+                // Nothing to move in, or an ordering of the view's own: the tabs stay where it puts them.
+                if (EditableSource is not { } viewed || View.IsSorted || View.IsGrouped) return false;
+
+                // Taken out from before it, the tab it lands beside has moved up one: either way its old place.
+                var source = View.SourceIndexOf(from);
+                var place = View.SourceIndexOf(to);
+                var item = viewed[source];
+                viewed.RemoveAt(source);
+                viewed.Insert(place, item);
+            }
+            else if (EditableSource is { } src && to < src.Count)
             {
                 var item = src[from];
                 src.RemoveAt(from);
@@ -1145,7 +1266,12 @@ public class TabControl : Selector
         finally { _reordering = false; }
 
         // SelectSingle, not SelectedItem: the item is unchanged, so assigning it would leave the index stale.
-        if (selected != null) SelectSingle(IndexOfItem(selected));
+        // Put back, a tab a view's filter no longer takes is hidden.
+        if (selected != null && IndexOfItem(selected) < 0)
+            OnItemsChanged(Items, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        else if (selected != null)
+            SelectSingle(IndexOfItem(selected));
+        return true;
     }
 
     internal bool IsContainerSelected(TabItem container) =>
@@ -1750,8 +1876,31 @@ public class TabControl : Selector
     internal void RequestCloseItem(object item)
     {
         var index = IndexOfItem(item);
-        if (index < 0 || index >= Items.Count) return;
-        RequestClose(ContainerOfTab(index) as TabItem, index);
+        if (index >= 0)
+        {
+            RequestClose(ContainerOfTab(index) as TabItem, index);
+        }
+        else if (ViewedSource != null && OpenTabs().Contains(item))
+        {
+            // Hidden by the view's filter, it has no container.
+            var args = new TabCloseRequestedEventArgs(null, item);
+            TabCloseRequested?.Invoke(this, args);
+            if (!args.Cancel && RemoveOnClose(null, -1)) RemoveFromSource(item);
+        }
+    }
+
+    // The very item, if it is still there: a handler may have closed it itself, or filtered the strip anew.
+    private void RemoveFromSource(object item)
+    {
+        if (EditableSource is not { } source) return;
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            if (!IsSame(source[i], item)) continue;
+
+            source.RemoveAt(i);
+            return;
+        }
     }
 
     internal void RequestClose(TabItem tab) => RequestClose(tab, IndexOfTab(tab));
@@ -1766,7 +1915,17 @@ public class TabControl : Selector
 
         if (!RemoveOnClose(tab, index)) return;
 
-        if (ItemsSource is IList { IsReadOnly: false, IsFixedSize: false } src && index < src.Count)
+        if (ViewedSource != null)
+        {
+            // The one clicked, of several the same, where the strip still shows it there.
+            if (EditableSource is { } viewed && IsSame(ItemAt(index), args.Item))
+                viewed.RemoveAt(View.SourceIndexOf(index));
+            else
+                RemoveFromSource(args.Item);
+            return;
+        }
+
+        if (EditableSource is { } src && index < src.Count)
         {
             src.RemoveAt(index);
             return;
