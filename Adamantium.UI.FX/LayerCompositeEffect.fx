@@ -205,7 +205,11 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
     float mirrored = Mirror.x * MirrorReach(here.y);
     // Only where the element itself leaves room: what it draws solid stays in front of the floor.
     float4 front = shadowsApart ? drawn * cover : self;
-    float4 reflected = lerp(front, mirror, mirrored * (1.0 - front.a));
+    // And as far as the mirror image is there to take the place of the element's glow: moved sideways, it may not be.
+    // Where it is fainter than the glow, what the mix thins of it is made up.
+    float takes = mirror.a / max(max(mirror.a, front.a), 1e-5);
+    float4 reflected = lerp(front, mirror, mirrored * takes * (1.0 - front.a));
+    reflected += front * (saturate(front.a - reflected.a) / max(front.a, 1e-5));
     // Its shadows darken the floor under the light the reflection adds: through it as much as the mirror image lets
     // the floor show - none under a whole image on a perfect mirror - and as before where it shows nothing, behind what
     // the element draws. So the shadow changes along the image's own outline, not along the edges of the floor. It lies
