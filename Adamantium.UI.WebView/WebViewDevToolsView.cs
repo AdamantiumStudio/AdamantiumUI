@@ -1,5 +1,3 @@
-using Adamantium.UI.Controls.Automation;
-using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.WebView.Cef;
 
@@ -26,10 +24,6 @@ public sealed class WebViewDevToolsView : WebView
     }
 
     private protected override bool CanStartBrowser => inspected is { IsDevToolsOpen: true, Page: not null };
-
-    // A pane with no page tree: Chromium's accessibility switched on for the DevTools front end brings CEF down with a
-    // failed check (measured 24.11: the WebView scenario crashed 3 of 9 runs with it, 0 of 5 without).
-    protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
 
     private protected override void BeginBrowser(WebViewBrowser created, int width, int height, float scale,
         IntPtr parentWindow) =>
