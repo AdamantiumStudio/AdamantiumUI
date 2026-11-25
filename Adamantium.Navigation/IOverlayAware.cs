@@ -17,6 +17,10 @@ public interface IOverlayAware
     /// control). Null (default) shows no icon.</summary>
     object Icon => null;
 
+    /// <summary>The window's automation id: what automation finds it by when its title changes. Null (default) leaves the
+    /// window's own.</summary>
+    string AutomationId => null;
+
     // Presentation options the overlay window is created with. Default interface members - a view model overrides only the
     // ones that differ from the default (a plain floating, movable, resizable, pinnable, closable, non-modal window).
     bool AllowMove => true;
@@ -38,6 +42,14 @@ public interface IOverlayAware
     /// properties to use them (the defaults here are inert).</summary>
     double Left { get => 0; set { } }
     double Top { get => 0; set { } }
+
+    /// <summary>The window's width; NaN (default) sizes it to its content - collapsed, to its title. A width given here
+    /// holds collapsed and expanded alike; a resize by the grip is the window's own and is not told back.</summary>
+    double Width => double.NaN;
+
+    /// <summary>Whether the window is collapsed to its title (with <see cref="CanCollapse"/>). TWO-WAY bound like
+    /// <see cref="Left"/>: true when it opens, it opens collapsed; folding it by its button updates it.</summary>
+    bool IsCollapsed { get => false; set { } }
 
     /// <summary>Awaited before the window appears. One that raises <see cref="RequestClose"/> meanwhile never appears.</summary>
     Task OnOverlayOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default);

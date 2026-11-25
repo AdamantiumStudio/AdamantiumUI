@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Diagnostics switch opens the live diagnostics in an overlay window: it collapses to its title and back by its own button, the switch turned off closes it, and its own close button turns the switch off.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Diagnostics switch opens the live diagnostics in an overlay window, collapsed to its title - which carries the render and loop rates - at the bottom-left: its own button expands it to the statistics and collapses it back, the switch turned off closes it, and its own close button turns the switch off.">
   <Toggle Target="id=ShowDiagnostics" />
-  <Wait Target="type=Window,name=Diagnostics" Timeout="5s" />
-  <Invoke Target="type=Window,name=Diagnostics/id=Collapse" />
-  <Invoke Target="type=Window,name=Diagnostics/id=Collapse" />
+  <Wait Target="type=Window,id=Diagnostics" Timeout="5s" />
+  <Absent Target="type=Window,id=Diagnostics/id=DiagnosticsPlate" Timeout="5s" />
+  <Invoke Target="type=Window,id=Diagnostics/id=Collapse" />
+  <Wait Target="type=Window,id=Diagnostics/id=DiagnosticsPlate" Offscreen="False" Timeout="5s" />
+  <Invoke Target="type=Window,id=Diagnostics/id=Collapse" />
+  <Wait Target="type=Window,id=Diagnostics/id=DiagnosticsPlate" Offscreen="True" Timeout="5s" />
   <Toggle Target="id=ShowDiagnostics" />
-  <Absent Target="type=Window,name=Diagnostics" Timeout="5s" />
+  <Absent Target="type=Window,id=Diagnostics" Timeout="5s" />
   <Toggle Target="id=ShowDiagnostics" />
-  <Wait Target="type=Window,name=Diagnostics" Timeout="5s" />
-  <Invoke Target="type=Window,name=Diagnostics/id=Close" />
-  <Absent Target="type=Window,name=Diagnostics" Timeout="5s" />
+  <Wait Target="type=Window,id=Diagnostics" Timeout="5s" />
+  <Invoke Target="type=Window,id=Diagnostics/id=Close" />
+  <Absent Target="type=Window,id=Diagnostics" Timeout="5s" />
   <Expect Target="id=ShowDiagnostics" Toggle="Off" />
 </Scenario>

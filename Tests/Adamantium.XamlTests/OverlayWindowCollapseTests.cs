@@ -221,6 +221,28 @@ public class OverlayWindowCollapseTests
         });
     }
 
+    // A title longer than the bar ends beside the buttons, not under them.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void ALongTitle_StaysOutOfTheButtons(string theme)
+    {
+        Use(theme);
+        var window = new OverlayWindow
+        {
+            Title = "A title much too long for a window this narrow, and then some more of it",
+            CanCollapse = true,
+            Width = 320,
+            Content = new TextBlock { Text = "content" }
+        };
+        Settle(window);
+
+        var title = (UIComponent)window.GetTemplateChild("PART_Title");
+        var thumb = (UIComponent)window.GetTemplateChild("PART_TitleThumb");
+
+        Assert.That(title.RenderSize.Width, Is.GreaterThan(0).And.LessThanOrEqualTo(thumb.RenderSize.Width));
+    }
+
     // No template, no glyph: nothing shows in its place.
     [TestCase("Fluent")]
     [TestCase("Graphite")]
