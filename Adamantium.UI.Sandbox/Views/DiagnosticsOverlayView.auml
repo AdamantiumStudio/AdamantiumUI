@@ -3,10 +3,11 @@
     <!-- DataContext is DiagnosticsOverlayViewModel. The live RuntimeStats, refreshed by DiagnosticsOverlayBehavior: how
          scroll, layout and render perf is watched at runtime. The window's bar moves it and collapses it to its title. -->
     <StackPanel Orientation="Vertical" Width="264">
-        <!-- A window with a presentation of its own chooses it here; with none, nothing stands here. -->
-        <ContentControl Content="{Binding Presentation}"
-                        Visibility="{Binding HasPresentation, Converter={BooleanToVisibilityConverter}}">
-            <ContentControl.ContentTemplate>
+        <!-- A window with a presentation of its own chooses it here; with none, nothing stands here: a selector is not
+             asked for no content, so nothing is built. -->
+        <ContentControl Content="{Binding Presentation}">
+            <ContentControl.ContentTemplateSelector>
+                <DataTemplateSet>
                 <DataTemplate>
                     <StackPanel Orientation="Vertical" Margin="0,0,0,10">
                         <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"
@@ -15,7 +16,8 @@
                                   SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"/>
                     </StackPanel>
                 </DataTemplate>
-            </ContentControl.ContentTemplate>
+                </DataTemplateSet>
+            </ContentControl.ContentTemplateSelector>
         </ContentControl>
         <TextBlock FontSize="13" TextWrapping="WrapBySymbols" Text="diagnostics…">
             <TextBlock.Behaviors>

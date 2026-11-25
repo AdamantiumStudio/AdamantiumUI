@@ -35,7 +35,7 @@ public class DropDownDisplayTemplateTests
         Assert.That(drop.DisplayContentTemplate, Is.Null);
     }
 
-    // The placeholder is words, not an item: neither the item template nor the selector is asked to draw it.
+    // The placeholder is words, not an item: the computed template gives it none.
     [Test]
     public void ThePlaceholder_HasNoTemplate()
     {

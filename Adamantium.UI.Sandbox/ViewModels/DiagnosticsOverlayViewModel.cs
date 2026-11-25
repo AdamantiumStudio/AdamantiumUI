@@ -28,9 +28,6 @@ public partial class DiagnosticsOverlayViewModel : AdamantiumViewModel, IOverlay
     /// <summary>The window whose presentation is chosen here - its PresentPolicies and PresentPolicy - if it has its own.</summary>
     public object Presentation { get; private set; }
 
-    /// <summary>Whether a window passed its presentation: the chooser shows only then.</summary>
-    public bool HasPresentation => Presentation != null;
-
     public event Action<object> RequestClose;
 
     public Task OnOverlayOpenedAsync(NavigationParameters parameters, CancellationToken cancellationToken = default)
