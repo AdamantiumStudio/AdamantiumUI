@@ -223,9 +223,10 @@ public class PdfContentSessionTests
         Assert.That(recorded.All<DrawnGeometry>().Single().Depth, Is.EqualTo(group.Depth + 1));
     }
 
-    // Opacity is a graphics state the form names: a group's and the brush's are one alpha.
+    // A group's opacity fades it as one, as a layer on screen: a transparency group laid down at that opacity, the
+    // brush's own alpha inside it.
     [Test]
-    public void AGroupsOpacityAndTheBrushsAreOneAlpha()
+    public void AGroupsOpacity_FadesItAsOne_TheBrushsAlphaInsideIt()
     {
         var content = new PdfContentBuilder();
         var session = new PdfContentSession(content, PdfMatrix.Identity);
@@ -233,15 +234,23 @@ public class PdfContentSessionTests
         session.DrawRectangle(new SolidColorBrush(Red, 0.5), new Rect(0, 0, 10, 10));
         session.PopGroup();
 
-        var form = content.ToFormXObject(new PdfRectangle(0, 0, 10, 10));
-        var resources = form.Dictionary["Resources"] as PdfDictionary;
-        var state = (resources?["ExtGState"] as PdfDictionary)?["GS0"] as PdfDictionary;
-        Assert.That((state?["ca"] as PdfReal)?.Value, Is.EqualTo(0.25).Within(1e-9));
+        var resources = content.ToResources();
+        var state = (resources["ExtGState"] as PdfDictionary)?["GS0"] as PdfDictionary;
+        var group = (resources["XObject"] as PdfDictionary)?["Fm0"] as PdfStream;
+        var inner = (group?.Dictionary["Resources"] as PdfDictionary)?["ExtGState"] as PdfDictionary;
+        Assert.Multiple(() =>
+        {
+            Assert.That((state?["ca"] as PdfReal)?.Value, Is.EqualTo(0.5).Within(1e-9));
+            Assert.That(((inner?["GS0"] as PdfDictionary)?["ca"] as PdfReal)?.Value, Is.EqualTo(0.5).Within(1e-9));
+            Assert.That(((group?.Dictionary["Group"] as PdfDictionary)?["S"] as PdfName)?.Value,
+                Is.EqualTo("Transparency"));
+        });
     }
 
-    // A highlight multiplied into the page stays multiplied in the saved appearance; a plain group names no blend.
+    // A highlight multiplied into the page stays multiplied in the saved appearance: the group laid down blended; a
+    // plain group names no blend and is no group of its own.
     [Test]
-    public void AGroupsBlendMode_IsAGraphicsStateTheFormNames()
+    public void AGroupsBlendMode_LaysTheGroupDownBlended()
     {
         var content = new PdfContentBuilder();
         var session = new PdfContentSession(content, PdfMatrix.Identity);
@@ -251,14 +260,15 @@ public class PdfContentSessionTests
         session.PopGroup();
         session.PopGroup();
 
-        var form = content.ToFormXObject(new PdfRectangle(0, 0, 10, 10));
-        var resources = form.Dictionary["Resources"] as PdfDictionary;
-        var states = resources?["ExtGState"] as PdfDictionary;
+        var resources = content.ToResources();
+        var states = resources["ExtGState"] as PdfDictionary;
+        var group = (resources["XObject"] as PdfDictionary)?["Fm0"] as PdfStream;
         Assert.Multiple(() =>
         {
             Assert.That(((states?["BM0"] as PdfDictionary)?["BM"] as PdfName)?.Value, Is.EqualTo("Multiply"));
             Assert.That(states?.Count, Is.EqualTo(1));
-            Assert.That(Encoding.ASCII.GetString(content.ToContent()), Does.StartWith("q\n/BM0 gs\nq\n"));
+            Assert.That(Encoding.ASCII.GetString(content.ToContent()), Is.EqualTo("q\n/BM0 gs\n/Fm0 Do\nQ\n"));
+            Assert.That(group, Is.Not.Null);
         });
     }
 

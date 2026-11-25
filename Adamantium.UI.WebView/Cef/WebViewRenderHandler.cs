@@ -5,14 +5,19 @@ namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>A browser drawn off screen: CEF asks it the view's size and the screen's scale, and hands it each frame -
 /// BGRA pixels, or its own texture where the browser was made to share one - with the rectangles that changed; the
-/// page's and, while one is dropped, a list's of its own.</summary>
+/// page's and, while one is dropped, a list's of its own. It holds the accessibility handler it hands CEF as long as
+/// CEF holds it: CEF asks for that one with each change of the tree, a closing page's too.</summary>
 internal sealed unsafe class WebViewRenderHandler : CefObject
 {
     private readonly WebViewBrowser browser;
+    private readonly WebViewAccessibilityHandler accessibilityHandler;
 
-    public WebViewRenderHandler(WebViewBrowser browser) : base(sizeof(CefRenderHandler))
+    public WebViewRenderHandler(WebViewBrowser browser, WebViewAccessibilityHandler accessibilityHandler)
+        : base(sizeof(CefRenderHandler))
     {
         this.browser = browser;
+        this.accessibilityHandler = accessibilityHandler;
+        accessibilityHandler.AddReference();
         var handler = (CefRenderHandler*)Native;
         handler->get_view_rect = &GetViewRect;
         handler->get_screen_info = &GetScreenInfo;
@@ -27,6 +32,8 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         handler->get_accessibility_handler = &GetAccessibilityHandler;
         handler->on_scroll_offset_changed = &OnScrollOffsetChanged;
     }
+
+    protected override void OnFreed() => accessibilityHandler.Release();
 
     [UnmanagedCallersOnly]
     private static void OnScrollOffsetChanged(CefRenderHandler* self, CefBrowser* cefBrowser, double x, double y)
@@ -50,7 +57,7 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
     // Asked by CEF only once the browser's accessibility is switched on (WebViewBrowser.EnableAccessibility).
     [UnmanagedCallersOnly]
     private static CefAccessibilityHandler* GetAccessibilityHandler(CefRenderHandler* self) =>
-        (CefAccessibilityHandler*)From<WebViewRenderHandler>(self).browser.AccessibilityHandler.Share();
+        (CefAccessibilityHandler*)From<WebViewRenderHandler>(self).accessibilityHandler.Share();
 
     [UnmanagedCallersOnly]
     private static int StartDragging(CefRenderHandler* self, CefBrowser* cefBrowser, CefDragData* data,

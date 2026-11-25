@@ -99,6 +99,7 @@
         <StyleInclude Source="{x:Type mac:MacOsColorPickerStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsColorPickerButtonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsColorWheelStyleSet}"/>
+        <StyleInclude Source="{x:Type mac:MacOsPrintDialogStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsRibbonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsDataPagerStyleSet}"/>
         <!-- Last: its class styles of buttons and lists stand over the theme's own. -->

@@ -31,6 +31,8 @@
 		     edit rebuilds this one project rather than the whole of Adamantium.UI. -->
 		<ProjectReference Include="..\Adamantium.UI.FX\Adamantium.UI.FX.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
+		<!-- Printing to a PDF file: the print service writes the sheets with it. -->
+		<ProjectReference Include="..\Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<AdamantiumVulkanReference Include="Adamantium.Vulkan" />
 		<PackageReference Include="Adamantium.Vulkan.ShaderObjectLayer" Version="1.0.3" />
