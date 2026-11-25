@@ -47,9 +47,10 @@ public sealed unsafe partial class WebViewEngine
     }
 
     /// <summary>Has Chromium fetch <paramref name="component"/> now, or the version newer than the one installed, ahead
-    /// of its own check; the status once that ended. Asked before Chromium registered the component, it waits for it;
-    /// Chromium downloads while a page is up - with none, the download waits for one (measured 25.11). While Chromium is updating the component already it ends at once, with the status then. Not installed while <see cref="WebViewOptions.Components"/> leaves the component out, or
-    /// with no CEF beside the application. On the UI loop.</summary>
+    /// of its own check; the status once that ended. Asked before Chromium registered the component, it waits for it,
+    /// and needs no page. While Chromium is updating the component already it ends at once, with the status then. Not
+    /// installed while <see cref="WebViewOptions.Components"/> leaves the component out, or with no CEF beside the
+    /// application. On the UI loop.</summary>
     public Task<WebComponentStatus> InstallComponentAsync(WebViewComponents component)
     {
         var id = CefComponents.IdOf(component);

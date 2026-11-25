@@ -804,6 +804,11 @@ public sealed unsafe partial class WebViewEngine : IDisposable
 
         // Chromium fetches from Google only the components the application lets it - with none, nothing.
         switches.Add(new(CefComponents.AllowedSwitch, CefComponents.Allowed(options.Components)));
+
+        // Chromium holds its lowest tasks - writing a component's download to disk among them - until its start is over,
+        // which a page that loaded tells it: with none, after three minutes. This ends the wait without a page in five
+        // seconds.
+        switches.Add(new(WebViewApp.EnableFeaturesSwitch, "ImprovedStartupBestEffortDelay"));
         return switches;
     }
 

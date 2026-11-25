@@ -74,8 +74,8 @@ public unsafe partial class WebViewFrameTests
 
     // Asked for, Widevine is fetched at once - not a minute later, when Chromium would get to it - and a page has it
     // from then on. Asked first, it is asked as Chromium starts, before its components registered: the fetch waits for
-    // Widevine to register, then downloads once a page is up. On Linux Chromium loads Widevine only as it starts: fetched while running - in this
-    // fixture's new profile - a page has it from the next start.
+    // Widevine to register, and needs no page. On Linux Chromium loads Widevine only as it starts: fetched while
+    // running - in this fixture's new profile - a page has it from the next start.
     [Test, Explicit("Needs the network: fetches Widevine from Google.")]
     public void Widevine_AskedFor_IsInstalled_AndPagesHaveItFromThen()
     {
@@ -84,14 +84,15 @@ public unsafe partial class WebViewFrameTests
         WebComponentStatus asked = null;
         var expected = OperatingSystem.IsLinux() ? "\"NotSupportedError\"" : "\"com.widevine.alpha\"";
         using var site = new LocalSite("<title>Protected</title>");
-        Task<WebComponentStatus> install = null;
-        loop.Run(() => install = engine.InstallComponentAsync(WebViewComponents.Widevine));
-        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+        loop.Run(() =>
         {
-            // Chromium downloads it while a page is up (measured 25.11: with none, the download stands still).
+            var install = engine.InstallComponentAsync(WebViewComponents.Widevine);
             Pump(() => install.IsCompleted, TimeSpan.FromSeconds(60));
             installed = install.IsCompletedSuccessfully ? install.Result : null;
             asked = engine.GetComponentStatus(WebViewComponents.Widevine);
+        });
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
+        {
             Pump(() => view.Title == "Protected", TimeSpan.FromSeconds(5));
             // Chromium hands Widevine to its pages as the install ends, a moment apart from telling it ended.
             for (var asking = 0; asking < 5 && answer != expected; asking++)
