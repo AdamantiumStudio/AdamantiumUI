@@ -4,6 +4,7 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.Pdf.Document;
 using Adamantium.Pdf.Graphics;
+using Adamantium.Pdf.Objects;
 using Adamantium.Pdf.Writing;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -15,38 +16,61 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Pdf;
 
-/// <summary>Writes what is drawn into a PDF content stream as paths - what an annotation's appearance is. Geometry is
-/// written from the curves the GPU fills and strokes it by, in its own units under the matrix it is drawn with, so
+/// <summary>Writes what is drawn into a PDF content stream - a page to print, or an annotation's appearance. Geometry
+/// is written from the curves the GPU fills and strokes it by, in its own units under the matrix it is drawn with, so
 /// widths, dashes and ends are the drawing's own; ink and arrows are filled as their passes shape them, each in one
-/// piece; text by its glyphs' outlines. Solid brushes only: pictures, colored meshes and any other brush have no place
-/// in such a drawing and are left out. A group's clip cuts what is drawn in it; its opacity and blend mode act on each
-/// thing drawn in it rather than on the group as one; its mask and text clip are not written.</summary>
-public sealed class PdfContentSession : IDrawingSession
+/// piece; text by its glyphs' outlines. Brushes: solid, linear and radial gradients (their alpha a soft mask). Pictures
+/// go in as images, a drawing's picture as the drawing itself; colored meshes as shaded triangles. A group is cut by
+/// its clip and its glyphs; one faded, blended or masked is a transparency group, faded as one.
+/// <para>Pens are stroked as the stroke shader lays them - trim, dashes fitted or not, every kind of end - and tile
+/// brushes (a picture, a drawing) laid out as the renderer lays them, once or as tiling patterns, tinted.</para>
+/// <para>Not written yet - the raster at print resolution is for them: a visual brush, a brush laid along a pen's line,
+/// live surfaces; and a drawing tile's brightness, contrast and saturation.</para>
+/// </summary>
+public sealed partial class PdfContentSession : IDrawingSession
 {
     private const double Kappa = 0.5522847498307936;
 
-    private readonly PdfContentBuilder _content;
-    private readonly PdfMatrix _toPage;
-    private readonly Stack<double> _groupOpacities = new();
-    private double _opacity = 1;
-    private double _left = double.PositiveInfinity;
-    private double _bottom = double.PositiveInfinity;
-    private double _right = double.NegativeInfinity;
-    private double _top = double.NegativeInfinity;
+    private readonly PdfPictures _pictures;
+    private readonly Level _root;
+    private readonly Stack<Level> _levels = new();
+    private Stack<PdfMatrix> _inners = new();
+
+    /// <summary>From the drawing's root units to the content's: the page's - or, while a tile's cell is drawn, the cell's.
+    /// </summary>
+    private PdfMatrix _base;
+
+    private PdfMatrix _through;
+
+    /// <summary>Multiplied into every color written - a tinted drawing tile's tint, as the renderer multiplies it into
+    /// every pixel; white leaves colors as they are.</summary>
+    private Color _tint = Mathematics.Colors.White;
 
     /// <param name="content">The content stream written into.</param>
     /// <param name="toPage">From the units things are drawn in to the page's: for a sheet, the inverse of
     /// <see cref="PdfPageSpace.ToSheet"/>.</param>
-    public PdfContentSession(PdfContentBuilder content, PdfMatrix toPage)
+    public PdfContentSession(PdfContentBuilder content, PdfMatrix toPage) : this(content, toPage, new PdfPictures())
+    {
+    }
+
+    /// <param name="pictures">The pictures already turned into images - one for the pages of a document, so a picture
+    /// on every page is written once.</param>
+    internal PdfContentSession(PdfContentBuilder content, PdfMatrix toPage, PdfPictures pictures)
     {
         ArgumentNullException.ThrowIfNull(content);
-        _content = content;
-        _toPage = toPage;
+        ArgumentNullException.ThrowIfNull(pictures);
+        _base = toPage;
+        _pictures = pictures;
+        _through = toPage;
+        _root = new Level(content, null, false);
+        _levels.Push(_root);
     }
 
     /// <summary>The box of everything drawn so far, strokes included, in the page's space; empty while nothing is.
     /// </summary>
-    public PdfRectangle Bounds => _left > _right ? default : new PdfRectangle(_left, _bottom, _right, _top);
+    public PdfRectangle Bounds => _root.Box;
+
+    private PdfContentBuilder Content => _levels.Peek().Builder;
 
     public IDrawingSession DrawLine(Vector2<double> start, Vector2<double> end, Pen pen)
     {
@@ -82,18 +106,37 @@ public sealed class PdfContentSession : IDrawingSession
         }
     }
 
+    /// <summary>The fill, then the border as the ring between the rect and the rect less each side's width - four
+    /// widths, each corner rounded inside by what is left of its radius.</summary>
     public IDrawingSession DrawBorder(Brush background, Rect destinationRect, CornerRadius corners, Brush borderBrush,
         Thickness borderThickness)
     {
         Figures(background, null, new RectangleGeometry(destinationRect, corners), Matrix4x4F.Identity);
-        var width = borderThickness.Left;
-        if (width > 0 && destinationRect.Width > width && destinationRect.Height > width)
+        var left = Math.Max(0, borderThickness.Left);
+        var top = Math.Max(0, borderThickness.Top);
+        var right = Math.Max(0, borderThickness.Right);
+        var bottom = Math.Max(0, borderThickness.Bottom);
+        if (left + top + right + bottom <= 0)
         {
-            var inside = new Rect(destinationRect.X + width / 2, destinationRect.Y + width / 2,
-                destinationRect.Width - width, destinationRect.Height - width);
-            Figures(null, new Pen(borderBrush, width), new RectangleGeometry(inside, corners), Matrix4x4F.Identity);
+            return this;
         }
 
+        var ring = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        ring.Children.Add(new RectangleGeometry(destinationRect, corners));
+        var width = destinationRect.Width - left - right;
+        var height = destinationRect.Height - top - bottom;
+        if (width > 0 && height > 0)
+        {
+            ring.Children.Add(new RectangleGeometry(new Rect(destinationRect.X + left, destinationRect.Y + top, width,
+                height), new CornerRadius(
+                Math.Max(0, corners.TopLeft - Math.Max(left, top)),
+                Math.Max(0, corners.TopRight - Math.Max(right, top)),
+                Math.Max(0, corners.BottomRight - Math.Max(right, bottom)),
+                Math.Max(0, corners.BottomLeft - Math.Max(left, bottom)))));
+        }
+
+        ring.RecalculateBounds();
+        Figures(borderBrush, null, ring, Matrix4x4F.Identity);
         return this;
     }
 
@@ -151,23 +194,6 @@ public sealed class PdfContentSession : IDrawingSession
     public IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement) =>
         DrawGeometry(brush, geometry, pen, placement?.Matrix ?? Matrix4x4F.Identity);
 
-    public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners) => this;
-
-    public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners,
-        Rect sourceUv) => this;
-
-    public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4F transform) => this;
-
-    public IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners,
-        int frameLayer) => this;
-
-    public IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners,
-        int frameLayer, Rect sourceUv) => this;
-
-    public IDrawingSession PushImage(ImageSource image) => this;
-
-    public IDrawingSession DrawColoredMesh(ColoredMesh mesh, Matrix4x4F transform) => this;
-
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke) =>
         DrawText(renderingParameters, desiredSize, textLayout, foreground, background, stroke, Matrix4x4F.Identity);
@@ -200,27 +226,151 @@ public sealed class PdfContentSession : IDrawingSession
         return this;
     }
 
+    /// <summary>Cut by the clip and the glyphs in place; faded, blended or masked, the group is drawn into a
+    /// transparency group of its own and laid down as one at <see cref="PopGroup"/>.</summary>
     public IDrawingSession PushGroup(DrawingGroupOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        _content.SaveState();
-        _groupOpacities.Push(_opacity);
-        _opacity *= Math.Clamp(options.Opacity, 0, 1);
-        if (options.BlendMode != BlendMode.Normal)
+        var apart = Math.Clamp(options.Opacity, 0, 1) < 1 || options.BlendMode != BlendMode.Normal ||
+                    options.Mask != null;
+        if (apart)
         {
-            _content.BlendMode(ToPdf(options.BlendMode));
+            _levels.Push(new Level(new PdfContentBuilder(), options, true));
+        }
+        else
+        {
+            Content.SaveState();
+            _levels.Push(new Level(Content, options, false));
         }
 
-        if (options.Clip is { } clip && clip.CurvesForDrawing is { } curves)
+        if (options.Clip is { } clip)
         {
+            // A clip with nothing in it lets nothing through, as on screen.
+            var curves = clip.CurvesForDrawing;
             var place = Through(options.ClipPlacement?.Matrix ?? options.ClipTransform);
-            if (Write(curves, true, place))
+            if (curves == null || !Write(curves, true, place))
             {
-                _content.Clip(curves.FillRule == FillRule.EvenOdd);
+                Content.Rectangle(0, 0, 0, 0);
             }
+
+            Content.Clip(curves?.FillRule == FillRule.EvenOdd);
+        }
+
+        if (options.TextClip is { Count: > 0 } glyphs)
+        {
+            var wrote = false;
+            foreach (var placed in glyphs)
+            {
+                if (placed?.Run?.Outline?.CurvesForDrawing is { } outline)
+                {
+                    wrote |= Write(outline, false, Through(placed.Transform));
+                }
+            }
+
+            if (!wrote)
+            {
+                Content.Rectangle(0, 0, 0, 0);
+            }
+
+            Content.Clip();
         }
 
         return this;
+    }
+
+    public IDrawingSession PopGroup()
+    {
+        if (_levels.Count <= 1)
+        {
+            throw new InvalidOperationException("PopGroup without a group pushed.");
+        }
+
+        if (_levels.Peek().Options == null)
+        {
+            throw new InvalidOperationException("PopGroup past the groups a soft mask's picture pushed.");
+        }
+
+        var level = _levels.Pop();
+        if (!level.IsApart)
+        {
+            Content.RestoreState();
+            _levels.Peek().Take(level);
+            return this;
+        }
+
+        if (level.IsEmpty)
+        {
+            return this;
+        }
+
+        var options = level.Options;
+        var box = level.Box;
+        var form = level.Builder.ToFormXObject(box, PdfTransparencyGroup.Layer);
+        var mask = options.Mask != null ? MaskOf(options, box) : null;
+        var content = Content;
+        content.SaveState();
+        if (mask != null)
+        {
+            content.SoftMask(mask, options.MaskKind == MaskKind.Luminosity);
+        }
+
+        var opacity = Math.Clamp(options.Opacity, 0, 1);
+        if (opacity < 1)
+        {
+            content.Opacity(opacity, opacity);
+        }
+
+        if (options.BlendMode != BlendMode.Normal)
+        {
+            content.BlendMode(ToPdf(options.BlendMode));
+        }
+
+        content.Draw(form);
+        content.RestoreState();
+        _levels.Peek().Take(level);
+        return this;
+    }
+
+    /// <summary>Ends the groups left open, as a drawing's end ends them on screen. A group faded, blended or masked is
+    /// written into the content only as it ends: call this before the content or <see cref="Bounds"/> is used.</summary>
+    public void CloseGroups()
+    {
+        while (_levels.Count > 1)
+        {
+            PopGroup();
+        }
+    }
+
+    /// <summary>The group's soft mask: its picture drawn into a group of its own - over its backdrop color, for a mask
+    /// read by luminosity - in the space the group is laid down in.</summary>
+    private PdfStream MaskOf(DrawingGroupOptions options, PdfRectangle box)
+    {
+        var level = new Level(new PdfContentBuilder(), null, true);
+        if (options.MaskKind == MaskKind.Luminosity)
+        {
+            var backdrop = options.MaskBackdrop;
+            level.Builder.FillColor(backdrop.R / 255.0, backdrop.G / 255.0, backdrop.B / 255.0)
+                .Rectangle(box.Left, box.Bottom, box.Width, box.Height).Fill();
+        }
+
+        // A mask says how much shows, not what color: no tint in it.
+        var tint = _tint;
+        _tint = Mathematics.Colors.White;
+        _levels.Push(level);
+        try
+        {
+            options.Mask.Render(this, options.MaskTransform, null);
+        }
+        finally
+        {
+            while (_levels.Pop() != level)
+            {
+            }
+
+            _tint = tint;
+        }
+
+        return level.Builder.ToFormXObject(box, PdfTransparencyGroup.Layer);
     }
 
     private static PdfBlendMode ToPdf(BlendMode mode) => mode switch
@@ -243,112 +393,46 @@ public sealed class PdfContentSession : IDrawingSession
         _ => PdfBlendMode.Normal,
     };
 
-    public IDrawingSession PopGroup()
-    {
-        if (_groupOpacities.Count == 0)
-        {
-            throw new InvalidOperationException("PopGroup without a group pushed.");
-        }
-
-        _opacity = _groupOpacities.Pop();
-        _content.RestoreState();
-        return this;
-    }
-
-    private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform)
-    {
-        if (geometry?.CurvesForDrawing is not { Figures.Count: > 0 } curves)
-        {
-            return;
-        }
-
-        var fills = TrySolid(brush, out var fillColor, out var fillAlpha);
-        var strokeColor = default(Color);
-        var strokeAlpha = 0.0;
-        var strokes = pen != null && pen.Thickness > 0 && TrySolid(pen.Brush, out strokeColor, out strokeAlpha);
-        var place = Through(transform);
-        if ((!fills && !strokes) || !Invertible(place))
-        {
-            return;
-        }
-
-        _content.SaveState();
-        Opacity(strokes ? strokeAlpha : 1, fills ? fillAlpha : 1);
-        if (fills)
-        {
-            _content.FillColor(fillColor.R / 255.0, fillColor.G / 255.0, fillColor.B / 255.0);
-        }
-
-        Transform(place);
-        if (strokes)
-        {
-            Pen(pen, strokeColor);
-        }
-
-        if (Write(curves, fills && !strokes, PdfMatrix.Identity))
-        {
-            var evenOdd = curves.FillRule == FillRule.EvenOdd;
-            if (fills && strokes)
-            {
-                _content.FillAndStroke(evenOdd);
-            }
-            else if (fills)
-            {
-                _content.Fill(evenOdd);
-            }
-            else
-            {
-                _content.Stroke();
-            }
-
-            var reach = strokes ? pen.Thickness / 2 * (pen.PenLineJoin == PenLineJoin.Miter
-                ? MiterReach(curves, Core.Media.Pen.ClampMiterLimit(pen.MiterLimit))
-                : 1) : 0;
-            GrowBox(curves.Bounds, place, reach);
-        }
-
-        _content.RestoreState();
-    }
-
     private void Ink(InkBrush ink, Matrix4x4F transform)
     {
         var points = ink.Points;
         var count = Math.Min(ink.Count, points?.Length ?? 0);
-        var alpha = ink.Color.A / 255.0 * ink.Opacity * _opacity;
+        var alpha = ink.Color.A / 255.0 * ink.Opacity;
         var place = Through(transform);
         if (count == 0 || !(ink.Thickness > 0) || alpha <= 0 || !Invertible(place))
         {
             return;
         }
 
-        _content.SaveState();
+        var content = Content;
+        content.SaveState();
         var color = ink.Color;
         var widths = ink.Widths;
         if (widths == null)
         {
             Opacity(alpha, 1);
-            _content.StrokeColor(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+            StrokeColor(color);
             Transform(place);
-            _content.LineWidth(ink.Thickness).LineCap(1).LineJoin(1);
-            _content.MoveTo(points[0].X, points[0].Y);
+            content.LineWidth(ink.Thickness).LineCap(1).LineJoin(1);
+            content.MoveTo(points[0].X, points[0].Y);
             for (var index = 1; index < count; index++)
             {
-                _content.LineTo(points[index].X, points[index].Y);
+                content.LineTo(points[index].X, points[index].Y);
             }
 
             if (count == 1)
             {
-                _content.LineTo(points[0].X, points[0].Y);
+                content.LineTo(points[0].X, points[0].Y);
             }
 
-            _content.Stroke();
+            content.Stroke();
             GrowPoints(points, count, place, ink.Thickness / 2);
-            _content.RestoreState();
+            content.RestoreState();
             return;
         }
 
         Opacity(1, alpha);
-        _content.FillColor(color.R / 255.0, color.G / 255.0, color.B / 255.0);
+        FillColor(color);
         Transform(place);
         var widest = 0.0;
         for (var index = 0; index < count; index++)
@@ -368,14 +452,14 @@ public sealed class PdfContentSession : IDrawingSession
             Polygon([from + side * before, to + side * radius, to - side * radius, from - side * before], false);
         }
 
-        _content.Fill();
+        content.Fill();
         GrowPoints(points, count, place, widest);
-        _content.RestoreState();
+        content.RestoreState();
     }
 
     private void Arrow(CanvasArrowBrush arrow, Matrix4x4F transform)
     {
-        var alpha = arrow.Color.A / 255.0 * arrow.Opacity * _opacity;
+        var alpha = arrow.Color.A / 255.0 * arrow.Opacity;
         var place = Through(transform);
         if (!(arrow.Thickness > 0) || alpha <= 0 || !Invertible(place))
         {
@@ -394,18 +478,19 @@ public sealed class PdfContentSession : IDrawingSession
         var shaftFrom = arrow.StartHead >= 1 ? from + along * Math.Min(arrow.StartHead >= 2 ? length : tuck, span) : from;
         var shaftTo = arrow.EndHead >= 1 ? to - along * Math.Min(arrow.EndHead >= 2 ? length : tuck, span) : to;
 
-        _content.SaveState();
+        var content = Content;
+        content.SaveState();
         Opacity(1, alpha);
-        _content.FillColor(arrow.Color.R / 255.0, arrow.Color.G / 255.0, arrow.Color.B / 255.0);
+        FillColor(arrow.Color);
         Transform(place);
         Capsule(shaftFrom, shaftTo, edge);
         Head(arrow.StartHead, from, along * -1, back, wide, edge);
         Head(arrow.EndHead, to, along, back, wide, edge);
-        _content.Fill();
+        content.Fill();
         var reach = Math.Max(edge, wide);
         GrowBox(new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Abs(to.X - from.X),
             Math.Abs(to.Y - from.Y)), place, reach);
-        _content.RestoreState();
+        content.RestoreState();
     }
 
     private void Head(int kind, Vector2<double> tip, Vector2<double> forward, double back, double wide, double edge)
@@ -435,12 +520,13 @@ public sealed class PdfContentSession : IDrawingSession
 
     private void Text(TextRenderingParameters parameters, TextLayout layout, Brush foreground, Matrix4x4F transform)
     {
-        if (layout == null || !TrySolid(foreground, out _, out _))
+        if (layout == null || !Paints(foreground))
         {
             return;
         }
 
         var area = parameters?.TextArea ?? default;
+        var runs = new List<GlyphRun>();
         var glyphs = new List<PositionedGlyph>();
         IFont font = null;
         var size = 0.0;
@@ -454,7 +540,7 @@ public sealed class PdfContentSession : IDrawingSession
 
             if (!ReferenceEquals(word.Font, font) || word.FontSize != size)
             {
-                Run(font, size, glyphs, foreground, transform);
+                Run(font, size, glyphs, runs);
                 font = word.Font;
                 size = word.FontSize;
             }
@@ -465,46 +551,47 @@ public sealed class PdfContentSession : IDrawingSession
                 word.Rect.Y + area.Y + (box.Y + box.Height) * scale));
         }
 
-        Run(font, size, glyphs, foreground, transform);
-    }
+        Run(font, size, glyphs, runs);
 
-    private void Run(IFont font, double size, List<PositionedGlyph> glyphs, Brush foreground, Matrix4x4F transform)
-    {
-        if (font == null || glyphs.Count == 0)
+        // One gradient or tile across the whole text, however many fonts and sizes it is set in.
+        Rect? whole = null;
+        if (foreground is GradientBrush or TileBrush)
         {
-            glyphs.Clear();
-            return;
+            foreach (var run in runs)
+            {
+                if (run.Outline?.CurvesForDrawing is { Figures.Count: > 0 } curves)
+                {
+                    whole = whole is { } sofar ? Union(sofar, curves.Bounds) : curves.Bounds;
+                }
+            }
         }
 
-        Figures(foreground, null, new GlyphRun(font, size, glyphs).Outline, transform);
+        foreach (var run in runs)
+        {
+            Figures(foreground, null, run.Outline, transform, whole);
+        }
+    }
+
+    private static void Run(IFont font, double size, List<PositionedGlyph> glyphs, List<GlyphRun> runs)
+    {
+        if (font != null && glyphs.Count > 0)
+        {
+            runs.Add(new GlyphRun(font, size, [.. glyphs]));
+        }
+
         glyphs.Clear();
     }
 
-    private void Pen(Pen pen, Color color)
+    private static Rect Union(Rect one, Rect other)
     {
-        _content.StrokeColor(color.R / 255.0, color.G / 255.0, color.B / 255.0);
-        _content.LineWidth(pen.Thickness);
-        _content.LineJoin(pen.PenLineJoin switch
-        {
-            PenLineJoin.Round => 1,
-            PenLineJoin.Bevel => 2,
-            _ => 0,
-        });
-        _content.LineCap(pen.StartLineCap switch
-        {
-            PenLineCap.ConvexRound => 1,
-            PenLineCap.Square => 2,
-            _ => 0,
-        });
-        _content.MiterLimit(Core.Media.Pen.ClampMiterLimit(pen.MiterLimit));
-        if (pen.DashStrokeArray is { Count: > 0 } dashes)
-        {
-            _content.Dash([.. dashes], pen.DashOffset);
-        }
+        var left = Math.Min(one.X, other.X);
+        var top = Math.Min(one.Y, other.Y);
+        return new Rect(left, top, Math.Max(one.Right, other.Right) - left, Math.Max(one.Bottom, other.Bottom) - top);
     }
 
     private bool Write(PathCurves curves, bool filledOnly, PdfMatrix map)
     {
+        var content = Content;
         var wrote = false;
         foreach (var figure in curves.Figures)
         {
@@ -530,7 +617,7 @@ public sealed class PdfContentSession : IDrawingSession
 
             if (figure.IsClosed)
             {
-                _content.ClosePath();
+                content.ClosePath();
             }
 
             wrote = true;
@@ -564,13 +651,14 @@ public sealed class PdfContentSession : IDrawingSession
             return;
         }
 
+        var content = Content;
         var hold = radius * Kappa;
-        _content.MoveTo(center.X + radius, center.Y);
-        _content.CurveTo(center.X + radius, center.Y + hold, center.X + hold, center.Y + radius, center.X, center.Y + radius);
-        _content.CurveTo(center.X - hold, center.Y + radius, center.X - radius, center.Y + hold, center.X - radius, center.Y);
-        _content.CurveTo(center.X - radius, center.Y - hold, center.X - hold, center.Y - radius, center.X, center.Y - radius);
-        _content.CurveTo(center.X + hold, center.Y - radius, center.X + radius, center.Y - hold, center.X + radius, center.Y);
-        _content.ClosePath();
+        content.MoveTo(center.X + radius, center.Y);
+        content.CurveTo(center.X + radius, center.Y + hold, center.X + hold, center.Y + radius, center.X, center.Y + radius);
+        content.CurveTo(center.X - hold, center.Y + radius, center.X - radius, center.Y + hold, center.X - radius, center.Y);
+        content.CurveTo(center.X - radius, center.Y - hold, center.X - hold, center.Y - radius, center.X, center.Y - radius);
+        content.CurveTo(center.X + hold, center.Y - radius, center.X + radius, center.Y - hold, center.X + radius, center.Y);
+        content.ClosePath();
     }
 
     private void Polygon(Vector2<double>[] points, bool hole)
@@ -587,35 +675,55 @@ public sealed class PdfContentSession : IDrawingSession
             Array.Reverse(points);
         }
 
-        _content.MoveTo(points[0].X, points[0].Y);
+        var content = Content;
+        content.MoveTo(points[0].X, points[0].Y);
         for (var index = 1; index < points.Length; index++)
         {
-            _content.LineTo(points[index].X, points[index].Y);
+            content.LineTo(points[index].X, points[index].Y);
         }
 
-        _content.ClosePath();
+        content.ClosePath();
+    }
+
+    /// <summary><paramref name="color"/> with the tint multiplied into its red, green and blue; its alpha as it is - a
+    /// tint's own alpha fades the whole tile.</summary>
+    private Color Tinted(Color color) => _tint == Mathematics.Colors.White
+        ? color
+        : new Color((byte)Math.Round(color.R * _tint.R / 255.0), (byte)Math.Round(color.G * _tint.G / 255.0),
+            (byte)Math.Round(color.B * _tint.B / 255.0), color.A);
+
+    private void FillColor(Color color)
+    {
+        var tinted = Tinted(color);
+        Content.FillColor(tinted.R / 255.0, tinted.G / 255.0, tinted.B / 255.0);
+    }
+
+    private void StrokeColor(Color color)
+    {
+        var tinted = Tinted(color);
+        Content.StrokeColor(tinted.R / 255.0, tinted.G / 255.0, tinted.B / 255.0);
     }
 
     private void Opacity(double stroke, double fill)
     {
         if (stroke < 1 || fill < 1)
         {
-            _content.Opacity(stroke, fill);
+            Content.Opacity(stroke, fill);
         }
     }
 
-    private void Transform(PdfMatrix place) => _content.Transform(place.A, place.B, place.C, place.D, place.E, place.F);
+    private void Transform(PdfMatrix place) => Content.Transform(place.A, place.B, place.C, place.D, place.E, place.F);
 
     private void MoveTo(PdfMatrix map, Vector2<double> point)
     {
         var at = map.Transform(point.X, point.Y);
-        _content.MoveTo(at.X, at.Y);
+        Content.MoveTo(at.X, at.Y);
     }
 
     private void LineTo(PdfMatrix map, Vector2<double> point)
     {
         var at = map.Transform(point.X, point.Y);
-        _content.LineTo(at.X, at.Y);
+        Content.LineTo(at.X, at.Y);
     }
 
     private void CurveTo(PdfMatrix map, Vector2<double> first, Vector2<double> second, Vector2<double> end)
@@ -623,7 +731,7 @@ public sealed class PdfContentSession : IDrawingSession
         var one = map.Transform(first.X, first.Y);
         var two = map.Transform(second.X, second.Y);
         var three = map.Transform(end.X, end.Y);
-        _content.CurveTo(one.X, one.Y, two.X, two.Y, three.X, three.Y);
+        Content.CurveTo(one.X, one.Y, two.X, two.Y, three.X, three.Y);
     }
 
     private void GrowPoints(Vector2<float>[] points, int count, PdfMatrix place, double reach)
@@ -634,39 +742,71 @@ public sealed class PdfContentSession : IDrawingSession
         }
     }
 
-    private void GrowBox(Rect local, PdfMatrix place, double reach)
+    private void GrowBox(Rect local, PdfMatrix place, double reach) => _levels.Peek().Grow(Box(local, place, reach));
+
+    /// <summary>The page-space box of <paramref name="local"/> grown by <paramref name="reach"/> and placed.</summary>
+    private static PdfRectangle Box(Rect local, PdfMatrix place, double reach)
     {
         var inflated = new Rect(local.X - reach, local.Y - reach, local.Width + reach * 2, local.Height + reach * 2);
-        Corner(place.Transform(inflated.X, inflated.Y));
-        Corner(place.Transform(inflated.Right, inflated.Y));
-        Corner(place.Transform(inflated.X, inflated.Bottom));
-        Corner(place.Transform(inflated.Right, inflated.Bottom));
+        var one = place.Transform(inflated.X, inflated.Y);
+        var two = place.Transform(inflated.Right, inflated.Y);
+        var three = place.Transform(inflated.X, inflated.Bottom);
+        var four = place.Transform(inflated.Right, inflated.Bottom);
+        return new PdfRectangle(Math.Min(Math.Min(one.X, two.X), Math.Min(three.X, four.X)),
+            Math.Min(Math.Min(one.Y, two.Y), Math.Min(three.Y, four.Y)),
+            Math.Max(Math.Max(one.X, two.X), Math.Max(three.X, four.X)),
+            Math.Max(Math.Max(one.Y, two.Y), Math.Max(three.Y, four.Y)));
     }
 
-    private void Corner(PdfPoint point)
+    private PdfMatrix Through(Matrix4x4F transform) => Matrix(transform).Then(_through);
+
+    private static PdfMatrix Matrix(Matrix4x4F transform) =>
+        new(transform.M11, transform.M12, transform.M21, transform.M22, transform.M41, transform.M42);
+
+    /// <summary>Draws what follows as if placed by <paramref name="transform"/> too - a drawing's picture replayed
+    /// where it is drawn - until <see cref="PopInner"/>.</summary>
+    private void PushInner(Matrix4x4F transform)
     {
-        _left = Math.Min(_left, point.X);
-        _right = Math.Max(_right, point.X);
-        _bottom = Math.Min(_bottom, point.Y);
-        _top = Math.Max(_top, point.Y);
+        var inner = _inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity;
+        inner = Matrix(transform).Then(inner);
+        _inners.Push(inner);
+        _through = inner.Then(_base);
     }
 
-    private PdfMatrix Through(Matrix4x4F transform) =>
-        new PdfMatrix(transform.M11, transform.M12, transform.M21, transform.M22, transform.M41, transform.M42)
-            .Then(_toPage);
-
-    private bool TrySolid(Brush brush, out Color color, out double alpha)
+    private void PopInner()
     {
-        if (brush is SolidColorBrush solid)
+        _inners.Pop();
+        _through = (_inners.Count > 0 ? _inners.Peek() : PdfMatrix.Identity).Then(_base);
+    }
+
+    /// <summary>What <paramref name="draw"/> draws, written into content of its own in the units it draws in - a tile's
+    /// cell - rather than into the page.</summary>
+    private PdfContentBuilder Capture(Action draw)
+    {
+        var savedBase = _base;
+        var savedInners = _inners;
+        var savedThrough = _through;
+        var level = new Level(new PdfContentBuilder(), null, true);
+        _base = PdfMatrix.Identity;
+        _inners = new Stack<PdfMatrix>();
+        _through = PdfMatrix.Identity;
+        _levels.Push(level);
+        try
         {
-            color = solid.Color;
-            alpha = solid.Color.A / 255.0 * solid.Opacity * _opacity;
-            return alpha > 0;
+            draw();
+        }
+        finally
+        {
+            while (_levels.Pop() != level)
+            {
+            }
+
+            _base = savedBase;
+            _inners = savedInners;
+            _through = savedThrough;
         }
 
-        color = default;
-        alpha = 0;
-        return false;
+        return level.Builder;
     }
 
     private static double MiterReach(PathCurves curves, double limit)
@@ -721,4 +861,40 @@ public sealed class PdfContentSession : IDrawingSession
     private static Vector2<double> At(Vector2<float> point) => new(point.X, point.Y);
 
     private static double Share(float[] widths, int index) => index < widths.Length ? Math.Max(0, widths[index]) : 1;
+
+    /// <summary>A group being written: the content it goes into - its own for a group drawn apart - and the box of
+    /// what it drew, in the page's space.</summary>
+    private sealed class Level(PdfContentBuilder builder, DrawingGroupOptions options, bool isApart)
+    {
+        private double _left = double.PositiveInfinity;
+        private double _bottom = double.PositiveInfinity;
+        private double _right = double.NegativeInfinity;
+        private double _top = double.NegativeInfinity;
+
+        public PdfContentBuilder Builder { get; } = builder;
+
+        public DrawingGroupOptions Options { get; } = options;
+
+        public bool IsApart { get; } = isApart;
+
+        public bool IsEmpty => _left > _right;
+
+        public PdfRectangle Box => IsEmpty ? default : new PdfRectangle(_left, _bottom, _right, _top);
+
+        public void Grow(PdfRectangle box)
+        {
+            _left = Math.Min(_left, box.Left);
+            _bottom = Math.Min(_bottom, box.Bottom);
+            _right = Math.Max(_right, box.Right);
+            _top = Math.Max(_top, box.Top);
+        }
+
+        public void Take(Level inner)
+        {
+            if (!inner.IsEmpty)
+            {
+                Grow(inner.Box);
+            }
+        }
+    }
 }

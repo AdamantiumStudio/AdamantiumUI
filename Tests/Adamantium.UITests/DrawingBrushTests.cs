@@ -149,7 +149,7 @@ public class DrawingBrushTests
             Stretch = Stretch.Uniform
         };
 
-        var layout = ImageTiling.Layout(brush, new Rect(0, 0, 200, 200), 1.0, 1.0);
+        var layout = TileBrushLayout.Layout(brush, new Rect(0, 0, 200, 200), 1.0, 1.0);
 
         Assert.That(brush.ContentSize, Is.EqualTo(new Size<double>(30, 20)));
         Assert.That(layout.Drawn.Z, Is.EqualTo(1f).Within(1e-4), "the wide axis fills the tile");
@@ -176,18 +176,18 @@ public class DrawingBrushTests
         {
             // The slice is half the drawing on each axis, so it is baked at the SAME size the whole picture would be -
             // that size is the tile's, and the tile is what the slice has to fill.
-            Assert.That(ImageTiling.BakeSize(brush, box.Size), Is.EqualTo(ImageTiling.BakeSize(whole, box.Size)),
+            Assert.That(TileBrushLayout.BakeSize(brush, box.Size), Is.EqualTo(TileBrushLayout.BakeSize(whole, box.Size)),
                 "the slice is baked at the tile's resolution, not at a fraction of it");
 
             // ...and because the texture then holds only the slice, the fill samples ALL of it.
-            var layout = ImageTiling.Layout(brush, box, 1.0, 1.0, sourceIsSlice: true);
+            var layout = TileBrushLayout.Layout(brush, box, 1.0, 1.0, sourceIsSlice: true);
             Assert.That(layout.UvRect.X, Is.EqualTo(0f).Within(1e-4));
             Assert.That(layout.UvRect.Y, Is.EqualTo(0f).Within(1e-4));
             Assert.That(layout.UvRect.Z, Is.EqualTo(1f).Within(1e-4));
             Assert.That(layout.UvRect.W, Is.EqualTo(1f).Within(1e-4));
 
             // A RASTER source is untouched by any of this: its pixels exist once, and the viewbox stays a sub-rectangle.
-            var raster = ImageTiling.Layout(brush, box, 1.0, 1.0);
+            var raster = TileBrushLayout.Layout(brush, box, 1.0, 1.0);
             Assert.That(raster.UvRect.X, Is.EqualTo(0.25f).Within(1e-4));
             Assert.That(raster.UvRect.Z, Is.EqualTo(0.5f).Within(1e-4));
         });
