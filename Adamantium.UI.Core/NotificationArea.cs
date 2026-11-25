@@ -12,7 +12,8 @@ public static class NotificationArea
     /// shows its window where this is false - GNOME without the AppIndicator extension has no such place.</summary>
     public static bool IsAvailable => Platform?.IsAvailable == true;
 
-    /// <summary>Puts an icon of the application's own there, with <paramref name="toolTip"/>; null where there is no
-    /// such place. Disposing it takes it away.</summary>
-    public static INotificationAreaIcon AddIcon(string toolTip) => Platform?.AddIcon(toolTip);
+    /// <summary>Puts an icon of the application's own there, with <paramref name="toolTip"/> and
+    /// <paramref name="menu"/>, null for none; null where there is no such place. Disposing it takes it away.</summary>
+    public static INotificationAreaIcon AddIcon(string toolTip, INotificationAreaMenu menu) =>
+        Platform?.AddIcon(toolTip, menu);
 }

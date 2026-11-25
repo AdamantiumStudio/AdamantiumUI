@@ -38,7 +38,7 @@ public class StatusNotifierIconTests
         _watcherName = $"org.adamantium.TestWatcher.N{Guid.NewGuid():N}";
         _watcher = new FakeWatcher(_watcherName);
         _panel = DBusConnection.ConnectSession();
-        _icon = new StatusNotifierIcon("Keyboard", 1, Post, _watcherName);
+        _icon = new StatusNotifierIcon("Keyboard", null, 1, Post, _watcherName);
     }
 
     [TearDown]
@@ -49,19 +49,16 @@ public class StatusNotifierIconTests
         _watcher?.Dispose();
     }
 
-    // Told by way of the loop: the menu the application gives right after asking for the icon is offered from the first.
+    // Its menu is given with it, so offered from the first.
     [Test]
-    public void TheIcon_IsToldToTheWatcher_OnABusNameOfItsOwn_WithWhatTheLoopGaveItFirst()
+    public void TheIcon_IsToldToTheWatcher_OnABusNameOfItsOwn_WithItsMenu()
     {
+        WithMenu(() => [new NotificationAreaMenuItem { Text = "Show" }]);
         _icon.Connect(DBusConnection.ConnectSession());
-        var beforeTheLoop = _watcher.Registered.Count;
-        _icon.Menu = () => [new NotificationAreaMenuItem { Text = "Show" }];
-        RunPosted();
 
         Assert.That(SpinWait.SpinUntil(() => _watcher.Registered.Count > 0, Patience), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(beforeTheLoop, Is.Zero, "told after the loop's turn");
             Assert.That(_watcher.Registered, Is.EqualTo(new[] { _icon.Name }));
             Assert.That(_icon.Name, Does.StartWith($"org.kde.StatusNotifierItem-{Environment.ProcessId}-"));
             Assert.That(((DBusObjectPath)All(ItemPath, ItemInterface)["Menu"].Value).Value, Is.EqualTo(MenuPath));
@@ -182,14 +179,14 @@ public class StatusNotifierIconTests
     {
         var picked = new List<string>();
         var docked = false;
-        _icon.Menu = () =>
+        WithMenu(() =>
         [
             new NotificationAreaMenuItem { Text = "Show", Picked = () => picked.Add("Show") },
             new NotificationAreaMenuItem { Text = "Along the bottom", IsCheckable = true, IsChecked = docked },
             new NotificationAreaMenuItem { Text = "Off", IsEnabled = false, Picked = () => picked.Add("Off") },
             NotificationAreaMenuItem.Separator,
             new NotificationAreaMenuItem { Text = "More", Items = [new NotificationAreaMenuItem { Text = "Inner" }] },
-        ];
+        ]);
         _icon.Connect(DBusConnection.ConnectSession());
         PixelPoint? asked = null;
         _icon.MenuAsked += (_, e) => asked = e.Point;
@@ -246,10 +243,10 @@ public class StatusNotifierIconTests
     {
         var picked = new List<string>();
         var withNew = false;
-        _icon.Menu = () => withNew
+        WithMenu(() => withNew
             ? [new NotificationAreaMenuItem { Text = "New", Picked = () => picked.Add("New") },
                new NotificationAreaMenuItem { Text = "my_project", Picked = () => picked.Add("my_project") }]
-            : [new NotificationAreaMenuItem { Text = "my_project", Picked = () => picked.Add("my_project") }];
+            : [new NotificationAreaMenuItem { Text = "my_project", Picked = () => picked.Add("my_project") }]);
         _icon.Connect(DBusConnection.ConnectSession());
         var said = new ManualResetEventSlim();
         using var heard = _panel.Subscribe(_icon.Name, MenuPath, MenuInterface, "LayoutUpdated", _ => said.Set());
@@ -337,6 +334,18 @@ public class StatusNotifierIconTests
     }
 
     private void Post(Action work) => _posted.Enqueue(work);
+
+    // The icon made again, with a menu whose rows are read from rows.
+    private void WithMenu(Func<IReadOnlyList<NotificationAreaMenuItem>> rows)
+    {
+        _icon.Dispose();
+        _icon = new StatusNotifierIcon("Keyboard", new Rows(rows), 1, Post, _watcherName);
+    }
+
+    private sealed class Rows(Func<IReadOnlyList<NotificationAreaMenuItem>> read) : INotificationAreaMenu
+    {
+        public IReadOnlyList<NotificationAreaMenuItem> ReadRows() => read();
+    }
 
     // What the loop would run, run here; the work a call waits on is run while it waits.
     private void RunPosted()

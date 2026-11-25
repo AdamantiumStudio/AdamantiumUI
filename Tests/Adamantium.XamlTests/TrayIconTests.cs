@@ -224,11 +224,11 @@ public class TrayIconTests
         };
         icon.Place();
 
-        var rows = _area.Shown.Single().Menu();
+        var rows = _area.Shown.Single().Menu.ReadRows();
         var before = docked.IsChecked;
         rows[0].Picked();
         rows[1].Picked();
-        var afterPick = _area.Shown.Single().Menu();
+        var afterPick = _area.Shown.Single().Menu.ReadRows();
         icon.TakeAway();
 
         Assert.Multiple(() =>
@@ -244,22 +244,33 @@ public class TrayIconTests
         });
     }
 
-    // No ContextMenu, no menu offered - a panel shows no empty one on a right click; one given later is offered.
+    // No ContextMenu, no menu offered - a panel shows no empty one on a right click. The desktop reads whether an icon
+    // has a menu as it is put there: a menu given later, or taken away, puts the icon there anew; another menu in place
+    // of one does not.
     [Test]
-    public void WithoutAContextMenu_NoMenuIsOffered_UntilOneIsGiven()
+    public void WithoutAContextMenu_NoMenuIsOffered_AndOneGivenPutsTheIconAnew()
     {
         var icon = new TrayIcon();
         icon.Place();
-        var without = _area.Shown.Single().Menu;
+        var without = _area.Shown.Single();
 
         icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Show" } } };
-        var given = _area.Shown.Single().Menu;
+        var given = _area.Shown.Single();
+        icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Exit" } } };
+        var replaced = _area.Shown.Single();
+        var replacedRows = replaced.Menu.ReadRows();
+        icon.ContextMenu = null;
+        var takenAway = _area.Shown.Single();
         icon.TakeAway();
 
         Assert.Multiple(() =>
         {
-            Assert.That(without, Is.Null);
-            Assert.That(given().Select(row => row.Text), Is.EqualTo(new[] { "Show" }));
+            Assert.That(without.Menu, Is.Null);
+            Assert.That(given, Is.Not.SameAs(without), "put there anew, with a menu");
+            Assert.That(replaced, Is.SameAs(given));
+            Assert.That(replacedRows.Select(row => row.Text), Is.EqualTo(new[] { "Exit" }), "read as it stands");
+            Assert.That(takenAway, Is.Not.SameAs(given));
+            Assert.That(takenAway.Menu, Is.Null);
         });
     }
 
@@ -293,23 +304,25 @@ public class TrayIconTests
         /// <summary>Whether the icons it takes are shown from the first - a panel runs.</summary>
         public bool Displays { get; set; } = true;
 
-        public INotificationAreaIcon AddIcon(string toolTip)
+        public bool IsAvailable => Displays;
+
+        public INotificationAreaIcon AddIcon(string toolTip, INotificationAreaMenu menu)
         {
-            var icon = new Icon(this) { ToolTip = toolTip };
+            var icon = new Icon(this, menu) { ToolTip = toolTip };
             Shown.Add(icon);
             return icon;
         }
     }
 
-    private sealed class Icon(Area area) : INotificationAreaIcon
+    private sealed class Icon(Area area, INotificationAreaMenu menu) : INotificationAreaIcon
     {
         public string ToolTip { get; set; }
+
+        public INotificationAreaMenu Menu { get; } = menu;
 
         public event EventHandler Clicked;
 
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
-
-        public Func<IReadOnlyList<NotificationAreaMenuItem>> Menu { get; set; }
 
         public bool IsDisplayed { get; private set; } = area.Displays;
 

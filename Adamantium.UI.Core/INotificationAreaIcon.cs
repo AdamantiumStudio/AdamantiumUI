@@ -14,26 +14,13 @@ public interface INotificationAreaIcon : IDisposable
     /// opens the menu itself.</summary>
     event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
 
-    /// <summary>Its menu, where the desktop shows the menu itself - a Linux panel: read on the application's loop thread
-    /// each time the menu is about to show; null for none. Where the application opens the menu, <see cref="MenuAsked"/>
-    /// is raised instead and this is never read.</summary>
-    Func<IReadOnlyList<NotificationAreaMenuItem>> Menu
-    {
-        get => null;
-        set { }
-    }
-
-    /// <summary>Whether the desktop shows the icon now - not on a Linux session whose panel has not started yet, or
-    /// that has none.</summary>
-    bool IsDisplayed => true;
+    /// <summary>Whether the desktop shows the icon now - not while the Windows task bar has not taken it, nor on a Linux
+    /// session whose panel has not started yet, or that has none.</summary>
+    bool IsDisplayed { get; }
 
     /// <summary>Raised on the application's loop thread when <see cref="IsDisplayed"/> changes - the panel started.
     /// </summary>
-    event EventHandler IsDisplayedChanged
-    {
-        add { }
-        remove { }
-    }
+    event EventHandler IsDisplayedChanged;
 }
 
 /// <summary>Where on the desktop the menu of a <see cref="INotificationAreaIcon"/> was asked for, in physical pixels.

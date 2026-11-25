@@ -11,7 +11,7 @@ namespace Adamantium.UI.Platforms.Linux;
 /// application on its loop thread each time the panel is about to show it or asks for its layout, its rows numbered in
 /// the order they stand - 0 the menu itself - and a row the panel says was clicked picked on the loop thread. A menu read
 /// changed is said with LayoutUpdated, which <paramref name="say"/> puts on the bus.</summary>
-internal sealed class StatusNotifierMenu(Action<Action> post, Action<DBusMessage> say)
+internal sealed class StatusNotifierMenu(INotificationAreaMenu menu, Action<Action> post, Action<DBusMessage> say)
 {
     internal const string MenuInterface = "com.canonical.dbusmenu";
 
@@ -27,19 +27,13 @@ internal sealed class StatusNotifierMenu(Action<Action> post, Action<DBusMessage
     private List<Row> _given = [new Row(null, [])];
     private string _shape = string.Empty;
     private uint _revision = 1;
-    private volatile Func<IReadOnlyList<NotificationAreaMenuItem>> _read;
+    // Dropped with the icon taken away.
+    private volatile INotificationAreaMenu _menu = menu;
 
-    /// <summary>What reads the menu, on the loop thread; null for none.</summary>
-    public Func<IReadOnlyList<NotificationAreaMenuItem>> Read
-    {
-        get => _read;
-        set => _read = value;
-    }
-
-    /// <summary>Drops the rows read: what they would run belongs to an icon taken away.</summary>
+    /// <summary>Drops the menu and the rows read: what they would run belongs to an icon taken away.</summary>
     public void Forget()
     {
-        _read = null;
+        _menu = null;
         lock (_lock)
         {
             _rows = [new Row(null, [])];
@@ -187,8 +181,8 @@ internal sealed class StatusNotifierMenu(Action<Action> post, Action<DBusMessage
     private Task<bool> ReadMenuAsync()
     {
         var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var read = _read;
-        if (read == null)
+        var menu = _menu;
+        if (menu == null)
         {
             done.SetResult(Take(null));
             return done.Task;
@@ -198,7 +192,7 @@ internal sealed class StatusNotifierMenu(Action<Action> post, Action<DBusMessage
         {
             try
             {
-                done.SetResult(Take(read()));
+                done.SetResult(Take(menu.ReadRows()));
             }
             catch (Exception e)
             {

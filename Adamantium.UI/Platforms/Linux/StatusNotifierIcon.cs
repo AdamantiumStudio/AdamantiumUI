@@ -39,6 +39,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
     private readonly string _watcher;
     private readonly Action<Action> _post;
     private readonly StatusNotifierMenu _menu;
+    private readonly bool _hasMenu;
     private readonly List<IDisposable> _served = [];
     private DBusConnection _bus;
     private string _toolTip;
@@ -46,12 +47,14 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
     private bool _displayed;
     private bool _disposed;
 
-    internal StatusNotifierIcon(string toolTip, int id, Action<Action> post, string watcher = WatcherName)
+    internal StatusNotifierIcon(string toolTip, INotificationAreaMenu menu, int id, Action<Action> post,
+        string watcher = WatcherName)
     {
         _toolTip = toolTip;
         _post = post;
         _watcher = watcher;
-        _menu = new StatusNotifierMenu(post, Say);
+        _hasMenu = menu != null;
+        _menu = new StatusNotifierMenu(menu, post, Say);
         Name = $"org.kde.StatusNotifierItem-{Environment.ProcessId}-{id}";
     }
 
@@ -80,12 +83,6 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
         }
     }
 
-    public Func<IReadOnlyList<NotificationAreaMenuItem>> Menu
-    {
-        get => _menu.Read;
-        set => _menu.Read = value;
-    }
-
     /// <summary>The watcher took the icon and a panel showing the icons is registered with it.</summary>
     public bool IsDisplayed
     {
@@ -106,9 +103,9 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
 
     /// <summary>An icon put on the session bus in the background: it is given at once, and shows when the bus answers.
     /// </summary>
-    public static StatusNotifierIcon Start(string toolTip, int id)
+    public static StatusNotifierIcon Start(string toolTip, INotificationAreaMenu menu, int id)
     {
-        var icon = new StatusNotifierIcon(toolTip, id, LoopSignal.PostAwaited);
+        var icon = new StatusNotifierIcon(toolTip, menu, id, LoopSignal.PostAwaited);
         Task.Run(() =>
         {
             DBusConnection bus = null;
@@ -189,9 +186,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             _served.AddRange(served);
         }
 
-        // Told by way of the loop, after the one the icon was asked on: what the application gives the icon then - its
-        // menu - is in place before the panel reads it. SNI has no signal for a menu coming later.
-        _post(() => Task.Run(() => Register(bus)));
+        Register(bus);
     }
 
     // The connection did not take the icon: nothing is said on it any more.
@@ -382,7 +377,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
                 // A panel that leaves the menu to the application: where it was asked for, as the panel says.
                 var reader = call.Reader();
                 var point = new PixelPoint(reader.ReadInt32(), reader.ReadInt32());
-                if (Menu == null)
+                if (!_hasMenu)
                 {
                     _post(() => MenuAsked?.Invoke(this, new NotificationAreaMenuEventArgs(point)));
                 }
@@ -422,7 +417,7 @@ internal sealed class StatusNotifierIcon : INotificationAreaIcon
             ["ToolTip"] = new DBusVariant("(sa(iiay)ss)",
                 new object[] { string.Empty, new List<object>(), toolTip, string.Empty }),
             ["ItemIsMenu"] = DBusVariant.Boolean(false),
-            ["Menu"] = DBusVariant.ObjectPath(Menu != null ? MenuPath : NoMenuPath),
+            ["Menu"] = DBusVariant.ObjectPath(_hasMenu ? MenuPath : NoMenuPath),
         };
     }
 

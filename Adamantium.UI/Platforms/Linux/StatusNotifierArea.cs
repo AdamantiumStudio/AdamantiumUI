@@ -14,8 +14,8 @@ internal sealed class StatusNotifierArea : INotificationAreaPlatform
 {
     private int _lastId;
 
-    public INotificationAreaIcon AddIcon(string toolTip) =>
-        StatusNotifierIcon.Start(toolTip, Interlocked.Increment(ref _lastId));
+    public INotificationAreaIcon AddIcon(string toolTip, INotificationAreaMenu menu) =>
+        StatusNotifierIcon.Start(toolTip, menu, Interlocked.Increment(ref _lastId));
 
     /// <summary>A watcher runs on the session bus and a panel showing the icons is registered with it.</summary>
     public bool IsAvailable
