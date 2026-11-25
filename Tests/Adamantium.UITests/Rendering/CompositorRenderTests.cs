@@ -142,6 +142,78 @@ public class CompositorRenderTests
             "the property must NOT have advanced: only the render thread moved the square");
     }
 
+    // A rounded clip slides with the element whose clip it is: what it holds is cut by the same arc all the way.
+    [Test]
+    public void ARoundedClipSlides_WithTheElementTheRenderThreadMoves()
+    {
+        using var renderer = new OffscreenTestRenderer(_device, new RenderUnitFactory(_device, new StubResourceFactory()), 64, 64)
+        {
+            ClearColor = Colors.Black
+        };
+        var transform = new Transform();
+        var card = new Adamantium.UI.Controls.Decorators.Border
+        {
+            Width = 24,
+            Height = 24,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            CornerRadius = new Adamantium.ProceduralGeometry.CornerRadius(12),
+            ClipToBounds = true,
+            RenderTransform = transform,
+            Child = new Adamantium.UI.Controls.Decorators.Border { Background = Brushes.Red }
+        };
+        var root = new VisualRoot(card, 64, 64);
+        ((IMeasurableComponent)root).Measure(new Size<double>(64, 64));
+        ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 64, 64));
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateX", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateX", 32.0) } }
+            }
+        }.Apply(transform);
+        Compositor.StartPending();
+        Assert.That(Compositor.EntryFor(transform), Is.Not.Null, "the slide must be composited");
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var before = LitPixels(renderer, out var startsAt);
+        RenderDirty.Clear();
+        for (var frame = 0; frame < 2; frame++)
+        {
+            Thread.Sleep(150);
+            Assert.That(renderer.RenderFrame(root), Is.True);
+        }
+
+        var after = LitPixels(renderer, out var movedTo);
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.InRange(400, 500), "a disc 24 across");
+            Assert.That(after, Is.EqualTo(before).Within(40), "the same disc further right");
+            Assert.That(movedTo, Is.GreaterThan(startsAt + 4), "it moved");
+        });
+    }
+
+    private static int LitPixels(OffscreenTestRenderer renderer, out int left)
+    {
+        left = int.MaxValue;
+        using var image = renderer.RenderTarget.ResolveTexture.ToImage();
+        var pixels = new byte[(int)image.TotalSizeInBytes];
+        System.Runtime.InteropServices.Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
+        var lit = 0;
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            if (pixels[i] + pixels[i + 1] + pixels[i + 2] <= 120) continue;
+
+            lit++;
+            left = Math.Min(left, i / 4 % 64);
+        }
+
+        return lit;
+    }
+
     // A sliding tab carries its close glyph: a stroke, drawn per unit by a CHILD of the element the compositor moves. The
     // render thread must take it along with the fill, not leave it where the loop last recorded it.
     [Test]

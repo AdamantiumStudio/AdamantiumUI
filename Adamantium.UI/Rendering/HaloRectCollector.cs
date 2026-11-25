@@ -107,7 +107,8 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     /// the shape and the caller falls back to drawing nothing rather than something wrong.</summary>
     public bool TryAdd(HaloBand[] bands, bool inner, Rect destinationRect, ProceduralGeometry.CornerRadius corners, HaloShape shape,
         Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot = 0,
-        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0)
+        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0,
+        HaloPick pick = HaloPick.All)
     {
         if (bands == null || bands.Length == 0) return false;
 
@@ -122,7 +123,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
 
         LastFirst = Count;
         var added = BakeInto(Items.AsSpan(Count, bands.Length), bands, inner, destinationRect, corners, shape, world,
-            opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth);
+            opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth, pick);
         if (added == 0) return false;
 
         Count += added;
@@ -148,7 +149,8 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     /// </summary>
     public static int BakeInto(Span<HaloRectItem> dst, HaloBand[] bands, bool inner, Rect destinationRect,
         ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world, double opacity,
-        int transformSlot, double fieldRange, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0)
+        int transformSlot, double fieldRange, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0,
+        HaloPick pick = HaloPick.All)
     {
         // The bake goes into the instance and the slot applies on top, like every fill family; in slot units, as the
         // band fields are.
@@ -161,7 +163,9 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
             if (band.IsEmpty || band.Inner != inner) continue;
 
             var color = band.Color;
-            color.W *= (float)opacity;
+            // A band this draw does not lay down is written transparent: the records stay as many, where they were.
+            var picked = pick == HaloPick.All || (pick == HaloPick.Shadows) == band.IsShadow;
+            color.W *= picked ? (float)opacity : 0f;
             // Transparent bands are still written, matching CountBands; skipping one would leave a stale record lit.
             if (written >= dst.Length) break;
 
