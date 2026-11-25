@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Adamantium.UI.Generators.WebHost;
+using Adamantium.UI.LanguageServer;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
@@ -167,7 +168,7 @@ namespace Probe
         var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Where(path => path.Length > 0)
-            .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))
+            .Select(path => MetadataReferenceCache.Shared.Get(path))
             .ToArray();
         var compilation = CSharpCompilation.Create("WebHostProbe",
             [CSharpSyntaxTree.ParseText(Attribute), CSharpSyntaxTree.ParseText(source)],

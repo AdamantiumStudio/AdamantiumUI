@@ -64,8 +64,8 @@ public sealed class AumlTypeModel
         foreach (var path in assemblyPaths)
         {
             if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-            try { references.Add(MetadataReference.CreateFromFile(path)); }
-            catch { /* native or otherwise non-managed dll — skip */ }
+            if (MetadataReferenceCache.Shared.Get(path) is { } reference)
+                references.Add(reference);   // none for a native or otherwise non-managed dll
         }
 
         // The project's own C# source is compiled in as syntax trees so its types/properties resolve live

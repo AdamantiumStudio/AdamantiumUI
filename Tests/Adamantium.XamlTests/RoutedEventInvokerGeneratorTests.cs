@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.EventGenerators;
+using Adamantium.UI.LanguageServer;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
@@ -96,7 +97,7 @@ namespace Probe
             .Where(p => p.Length > 0)
             .Append(typeof(RoutedEventArgs).Assembly.Location)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
+            .Select(p => MetadataReferenceCache.Shared.Get(p))
             .ToArray();
 
     private static (string Generated, Diagnostic[] Diagnostics) Run(string source, params MetadataReference[] more)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Adamantium.Localization.Generators;
 using Adamantium.UI.Generators;
+using Adamantium.UI.LanguageServer;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -183,12 +184,12 @@ internal static class AumlCodegenHarness
 
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-            .Select(a => (MetadataReference)MetadataReference.CreateFromFile(a.Location))
+            .Select(a => MetadataReferenceCache.Shared.Get(a.Location))
             .ToList();
 
         if (AppDomain.CurrentDomain.GetAssemblies().All(a => a.GetName().Name != "System.Runtime"))
         {
-            references.Add(MetadataReference.CreateFromFile(
+            references.Add(MetadataReferenceCache.Shared.Get(
                 System.IO.Path.Combine(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(), "System.Runtime.dll")));
         }
 
