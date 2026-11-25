@@ -121,17 +121,22 @@ public class MacOSSystemTests
     }
 
     [Test]
-    public void AFileDialog_OffersTheFilesOfAllItsKinds_AndEveryFileForOneOfAny()
+    public void AFileDialog_OffersTheKindsThatSayTheirFiles_AndEveryFileForOneOfAny()
     {
         var pictures = new FileType("Pictures", "png", "jpg");
-        var png = new FileType("PNG", "png");
 
         Assert.Multiple(() =>
         {
-            Assert.That(MacOSFileDialog.Extensions([pictures, png]), Is.EqualTo(new[] { "png", "jpg" }));
-            Assert.That(MacOSFileDialog.Extensions([pictures, new FileType("All files", "*")]), Is.Empty);
-            Assert.That(MacOSFileDialog.Extensions([pictures, new FileType("Anything")]), Is.Empty);
-            Assert.That(MacOSFileDialog.Extensions(null), Is.Empty);
+            Assert.That(MacOSFileTypeList.Offered([pictures, null, new FileType("Anything")]), Is.EqualTo(new[] { pictures }));
+            Assert.That(MacOSFileTypeList.Offered(null), Is.Empty);
+            Assert.That(MacOSFileTypeList.ExtensionsOf(pictures), Is.EqualTo(new[] { "png", "jpg" }));
+            Assert.That(MacOSFileTypeList.ExtensionsOf(new FileType("All files", "*")), Is.Empty);
+            Assert.That(MacOSFileTypeList.Renamed("a.b.PNG", pictures, new FileType("Text", "txt")), Is.EqualTo("a.b.txt"));
+            Assert.That(MacOSFileTypeList.Renamed("a.zip", pictures, new FileType("Text", "txt")), Is.EqualTo("a.zip"));
+            Assert.That(MacOSFileTypeList.Renamed("a", pictures, new FileType("Text", "txt")), Is.EqualTo("a"));
+            Assert.That(MacOSFileTypeList.Renamed("a.png", pictures, new FileType("All files", "*")), Is.EqualTo("a.png"));
+            Assert.That(MacOSFileTypeList.NameOf(pictures), Is.EqualTo("Pictures"));
+            Assert.That(MacOSFileTypeList.NameOf(new FileType(null, "png", "jpg")), Is.EqualTo("*.png, *.jpg"));
         });
     }
 

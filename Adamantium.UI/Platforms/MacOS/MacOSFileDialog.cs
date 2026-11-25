@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Adamantium.MacOS.AppKit;
 using Adamantium.UI.Core;
 
@@ -18,12 +17,11 @@ internal sealed class MacOSFileDialog(MacOSPlatform platform) : IFileDialogPlatf
         var path = Ask(() =>
         {
             var panel = NSSavePanel.CreateSave();
-            Prepare(panel, request?.Title, request?.Key, request?.FileTypes);
             if (request?.FileName is { Length: > 0 } name)
                 NSSavePanel.SetName(panel, name);
             if (Directory.Exists(request?.Folder))
                 NSSavePanel.SetFolder(panel, Path.GetFullPath(request.Folder));
-            return NSSavePanel.Run(panel);
+            return Run(panel, request?.Title, request?.Key, request?.FileTypes);
         });
         return path != null && request?.DefaultExtension is { Length: > 0 } extension && Path.GetExtension(path).Length == 0
             ? path + "." + extension
@@ -31,37 +29,19 @@ internal sealed class MacOSFileDialog(MacOSPlatform platform) : IFileDialogPlatf
     }
 
     public string Open(OpenFileRequest request) => Ask(() =>
-    {
-        var panel = NSSavePanel.CreateOpen(folders: false);
-        Prepare(panel, request?.Title, request?.Key, request?.FileTypes);
-        return NSSavePanel.Run(panel);
-    });
+        Run(NSSavePanel.CreateOpen(folders: false), request?.Title, request?.Key, request?.FileTypes));
 
     public string OpenFolder(OpenFolderRequest request) => Ask(() =>
-    {
-        var panel = NSSavePanel.CreateOpen(folders: true);
-        Prepare(panel, request?.Title, request?.Key, null);
-        return NSSavePanel.Run(panel);
-    });
+        Run(NSSavePanel.CreateOpen(folders: true), request?.Title, request?.Key, null));
 
-    private static void Prepare(IntPtr panel, string title, string key, IReadOnlyList<FileType> fileTypes)
+    private static string Run(IntPtr panel, string title, string key, IReadOnlyList<FileType> fileTypes)
     {
         if (!string.IsNullOrEmpty(title))
             NSSavePanel.SetMessage(panel, title);
         if (!string.IsNullOrEmpty(key))
             NSSavePanel.SetIdentifier(panel, IdentifierPrefix + key);
-        // All the kinds at once: the system's dialog has no list to choose one from.
-        if (Extensions(fileTypes) is { Length: > 0 } extensions)
-            NSSavePanel.SetExtensions(panel, extensions);
-    }
-
-    /// <summary>The extensions of all the kinds; none when one of them is of any file.</summary>
-    internal static string[] Extensions(IReadOnlyList<FileType> fileTypes)
-    {
-        var extensions = (fileTypes ?? []).SelectMany(type => type.Extensions).ToArray();
-        return fileTypes?.Any(type => type.Extensions.Count == 0) == true || extensions.Any(extension => extension is "*" or "*.*")
-            ? []
-            : extensions.Distinct().ToArray();
+        using var types = new MacOSFileTypeList(panel, fileTypes);
+        return NSSavePanel.Run(panel);
     }
 
     private string Ask(Func<string> ask)

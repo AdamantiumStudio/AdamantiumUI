@@ -3,7 +3,7 @@
 - macOS: the clipboard - text, HTML, RTF, pictures in their own encoding, files and formats of one's own.
 - macOS: the menu bar's menus - the application's (About, Services, Hide, Quit) and Window - in the application's
   language.
-- macOS: the open, save and folder dialogs (`FileDialog`).
+- macOS: the open, save and folder dialogs (`FileDialog`), with a list of the kinds of file.
 - macOS: spelling and word completion (`ISpellChecker`, `IWordPredictor`) by the system's dictionaries.
 - macOS: icons in the menu bar (`NotificationArea`), starting at sign-in (`ISystemStartup`), gamepads with
   vibration, of the triggers too where the gamepad gives it.
