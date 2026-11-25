@@ -2,6 +2,9 @@
 <Scenario xmlns="http://adamantium/automation/scenario" Description="The Web page: an address is gone to on Enter; leaving the page parks it with its browser hidden and coming back shows it again - with no error left behind, CEF staged beside the sandbox or not.">
   <Select Target="id=GalleryTabs/id=Web" />
   <Wait Target="id=WebPage" />
+  <!-- No site asks for anything: no row to answer it. -->
+  <Absent Target="id=WebAskedText" />
+  <Absent Target="id=WebAskedAllow" />
   <Set Target="id=WebAddress" Value="about:blank" />
   <Key Keys="Enter" Into="id=WebAddress" />
   <WaitIdle />
