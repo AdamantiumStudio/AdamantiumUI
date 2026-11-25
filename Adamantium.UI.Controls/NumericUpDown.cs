@@ -787,8 +787,20 @@ public class NumericUpDown : RangeLimitsBase
     private double Snap(double value)
     {
         if (!SnapsToSmallChange || SmallChange <= 0) return value;
-        return Math.Round(value / SmallChange, MidpointRounding.AwayFromZero) * SmallChange;
+
+        var snapped = Math.Round(value / SmallChange, MidpointRounding.AwayFromZero) * SmallChange;
+        // To the decimals the step is written with: twelve steps of 0.1 are 1.2, not the product's 1.2000000000000002.
+        // A step with no short decimal - a third - is left to the product.
+        for (var decimals = 0; decimals <= MaximumStepDecimals; decimals++)
+        {
+            if (Math.Round(SmallChange, decimals) == SmallChange)
+                return Math.Round(snapped, decimals);
+        }
+
+        return snapped;
     }
+
+    private const int MaximumStepDecimals = 10;
 
     private void UpdateButtons()
     {
@@ -944,9 +956,27 @@ public class NumericUpDown : RangeLimitsBase
             return;
         }
 
+        // A step button's press is its own: a hand drifting while it is held drags nothing.
+        if (IsInStepButton(e.OriginalSource as IUIComponent))
+        {
+            _scrubArmed = _scrubbing;
+            return;
+        }
+
         _scrubOriginX = RootX(e);
         _scrubFrom = Value ?? StartingPoint();
         _scrubArmed = true;
+    }
+
+    private bool IsInStepButton(IUIComponent pressed)
+    {
+        for (var node = pressed; node != null && !ReferenceEquals(node, this); node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, _increase) || ReferenceEquals(node, _decrease))
+                return true;
+        }
+
+        return false;
     }
 
     private void OnScrubMoved(object sender, PointerEventArgs e)
