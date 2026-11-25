@@ -47,8 +47,7 @@
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
                                         Content="{TemplateBinding DisplayContent}"
-                                        ContentTemplate="{TemplateBinding DisplayContentTemplate}"
-                                        ContentTemplateSelector="{TemplateBinding DisplayContentTemplateSelector}"/>
+                                        ContentTemplate="{TemplateBinding DisplayContentTemplate}"/>
                                 <!-- An editable one's value is typed here; a bare editor, as the spin box's. -->
                                 <TextBox x:Name="PART_EditableTextBox"
                                         Visibility="Collapsed"

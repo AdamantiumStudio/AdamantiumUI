@@ -35,8 +35,10 @@ public class DropDown : Selector
         typeof(object), typeof(DropDown), new PropertyMetadata(null, OnPlaceholderChanged));
 
     // What the header shows: the selected item, or the placeholder when nothing is selected. Read-only for the template.
-    public static readonly AdamantiumProperty DisplayContentProperty = AdamantiumProperty.Register(nameof(DisplayContent),
-        typeof(object), typeof(DropDown), new PropertyMetadata(null));
+    private static readonly AdamantiumPropertyKey DisplayContentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(DisplayContent), typeof(object), typeof(DropDown), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty DisplayContentProperty = DisplayContentPropertyKey.Property;
 
     // Bind ItemsSource to an enum's values with no ceremony: EnumType="{x:Type local:MyEnum}" (or {x:Enum ...}). Selecting
     // a row sets SelectedItem to the enum value; display is the value's ToString (use ItemTemplate for friendly names).
@@ -293,28 +295,21 @@ public class DropDown : Selector
     public object DisplayContent
     {
         get => GetValue(DisplayContentProperty);
-        private set => SetValue(DisplayContentProperty, value);
+        private set => SetValue(DisplayContentPropertyKey, value);
     }
 
-    public static readonly AdamantiumProperty DisplayContentTemplateProperty = AdamantiumProperty.Register(
+    private static readonly AdamantiumPropertyKey DisplayContentTemplatePropertyKey = AdamantiumProperty.RegisterReadOnly(
         nameof(DisplayContentTemplate), typeof(DataTemplate), typeof(DropDown), new PropertyMetadata(null));
 
-    /// <summary>How the header presents <see cref="DisplayContent"/>: the item template for an item, none for the
-    /// placeholder. Read-only.</summary>
+    public static readonly AdamantiumProperty DisplayContentTemplateProperty = DisplayContentTemplatePropertyKey.Property;
+
+    /// <summary>How the header presents <see cref="DisplayContent"/>: for an item, <see cref="ItemsControl.ItemTemplate"/>
+    /// or the one <see cref="ItemsControl.ItemTemplateSelector"/> picks for it; none for the placeholder. Computed, as
+    /// WPF's SelectionBoxItemTemplate.</summary>
     public DataTemplate DisplayContentTemplate
     {
         get => GetValue<DataTemplate>(DisplayContentTemplateProperty);
-        private set => SetValue(DisplayContentTemplateProperty, value);
-    }
-
-    public static readonly AdamantiumProperty DisplayContentTemplateSelectorProperty = AdamantiumProperty.Register(
-        nameof(DisplayContentTemplateSelector), typeof(DataTemplateSelector), typeof(DropDown), new PropertyMetadata(null));
-
-    /// <summary>The item template selector for an item, none for the placeholder. Read-only.</summary>
-    public DataTemplateSelector DisplayContentTemplateSelector
-    {
-        get => GetValue<DataTemplateSelector>(DisplayContentTemplateSelectorProperty);
-        private set => SetValue(DisplayContentTemplateSelectorProperty, value);
+        private set => SetValue(DisplayContentTemplatePropertyKey, value);
     }
 
     /// <summary>Set to an enum type to auto-fill the list with its values (SelectedItem becomes the chosen enum value).</summary>
@@ -759,9 +754,9 @@ public class DropDown : Selector
 
         // The item template is for an item: the placeholder, or nothing, is not one.
         var item = SelectedItem != null || _answer != null;
-        DisplayContentTemplate = item ? ItemTemplate : null;
-        DisplayContentTemplateSelector = item ? ItemTemplateSelector : null;
-        DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
+        var content = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
+        DisplayContentTemplate = item ? ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(content, this) : null;
+        DisplayContent = content;
         ShowText();
     }
 

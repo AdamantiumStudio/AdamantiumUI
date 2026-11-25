@@ -39,6 +39,11 @@ public partial class WebPageViewModel : TabPageViewModel
     /// <summary>A site asking to use something, shown over the page until answered; none while nobody asks.</summary>
     [Bindable] private WebPermissionRequestedEventArgs _askedPermission;
 
+    /// <summary>Whether a site is asking: the question shows only then.</summary>
+    public bool IsAsked => AskedPermission != null;
+
+    partial void OnAskedPermissionChanged(WebPermissionRequestedEventArgs value) => RaisePropertyChanged(nameof(IsAsked));
+
     // The latest asks; one asked before and still there is put away unanswered - asked again next time - as a browser
     // shows one question at a time.
     private void OnPermissionRequested(object sender, WebPermissionRequestedEventArgs e)
@@ -67,6 +72,11 @@ public partial class WebPageViewModel : TabPageViewModel
 
     /// <summary>The page the page opened last - or that one in turn - shown beside it; none until one is.</summary>
     [Bindable] private OpenedWebPageViewModel _openedPage;
+
+    /// <summary>Whether the page opened one: the page beside shows only then.</summary>
+    public bool HasOpenedPage => OpenedPage != null;
+
+    partial void OnOpenedPageChanged(OpenedWebPageViewModel value) => RaisePropertyChanged(nameof(HasOpenedPage));
 
     /// <summary>The address as typed.</summary>
     [Bindable] private string _address = "https://example.org";

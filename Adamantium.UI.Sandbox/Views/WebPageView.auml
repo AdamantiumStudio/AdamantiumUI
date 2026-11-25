@@ -34,7 +34,8 @@
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
             <!-- A site asking to use something - the camera, where the device is: answered here, kept for the site. -->
-            <ContentControl Grid.ColumnSpan="2" Content="{Binding AskedPermission}" AutomationProperties.AutomationId="WebAsked">
+            <ContentControl Grid.ColumnSpan="2" Content="{Binding AskedPermission}" AutomationProperties.AutomationId="WebAsked"
+                            Visibility="{Binding IsAsked, Converter={BooleanToVisibilityConverter}}">
                 <ContentControl.ContentTemplate>
                     <DataTemplate>
                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="8,0,8,8">
@@ -64,7 +65,8 @@
                          AutomationProperties.AutomationId="WebPage"/>
             <!-- What the page opened last - a link to a new tab, window.open, its page source - beside it, as a browser
                  shows it in a tab of its own, the page that opened it still there. -->
-            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened">
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened"
+                            Visibility="{Binding HasOpenedPage, Converter={BooleanToVisibilityConverter}}">
                 <ContentControl.ContentTemplate>
                     <DataTemplate>
                         <Grid RowDefinitions="Auto,*" Width="520" Margin="8,0,8,8">
