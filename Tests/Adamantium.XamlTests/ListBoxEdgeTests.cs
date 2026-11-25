@@ -25,6 +25,9 @@ public class ListBoxEdgeTests
 
     private void Use(string name)
     {
+        // The resources first: a theme takes the app's resource manager as it is made.
+        _app.ResourceManager = new ResourceManager();
+        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         Theme theme = name switch
         {
             "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
@@ -32,8 +35,6 @@ public class ListBoxEdgeTests
             _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
         };
 
-        _app.ResourceManager = new ResourceManager();
-        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = themes;
         ((FakeContext)_app.UIContext).ThemeEngine = themes;
@@ -61,6 +62,7 @@ public class ListBoxEdgeTests
     [Test]
     [TestCase("Fluent", 1, 4)]
     [TestCase("MacOs", 1, 6)]
+    [TestCase("Graphite", 1, 0)]
     public void AListIsOutlinedByDefault(string theme, double thickness, double corner)
     {
         Use(theme);

@@ -11,10 +11,8 @@
 
     <Style Selector="ListBox">
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
-        <!-- The theme's StrokeControl and CornerRadiusDefault, written out: a setter does not find this theme's metrics
-             the way the template did. -->
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeControl}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
