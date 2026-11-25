@@ -64,6 +64,9 @@ public class MacOSPlatform : IApplicationPlatform
             host._guests.Add(this);
     }
 
+    /// <summary>The keys of the keyboard layout in use.</summary>
+    internal MacOSKeyboard Keyboard { get; } = new();
+
     /// <summary>The dispatcher of a splash window's side; null for the application's own.</summary>
     internal Threading.Dispatcher Dispatcher { get; set; }
 
