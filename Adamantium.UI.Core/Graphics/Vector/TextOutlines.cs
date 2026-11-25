@@ -22,32 +22,7 @@ internal static class TextOutlines
             return runs;
         }
 
-        var area = parameters?.TextArea ?? default;
-        var glyphs = new List<PositionedGlyph>();
-        IFont font = null;
-        var size = 0.0;
-        foreach (var word in layout.GetTextData())
-        {
-            var glyph = word.Glyph;
-            if (glyph == null || word.Font == null || !glyph.HasOutlines || word.Rect.Width <= 0 || !(word.FontSize > 0))
-            {
-                continue;
-            }
-
-            if (!ReferenceEquals(word.Font, font) || word.FontSize != size)
-            {
-                Close(font, size, glyphs, runs);
-                font = word.Font;
-                size = word.FontSize;
-            }
-
-            var box = glyph.BoundingRectangle;
-            var scale = word.FontSize / word.Font.UnitsPerEm;
-            glyphs.Add(new PositionedGlyph(glyph.Index, word.Rect.X + area.X - box.X * scale,
-                word.Rect.Y + area.Y + (box.Y + box.Height) * scale));
-        }
-
-        Close(font, size, glyphs, runs);
+        runs = RunsOf(TextGlyph.Of(parameters, layout, said: false));
         foreach (var run in runs)
         {
             if (run.Outline?.CurvesForDrawing is { Figures.Count: > 0 } curves)
@@ -56,6 +31,34 @@ internal static class TextOutlines
             }
         }
 
+        return runs;
+    }
+
+    /// <summary>The runs of <paramref name="glyphs"/> that have outlines.</summary>
+    public static List<GlyphRun> RunsOf(IReadOnlyList<TextGlyph> glyphs)
+    {
+        var runs = new List<GlyphRun>();
+        var placed = new List<PositionedGlyph>();
+        IFont font = null;
+        var size = 0.0;
+        foreach (var glyph in glyphs)
+        {
+            if (!glyph.Font.GetGlyphByIndex(glyph.Index).HasOutlines)
+            {
+                continue;
+            }
+
+            if (!ReferenceEquals(glyph.Font, font) || glyph.Size != size)
+            {
+                Close(font, size, placed, runs);
+                font = glyph.Font;
+                size = glyph.Size;
+            }
+
+            placed.Add(new PositionedGlyph(glyph.Index, glyph.X, glyph.Y));
+        }
+
+        Close(font, size, placed, runs);
         return runs;
     }
 

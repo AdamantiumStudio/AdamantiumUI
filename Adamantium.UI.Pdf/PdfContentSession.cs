@@ -20,7 +20,7 @@ namespace Adamantium.UI.Pdf;
 /// <summary>Writes what is drawn into a PDF content stream - a page to print, or an annotation's appearance. Geometry
 /// is written from the curves the GPU fills and strokes it by, in its own units under the matrix it is drawn with, so
 /// widths, dashes and ends are the drawing's own; ink and arrows are filled as their passes shape them, each in one
-/// piece; text by its glyphs' outlines. Brushes: solid, linear and radial gradients (their alpha a soft mask). Pictures
+/// piece; text of one color in a page of a document in the fonts it carries, other text by its glyphs' outlines. Brushes: solid, linear and radial gradients (their alpha a soft mask). Pictures
 /// go in as images, a drawing's picture as the drawing itself; colored meshes as shaded triangles. A group is cut by
 /// its clip and its glyphs; one faded, blended or masked is a transparency group, faded as one.
 /// <para>Pens are stroked as the stroke shader lays them - trim, dashes fitted or not, every kind of end - and tile
@@ -54,8 +54,12 @@ public sealed partial class PdfContentSession : IDrawingSession
 
     /// <param name="pictures">The pictures already turned into images - one for the pages of a document, so a picture
     /// on every page is written once.</param>
-    internal PdfContentSession(PdfContentBuilder content, PdfMatrix toPage, PdfPictures pictures)
+    /// <param name="document">The document the content is for, to carry its fonts; null to write text by its outlines.
+    /// </param>
+    internal PdfContentSession(PdfContentBuilder content, PdfMatrix toPage, PdfPictures pictures,
+        PdfDocumentWriter document = null)
     {
+        _document = document;
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(pictures);
         _base = toPage;
@@ -201,7 +205,16 @@ public sealed partial class PdfContentSession : IDrawingSession
     public IDrawingSession DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform)
     {
         ArgumentNullException.ThrowIfNull(run);
-        Figures(fill, stroke, run.Outline, transform);
+        if (_document != null && stroke == null && fill is SolidColorBrush solid && Paints(solid) &&
+            PdfEmbeddedFont.CanEmbed(run.Font))
+        {
+            Set(GlyphsOf(run), solid, transform);
+        }
+        else
+        {
+            Figures(fill, stroke, run.Outline, transform);
+        }
+
         return this;
     }
 
@@ -442,27 +455,6 @@ public sealed partial class PdfContentSession : IDrawingSession
         GrowBox(new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Abs(to.X - from.X),
             Math.Abs(to.Y - from.Y)), place, reach);
         content.RestoreState();
-    }
-
-    private void Text(TextRenderingParameters parameters, TextLayout layout, Brush foreground, Matrix4x4F transform)
-    {
-        if (layout == null || !Paints(foreground))
-        {
-            return;
-        }
-
-        var runs = TextOutlines.RunsOf(parameters, layout, out var whole);
-
-        // One gradient or tile across the whole text, however many fonts and sizes it is set in.
-        if (foreground is not (GradientBrush or TileBrush))
-        {
-            whole = null;
-        }
-
-        foreach (var run in runs)
-        {
-            Figures(foreground, null, run.Outline, transform, whole);
-        }
     }
 
     private bool Write(PathCurves curves, bool filledOnly, PdfMatrix map) =>
