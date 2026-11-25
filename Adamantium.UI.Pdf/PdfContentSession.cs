@@ -112,31 +112,11 @@ public sealed partial class PdfContentSession : IDrawingSession
         Thickness borderThickness)
     {
         Figures(background, null, new RectangleGeometry(destinationRect, corners), Matrix4x4F.Identity);
-        var left = Math.Max(0, borderThickness.Left);
-        var top = Math.Max(0, borderThickness.Top);
-        var right = Math.Max(0, borderThickness.Right);
-        var bottom = Math.Max(0, borderThickness.Bottom);
-        if (left + top + right + bottom <= 0)
+        if (BorderRing.Of(destinationRect, corners, borderThickness) is { } ring)
         {
-            return this;
+            Figures(borderBrush, null, ring, Matrix4x4F.Identity);
         }
 
-        var ring = new GeometryGroup { FillRule = FillRule.EvenOdd };
-        ring.Children.Add(new RectangleGeometry(destinationRect, corners));
-        var width = destinationRect.Width - left - right;
-        var height = destinationRect.Height - top - bottom;
-        if (width > 0 && height > 0)
-        {
-            ring.Children.Add(new RectangleGeometry(new Rect(destinationRect.X + left, destinationRect.Y + top, width,
-                height), new CornerRadius(
-                Math.Max(0, corners.TopLeft - Math.Max(left, top)),
-                Math.Max(0, corners.TopRight - Math.Max(right, top)),
-                Math.Max(0, corners.BottomRight - Math.Max(right, bottom)),
-                Math.Max(0, corners.BottomLeft - Math.Max(left, bottom)))));
-        }
-
-        ring.RecalculateBounds();
-        Figures(borderBrush, null, ring, Matrix4x4F.Identity);
         return this;
     }
 

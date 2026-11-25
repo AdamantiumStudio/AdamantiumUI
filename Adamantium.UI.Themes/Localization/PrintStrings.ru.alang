@@ -1,0 +1,48 @@
+<Language>
+    <Phrase Key="Print" Text="Печать"/>
+    <Phrase Key="Save" Text="Сохранить"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="Printer" Text="Принтер"/>
+    <Phrase Key="SaveAsPdf" Text="Сохранить в PDF"/>
+    <Phrase Key="LookingForPrinters" Text="Спрашиваю принтер…"/>
+    <Phrase Key="Pages" Text="Страницы"/>
+    <Phrase Key="All" Text="Все"/>
+    <Phrase Key="CurrentPage" Text="Текущая"/>
+    <Phrase Key="Chosen" Text="Выбранные"/>
+    <Phrase Key="ChosenPages" Text="Какие страницы"/>
+    <Phrase Key="ChosenPagesHint" Text="1–3, 5"/>
+    <Phrase Key="NoSuchPages" Text="Напишите номера страниц, например 1–3, 5"/>
+    <Phrase Key="Orientation" Text="Ориентация"/>
+    <Phrase Key="Portrait" Text="Книжная"/>
+    <Phrase Key="Landscape" Text="Альбомная"/>
+    <Phrase Key="Paper" Text="Бумага"/>
+    <Phrase Key="Scale" Text="Масштаб"/>
+    <Phrase Key="FitToSheet" Text="По размеру листа"/>
+    <Phrase Key="ActualSize" Text="Как есть"/>
+    <Phrase Key="Custom" Text="Свой"/>
+    <Phrase Key="ScalePercent" Text="Масштаб, процентов"/>
+    <Phrase Key="PagesPerSheet" Text="Страниц на листе"/>
+    <Phrase Key="Copies" Text="Копии"/>
+    <Phrase Key="Collate" Text="Разобрать по копиям"/>
+    <Phrase Key="TwoSided" Text="Двусторонняя"/>
+    <Phrase Key="OneSided" Text="Одна сторона"/>
+    <Phrase Key="LongEdge" Text="По длинному краю"/>
+    <Phrase Key="ShortEdge" Text="По короткому краю"/>
+    <Phrase Key="ColorMode" Text="Цвет"/>
+    <Phrase Key="Color" Text="Цветная"/>
+    <Phrase Key="Grayscale" Text="Оттенки серого"/>
+    <Phrase Key="Quality" Text="Качество"/>
+    <Phrase Key="Tray" Text="Лоток"/>
+    <Phrase Key="MediaType" Text="Тип бумаги"/>
+    <Phrase Key="SheetOfCount" Text="Лист {sheet} из {count}"/>
+    <Phrase Key="PreviousSheet" Text="Предыдущий лист"/>
+    <Phrase Key="NextSheet" Text="Следующий лист"/>
+    <Phrase Key="Preview" Text="Предпросмотр"/>
+    <Phrase Key="Ready" Text="Готов"/>
+    <Phrase Key="Printing" Text="Печатает другие задания"/>
+    <Phrase Key="Offline" Text="Не в сети"/>
+    <Phrase Key="OutOfPaper" Text="Нет бумаги · задание встанет в очередь"/>
+    <Phrase Key="PaperJam" Text="Замята бумага"/>
+    <Phrase Key="Paused" Text="Приостановлен"/>
+    <Phrase Key="Error" Text="Не работает"/>
+</Language>

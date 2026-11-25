@@ -1225,6 +1225,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (!containerRegistry.IsRegistered<Adamantium.Navigation.IDialogService>())
             containerRegistry.RegisterSingleton<Adamantium.Navigation.IDialogService, Adamantium.Navigation.DialogService>();
 
+        // Printing: the print dialog through the dialog service, its view the PrintDialog control.
+        if (!containerRegistry.IsRegistered<Core.Printing.IPrintService>())
+        {
+            containerRegistry.Register<Printing.PrintDialogViewModel, Printing.PrintDialogViewModel>();
+            Container.Resolve<IViewLocator>().Register<Printing.PrintDialogViewModel, Printing.PrintDialogView>();
+            containerRegistry.RegisterSingleton<Core.Printing.IPrintService, Printing.PrintService>();
+        }
+
         // Overlays (floating in-window OverlayWindows) - a service of their own, distinct from dialogs.
         if (!containerRegistry.IsRegistered<Adamantium.Navigation.IOverlayService>())
         {
