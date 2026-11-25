@@ -49,6 +49,10 @@ public interface IUIComponent : IFundamentalUIComponent
     /// has one - see UIComponent.ClipCornerRadius.</summary>
     Vector4F ClipRadii { get; }
 
+    /// <summary>How far inside its own edge a rounded clip cuts what it HOLDS: its stroke's
+    /// place there. What it paints itself, and what adorns it, is cut by its edge.</summary>
+    float ClipInset => 0f;
+
     Double Opacity { get; set; }
     Double SelfOpacity { get; set; }
     bool IsEnabled { get; set; }
