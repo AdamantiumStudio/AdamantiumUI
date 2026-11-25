@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
@@ -113,6 +114,33 @@ public class PanelItemPlacesTests
         holder.Child = null;
 
         Assert.That(presenter.Inner, Is.Null);
+    }
+
+    // A page kept between visits comes back measured as it left: nothing measures its scroll viewer again, and it must
+    // find the panel it scrolls for all the same - the list would not scroll any more.
+    [Test]
+    public void AScrollViewerComeBackWithItsContent_ScrollsForItsPanelAgain()
+    {
+        var list = new ItemsControl
+        {
+            ItemTemplate = RowTemplate(),
+            ItemsSource = new TrackingCollection<object> { new Row() },
+            Template = ItemsPresenterTemplate()
+        };
+        var presenter = new ScrollContentPresenter { Content = list, CanContentScroll = true };
+        var page = new Border { Child = presenter };
+        var holder = new Grid { Children = { page } };
+        var window = new Window { Width = 200, Height = 300, Content = holder };
+        Settle(window);
+        var panel = PanelOf(list);
+        Assume.That(presenter.Inner, Is.SameAs(panel));
+        ParkedSubtree.Park(page);
+        holder.Children.Remove(page);
+        Assume.That(presenter.Inner, Is.Null, "let go of while away");
+
+        holder.Children.Add(page);
+
+        Assert.That(presenter.Inner, Is.SameAs(panel));
     }
 
     private static void Settle(Window window)

@@ -187,7 +187,10 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
     /// <summary>Whether <paramref name="content"/> a template part shows for this control is still this control's to
     /// show again - what a view kept for it (<c>x:KeepAlive</c>) is kept for.</summary>
-    internal virtual bool HoldsContent(object content) => Items.Contains(content);
+    internal virtual bool HoldsContent(object content) => HasItem(content);
+
+    /// <summary>Whether this is one of the control's items, shown or not.</summary>
+    internal virtual bool HasItem(object item) => Items.Contains(item);
 
     public ItemContainerGenerator ItemContainerGenerator { get; }
 

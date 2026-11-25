@@ -90,6 +90,7 @@ internal sealed class TornTab
         }
 
         target.InsertIntoSource(index, _item);
+        target.EnforceTabLimit();
 
         if (!target.Items.Contains(_item))
         {

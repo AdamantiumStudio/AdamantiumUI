@@ -113,7 +113,7 @@ public class ListBox : Selector
         if (SelectedIndex < 0)
         {
             SelectOnly(0);
-            ShowSelected(0);
+            if (SelectedIndex >= 0) ShowSelected(SelectedIndex);
             return;
         }
 
@@ -124,7 +124,7 @@ public class ListBox : Selector
         if (index < 0 || index >= Items.Count) return;
 
         SelectOnly(index);
-        ShowSelected(index);
+        if (SelectedIndex >= 0) ShowSelected(SelectedIndex);
     }
 
     /// <summary>The item an arrow leads to. Normally the panel's answer, from the geometry of the row the selection is
@@ -286,18 +286,36 @@ public class ListBox : Selector
         // (Binding < Local), silently isolating the view-model's collection.
         if (writeBoundList && items.Count > 0) EnsureSelectedItems();
         ForgetAwaitedSelection();
+        var chosen = primaryIndex >= 0 && primaryIndex < Items.Count ? Items[primaryIndex] : null;
+        var primary = chosen;
+        SetSelectedProperties(ref primaryIndex, ref primary);
+
+        // The source answered with another, or none: that is the selection - the one there was, when it kept its own -
+        // and the bound list is told of it too, but not while it is telling of a change itself.
+        if (!Equals(primary, chosen))
+        {
+            items = primary == null ? [] : _selectedSet.Contains(primary) ? _selectedSet.ToList() : [primary];
+            _anchorIndex = primaryIndex;
+            if (!writeBoundList) Core.LoopSignal.Post(WriteBoundList);
+        }
+
         var newSet = new HashSet<object>(items);
         var changed = !newSet.SetEquals(_selectedSet);
         _selectedSet = newSet;
-
-        SyncingSelection = true;
-        SetCurrentValue(SelectedIndexProperty, primaryIndex);
-        SetCurrentValue(SelectedItemProperty, primaryIndex >= 0 && primaryIndex < Items.Count ? Items[primaryIndex] : null);
-        if (writeBoundList) SyncBoundList(items);
-        SyncingSelection = false;
+        if (writeBoundList) WriteBoundList(items);
 
         UpdateContainersSelection();
         if (changed) RaiseSelectionChanged();
+    }
+
+    private void WriteBoundList() => WriteBoundList(_selectedSet.ToList());
+
+    private void WriteBoundList(IReadOnlyList<object> items)
+    {
+        var nested = SyncingSelection;
+        SyncingSelection = true;
+        SyncBoundList(items);
+        SyncingSelection = nested;
     }
 
     // Reconcile the bound SelectedItems collection to exactly 'items' (minimal diff so observers see granular changes, not

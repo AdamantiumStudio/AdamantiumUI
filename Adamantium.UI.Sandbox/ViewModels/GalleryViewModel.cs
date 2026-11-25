@@ -97,6 +97,9 @@ public partial class GalleryViewModel
         Tabs.Add(resolver.Resolve<SceneViewModel>());
         SelectedTab = Tabs[2];
         FoundTabs = new CollectionView(Tabs) { Filter = tab => IsFound((TabPageViewModel)tab) };
+
+        // The gallery lives as long as the application.
+        Languages.Changed += (_, _) => FoundTabs.Refresh();
     }
 
     partial void OnTabSearchChanged(string value) => FoundTabs.Refresh();
