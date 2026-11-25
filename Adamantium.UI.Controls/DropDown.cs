@@ -303,9 +303,9 @@ public class DropDown : Selector
 
     public static readonly AdamantiumProperty DisplayContentTemplateProperty = DisplayContentTemplatePropertyKey.Property;
 
-    /// <summary>How the header presents <see cref="DisplayContent"/>: for an item, <see cref="ItemsControl.ItemTemplate"/>
-    /// or the one <see cref="ItemsControl.ItemTemplateSelector"/> picks for it; none for the placeholder. Computed, as
-    /// WPF's SelectionBoxItemTemplate.</summary>
+    /// <summary>How the header presents <see cref="DisplayContent"/>: <see cref="ItemsControl.ItemTemplate"/> for an item,
+    /// none for the placeholder. Computed, as WPF's SelectionBoxItemTemplate; the header's presenter asks
+    /// <see cref="ItemsControl.ItemTemplateSelector"/> itself, in the tree.</summary>
     public DataTemplate DisplayContentTemplate
     {
         get => GetValue<DataTemplate>(DisplayContentTemplateProperty);
@@ -754,9 +754,8 @@ public class DropDown : Selector
 
         // The item template is for an item: the placeholder, or nothing, is not one.
         var item = SelectedItem != null || _answer != null;
-        var content = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
-        DisplayContentTemplate = item ? ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(content, this) : null;
-        DisplayContent = content;
+        DisplayContentTemplate = item ? ItemTemplate : null;
+        DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
         ShowText();
     }
 

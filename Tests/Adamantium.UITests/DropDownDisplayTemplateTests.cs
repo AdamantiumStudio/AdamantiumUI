@@ -22,16 +22,17 @@ public class DropDownDisplayTemplateTests
         Assert.That(drop.DisplayContentTemplate, Is.SameAs(template));
     }
 
+    // A selector is asked by the header's presenter, in the tree where it can find resources and ancestors - as WPF's
+    // ComboBox hands its ItemTemplateSelector to the selection box - so the computed template stays empty.
     [Test]
-    public void AChosenItem_IsShownByTheTemplateTheSelectorPicks()
+    public void ASelector_IsLeftToTheHeadersPresenter()
     {
-        var picked = Template();
         var drop = new DropDown
         {
-            ItemTemplateSelector = new FixedTemplateSelector(picked), ItemsSource = new[] { "a", "b" }, SelectedIndex = 0
+            ItemTemplateSelector = new FixedTemplateSelector(Template()), ItemsSource = new[] { "a", "b" }, SelectedIndex = 0
         };
 
-        Assert.That(drop.DisplayContentTemplate, Is.SameAs(picked));
+        Assert.That(drop.DisplayContentTemplate, Is.Null);
     }
 
     // The placeholder is words, not an item: neither the item template nor the selector is asked to draw it.

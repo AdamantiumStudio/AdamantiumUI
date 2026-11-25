@@ -1,7 +1,8 @@
 <View x:KeepAlive="Enabled"
       xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView">
+      xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView"
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels">
     <!-- The WebView as its steps come: back, forward, reload or stop and the address, which follows the page; the page;
          and below, for the stand, how its frames come and what it is doing. Popups come with their step. Kept between
          visits, so the page is where it was when the tab comes back. -->
@@ -34,10 +35,11 @@
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
             <!-- A site asking to use something - the camera, where the device is: answered here, kept for the site. -->
-            <ContentControl Grid.ColumnSpan="2" Content="{Binding AskedPermission}" AutomationProperties.AutomationId="WebAsked"
-                            Visibility="{Binding IsAsked, Converter={BooleanToVisibilityConverter}}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
+            <!-- A template by type, not a ContentTemplate: with no question there is no template, and nothing is built. -->
+            <ContentControl Grid.ColumnSpan="2" Content="{Binding AskedPermission}" AutomationProperties.AutomationId="WebAsked">
+                <ContentControl.ContentTemplateSelector>
+                    <DataTemplateSet>
+                    <DataTemplate x:DataType="web:WebPermissionRequestedEventArgs">
                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="8,0,8,8">
                             <TextBlock VerticalAlignment="Center" AutomationProperties.AutomationId="WebAskedText">
                                 <Run Text="{Binding Site}"/>
@@ -52,7 +54,8 @@
                                     AutomationProperties.AutomationId="WebAskedBlock"/>
                         </Grid>
                     </DataTemplate>
-                </ContentControl.ContentTemplate>
+                    </DataTemplateSet>
+                </ContentControl.ContentTemplateSelector>
             </ContentControl>
             <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source, Mode=TwoWay}"
                          Bridge="{Binding Bridge}"
@@ -64,11 +67,12 @@
                          FindMatchCase="{Binding FindMatchCase, Mode=TwoWay}"
                          AutomationProperties.AutomationId="WebPage"/>
             <!-- What the page opened last - a link to a new tab, window.open, its page source - beside it, as a browser
-                 shows it in a tab of its own, the page that opened it still there. -->
-            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened"
-                            Visibility="{Binding HasOpenedPage, Converter={BooleanToVisibilityConverter}}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
+                 shows it in a tab of its own, the page that opened it still there. A template by type: closed, the page
+                 has no template, and its browser goes with the visual that held it. -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened">
+                <ContentControl.ContentTemplateSelector>
+                    <DataTemplateSet>
+                    <DataTemplate x:DataType="vm:OpenedWebPageViewModel">
                         <Grid RowDefinitions="Auto,*" Width="520" Margin="8,0,8,8">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
                                 <TextBlock Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharEllipses"
@@ -83,7 +87,8 @@
                                          AutomationProperties.AutomationId="WebOpenedPage"/>
                         </Grid>
                     </DataTemplate>
-                </ContentControl.ContentTemplate>
+                    </DataTemplateSet>
+                </ContentControl.ContentTemplateSelector>
             </ContentControl>
         </Grid>
         <!-- The files the pages downloaded, where the user said to save them: how far each has come, paused, gone on,
