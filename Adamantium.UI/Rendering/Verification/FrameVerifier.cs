@@ -173,7 +173,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
 
             var textBrush = (component as Controls.Text.TextBlock)?.Foreground as Core.Media.SolidColorBrush;
             _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds,
-                RenderCache.ClipInsetOf(component), parent, (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden,
+                RenderCache.ClipInsetOf(component), parent, (float)component.Opacity, world, animated, carried,
+                component.RenderClones?.Count ?? 0, hidden,
                 (float)component.SelfOpacity,
                 textBrush?.Color.ToVector4(), textBrush, textBrush?.PaintVersion ?? 0,
                 !component.IsGeometryValid);
