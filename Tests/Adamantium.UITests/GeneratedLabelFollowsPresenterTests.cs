@@ -1,7 +1,9 @@
 using System.Linq;
+using Adamantium.Localization;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
@@ -44,5 +46,81 @@ public class GeneratedLabelFollowsPresenterTests
 
         Assert.That(LabelOf(presenter).Foreground, Is.SameAs(Brushes.Lime),
             "the label has to track the presenter, not the value it was built with");
+    }
+
+    private sealed class Word(string english, string russian)
+    {
+        public override string ToString() => Languages.Current == "ru" ? russian : english;
+    }
+
+    [Test]
+    public void TheGeneratedLabel_SaysItsContentAgainInTheNewLanguage()
+    {
+        var language = Languages.Current;
+        try
+        {
+            Languages.Current = "en";
+            var (presenter, window) = Hosted(Brushes.Red);
+            presenter.Content = new Word("Opaque", "Непрозрачный");
+            WindowExtension.UpdateTree(window);
+            var english = LabelOf(presenter).Text;
+
+            Languages.Current = "ru";
+            BindingUpdateQueue.Flush();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(english, Is.EqualTo("Opaque"));
+                Assert.That(LabelOf(presenter).Text, Is.EqualTo("Непрозрачный"));
+            });
+        }
+        finally
+        {
+            Languages.Current = language;
+        }
+    }
+
+    private sealed class Download : System.ComponentModel.INotifyPropertyChanged
+    {
+        public int Listeners { get; private set; }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged
+        {
+            add => Listeners++;
+            remove => Listeners--;
+        }
+    }
+
+    [Test]
+    public void TheGeneratedLabel_DoesNotListenToItsContent()
+    {
+        var (presenter, window) = Hosted(Brushes.Red);
+        var download = new Download();
+
+        presenter.Content = download;
+        WindowExtension.UpdateTree(window);
+
+        Assert.That(download.Listeners, Is.Zero);
+    }
+
+    // One label said by a string and by things in turn, as a recycled row's is.
+    [Test]
+    public void TheGeneratedLabel_SaysWhateverItsPresenterHoldsNow()
+    {
+        var (presenter, window) = Hosted(Brushes.Red);
+        var label = LabelOf(presenter);
+        var said = new System.Collections.Generic.List<string>();
+        foreach (var content in new object[] { new Word("one", "one"), "two", new Word("three", "three"), "four", 5 })
+        {
+            presenter.Content = content;
+            WindowExtension.UpdateTree(window);
+            said.Add(LabelOf(presenter).Text);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(said, Is.EqualTo(new[] { "one", "two", "three", "four", "5" }));
+            Assert.That(LabelOf(presenter), Is.SameAs(label), "the label is kept");
+        });
     }
 }

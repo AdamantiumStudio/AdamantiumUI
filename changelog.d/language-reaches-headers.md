@@ -5,4 +5,5 @@
 - The caption of a docking panel follows the header of the pane it names; before, it kept the one the pane had when it
   was selected.
 - A `NumericUpDown` writes its number the new language's way when the language changes; a number half typed is left.
-- A `DropDown` without an item template asks its items for their words again when the language changes.
+- Content shown by its `ToString`, no template given - a drop-down's choices, a list's rows - is asked for its words
+  again when the language changes; an editable `DropDown` writes its choice again.

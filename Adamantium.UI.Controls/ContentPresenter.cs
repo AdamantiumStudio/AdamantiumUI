@@ -189,7 +189,7 @@ public class ContentPresenter : InputUIComponent
             && ContentTemplate == null && ContentTemplateSelector == null)
         {
             reusableText.LetSelectionGo();
-            reusableText.Text = newContent.ToString();
+            SayIn(reusableText, newContent);
             return false;
         }
 
@@ -280,7 +280,6 @@ public class ContentPresenter : InputUIComponent
             {
                 var textBlock = new TextBlock
                 {
-                    Text = newContent.ToString(),
                     HorizontalTextAlignment = ToTextAlignment(HorizontalAlignment),
                     VerticalTextAlignment = ToTextAlignment(VerticalAlignment),
                     // Centered, not stretched: a stretched block does not hand its height to the text layout, so the
@@ -290,6 +289,7 @@ public class ContentPresenter : InputUIComponent
                         ? VerticalAlignment.Center
                         : VerticalAlignment
                 };
+                SayIn(textBlock, newContent);
                 // Bound, not copied: an inherited change can step over the label without notifying it. A presenter with
                 // no color of its own says nothing - handed its null, the label threw on every frame it drew.
                 textBlock.SetBinding(nameof(TextBlock.Foreground),
@@ -312,6 +312,29 @@ public class ContentPresenter : InputUIComponent
             Host(_currentRoot);
             SetContentContext(newContent);
         }
+    }
+
+    // A string is its words. Anything else is asked for them, which its language may decide: bound, so it is asked again
+    // when the language changes.
+    private static void SayIn(TextBlock label, object content)
+    {
+        if (content is string text)
+        {
+            label.RemoveBinding(TextBlock.TextProperty);
+            // As a binding would: a local value would outrank the binding of the next content.
+            label.SetValue(TextBlock.TextProperty, text, ValuePriority.Binding);
+        }
+        else
+        {
+            label.SetBinding(nameof(TextBlock.Text), new Core.Data.Binding { Source = new Words(content) });
+        }
+    }
+
+    // What a content calls itself. Not the content, which a binding would listen to: what else it says of itself is
+    // nothing to its label.
+    private sealed class Words(object content)
+    {
+        public override string ToString() => content.ToString();
     }
 
     private void ShowParked(object content, IUIComponent root, TemplateResult built, DataTemplate template,
