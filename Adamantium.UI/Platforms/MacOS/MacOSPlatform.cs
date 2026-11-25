@@ -9,6 +9,8 @@ using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Platforms.Cups;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -307,5 +309,6 @@ public class MacOSPlatform : IApplicationPlatform
         resolver.RegisterSingleton<IDragGhost, MacOSDragGhost>();
         FileManager.Platform = new FinderFileManager();
         Trash.Platform = new FinderTrash();
+        SystemPrinting.Platform = new CupsPrintPlatform();
     }
 }

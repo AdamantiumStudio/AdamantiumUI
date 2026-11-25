@@ -5,8 +5,10 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.Multiverse.Input;
 using Adamantium.Multiverse.Input.Evdev;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Printing;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Text;
+using Adamantium.UI.Platforms.Cups;
 using Adamantium.UI.Platforms.Linux.Accessibility;
 using Adamantium.UI.Platforms.Wayland;
 
@@ -79,6 +81,7 @@ public static class LinuxPlatform
             (container.Resolve<IApplicationPlatform>() as IPortalParent)?.PortalParentOf(owner) ?? string.Empty);
         FileManager.Platform = new DesktopFileManager();
         NotificationArea.Platform = new StatusNotifierArea();
+        SystemPrinting.Platform = new CupsPrintPlatform();
         if (OperatingSystem.IsLinux())
         {
             Trash.Platform = new FreedesktopTrash();
