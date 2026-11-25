@@ -44,6 +44,9 @@ internal sealed class CrossThreadChanges<T>
         return true;
     }
 
+    // Whether changes from another thread wait to be applied: the receiver is behind its source.
+    public bool IsWaiting => _pending is { IsEmpty: false };
+
     // Drops what is waiting: the source was let go of, or read again under its lock and so holds those changes already.
     public void Clear()
     {

@@ -15,6 +15,12 @@
     groups. A pen XPS strokes as it is is its own; any other is laid out as the stroke shader lays it, as in PDF.
 - The sandbox's Printing page offers the system's printers beside the sample ones.
 
+### Fixed
+
+- A selector cleared a choice named just as its item was added, when the item was added on another thread than the
+  list's - a view-model on the dispatcher with the list on the loop - and wrote the clearing back through a TwoWay
+  binding: the choice now waits for its item to come, as it already did while the list was empty.
+
 ### Changed
 
 - How the stroke shader lays out a pen, the shapes of ink and arrows, a gradient's stops as drawn and their repeats,
