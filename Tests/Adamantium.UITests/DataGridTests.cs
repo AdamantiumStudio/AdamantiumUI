@@ -688,6 +688,24 @@ public class DataGridTests
         });
     }
 
+    // A cell pooled for the column that left the window still held its value: automation found it beside the cells shown.
+    [Test]
+    public void ScrollingSideways_LeavesTheCellsThatLeftOutOfTheAutomationTree()
+    {
+        var grid = WideGrid(200);
+        Relayout(grid, width: 400);
+
+        grid.HorizontalOffset = 10000;
+        Relayout(grid, width: 400);
+
+        var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
+        var realized = Enumerable.Range(0, 200).Count(i => row.CellAt(i) != null);
+        var cells = row.GetAutomationPeer().GetChildren().OfType<Adamantium.UI.Controls.Automation.UIComponentAutomationPeer>()
+            .Count(peer => peer.Owner is DataGridCell);
+
+        Assert.That(cells, Is.EqualTo(realized));
+    }
+
     [Test]
     public void AFrozenColumn_IsBuiltWhereverTheGridIsScrolled()
     {

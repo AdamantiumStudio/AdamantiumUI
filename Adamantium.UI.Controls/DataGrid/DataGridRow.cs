@@ -262,6 +262,7 @@ public class DataGridRow : Panel
             if (!_cells.TryGetValue(i, out var cell))
             {
                 cell = _pool.Count > 0 ? _pool.Pop() : NewCell();
+                cell.Revive();
                 // A cell pooled on the way INTO a details panel was taken out of the row, not merely hidden, so coming
                 // back means being put back. Pooling for a column leaving the window sideways still only hides.
                 if (cell.VisualParent != this) Children.Add(cell);
@@ -369,10 +370,12 @@ public class DataGridRow : Panel
         return true;
     }
 
+    // Pooled as a list's container is: waiting for another column, no part of the row to automation meanwhile.
     private void ToPool(DataGridCell cell)
     {
         cell.Visibility = Visibility.Collapsed;
         cell.IsEditing = false;
+        cell.MarkRecycled();
         _pool.Push(cell);
     }
 
