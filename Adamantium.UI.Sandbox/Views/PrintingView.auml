@@ -8,6 +8,8 @@
             <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=PagesLabel}"
                            Minimum="1" Maximum="40" Width="120" Value="{Binding Pages, Mode=TwoWay}"/>
         </StackPanel>
+        <CheckBox Content="{Localize PrintingStrings.SystemPrinters}" IsChecked="{Binding SystemPrinters, Mode=TwoWay}"
+                  MarginBottom="8"/>
         <CheckBox Content="{Localize PrintingStrings.SamplePrinters}" IsChecked="{Binding SamplePrinters, Mode=TwoWay}"
                   MarginBottom="16"/>
         <Button x:Name="PrintSample" Classes="Accent" Content="{Localize PrintingStrings.Print}"

@@ -10,6 +10,7 @@ using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Graphics.Vector;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Curves;
 using Adamantium.UI.Core.Media.Imaging;
@@ -29,8 +30,6 @@ namespace Adamantium.UI.Pdf;
 /// </summary>
 public sealed partial class PdfContentSession : IDrawingSession
 {
-    private const double Kappa = 0.5522847498307936;
-
     private readonly PdfPictures _pictures;
     private readonly Level _root;
     private readonly Stack<Level> _levels = new();
@@ -414,24 +413,7 @@ public sealed partial class PdfContentSession : IDrawingSession
         Opacity(1, alpha);
         FillColor(color);
         Transform(place);
-        var widest = 0.0;
-        for (var index = 0; index < count; index++)
-        {
-            var radius = ink.Thickness * Share(widths, index) / 2;
-            widest = Math.Max(widest, radius);
-            Circle(At(points[index]), radius);
-            if (index == 0)
-            {
-                continue;
-            }
-
-            var from = At(points[index - 1]);
-            var to = At(points[index]);
-            var side = Across(to - from);
-            var before = ink.Thickness * Share(widths, index - 1) / 2;
-            Polygon([from + side * before, to + side * radius, to - side * radius, from - side * before], false);
-        }
-
+        var widest = VectorShapes.AddInk(new PdfVectorPath(content), ink, count);
         content.Fill();
         GrowPoints(points, count, place, widest);
         content.RestoreState();
@@ -448,54 +430,18 @@ public sealed partial class PdfContentSession : IDrawingSession
 
         var from = arrow.From;
         var to = arrow.To;
-        var span = Math.Max(Length(to - from), 1e-6);
-        var along = (to - from) * (1 / span);
         var edge = arrow.Thickness / 2;
-        var wide = arrow.HeadWidth;
-        var length = arrow.HeadLength;
-        var back = Math.Min(length, span);
-        var tuck = edge / Math.Max(wide / Math.Sqrt(Math.Max(length * length + wide * wide, 1e-12)), 1e-6);
-        var shaftFrom = arrow.StartHead >= 1 ? from + along * Math.Min(arrow.StartHead >= 2 ? length : tuck, span) : from;
-        var shaftTo = arrow.EndHead >= 1 ? to - along * Math.Min(arrow.EndHead >= 2 ? length : tuck, span) : to;
-
         var content = Content;
         content.SaveState();
         Opacity(1, alpha);
         FillColor(arrow.Color);
         Transform(place);
-        Capsule(shaftFrom, shaftTo, edge);
-        Head(arrow.StartHead, from, along * -1, back, wide, edge);
-        Head(arrow.EndHead, to, along, back, wide, edge);
+        VectorShapes.AddArrow(new PdfVectorPath(content), arrow);
         content.Fill();
-        var reach = Math.Max(edge, wide);
+        var reach = Math.Max(edge, arrow.HeadWidth);
         GrowBox(new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Abs(to.X - from.X),
             Math.Abs(to.Y - from.Y)), place, reach);
         content.RestoreState();
-    }
-
-    private void Head(int kind, Vector2<double> tip, Vector2<double> forward, double back, double wide, double edge)
-    {
-        if (kind < 1 || !(back > 0) || !(wide > 0))
-        {
-            return;
-        }
-
-        var side = Across(forward);
-        var bottom = tip - forward * back;
-        Polygon([tip, bottom + side * wide, bottom - side * wide], false);
-        if (kind >= 2)
-        {
-            return;
-        }
-
-        var slant = 1 / Math.Sqrt(back * back + wide * wide);
-        var apex = edge / (wide * slant);
-        var inner = wide - edge / (slant * back);
-        if (apex < back && inner > 0)
-        {
-            var notch = tip - forward * apex;
-            Polygon([notch, bottom + side * inner, bottom - side * inner], true);
-        }
     }
 
     private void Text(TextRenderingParameters parameters, TextLayout layout, Brush foreground, Matrix4x4F transform)
@@ -505,45 +451,12 @@ public sealed partial class PdfContentSession : IDrawingSession
             return;
         }
 
-        var area = parameters?.TextArea ?? default;
-        var runs = new List<GlyphRun>();
-        var glyphs = new List<PositionedGlyph>();
-        IFont font = null;
-        var size = 0.0;
-        foreach (var word in layout.GetTextData())
-        {
-            var glyph = word.Glyph;
-            if (glyph == null || word.Font == null || !glyph.HasOutlines || word.Rect.Width <= 0 || !(word.FontSize > 0))
-            {
-                continue;
-            }
-
-            if (!ReferenceEquals(word.Font, font) || word.FontSize != size)
-            {
-                Run(font, size, glyphs, runs);
-                font = word.Font;
-                size = word.FontSize;
-            }
-
-            var box = glyph.BoundingRectangle;
-            var scale = word.FontSize / word.Font.UnitsPerEm;
-            glyphs.Add(new PositionedGlyph(glyph.Index, word.Rect.X + area.X - box.X * scale,
-                word.Rect.Y + area.Y + (box.Y + box.Height) * scale));
-        }
-
-        Run(font, size, glyphs, runs);
+        var runs = TextOutlines.RunsOf(parameters, layout, out var whole);
 
         // One gradient or tile across the whole text, however many fonts and sizes it is set in.
-        Rect? whole = null;
-        if (foreground is GradientBrush or TileBrush)
+        if (foreground is not (GradientBrush or TileBrush))
         {
-            foreach (var run in runs)
-            {
-                if (run.Outline?.CurvesForDrawing is { Figures.Count: > 0 } curves)
-                {
-                    whole = whole is { } sofar ? Union(sofar, curves.Bounds) : curves.Bounds;
-                }
-            }
+            whole = null;
         }
 
         foreach (var run in runs)
@@ -552,118 +465,8 @@ public sealed partial class PdfContentSession : IDrawingSession
         }
     }
 
-    private static void Run(IFont font, double size, List<PositionedGlyph> glyphs, List<GlyphRun> runs)
-    {
-        if (font != null && glyphs.Count > 0)
-        {
-            runs.Add(new GlyphRun(font, size, [.. glyphs]));
-        }
-
-        glyphs.Clear();
-    }
-
-    private static Rect Union(Rect one, Rect other)
-    {
-        var left = Math.Min(one.X, other.X);
-        var top = Math.Min(one.Y, other.Y);
-        return new Rect(left, top, Math.Max(one.Right, other.Right) - left, Math.Max(one.Bottom, other.Bottom) - top);
-    }
-
-    private bool Write(PathCurves curves, bool filledOnly, PdfMatrix map)
-    {
-        var content = Content;
-        var wrote = false;
-        foreach (var figure in curves.Figures)
-        {
-            if (figure.Count == 0 || (filledOnly && !figure.IsFilled))
-            {
-                continue;
-            }
-
-            var first = curves.Curves[figure.First];
-            MoveTo(map, first.Start);
-            for (var index = figure.First; index < figure.First + figure.Count; index++)
-            {
-                var curve = curves.Curves[index];
-                if (curve.IsStraight())
-                {
-                    LineTo(map, curve.End);
-                    continue;
-                }
-
-                CurveTo(map, curve.Start + (curve.Control - curve.Start) * (2.0 / 3),
-                    curve.End + (curve.Control - curve.End) * (2.0 / 3), curve.End);
-            }
-
-            if (figure.IsClosed)
-            {
-                content.ClosePath();
-            }
-
-            wrote = true;
-        }
-
-        return wrote;
-    }
-
-    private void Capsule(Vector2<double> from, Vector2<double> to, double radius)
-    {
-        if (!(radius > 0))
-        {
-            return;
-        }
-
-        Circle(from, radius);
-        if (Length(to - from) <= 1e-9)
-        {
-            return;
-        }
-
-        var side = Across(to - from);
-        Polygon([from + side * radius, to + side * radius, to - side * radius, from - side * radius], false);
-        Circle(to, radius);
-    }
-
-    private void Circle(Vector2<double> center, double radius)
-    {
-        if (!(radius > 0))
-        {
-            return;
-        }
-
-        var content = Content;
-        var hold = radius * Kappa;
-        content.MoveTo(center.X + radius, center.Y);
-        content.CurveTo(center.X + radius, center.Y + hold, center.X + hold, center.Y + radius, center.X, center.Y + radius);
-        content.CurveTo(center.X - hold, center.Y + radius, center.X - radius, center.Y + hold, center.X - radius, center.Y);
-        content.CurveTo(center.X - radius, center.Y - hold, center.X - hold, center.Y - radius, center.X, center.Y - radius);
-        content.CurveTo(center.X + hold, center.Y - radius, center.X + radius, center.Y - hold, center.X + radius, center.Y);
-        content.ClosePath();
-    }
-
-    private void Polygon(Vector2<double>[] points, bool hole)
-    {
-        var area = 0.0;
-        for (var index = 0; index < points.Length; index++)
-        {
-            var next = points[(index + 1) % points.Length];
-            area += points[index].X * next.Y - next.X * points[index].Y;
-        }
-
-        if ((area < 0) != hole)
-        {
-            Array.Reverse(points);
-        }
-
-        var content = Content;
-        content.MoveTo(points[0].X, points[0].Y);
-        for (var index = 1; index < points.Length; index++)
-        {
-            content.LineTo(points[index].X, points[index].Y);
-        }
-
-        content.ClosePath();
-    }
+    private bool Write(PathCurves curves, bool filledOnly, PdfMatrix map) =>
+        VectorShapes.AddCurves(new PdfVectorPath(Content, map), curves, filledOnly);
 
     /// <summary><paramref name="color"/> with the tint multiplied into its red, green and blue; its alpha as it is - a
     /// tint's own alpha fades the whole tile.</summary>
@@ -693,26 +496,6 @@ public sealed partial class PdfContentSession : IDrawingSession
     }
 
     private void Transform(PdfMatrix place) => Content.Transform(place.A, place.B, place.C, place.D, place.E, place.F);
-
-    private void MoveTo(PdfMatrix map, Vector2<double> point)
-    {
-        var at = map.Transform(point.X, point.Y);
-        Content.MoveTo(at.X, at.Y);
-    }
-
-    private void LineTo(PdfMatrix map, Vector2<double> point)
-    {
-        var at = map.Transform(point.X, point.Y);
-        Content.LineTo(at.X, at.Y);
-    }
-
-    private void CurveTo(PdfMatrix map, Vector2<double> first, Vector2<double> second, Vector2<double> end)
-    {
-        var one = map.Transform(first.X, first.Y);
-        var two = map.Transform(second.X, second.Y);
-        var three = map.Transform(end.X, end.Y);
-        Content.CurveTo(one.X, one.Y, two.X, two.Y, three.X, three.Y);
-    }
 
     private void GrowPoints(Vector2<float>[] points, int count, PdfMatrix place, double reach)
     {
@@ -830,17 +613,7 @@ public sealed partial class PdfContentSession : IDrawingSession
 
     private static bool Invertible(PdfMatrix place) => Math.Abs(place.A * place.D - place.B * place.C) > 1e-12;
 
-    private static double Length(Vector2<double> vector) => Math.Sqrt(vector.X * vector.X + vector.Y * vector.Y);
-
-    private static Vector2<double> Across(Vector2<double> along)
-    {
-        var length = Length(along);
-        return length > 0 ? new Vector2<double>(-along.Y / length, along.X / length) : default;
-    }
-
-    private static Vector2<double> At(Vector2<float> point) => new(point.X, point.Y);
-
-    private static double Share(float[] widths, int index) => index < widths.Length ? Math.Max(0, widths[index]) : 1;
+    private static double Length(Vector2<double> vector) => VectorShapes.Length(vector);
 
     /// <summary>A group being written: the content it goes into - its own for a group drawn apart - and the box of
     /// what it drew, in the page's space.</summary>

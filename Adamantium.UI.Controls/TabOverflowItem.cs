@@ -21,7 +21,8 @@ public sealed class TabOverflowItem
         Header = header;
         HeaderTemplate = headerTemplate;
         Icon = tab?.Icon ?? owner?.IconOf(item);
-        IconTemplate = tab?.IconTemplate ?? owner?.IconTemplate;
+        // No icon, no template to build: the row's name sits where it does for a tab that has none.
+        IconTemplate = Icon == null ? null : tab?.IconTemplate ?? owner?.IconTemplate;
         // Falls back to the CONTROL when there is no container: most rows here stand for tabs that are off screen, and
         // asking the missing container left every one of them without a close button.
         CanClose = tab != null ? tab.ShowCloseButton : owner is { ShowCloseButton: true };

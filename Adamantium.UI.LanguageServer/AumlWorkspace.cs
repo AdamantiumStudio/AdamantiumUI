@@ -12,7 +12,7 @@ public sealed class AumlWorkspace : IDisposable
     private readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Timer> _debounce = new(StringComparer.OrdinalIgnoreCase);
     private readonly SyntaxTreeCache _syntaxCache = new();
-    private readonly MetadataReferenceCache _metadataCache = new();
+    private readonly MetadataReferenceCache _metadataCache = MetadataReferenceCache.Shared;
 
     // A build writes/copies many dlls in a burst; collapse the burst into one refresh once it goes quiet.
     private static readonly TimeSpan DebounceDelay = TimeSpan.FromMilliseconds(800);

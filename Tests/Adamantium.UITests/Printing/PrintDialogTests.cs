@@ -41,6 +41,7 @@ public class PrintDialogTests
                     Collates = true,
                     Duplex = [DuplexMode.OneSided, DuplexMode.LongEdge],
                     Colors = [PrintColorMode.Grayscale],
+                    HasDriverSettings = true,
                 }
                 : new PrinterCapabilities
                 {
@@ -52,6 +53,12 @@ public class PrintDialogTests
         // Glossy paper is printed on one side only, as a driver would say.
         public PrintSettings Reconcile(PrinterCapabilities capabilities, PrintSettings settings) =>
             settings.MediaType == "Glossy" ? settings with { Duplex = DuplexMode.OneSided } : settings;
+
+        /// <summary>What a driver's window is left with: both sides chosen in it, and its own setting.</summary>
+        public object Answer { get; set; } = "stapled";
+
+        public PrintSettings EditDriverSettings(PrinterCapabilities capabilities, PrintSettings settings) =>
+            Answer == null ? null : settings with { Duplex = DuplexMode.LongEdge, DriverSettings = Answer };
 
         public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
             CancellationToken cancellation) => Task.CompletedTask;
@@ -202,6 +209,8 @@ public class PrintDialogTests
 
         public PrintSettings Reconcile(PrinterCapabilities capabilities, PrintSettings settings) => settings;
 
+        public PrintSettings EditDriverSettings(PrinterCapabilities capabilities, PrintSettings settings) => null;
+
         public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
             CancellationToken cancellation) => Task.CompletedTask;
     }
@@ -238,6 +247,31 @@ public class PrintDialogTests
         Assert.That(dialog.Sheet, Is.EqualTo(2), "the preview kept among the sheets there are");
         Assert.That(dialog.NextSheetCommand.CanExecute(), Is.False);
         Assert.That(dialog.PreviousSheetCommand.CanExecute(), Is.True);
+    }
+
+    // The driver's own window: offered where the printer has one; what it is left with is printed - the dialog's options
+    // as it set them, its own kept - and another printer starts without them.
+    [Test]
+    public void ThePrintersOwnSettings_AreOfferedWhereItHasThem_AndWhatTheyAreLeftWithIsPrinted()
+    {
+        var platform = new Platform();
+        var dialog = new PrintDialog { Document = new Pages(3), Platform = platform };
+        Assert.That(dialog.ShowsDriverSettings, Is.True);
+
+        dialog.DriverSettingsCommand.Execute();
+        Assert.That(dialog.Duplex, Is.EqualTo(DuplexMode.LongEdge), "chosen in the driver's window");
+        Assert.That(dialog.Settings.DriverSettings, Is.EqualTo("stapled"));
+
+        platform.Answer = null;
+        dialog.DriverSettingsCommand.Execute();
+        Assert.That(dialog.Settings.DriverSettings, Is.EqualTo("stapled"), "canceled: nothing changes");
+
+        dialog.Printer = Platform.Photo;
+        Assert.That(dialog.ShowsDriverSettings, Is.False);
+        Assert.That(dialog.Settings.DriverSettings, Is.Null, "the laser's own settings are not the photo printer's");
+
+        dialog.Printer = Printer.Pdf;
+        Assert.That(dialog.ShowsDriverSettings, Is.False, "the PDF file has no driver");
     }
 
     // Copies, color and the like print the same sheets: only what moves pages lays them out again.

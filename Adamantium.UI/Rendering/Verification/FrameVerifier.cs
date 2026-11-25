@@ -172,8 +172,9 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             }
 
             var textBrush = (component as Controls.Text.TextBlock)?.Foreground as Core.Media.SolidColorBrush;
-            _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds, parent,
-                (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden,
+            _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds,
+                RenderCache.ClipInsetOf(component), parent, (float)component.Opacity, world, animated, carried,
+                component.RenderClones?.Count ?? 0, hidden,
                 (float)component.SelfOpacity,
                 textBrush?.Color.ToVector4(), textBrush, textBrush?.PaintVersion ?? 0,
                 !component.IsGeometryValid);
@@ -575,7 +576,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         }
 
         var drawn = live.SlotClipBox(clip);
-        var expected = live.ClipBoxOf(owner, fact.Size, fact.World);
+        var expected = live.ClipBoxOf(owner, fact.Size, fact.ClipInset, fact.World, clip);
         if (Math.Abs(drawn.X - expected.X) > 1.5f || Math.Abs(drawn.Y - expected.Y) > 1.5f
             || Math.Abs(drawn.Z - expected.Z) > 1.5f || Math.Abs(drawn.W - expected.W) > 1.5f)
         {

@@ -29,6 +29,11 @@
         <ProjectReference Include="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
+    <ItemGroup>
+        <!-- What a test built goes with it, as in Adamantium.XamlTests. -->
+        <Compile Include="..\ReleaseVisualsAttribute.cs" Link="ReleaseVisualsAttribute.cs" />
+    </ItemGroup>
+
     <Target Name="ScenarioGeneratorFromSource" BeforeTargets="CoreCompile">
         <MSBuild Projects="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj"
                  Targets="GetAumlAnalyzerAssemblies"

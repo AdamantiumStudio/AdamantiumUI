@@ -13,6 +13,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Templates;
 using Adamantium.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
@@ -293,6 +294,27 @@ public class DropDown : Selector
     {
         get => GetValue(DisplayContentProperty);
         private set => SetValue(DisplayContentProperty, value);
+    }
+
+    public static readonly AdamantiumProperty DisplayContentTemplateProperty = AdamantiumProperty.Register(
+        nameof(DisplayContentTemplate), typeof(DataTemplate), typeof(DropDown), new PropertyMetadata(null));
+
+    /// <summary>How the header presents <see cref="DisplayContent"/>: the item template for an item, none for the
+    /// placeholder. Read-only.</summary>
+    public DataTemplate DisplayContentTemplate
+    {
+        get => GetValue<DataTemplate>(DisplayContentTemplateProperty);
+        private set => SetValue(DisplayContentTemplateProperty, value);
+    }
+
+    public static readonly AdamantiumProperty DisplayContentTemplateSelectorProperty = AdamantiumProperty.Register(
+        nameof(DisplayContentTemplateSelector), typeof(DataTemplateSelector), typeof(DropDown), new PropertyMetadata(null));
+
+    /// <summary>The item template selector for an item, none for the placeholder. Read-only.</summary>
+    public DataTemplateSelector DisplayContentTemplateSelector
+    {
+        get => GetValue<DataTemplateSelector>(DisplayContentTemplateSelectorProperty);
+        private set => SetValue(DisplayContentTemplateSelectorProperty, value);
     }
 
     /// <summary>Set to an enum type to auto-fill the list with its values (SelectedItem becomes the chosen enum value).</summary>
@@ -735,6 +757,10 @@ public class DropDown : Selector
             if (_shown != null) _shown.PropertyChanged += OnShownChanged;
         }
 
+        // The item template is for an item: the placeholder, or nothing, is not one.
+        var item = SelectedItem != null || _answer != null;
+        DisplayContentTemplate = item ? ItemTemplate : null;
+        DisplayContentTemplateSelector = item ? ItemTemplateSelector : null;
         DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
         ShowText();
     }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="MacOS" Description="What a window of a hidden run keeps in AppKit's place: minimized it is not the active one and restored it is again, a maximized one comes back from the Dock maximized, and a modal window takes the activation and gives it back.">
+  <Wait Target="id=MainWindow" IsActive="True" />
+  <Window Target="id=MainWindow" Action="Minimize" />
+  <Wait Target="id=MainWindow" IsActive="False" Timeout="2s" />
+  <Window Target="id=MainWindow" Action="Restore" />
+  <Wait Target="id=MainWindow" IsActive="True" Timeout="2s" />
+  <Window Target="id=MainWindow" Action="Maximize" />
+  <Wait Target="id=MainWindow" Window="Maximized" Timeout="2s" />
+  <Window Target="id=MainWindow" Action="Minimize" />
+  <Wait Target="id=MainWindow" Window="Minimized" Timeout="2s" />
+  <Window Target="id=MainWindow" Action="Restore" />
+  <Wait Target="id=MainWindow" Window="Maximized" Timeout="2s" />
+  <Window Target="id=MainWindow" Action="Restore" />
+  <Wait Target="id=MainWindow" Window="Normal" Timeout="2s" />
+  <Select Target="id=GalleryTabs/id=Navigation" />
+  <Invoke Target="id=ShowModalWindow" />
+  <Wait Target="id=ConfirmDialogView" />
+  <Wait Target="id=MainWindow" IsActive="False" Timeout="2s" />
+  <Invoke Target="id=ConfirmDialogView/name=Cancel" />
+  <Absent Target="id=ConfirmDialogView" />
+  <Wait Target="id=MainWindow" IsActive="True" Timeout="2s" />
+</Scenario>

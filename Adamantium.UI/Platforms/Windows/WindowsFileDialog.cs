@@ -29,7 +29,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
 
             // Every non-zero answer means no file, and canceling is the usual one. Nothing to report either way: the
             // user closing a dialog is not a failure, and neither is a shell that refused to open one.
-            if (dialog.Show(Owner(request?.Owner ?? IntPtr.Zero)) != 0) return null;
+            if (dialog.Show(WindowsDialogOwner.Of(request?.Owner ?? IntPtr.Zero)) != 0) return null;
             if (dialog.GetResult(out var item) != 0) return null;
 
             return PathOf(item);
@@ -54,7 +54,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         {
             Prepare(dialog, request);
 
-            if (dialog.Show(Owner(request?.Owner ?? IntPtr.Zero)) != 0) return null;
+            if (dialog.Show(WindowsDialogOwner.Of(request?.Owner ?? IntPtr.Zero)) != 0) return null;
             if (dialog.GetResult(out var item) != 0) return null;
 
             return PathOf(item);
@@ -87,7 +87,7 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
 
             if (Named(request?.Key) is { } id) dialog.SetClientGuid(ref id);
 
-            if (dialog.Show(Owner(request?.Owner ?? IntPtr.Zero)) != 0) return null;
+            if (dialog.Show(WindowsDialogOwner.Of(request?.Owner ?? IntPtr.Zero)) != 0) return null;
             if (dialog.GetResult(out var item) != 0) return null;
 
             return PathOf(item);
@@ -150,17 +150,6 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
     {
         var iid = typeof(IShellItem).GUID;
         return Win32Interop.SHCreateItemFromParsingName(path, IntPtr.Zero, ref iid, out var item) == 0 ? item : null;
-    }
-
-    // The owner decides the dialog's monitor: the requested window, else the active one (per-thread, so possibly none),
-    // else the main window.
-    private static IntPtr Owner(IntPtr asked)
-    {
-        if (asked != IntPtr.Zero) return asked;
-
-        var active = Win32Interop.GetActiveWindow();
-
-        return active != IntPtr.Zero ? active : UIApplication.Current?.MainWindow?.Handle ?? IntPtr.Zero;
     }
 
     // A NAME TURNED INTO THE IDENTIFIER THE SHELL WANTS, and the same name always gives the same one - which is the

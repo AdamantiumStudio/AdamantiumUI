@@ -33,6 +33,7 @@ if [ "$CEF_RESUME" != 1 ]; then
   (cd "$src/cef" && python3 tools/gclient_hook.py)
 fi
 apply_once "$src" "$here/patches/chromium-proprietary-codecs-gate.patch"
+apply_once "$src" "$here/patches/chromium-allowed-components.patch"
 apply_once "$src/cef" "$here/patches/cef-make-distrib-ffmpeg.patch"
 echo "== args"
 cat "$src/out/Release_GN_x64/args.gn"
