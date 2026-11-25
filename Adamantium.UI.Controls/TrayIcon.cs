@@ -1,4 +1,5 @@
 using Adamantium.Core.Commands;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -9,9 +10,17 @@ namespace Adamantium.UI.Controls;
 /// <c>TrayIcons</c> and <see cref="IsVisible"/>; where the desktop has no such place it shows nowhere.</summary>
 public sealed class TrayIcon : FundamentalUIComponent
 {
+    private readonly ContextMenuRows _menuRows;
     private INotificationAreaIcon _shown;
     private TrayMenuWindow _menuWindow;
     private bool _placed;
+    // IsDisplayed as last told: a change comes from more than one place, each told once.
+    private bool _toldDisplayed;
+
+    public TrayIcon()
+    {
+        _menuRows = new ContextMenuRows(this);
+    }
 
     public static readonly AdamantiumProperty ToolTipProperty = AdamantiumProperty.Register(nameof(ToolTip),
         typeof(string), typeof(TrayIcon), new PropertyMetadata(null, OnToolTipChanged));
@@ -65,8 +74,18 @@ public sealed class TrayIcon : FundamentalUIComponent
     /// <summary>Whether the icon is in the notification area now.</summary>
     public bool IsShown => _shown != null;
 
+    /// <summary>Whether the desktop shows the icon now: not while it is not shown; on Windows, not before the task bar took
+    /// it - at sign-in, before Explorer starts; on Linux, not on a session whose panel has not started yet, or that has
+    /// none.</summary>
+    public bool IsDisplayed => _shown?.IsDisplayed == true;
+
     /// <summary>The icon clicked, or picked from the keyboard.</summary>
     public event EventHandler Clicked;
+
+    /// <summary>Raised on the loop thread when <see cref="IsDisplayed"/> changes - the task bar or a Linux panel started
+    /// after the application, or the panel went. Windows says nothing of a task bar that ends; it says when one starts
+    /// again.</summary>
+    public event EventHandler IsDisplayedChanged;
 
     /// <summary>The window its menu is open in; null while it is closed.</summary>
     internal TrayMenuWindow MenuWindow => _menuWindow;
@@ -87,25 +106,68 @@ public sealed class TrayIcon : FundamentalUIComponent
 
     private void ShowOrTakeAway()
     {
-        var wanted = _placed && IsVisible;
-        if (wanted && _shown == null)
+        if (_placed && IsVisible)
         {
-            _shown = NotificationArea.AddIcon(ToolTip);
-            if (_shown == null)
-            {
-                return;
-            }
-
-            _shown.Clicked += OnClicked;
-            _shown.MenuAsked += OnMenuAsked;
+            Show();
         }
-        else if (!wanted && _shown != null)
+        else
         {
-            _shown.Clicked -= OnClicked;
-            _shown.MenuAsked -= OnMenuAsked;
-            _shown.Dispose();
-            _shown = null;
-            CloseMenuWindow();
+            Remove();
+        }
+
+        TellIfDisplayedChanged();
+    }
+
+    private void Show()
+    {
+        if (_shown != null)
+        {
+            return;
+        }
+
+        _shown = NotificationArea.AddIcon(ToolTip, _menuRows);
+        if (_shown == null)
+        {
+            return;
+        }
+
+        _shown.Clicked += OnClicked;
+        _shown.MenuAsked += OnMenuAsked;
+        _shown.IsDisplayedChanged += OnIsDisplayedChanged;
+    }
+
+    private void Remove()
+    {
+        if (_shown == null)
+        {
+            return;
+        }
+
+        _shown.Clicked -= OnClicked;
+        _shown.MenuAsked -= OnMenuAsked;
+        _shown.IsDisplayedChanged -= OnIsDisplayedChanged;
+        _shown.Dispose();
+        _shown = null;
+        CloseMenuWindow();
+    }
+
+    private void TellIfDisplayedChanged()
+    {
+        var displayed = IsDisplayed;
+        if (displayed == _toldDisplayed)
+        {
+            return;
+        }
+
+        _toldDisplayed = displayed;
+        IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnIsDisplayedChanged(object sender, EventArgs e)
+    {
+        if (ReferenceEquals(sender, _shown))
+        {
+            TellIfDisplayedChanged();
         }
     }
 
@@ -117,6 +179,39 @@ public sealed class TrayIcon : FundamentalUIComponent
         {
             command.Execute(parameter);
         }
+    }
+
+    private static List<NotificationAreaMenuItem> RowsOf(ItemsControl owner)
+    {
+        List<NotificationAreaMenuItem> rows = [];
+        foreach (var item in owner.Items)
+        {
+            switch (item)
+            {
+                case Separator or ISeparatorItem { IsSeparator: true }:
+                    rows.Add(NotificationAreaMenuItem.Separator);
+                    break;
+                case MenuItem { Visibility: Visibility.Visible } row:
+                    rows.Add(new NotificationAreaMenuItem
+                    {
+                        Text = row.Header as string ?? row.GetAutomationPeer()?.Name,
+                        IsEnabled = row.IsEnabled,
+                        IsCheckable = row.IsCheckable,
+                        IsChecked = row.IsChecked,
+                        Items = row.HasItems ? RowsOf(row) : [],
+                        Picked = () => row.Invoke(),
+                    });
+                    break;
+                case MenuItem:
+                    break;
+                default:
+                    // A row of data, which the menu makes a MenuItem of only as it opens: its text, nothing to pick.
+                    rows.Add(new NotificationAreaMenuItem { Text = item?.ToString(), IsEnabled = false });
+                    break;
+            }
+        }
+
+        return rows;
     }
 
     private void OnMenuAsked(object sender, NotificationAreaMenuEventArgs e)
@@ -189,5 +284,23 @@ public sealed class TrayIcon : FundamentalUIComponent
         {
             icon.AddLogicalChild(menu);
         }
+
+        icon._menuRows.IsOffered = e.NewValue != null;
+    }
+
+    // For a desktop that shows the menu itself - a Linux panel: the rows of ContextMenu as they stand now, each picked as
+    // a click on it would pick it. Read on the loop thread, each time the menu is about to show. An icon without a
+    // ContextMenu offers none: a panel shows no empty one on a right click.
+    private sealed class ContextMenuRows(TrayIcon icon) : INotificationAreaMenu
+    {
+        private volatile bool _isOffered;
+
+        public bool IsOffered
+        {
+            get => _isOffered;
+            set => _isOffered = value;
+        }
+
+        public IReadOnlyList<NotificationAreaMenuItem> ReadRows() => icon.ContextMenu is { } menu ? RowsOf(menu) : [];
     }
 }

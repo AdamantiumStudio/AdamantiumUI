@@ -11,7 +11,7 @@ namespace Adamantium.UI.Platforms.Windows;
 /// <summary>Icons of the task bar's notification area (<c>Shell_NotifyIconW</c>). What is done to them is told to a hidden
 /// window of the pump thread - a top-level one, not message-only, as only those hear "TaskbarCreated", the shell saying
 /// it started again and the icons have to be put back.</summary>
-internal sealed class WindowsNotificationArea : INotificationAreaPlatform
+internal sealed partial class WindowsNotificationArea : INotificationAreaPlatform
 {
     private static readonly uint IconMessage = Messages.RegisterWindowMessage("Adamantium.NotificationAreaIcon");
     private static readonly uint TaskbarCreatedMessage = Messages.RegisterWindowMessage("TaskbarCreated");
@@ -20,7 +20,12 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
     private readonly Dictionary<uint, Icon> _icons = new();
     private Win32NativeWindowWrapper _window;
 
-    public INotificationAreaIcon AddIcon(string toolTip)
+    /// <summary>A task bar runs: Explorer's, which holds the notification area - not another shell, nor Explorer while it
+    /// restarts.</summary>
+    public bool IsAvailable => Shell.FindWindow("Shell_TrayWnd", null) != IntPtr.Zero;
+
+    // The menu is not read here: the application opens its own, on MenuAsked.
+    public INotificationAreaIcon AddIcon(string toolTip, INotificationAreaMenu menu)
     {
         Icon icon;
         lock (_lock)
@@ -42,14 +47,14 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         if (dispatcher == null || dispatcher.CheckAccess())
         {
             MakeWindow();
-            icon.Show();
+            icon.Show(tellChange: false);
         }
         else
         {
             dispatcher.Invoke(() =>
             {
                 MakeWindow();
-                icon.Show();
+                icon.Show(tellChange: false);
             });
         }
 
@@ -97,7 +102,7 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         {
             foreach (var icon in IconsNow())
             {
-                icon.Show();
+                icon.Show(tellChange: true);
             }
 
             return IntPtr.Zero;
@@ -152,6 +157,7 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
         // Shown, changed and taken away from any thread; the shell is told nothing before the window is made.
         private readonly object _lock = new();
         private string _toolTip = toolTip;
+        private bool _displayed;
         private bool _disposed;
 
         public uint Id { get; } = id;
@@ -179,10 +185,26 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
 
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
 
-        // Added, or added again after the shell restarted; false while there is no shell to take it - it says when it is
-        // back.
-        public void Show()
+        /// <summary>The task bar took the icon, when it was put there last. A task bar that ends says nothing; the one
+        /// that starts again does, and the icon is put there anew.</summary>
+        public bool IsDisplayed
         {
+            get
+            {
+                lock (_lock)
+                {
+                    return _displayed;
+                }
+            }
+        }
+
+        public event EventHandler IsDisplayedChanged;
+
+        // Added, or added again after the shell restarted; not taken while there is no shell - it says when it is back.
+        // A change is told unless the icon is being made, before anyone could hear it.
+        public void Show(bool tellChange)
+        {
+            bool changed;
             lock (_lock)
             {
                 if (_disposed)
@@ -190,20 +212,43 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
                     return;
                 }
 
-                var data = Data(NotifyIconFlags.Message | NotifyIconFlags.Icon | NotifyIconFlags.Tip |
-                    NotifyIconFlags.ShowTip);
-                data.CallbackMessage = IconMessage;
-                data.Icon = ApplicationIcon();
-                if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data))
-                {
-                    Log.Logger.Information(
-                        "The notification area took no icon now; it is put there when the task bar starts");
-                    return;
-                }
+                var displayed = Add();
+                changed = displayed != _displayed;
+                _displayed = displayed;
+            }
 
-                var version = Data(default);
-                version.Version = NOTIFYICONDATA.NotifyIconVersion4;
-                Win32Interop.ShellNotifyIcon(NotifyIconMessage.SetVersion, ref version);
+            if (changed && tellChange)
+            {
+                Win32WindowWorker.DispatchInput(RaiseIsDisplayedChanged);
+            }
+        }
+
+        private bool Add()
+        {
+            var data = Data(NotifyIconFlags.Message | NotifyIconFlags.Icon | NotifyIconFlags.Tip | NotifyIconFlags.ShowTip);
+            data.CallbackMessage = IconMessage;
+            data.Icon = ApplicationIcon();
+            // Not taken because it is there still - "TaskbarCreated" heard while the icons stayed, or an Add the shell
+            // answered late: changed instead.
+            if (!Win32Interop.ShellNotifyIcon(NotifyIconMessage.Add, ref data) &&
+                !Win32Interop.ShellNotifyIcon(NotifyIconMessage.Modify, ref data))
+            {
+                Log.Logger.Information("The notification area took no icon now; it is put there when the task bar starts");
+                return false;
+            }
+
+            // The version 4 form, which OnMessage reads, whichever way the icon came to be there.
+            var version = Data(default);
+            version.Version = NOTIFYICONDATA.NotifyIconVersion4;
+            Win32Interop.ShellNotifyIcon(NotifyIconMessage.SetVersion, ref version);
+            return true;
+        }
+
+        private void RaiseIsDisplayedChanged()
+        {
+            if (!_disposed)
+            {
+                IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -261,5 +306,11 @@ internal sealed class WindowsNotificationArea : INotificationAreaPlatform
             return Win32Interop.LoadImage(Win32Interop.GetModuleHandle(null),
                 new IntPtr(Win32NativeWindowWrapper.ApplicationIconId), LoadImageType.Icon, size, size, LoadImageFlags.Shared);
         }
+    }
+
+    private static partial class Shell
+    {
+        [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
+        public static partial IntPtr FindWindow(string className, string windowName);
     }
 }
