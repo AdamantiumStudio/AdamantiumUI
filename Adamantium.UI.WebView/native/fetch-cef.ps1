@@ -22,8 +22,8 @@ $version = "156.0.26+g8ea0c73+chromium-156.0.8078.88"
 $release = "cef-156.0.26-2"
 $releases = "https://github.com/AdamantiumStudio/AdamantiumUI/releases/download/$release"
 $ours = @{
-    "win-x64" = @{ Platform = "windows64"; Sha256 = "355d830130c8131eb767d9a96fd6f9d4502f029f03c731a36d6c278e5a573ba0"; FFmpeg = "ffmpeg.dll" }
-    "linux-x64" = @{ Platform = "linux64"; Sha256 = "31a3af296be28ffbca833c0a6655d84fe6c64d3b291032c861512c4c9143a96f"; FFmpeg = "libffmpeg.so" }
+    "win-x64" = @{ Platform = "windows64"; Sha256 = "148c5a94a1ab0f75019ce9105fbd9d154027c983ca78ffc2f810079446f8ddd6"; FFmpeg = "ffmpeg.dll" }
+    "linux-x64" = @{ Platform = "linux64"; Sha256 = "d1685756daf0988d7c304d43de2bc96ab2a63fb49e6c215b1ed590d83d789c59"; FFmpeg = "libffmpeg.so" }
 }
 $build = $ours[$Rid]
 if ($build) {

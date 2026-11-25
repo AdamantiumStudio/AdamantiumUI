@@ -15,7 +15,9 @@ differences:
   `--allowed-components=<id>,<id>`: Component Updater registers only the components it lists, wherever they are
   registered from, and none when it is empty, so nothing is fetched from Google that the application did not ask for.
   A component left out is not updated, and a copy it left on disk is not loaded - Widevine's on Linux too, which is
-  otherwise read from its hint file at start. Without the switch every component is registered, as in CEF's build.
+  otherwise read from its hint file at start. An update asked for a component it lists before that component
+  registered - they register a while after start - waits and runs as it registers, instead of failing as unknown.
+  Without the switch every component is registered, as in CEF's build.
 - `make_distrib` ships FFmpeg (`patches/cef-make-distrib-ffmpeg.patch`).
 
 The WebView turns the feature on when the FFmpeg beside CEF decodes H.264 and AAC.
