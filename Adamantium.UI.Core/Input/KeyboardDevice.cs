@@ -219,6 +219,7 @@ public class KeyboardDevice
          {
             target.RaiseEvent(new TextCompositionEventArgs(composition.Text ?? string.Empty, composition.CursorPosition)
             {
+               IsShownBySystem = composition.IsShownBySystem,
                RoutedEvent = composition.EventType switch
                {
                   RawTextCompositionEventType.Started => Keyboard.TextCompositionStartedEvent,

@@ -16,7 +16,7 @@ namespace Adamantium.UI.Platforms.MacOS;
 
 /// <summary>A window on macOS: an NSWindow whose content view hosts the CAMetalLayer the window is drawn into. AppKit
 /// is called on the main thread; what it reports reaches the window on the loop thread.</summary>
-public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
+public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService, ITextInputTarget
 {
     private const int DefaultWidth = 800;
     private const int DefaultHeight = 600;
@@ -44,6 +44,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private CGRect _restoreFrame;
     private bool _topmost;
     private volatile bool _closed;
+    private volatile bool _hidesComposition;
     private MacOSModality _modality;
 
     public MacOSWindowWorker(IUIContext context)
@@ -88,6 +89,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         _window = window;
         _modality = new MacOSModality(_platform, window, Activate);
+        TextInput = new MacOSTextInput(this);
+        FocusManager.FocusMoved += OnFocusMoved;
         window.Closed += OnWindowClosed;
 
         var width = InitialExtent(window.ClientWidth, window.Width, DefaultWidth);
@@ -356,6 +359,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void SetInputMethodEnabled(bool enabled)
     {
+        _hidesComposition = !enabled;
+        OnMainThread(() =>
+        {
+            LeaveComposition(TextInput.Discard);
+            // What types letters by composing them, as Chinese, is left out; dead keys are not.
+            NSTextInputContext.AllowOnlyRoman(NSTextInputContext.Of(_view), !enabled);
+        });
     }
 
     public void BeginMoveDrag() => OnMainThread(() =>
@@ -399,6 +409,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
                 ReportDelta(window, nsEvent);
             return;
         }
+
+        if (type == RawPointerEventType.Down)
+            LeaveComposition();
 
         if (type == RawPointerEventType.Down && button == MouseButtons.Left)
         {
@@ -566,9 +579,40 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
         }
 
-        ReportKey(window, nsEvent, down, down && NSEvent.IsRepeat(nsEvent));
+        if (!down)
+        {
+            ReportKey(window, nsEvent, false, false);
+            return;
+        }
 
-        if (!down || (flags & (NSEventModifierFlags.Command | NSEventModifierFlags.Control)) != 0)
+        if (IsEmojiShortcut(nsEvent, flags) && _takesText)
+        {
+            if (!NSEvent.IsRepeat(nsEvent))
+                NSTextInputContext.ShowCharacters();
+            return;
+        }
+
+        if (!_takesText || (flags & NSEventModifierFlags.Command) != 0 ||
+            (flags & NSEventModifierFlags.Control) != 0 && !TextInput.IsComposing)
+        {
+            LeaveComposition();
+            ReportKey(window, nsEvent, true, NSEvent.IsRepeat(nsEvent));
+            ReportText(window, nsEvent, flags);
+            return;
+        }
+
+        var context = NSTextInputContext.Of(_view);
+        if (!TextInput.Press(() => NSTextInputContext.HandleEvent(context, nsEvent),
+                () => ReportKey(window, nsEvent, true, NSEvent.IsRepeat(nsEvent))))
+        {
+            ReportText(window, nsEvent, flags);
+        }
+    }
+
+    // Straight from the key, past the input method.
+    private void ReportText(IWindow window, IntPtr nsEvent, NSEventModifierFlags flags)
+    {
+        if ((flags & (NSEventModifierFlags.Command | NSEventModifierFlags.Control)) != 0)
             return;
 
         var text = NSEvent.CharactersOf(nsEvent);
@@ -581,12 +625,97 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             new RawTextInputEventArgs(text, modifiers, time), window));
     }
 
+    /// <summary>What the input method makes of the keys; main thread.</summary>
+    internal MacOSTextInput TextInput { get; private set; }
+
+    // A letter held down where no text is typed - in a scene - repeats, with no accents offered for it.
+    // Told on the loop thread, which the focus is on.
+    private volatile bool _takesText;
+
+    private void FindWhetherTextIsTaken() =>
+        _takesText = CommandManager.EntryAround(FocusManager.Focused as IUIComponent) != null;
+
+    private void OnFocusMoved(object sender, FocusMovedEventArgs e)
+    {
+        FindWhetherTextIsTaken();
+        // What was composed was for where the focus was.
+        OnMainThread(() => LeaveComposition(TextInput.Discard));
+    }
+
+    /// <summary>Where the input method puts its windows; main thread.</summary>
+    internal CGRect CaretOnScreen
+    {
+        get
+        {
+            var caret = _window?.InputMethodCaret ?? default;
+            var height = NSView.BoundsOf(_view).Size.Height;
+            return NSTextInputContext.ToScreen(_view, new CGRect(caret.X, height - caret.Bottom, caret.Width, caret.Height));
+        }
+    }
+
+    void ITextInputTarget.Type(string text)
+    {
+        var window = _window;
+        Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
+            new RawTextInputEventArgs(text, InputModifiers.None, Now), window));
+    }
+
+    void ITextInputTarget.Compose(RawTextCompositionEventType type, string text, int cursor)
+    {
+        // What is typed into a password is not shown.
+        if (_hidesComposition)
+            return;
+
+        var window = _window;
+        Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
+            new RawTextCompositionEventArgs(type, text, cursor, InputModifiers.None, Now), window));
+    }
+
+    void ITextInputTarget.Erase(int count)
+    {
+        var window = _window;
+        Report(() =>
+        {
+            for (var i = 0; i < count; i++)
+            {
+                KeyboardDevice.CurrentDevice.ProcessEvent(BackspaceOf(RawKeyboardEventType.KeyDown), window);
+                KeyboardDevice.CurrentDevice.ProcessEvent(BackspaceOf(RawKeyboardEventType.KeyUp), window);
+            }
+        });
+    }
+
+    private static RawKeyboardEventArgs BackspaceOf(RawKeyboardEventType type) => new(Key.BackSpace, type,
+        new KeyPressInfo { RepeatCount = 1 }, InputModifiers.None, Now);
+
+    private static uint Now => unchecked((uint)Environment.TickCount64);
+
+    // What is composed stays as it is when the caret is about to go elsewhere.
+    private void LeaveComposition() => LeaveComposition(TextInput.Commit);
+
+    private void LeaveComposition(Action end)
+    {
+        if (TextInput.IsComposing)
+        {
+            end();
+            NSTextInputContext.DiscardMarkedText(NSTextInputContext.Of(_view));
+        }
+
+        TextInput.ForgetTyped();
+    }
+
     // ⌃⌘F, as every Mac application has it.
-    private bool IsFullScreenShortcut(IntPtr nsEvent, NSEventModifierFlags flags)
+    private bool IsFullScreenShortcut(IntPtr nsEvent, NSEventModifierFlags flags) =>
+        IsHeldWithControlAndCommand(flags) && _platform.Keyboard.KeyOf(nsEvent) == Key.F;
+
+    // ⌃⌘Space.
+    private bool IsEmojiShortcut(IntPtr nsEvent, NSEventModifierFlags flags) =>
+        IsHeldWithControlAndCommand(flags) && _platform.Keyboard.KeyOf(nsEvent) == Key.Space;
+
+    private static bool IsHeldWithControlAndCommand(NSEventModifierFlags flags)
     {
         const NSEventModifierFlags shortcut = NSEventModifierFlags.Command | NSEventModifierFlags.Control;
         const NSEventModifierFlags held = shortcut | NSEventModifierFlags.Shift | NSEventModifierFlags.Option;
-        return (flags & held) == shortcut && _platform.Keyboard.KeyOf(nsEvent) == Key.F;
+        return (flags & held) == shortcut;
     }
 
     internal void OnFlagsChanged(IntPtr nsEvent)
@@ -631,8 +760,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         };
         var key = _platform.Keyboard.KeyOf(nsEvent, down);
         var type = down ? RawKeyboardEventType.KeyDown : RawKeyboardEventType.KeyUp;
-        Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
-            new RawKeyboardEventArgs(key, type, press, modifiers, time), window));
+        Report(() =>
+        {
+            KeyboardDevice.CurrentDevice.ProcessEvent(new RawKeyboardEventArgs(key, type, press, modifiers, time), window);
+            // A web page goes from field to field within the focus.
+            FindWhetherTextIsTaken();
+        });
     }
 
     internal void OnCloseRequested()
@@ -711,7 +844,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (isKey)
             EnterRelativeMouse();
         else
+        {
             LeaveRelativeMouse();
+            LeaveComposition();
+        }
 
         // A window a modal one keeps from input is not the active one: the keyboard coming to it is handed on.
         if (isKey && _modality.IsBlocked)
@@ -881,6 +1017,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
 
         _closed = true;
+        FocusManager.FocusMoved -= OnFocusMoved;
         _window.StateChanged -= WindowOnStateChanged;
         _window.ResizeModeChanged -= WindowOnResizeModeChanged;
         _platform.Unregister(this);

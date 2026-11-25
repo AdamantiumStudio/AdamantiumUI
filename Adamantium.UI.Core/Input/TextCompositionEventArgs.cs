@@ -16,4 +16,8 @@ public class TextCompositionEventArgs : RoutedEventArgs
 
     /// <summary>Where the composition's own cursor stands in <see cref="Text"/>.</summary>
     public int CursorPosition { get; }
+
+    /// <summary>Whether the system shows <see cref="Text"/> at the caret in a window of its own, as Windows does; otherwise
+    /// the control does.</summary>
+    public bool IsShownBySystem { get; init; }
 }

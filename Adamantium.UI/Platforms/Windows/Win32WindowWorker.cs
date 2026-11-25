@@ -1393,7 +1393,7 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
 
     private void DispatchComposition(RawTextCompositionEventType type, string text, int cursor) =>
         DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(new RawTextCompositionEventArgs(type, text, cursor,
-            KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp())));
+            KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp()) { IsShownBySystem = true }));
 
     private IntPtr HandleMouseMove(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
