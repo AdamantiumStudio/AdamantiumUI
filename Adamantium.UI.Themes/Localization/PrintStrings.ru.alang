@@ -34,8 +34,6 @@
     <Phrase Key="Quality" Text="Качество"/>
     <Phrase Key="Tray" Text="Лоток"/>
     <Phrase Key="MediaType" Text="Тип бумаги"/>
-    <Phrase Key="RasterResolution" Text="Разрешение растра"/>
-    <Phrase Key="DotsPerInch" Text="{dpi} dpi"/>
     <Phrase Key="SheetOfCount" Text="Лист {sheet} из {count}"/>
     <Phrase Key="PreviousSheet" Text="Предыдущий лист"/>
     <Phrase Key="NextSheet" Text="Следующий лист"/>

@@ -26,9 +26,19 @@ public class PrintDialog : Control
     private CancellationTokenSource _asking;
     private bool _composing;
 
+    // What the user asked for, before any printer fitted it: a choice one printer cannot make comes back with the
+    // next that can.
+    private PrintSettings _wish = new() { Scaling = PrintScaling.FitToSheet, Color = PrintColorMode.Color };
+
+    // What the sheets were last laid out from: only a choice that moves pages lays them out again.
+    private PrintSettings _laidOut;
+    private PrinterCapabilities _laidOutFor;
+    private IPrintDocument _laidOutDocument;
+    private int _laidOutCurrentPage;
+
     public PrintDialog()
     {
-        PrintCommand = new PrintDialogCommand(OnPrint, () => RangeIsValid);
+        PrintCommand = new PrintDialogCommand(OnPrint, () => RangeIsValid && !IsAsking);
         CancelCommand = new PrintDialogCommand(OnCancel);
         PreviousSheetCommand = new PrintDialogCommand(() => Sheet--, () => Sheet > 0);
         NextSheetCommand = new PrintDialogCommand(() => Sheet++, () => Sheet < SheetCount - 1);
@@ -113,9 +123,6 @@ public class PrintDialog : Control
     public static readonly AdamantiumProperty PagesPerSheetProperty = AdamantiumProperty.Register(
         nameof(PagesPerSheet), typeof(int), typeof(PrintDialog), new PropertyMetadata(1, OnOptionChanged));
 
-    public static readonly AdamantiumProperty RasterDotsPerInchProperty = AdamantiumProperty.Register(
-        nameof(RasterDotsPerInch), typeof(int), typeof(PrintDialog), new PropertyMetadata(300, OnOptionChanged));
-
     /// <summary>All pages, the current one, or those in <see cref="RangeText"/>.</summary>
     public PageRangeKind RangeKind
     {
@@ -169,16 +176,6 @@ public class PrintDialog : Control
 
     /// <summary>The choices of <see cref="PagesPerSheet"/>.</summary>
     public IReadOnlyList<int> PagesPerSheetChoices => PrintSettings.PagesPerSheetChoices;
-
-    /// <summary>How finely what has no shapes goes into a PDF file - shown for the file alone.</summary>
-    public int RasterDotsPerInch
-    {
-        get => GetValue<int>(RasterDotsPerInchProperty);
-        set => SetValue(RasterDotsPerInchProperty, value);
-    }
-
-    /// <summary>The choices of <see cref="RasterDotsPerInch"/>.</summary>
-    public IReadOnlyList<int> RasterChoices { get; } = [150, 300, 600];
 
     #endregion
 
@@ -291,7 +288,7 @@ public class PrintDialog : Control
     public static readonly AdamantiumProperty ShowsTrayProperty = Shows(nameof(ShowsTray));
     public static readonly AdamantiumProperty ShowsMediaTypeProperty = Shows(nameof(ShowsMediaType));
     public static readonly AdamantiumProperty ShowsScaleProperty = Shows(nameof(ShowsScale));
-    public static readonly AdamantiumProperty ShowsRasterProperty = Shows(nameof(ShowsRaster));
+    public static readonly AdamantiumProperty PrintsToFileProperty = Shows(nameof(PrintsToFile));
     public static readonly AdamantiumProperty ShowsPrinterStateProperty = Shows(nameof(ShowsPrinterState));
 
     public static readonly AdamantiumProperty PrinterStateProperty = AdamantiumProperty.Register(nameof(PrinterState),
@@ -322,8 +319,8 @@ public class PrintDialog : Control
     /// <summary>The scale is asked for: <see cref="PrintScaling.Custom"/>.</summary>
     public bool ShowsScale => GetValue<bool>(ShowsScaleProperty);
 
-    /// <summary>Printing to the PDF file, whose raster resolution is the dialog's to choose.</summary>
-    public bool ShowsRaster => GetValue<bool>(ShowsRasterProperty);
+    /// <summary>Printing into the PDF file - which is saved, not printed.</summary>
+    public bool PrintsToFile => GetValue<bool>(PrintsToFileProperty);
 
     /// <summary>The printer is held up or busy - its <see cref="PrinterState"/> is worth saying.</summary>
     public bool ShowsPrinterState => GetValue<bool>(ShowsPrinterStateProperty);
@@ -394,8 +391,76 @@ public class PrintDialog : Control
         Canceled?.Invoke(this, EventArgs.Empty);
     }
 
-    private static void OnOptionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
-        (component as PrintDialog)?.Compose();
+    private static void OnOptionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not PrintDialog dialog)
+        {
+            return;
+        }
+
+        // The user's choice is kept as asked: what a printer cannot do is shown fitted, and given back to the next
+        // printer that can.
+        if (!dialog._composing)
+        {
+            dialog.Wish(e.Property, e.NewValue);
+        }
+
+        dialog.Compose();
+    }
+
+    /// <summary>Keeps what the user asked for of <paramref name="property"/>.</summary>
+    private void Wish(AdamantiumProperty property, object value)
+    {
+        if (property == CopiesProperty)
+        {
+            var copies = value is double number && double.IsFinite(number) ? (int)Math.Round(number) : 1;
+            _wish = _wish with { Copies = copies };
+        }
+        else if (property == CollateProperty && value is bool collate)
+        {
+            _wish = _wish with { Collate = collate };
+        }
+        else if (property == DuplexProperty && value is DuplexMode duplex)
+        {
+            _wish = _wish with { Duplex = duplex };
+        }
+        else if (property == ColorProperty && value is PrintColorMode color)
+        {
+            _wish = _wish with { Color = color };
+        }
+        else if (property == QualityProperty)
+        {
+            _wish = _wish with { Quality = value as PrintQuality };
+        }
+        else if (property == TrayProperty)
+        {
+            _wish = _wish with { Tray = value as string };
+        }
+        else if (property == MediaTypeProperty)
+        {
+            _wish = _wish with { MediaType = value as string };
+        }
+        else if (property == PaperProperty && value is PaperSize paper)
+        {
+            _wish = _wish with { Paper = paper };
+        }
+        else if (property == OrientationProperty && value is PageOrientation orientation)
+        {
+            _wish = _wish with { Orientation = orientation };
+        }
+        else if (property == ScalingProperty && value is PrintScaling scaling)
+        {
+            _wish = _wish with { Scaling = scaling };
+        }
+        else if (property == ScalePercentProperty && value is double percent)
+        {
+            _wish = _wish with { ScalePercent = percent };
+        }
+        else if (property == PagesPerSheetProperty && value is int perSheet)
+        {
+            _wish = _wish with { PagesPerSheet = perSheet };
+        }
+    }
 
     private static void OnRangeTextChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
@@ -404,10 +469,12 @@ public class PrintDialog : Control
             return;
         }
 
-        // Typing pages chooses them.
-        if (!dialog._composing && !string.IsNullOrWhiteSpace(e.NewValue as string))
+        // Typing pages chooses them - which lays the sheets out anew by itself.
+        if (!dialog._composing && !string.IsNullOrWhiteSpace(e.NewValue as string) &&
+            dialog.RangeKind != PageRangeKind.Chosen)
         {
             dialog.RangeKind = PageRangeKind.Chosen;
+            return;
         }
 
         dialog.Compose();
@@ -446,7 +513,7 @@ public class PrintDialog : Control
         IReadOnlyList<Printer> found = [];
         if (platform != null)
         {
-            SetCurrentValue(IsAskingProperty, true);
+            Asking(true);
             try
             {
                 found = await platform.FindPrintersAsync(asking.Token);
@@ -459,7 +526,7 @@ public class PrintDialog : Control
             {
                 if (ReferenceEquals(asking, _asking))
                 {
-                    SetCurrentValue(IsAskingProperty, false);
+                    Asking(false);
                 }
             }
         }
@@ -493,7 +560,7 @@ public class PrintDialog : Control
         var capabilities = PrinterCapabilities.Pdf;
         if (!printer.IsFile && platform != null)
         {
-            SetCurrentValue(IsAskingProperty, true);
+            Asking(true);
             try
             {
                 capabilities = await platform.CapabilitiesAsync(printer, asking.Token) ?? PrinterCapabilities.Pdf;
@@ -506,7 +573,7 @@ public class PrintDialog : Control
             {
                 if (ReferenceEquals(asking, _asking))
                 {
-                    SetCurrentValue(IsAskingProperty, false);
+                    Asking(false);
                 }
             }
         }
@@ -519,11 +586,21 @@ public class PrintDialog : Control
         Offer(printer, capabilities);
     }
 
+    /// <summary>A new question to the system: the one before it called off, and nothing asked until this one asks.
+    /// </summary>
     private CancellationTokenSource Restart()
     {
         _asking?.Cancel();
         _asking = new CancellationTokenSource();
+        Asking(false);
         return _asking;
+    }
+
+    /// <summary>Whether the system is being asked - printing waits for its answer.</summary>
+    private void Asking(bool asking)
+    {
+        SetCurrentValue(IsAskingProperty, asking);
+        PrintCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>Shows what <paramref name="capabilities"/> offer, and fits the choices to them.</summary>
@@ -531,20 +608,31 @@ public class PrintDialog : Control
     {
         _capabilities = capabilities;
         var file = printer.IsFile;
-        SetCurrentValue(PapersProperty, capabilities.Papers.Count > 0 ? capabilities.Papers : PaperSize.Standard);
-        SetCurrentValue(MaxCopiesProperty, (double)Math.Max(1, capabilities.MaxCopies));
-        SetCurrentValue(DuplexesProperty, capabilities.Duplex);
-        SetCurrentValue(ColorsProperty, capabilities.Colors);
-        SetCurrentValue(QualitiesProperty, capabilities.Qualities);
-        SetCurrentValue(TraysProperty, capabilities.Trays);
-        SetCurrentValue(MediaTypesProperty, capabilities.MediaTypes);
+
+        // The lists change under their choices: whatever a list writes back meanwhile is not the user's.
+        _composing = true;
+        try
+        {
+            SetCurrentValue(PapersProperty, capabilities.Papers.Count > 0 ? capabilities.Papers : PaperSize.Standard);
+            SetCurrentValue(MaxCopiesProperty, (double)Math.Max(1, capabilities.MaxCopies));
+            SetCurrentValue(DuplexesProperty, capabilities.Duplex);
+            SetCurrentValue(ColorsProperty, capabilities.Colors);
+            SetCurrentValue(QualitiesProperty, capabilities.Qualities);
+            SetCurrentValue(TraysProperty, capabilities.Trays);
+            SetCurrentValue(MediaTypesProperty, capabilities.MediaTypes);
+        }
+        finally
+        {
+            _composing = false;
+        }
+
         SetCurrentValue(ShowsCopiesProperty, capabilities.MaxCopies > 1);
         SetCurrentValue(ShowsDuplexProperty, capabilities.Duplex.Count > 1);
         SetCurrentValue(ShowsColorProperty, capabilities.Colors.Count > 1);
         SetCurrentValue(ShowsQualityProperty, capabilities.Qualities.Count > 1);
         SetCurrentValue(ShowsTrayProperty, capabilities.Trays.Count > 1);
         SetCurrentValue(ShowsMediaTypeProperty, capabilities.MediaTypes.Count > 1);
-        SetCurrentValue(ShowsRasterProperty, file);
+        SetCurrentValue(PrintsToFileProperty, file);
         SetCurrentValue(PrinterStateProperty, printer.State);
         SetCurrentValue(ShowsPrinterStateProperty, !file && printer.State != PrinterState.Ready);
         Compose();
@@ -562,40 +650,26 @@ public class PrintDialog : Control
         _composing = true;
         try
         {
-            var valid = PageRange.TryParse(RangeText, out var chosen);
+            var written = PageRange.TryParse(RangeText, out var chosen);
             var range = RangeKind switch
             {
                 PageRangeKind.CurrentPage => PageRange.Current,
-                PageRangeKind.Chosen when valid => chosen,
+                PageRangeKind.Chosen when written => chosen,
                 _ => PageRange.All,
             };
-            SetCurrentValue(RangeIsValidProperty, RangeKind != PageRangeKind.Chosen || valid);
-            var asked = new PrintSettings
-            {
-                Printer = Printer ?? Printer.Pdf,
-                Range = range,
-                Orientation = Orientation,
-                Paper = Paper,
-                Scaling = Scaling,
-                ScalePercent = ScalePercent,
-                PagesPerSheet = PagesPerSheet,
-                Copies = double.IsFinite(Copies) ? (int)Math.Round(Copies) : 1,
-                Collate = Collate,
-                Duplex = Duplex,
-                Color = Color,
-                Quality = Quality,
-                Tray = Tray,
-                MediaType = MediaType,
-                RasterDotsPerInch = RasterDotsPerInch,
-            };
-            var settings = asked.FitTo(_capabilities);
+
+            // Asked as the user chose, fitted to the printer and put right by the system - shown as it came back, the
+            // choice itself kept.
+            var settings = (_wish with { Printer = Printer ?? Printer.Pdf, Range = range }).FitTo(_capabilities);
             if (Platform is { } platform && !settings.Printer.IsFile)
             {
                 settings = platform.Reconcile(_capabilities, settings) ?? settings;
             }
 
             Settings = settings;
+            SetCurrentValue(OrientationProperty, settings.Orientation);
             SetCurrentValue(PaperProperty, settings.Paper);
+            SetCurrentValue(ScalingProperty, settings.Scaling);
             SetCurrentValue(ScalePercentProperty, settings.ScalePercent);
             SetCurrentValue(PagesPerSheetProperty, settings.PagesPerSheet);
             SetCurrentValue(CopiesProperty, (double)settings.Copies);
@@ -605,26 +679,17 @@ public class PrintDialog : Control
             SetCurrentValue(QualityProperty, settings.Quality);
             SetCurrentValue(TrayProperty, settings.Tray);
             SetCurrentValue(MediaTypeProperty, settings.MediaType);
-            SetCurrentValue(RasterDotsPerInchProperty, settings.RasterDotsPerInch);
             SetCurrentValue(ShowsCollateProperty, _capabilities.Collates && settings.Copies > 1);
             SetCurrentValue(ShowsScaleProperty, settings.Scaling == PrintScaling.Custom);
 
-            if (Document is { } document)
+            if (MovesPages(settings))
             {
-                var sheets = new PrintSheets(document, settings, _capabilities, CurrentPage);
-                var count = sheets.Paginate(sheets.Sheet);
-                SetCurrentValue(SheetCountProperty, count);
-                SetCurrentValue(SheetsProperty, sheets);
-                Sheet = Math.Clamp(Sheet, 0, count - 1);
-            }
-            else
-            {
-                SetCurrentValue(SheetsProperty, null);
-                SetCurrentValue(SheetCountProperty, 1);
-                Sheet = 0;
+                LayOut(settings);
             }
 
-            SetCurrentValue(SheetNumberProperty, Sheet + 1);
+            // Pages written out must be pages, and ones the document has.
+            var named = Sheets == null || Sheets.Pages.Count > 0;
+            SetCurrentValue(RangeIsValidProperty, (RangeKind != PageRangeKind.Chosen || written) && named);
         }
         finally
         {
@@ -634,5 +699,39 @@ public class PrintDialog : Control
         PrintCommand.RaiseCanExecuteChanged();
         PreviousSheetCommand.RaiseCanExecuteChanged();
         NextSheetCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>Whether <paramref name="settings"/> put pages elsewhere than the sheets show - copies, color and the
+    /// like do not.</summary>
+    private bool MovesPages(PrintSettings settings) =>
+        _laidOut == null || !ReferenceEquals(_laidOutDocument, Document) || _laidOutCurrentPage != CurrentPage ||
+        !ReferenceEquals(_laidOutFor, _capabilities) || !Equals(_laidOut.Paper, settings.Paper) ||
+        _laidOut.Orientation != settings.Orientation || _laidOut.Scaling != settings.Scaling ||
+        _laidOut.ScalePercent != settings.ScalePercent || _laidOut.PagesPerSheet != settings.PagesPerSheet ||
+        _laidOut.Range.Kind != settings.Range.Kind || _laidOut.Range.Text != settings.Range.Text;
+
+    /// <summary>The sheets laid out anew for the preview, which stays among them.</summary>
+    private void LayOut(PrintSettings settings)
+    {
+        _laidOut = settings;
+        _laidOutFor = _capabilities;
+        _laidOutDocument = Document;
+        _laidOutCurrentPage = CurrentPage;
+        if (Document is { } document)
+        {
+            var sheets = new PrintSheets(document, settings, _capabilities, CurrentPage);
+            var count = sheets.Paginate(sheets.Sheet);
+            SetCurrentValue(SheetCountProperty, count);
+            SetCurrentValue(SheetsProperty, sheets);
+            Sheet = Math.Clamp(Sheet, 0, count - 1);
+        }
+        else
+        {
+            SetCurrentValue(SheetsProperty, null);
+            SetCurrentValue(SheetCountProperty, 1);
+            Sheet = 0;
+        }
+
+        SetCurrentValue(SheetNumberProperty, Sheet + 1);
     }
 }

@@ -34,8 +34,6 @@
     <Phrase Key="Quality" Text="Quality"/>
     <Phrase Key="Tray" Text="Paper source"/>
     <Phrase Key="MediaType" Text="Paper type"/>
-    <Phrase Key="RasterResolution" Text="Raster resolution"/>
-    <Phrase Key="DotsPerInch" Text="{dpi} dpi"/>
     <Phrase Key="SheetOfCount" Text="Sheet {sheet} of {count}"/>
     <Phrase Key="PreviousSheet" Text="Previous sheet"/>
     <Phrase Key="NextSheet" Text="Next sheet"/>

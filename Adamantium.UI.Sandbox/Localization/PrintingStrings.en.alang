@@ -6,4 +6,5 @@
     <Phrase Key="Printed" Text="Sent to"/>
     <Phrase Key="Saved" Text="Saved as PDF."/>
     <Phrase Key="Canceled" Text="Not printed."/>
+    <Phrase Key="Failed" Text="The PDF file could not be written there."/>
 </Language>

@@ -6,4 +6,5 @@
     <Phrase Key="Printed" Text="Отправлено:"/>
     <Phrase Key="Saved" Text="Сохранено в PDF."/>
     <Phrase Key="Canceled" Text="Не напечатано."/>
+    <Phrase Key="Failed" Text="Не удалось записать PDF-файл туда."/>
 </Language>

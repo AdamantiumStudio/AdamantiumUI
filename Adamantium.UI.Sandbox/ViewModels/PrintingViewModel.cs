@@ -38,6 +38,7 @@ public partial class PrintingViewModel : TabPageViewModel
         {
             PrintResult.Printed => PrintingStrings.Printed + " " + _samples.LastJob,
             PrintResult.Saved => PrintingStrings.Saved,
+            PrintResult.Failed => PrintingStrings.Failed,
             _ => PrintingStrings.Canceled,
         };
     }

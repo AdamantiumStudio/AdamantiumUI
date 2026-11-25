@@ -6,11 +6,13 @@
     which way up, the paper, the scale, pages to a sheet - are there for every printer and the PDF file; each of the
     printer's - copies and their order, two sides, color, quality, paper source, paper type - shows only when the printer
     chosen offers more than one choice of it, offering only those. Choices that cannot go together are put right by the
-    system, and the dialog shows what came back; a range that is no pages stops printing until it is.
+    system, and the dialog shows what came back - the user's own choice is kept, and comes back with a printer that can
+    make it. A range that is no pages, or none the document has, stops printing until it is, and so does a printer
+    still being asked what it can do.
   - `PrintPreview`: one sheet as it will be printed, drawn by the same layout that goes to the printer or the file.
   - `IPrintService.PrintAsync(document, currentPage)`: shows the dialog in a window of its own through the dialog
     service, then prints - to the system's printer, or into a PDF file the user names, written beside it and moved over
-    it once whole.
+    it once whole; a place that will not take the file is `PrintResult.Failed`, with nothing left behind.
   - `Adamantium.UI.Core.Printing`: `Printer` (`Printer.Pdf` for the file), `PrinterState`, `PrinterCapabilities`,
     `PrintSettings` (`FitTo` a printer), `PageRange`, `DuplexMode`, `PrintColorMode`, `PrintQuality`, `PrintScaling`,
     `PrintProgress`, `PrintResult`, and `IPrintPlatform` - the system's printers, registered as

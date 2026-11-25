@@ -11,4 +11,8 @@ public enum PrintResult
 
     /// <summary>Written to a PDF file.</summary>
     Saved,
+
+    /// <summary>The PDF file could not be written - the place is read-only, full, or the file is held open; nothing
+    /// of it is left behind.</summary>
+    Failed,
 }

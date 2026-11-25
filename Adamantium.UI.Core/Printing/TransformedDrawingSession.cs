@@ -31,10 +31,20 @@ internal sealed class TransformedDrawingSession(IDrawingSession inner, Matrix4x4
     }
 
     public IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, Pen pen = null) =>
-        DrawRectangle(brush, destinationRect, new CornerRadius(0), pen, null);
+        DrawRectangle(brush, destinationRect, new CornerRadius(0), pen);
 
-    public IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen = null) =>
-        DrawRectangle(brush, destinationRect, corners, pen, null);
+    /// <summary>As its shape with the matrix - a placement means a shape placed by layout, which this one was not;
+    /// the brushes drawn only as a placed rectangle keep it.</summary>
+    public IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen = null)
+    {
+        if (brush is InkBrush or CanvasArrowBrush)
+        {
+            return DrawRectangle(brush, destinationRect, corners, pen, null);
+        }
+
+        inner.DrawGeometry(brush, new RectangleGeometry(destinationRect, corners), pen, transform);
+        return this;
+    }
 
     public IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen,
         Placement placement)
@@ -46,7 +56,11 @@ internal sealed class TransformedDrawingSession(IDrawingSession inner, Matrix4x4
     public IDrawingSession DrawBorder(Brush background, Rect destinationRect, CornerRadius corners, Brush borderBrush,
         Thickness borderThickness)
     {
-        inner.DrawRectangle(background, destinationRect, corners, null, Placed(null));
+        if (background != null)
+        {
+            DrawRectangle(background, destinationRect, corners);
+        }
+
         if (BorderRing.Of(destinationRect, corners, borderThickness) is { } ring)
         {
             inner.DrawGeometry(borderBrush, ring, null, transform);

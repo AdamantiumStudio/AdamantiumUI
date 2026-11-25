@@ -66,7 +66,7 @@ public class PrintDialogTests
         {
             Assert.That(dialog.Printers, Is.EqualTo(new[] { Printer.Pdf }));
             Assert.That(dialog.Printer, Is.SameAs(Printer.Pdf));
-            Assert.That(dialog.ShowsRaster, Is.True);
+            Assert.That(dialog.PrintsToFile, Is.True);
             Assert.That(dialog.ShowsCopies, Is.False);
             Assert.That(dialog.ShowsDuplex, Is.False);
             Assert.That(dialog.ShowsColor, Is.False);
@@ -87,7 +87,7 @@ public class PrintDialogTests
             Assert.That(dialog.ShowsDuplex, Is.True);
             Assert.That(dialog.ShowsColor, Is.False, "gray only: nothing to choose");
             Assert.That(dialog.Color, Is.EqualTo(PrintColorMode.Grayscale));
-            Assert.That(dialog.ShowsRaster, Is.False);
+            Assert.That(dialog.PrintsToFile, Is.False);
             Assert.That(dialog.ShowsPrinterState, Is.False);
         });
     }
@@ -154,6 +154,78 @@ public class PrintDialogTests
         Assert.That(dialog.SheetCount, Is.EqualTo(6));
     }
 
+    // A choice one printer cannot make is not forgotten: it comes back with the next printer that can.
+    [Test]
+    public void AChoiceAPrinterCannotMake_ComesBackWithOneThatCan()
+    {
+        var dialog = new PrintDialog { Document = new Pages(3), Platform = new Platform() };
+        Assert.That(dialog.Collate, Is.True, "copies in order, as asked by default");
+
+        dialog.Copies = 5;
+        dialog.Printer = Platform.Photo;
+        Assert.That(dialog.Copies, Is.EqualTo(1));
+        Assert.That(dialog.Collate, Is.False, "it does not collate");
+
+        dialog.Printer = Platform.Laser;
+        Assert.That(dialog.Copies, Is.EqualTo(5));
+        Assert.That(dialog.Collate, Is.True);
+    }
+
+    [Test]
+    public void PagesTheDocumentHasNot_AreNoPages_AndStopPrinting()
+    {
+        var dialog = new PrintDialog { Document = new Pages(3) };
+
+        dialog.RangeText = "5-9";
+        Assert.That(dialog.RangeIsValid, Is.False);
+        Assert.That(dialog.PrintCommand.CanExecute(), Is.False);
+
+        dialog.RangeText = "2-9";
+        Assert.That(dialog.RangeIsValid, Is.True, "page 2 and 3 are there");
+        Assert.That(dialog.SheetCount, Is.EqualTo(2));
+    }
+
+    /// <summary>A platform whose answer about a printer is held until the test lets it go.</summary>
+    private sealed class SlowPlatform : IPrintPlatform
+    {
+        public TaskCompletionSource<PrinterCapabilities> Answer { get; private set; } = new();
+
+        public Task<IReadOnlyList<Printer>> FindPrintersAsync(CancellationToken cancellation) =>
+            Task.FromResult<IReadOnlyList<Printer>>([Platform.Laser, Platform.Photo]);
+
+        public Task<PrinterCapabilities> CapabilitiesAsync(Printer printer, CancellationToken cancellation)
+        {
+            Answer = new TaskCompletionSource<PrinterCapabilities>();
+            cancellation.Register(() => Answer.TrySetCanceled());
+            return Answer.Task;
+        }
+
+        public PrintSettings Reconcile(PrinterCapabilities capabilities, PrintSettings settings) => settings;
+
+        public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
+            CancellationToken cancellation) => Task.CompletedTask;
+    }
+
+    [Test]
+    public void WhileThePrinterIsAsked_PrintingWaits_AndTheFileNeedsNoAnswer()
+    {
+        var platform = new SlowPlatform();
+        var dialog = new PrintDialog { Document = new Pages(3), Platform = platform };
+        Assert.That(dialog.IsAsking, Is.True);
+        Assert.That(dialog.PrintCommand.CanExecute(), Is.False, "not with what another printer could do");
+
+        platform.Answer.SetResult(new PrinterCapabilities { MaxCopies = 9 });
+        Assert.That(dialog.IsAsking, Is.False);
+        Assert.That(dialog.PrintCommand.CanExecute(), Is.True);
+
+        // Asked about one printer, then the file chosen: nothing is asked any more.
+        dialog.Printer = Platform.Photo;
+        Assert.That(dialog.IsAsking, Is.True);
+        dialog.Printer = Printer.Pdf;
+        Assert.That(dialog.IsAsking, Is.False);
+        Assert.That(dialog.PrintCommand.CanExecute(), Is.True);
+    }
+
     [Test]
     public void TheSheets_FollowTheChoices_AndThePreviewStaysAmongThem()
     {
@@ -166,6 +238,21 @@ public class PrintDialogTests
         Assert.That(dialog.Sheet, Is.EqualTo(2), "the preview kept among the sheets there are");
         Assert.That(dialog.NextSheetCommand.CanExecute(), Is.False);
         Assert.That(dialog.PreviousSheetCommand.CanExecute(), Is.True);
+    }
+
+    // Copies, color and the like print the same sheets: only what moves pages lays them out again.
+    [Test]
+    public void OnlyWhatMovesPages_LaysTheSheetsOutAgain()
+    {
+        var dialog = new PrintDialog { Document = new Pages(3), Platform = new Platform() };
+        var sheets = dialog.Sheets;
+
+        dialog.Copies = 3;
+        dialog.Duplex = DuplexMode.LongEdge;
+        Assert.That(dialog.Sheets, Is.SameAs(sheets));
+
+        dialog.Orientation = PageOrientation.Landscape;
+        Assert.That(dialog.Sheets, Is.Not.SameAs(sheets));
     }
 
     [Test]

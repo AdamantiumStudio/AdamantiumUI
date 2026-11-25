@@ -139,6 +139,24 @@ public class PrintSheetsTests
         Assert.That(session.Groups.Single().Clip, Is.InstanceOf<RectangleGeometry>(), "cut to what the printer reaches");
     }
 
+    // A rectangle a page draws by itself is a shape moved with the page, not one placed by layout.
+    [Test]
+    public void ARectangleAPageDraws_GoesOnAsItsShape_MovedWithThePage()
+    {
+        Matrix4x4F transform = Matrix4x4.CreateScale(0.5f, 0.5f, 1f) * Matrix4x4.CreateTranslation(10f, 20f, 0f);
+        var recording = new RecordingDrawingSession();
+        var session = new TransformedDrawingSession(recording, transform);
+        var brush = new SolidColorBrush(Mathematics.Colors.Red);
+
+        session.DrawRectangle(brush, new Rect(0, 0, 100, 50), new CornerRadius(4));
+        session.DrawBorder(brush, new Rect(0, 0, 100, 50), new CornerRadius(0), null, new Thickness(0));
+
+        Assert.That(recording.Rectangles, Is.Empty, "no placement it did not ask for");
+        Assert.That(recording.Geometries, Has.Count.EqualTo(2));
+        Assert.That(recording.Geometries.Select(drawn => drawn.Transform), Is.All.EqualTo(transform));
+        Assert.That(Landed(recording.Geometries[1]), Is.EqualTo(new Rect(10, 20, 50, 25)));
+    }
+
     [Test]
     public void APageAtItsOwnSize_KeepsItsPlaceOnTheSheet()
     {

@@ -42,10 +42,6 @@ public sealed record PrintSettings
 
     public string MediaType { get; init; }
 
-    /// <summary>How finely what has no shapes is drawn into a PDF file, dots to the inch; a printer's
-    /// <see cref="Quality"/> decides it when printing.</summary>
-    public int RasterDotsPerInch { get; init; } = 300;
-
     /// <summary>These settings with each of the printer's choices one <paramref name="capabilities"/> offers - a
     /// choice it does not offer goes back to its default - and the platform's own kept in their bounds.</summary>
     public PrintSettings FitTo(PrinterCapabilities capabilities)
@@ -67,7 +63,6 @@ public sealed record PrintSettings
             Quality = capabilities.Qualities.Contains(Quality) ? Quality : capabilities.DefaultQuality,
             Tray = capabilities.Trays.Contains(Tray) ? Tray : capabilities.Trays.FirstOrDefault(),
             MediaType = capabilities.MediaTypes.Contains(MediaType) ? MediaType : capabilities.MediaTypes.FirstOrDefault(),
-            RasterDotsPerInch = Math.Clamp(RasterDotsPerInch, 72, 1200),
         };
     }
 }
