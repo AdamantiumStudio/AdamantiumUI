@@ -132,7 +132,12 @@ internal sealed class WindowsWordPredictor : IWordPredictor, IDisposable
         }
         catch (COMException failure)
         {
-            Log.Logger.Warning("Windows' text prediction failed twice, the last time with 0x{Error:X8}", failure.ErrorCode);
+            // Debug: with the service down, every letter typed asks twice.
+            if (!cancellation.IsCancellationRequested)
+            {
+                Log.Logger.Debug("Windows' text prediction failed twice, the last time with 0x{Error:X8}", failure.ErrorCode);
+            }
+
             return [];
         }
     }
