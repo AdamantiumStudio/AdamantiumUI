@@ -15,4 +15,10 @@ public sealed class WebViewOptions
     /// <see cref="WebViewEngine.ColorScheme"/>. The page is asked directly; Chromium's own scheme - about:blank, its own
     /// pages, and what else of the profile follows it, as a frame of another site or the DevTools - is set to match.</summary>
     public WebViewColorScheme ColorScheme { get; set; } = WebViewColorScheme.Application;
+
+    /// <summary>The components Chromium may fetch from Google and keep up to date: by default the hyphenation
+    /// dictionaries and the list of revoked certificates - data, not code - and not Widevine, Google's own module, which
+    /// the application adds. <see cref="WebViewComponents.None"/> fetches nothing. A component left out is not loaded
+    /// either, though an earlier run fetched it.</summary>
+    public WebViewComponents Components { get; set; } = WebViewComponents.Hyphenation | WebViewComponents.RevokedCertificates;
 }
