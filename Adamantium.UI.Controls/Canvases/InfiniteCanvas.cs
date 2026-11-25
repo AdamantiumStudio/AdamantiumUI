@@ -370,7 +370,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower, ITrackpadPanTarge
     /// <summary>Whether the canvas shows its own inspector - the tool in hand and its settings with nothing selected,
     /// the properties of what is selected otherwise, and a list of everything on the plane.</summary>
     public static readonly AdamantiumProperty ShowsInspectorProperty = AdamantiumProperty.Register(
-        nameof(ShowsInspector), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true, OnInspectorPlaced));
+        nameof(ShowsInspector), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnInspectorPlaced));
 
     /// <summary>Whether the inspector's number rows carry up/down buttons (on by default); a switch, since the buttons cost
     /// width.</summary>
@@ -732,6 +733,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower, ITrackpadPanTarge
 
     public InfiniteCanvas()
     {
+        DataContextChanged += OnPanelDataChanged;
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
         _coast = new PanInertia(() => _travel, Travel, RememberLayout);
         _glide = new PanInertia(() => Offset, to => SetCurrentValue(OffsetProperty, to), RememberLayout);

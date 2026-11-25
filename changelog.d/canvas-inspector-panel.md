@@ -11,4 +11,5 @@
   longer floating over it: pulled by a splitter, folded to a strip, as tall as the canvas. A template that wants the
   inspector names `PART_Viewport`, `PART_Inspector` and `PART_InspectorSplitter`; `PART_Inspector` is not a `CanvasPane`
   any more, and a saved layout's place for it is ignored.
+- `InfiniteCanvas.ShowsInspector` binds two way by default.
 - A `CanvasInspector` standing in a canvas and given none finds it by itself.

@@ -39,6 +39,11 @@ public partial class InfiniteCanvas
 
     public static readonly AdamantiumProperty IsInspectorUnfoldedProperty = IsInspectorUnfoldedPropertyKey.Property;
 
+    private static readonly AdamantiumPropertyKey InspectorPanelDataPropertyKey = AdamantiumProperty.RegisterReadOnly(
+        nameof(InspectorPanelData), typeof(Object), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty InspectorPanelDataProperty = InspectorPanelDataPropertyKey.Property;
+
     // What the plane is always left, however wide the panel is asked to be.
     private const double LeastPlaneWidth = 120;
 
@@ -94,6 +99,13 @@ public partial class InfiniteCanvas
         set => SetValue(InspectorPanelTemplateProperty, value);
     }
 
+    /// <summary>The data of the panel: the canvas's <c>DataContext</c> - but for a control, which a presenter would show in
+    /// the panel's place.</summary>
+    public Object InspectorPanelData => GetValue(InspectorPanelDataProperty);
+
+    private void OnPanelDataChanged(object sender, AdamantiumPropertyChangedEventArgs e) =>
+        SetValue(InspectorPanelDataPropertyKey, DataContext is IUIComponent ? null : DataContext);
+
     /// <summary>Whether the panel stands open beside the plane now: shown, and not folded.</summary>
     public Boolean IsInspectorUnfolded => GetValue<Boolean>(IsInspectorUnfoldedProperty);
 
@@ -116,21 +128,42 @@ public partial class InfiniteCanvas
         {
             SetCurrentValue(IsInspectorOpenProperty, !IsInspectorOpen);
         }
+
+        RememberLayout();
     }
 
     // A search opens the panel it is typed into, and is asked for once that has been laid out; one hidden whole stays
-    // hidden. False when the panel is open already, or there is none.
+    // hidden. False when the panel is open already, or has nothing to search with.
     private bool OpenInspectorToSearch()
     {
-        if (!ShowsInspector || IsInspectorOpen)
+        if (!ShowsInspector || IsInspectorOpen || !Holds<CanvasInspector>(_inspectorPart))
         {
             return false;
         }
 
         SetCurrentValue(IsInspectorOpenProperty, true);
+        RememberLayout();
         _searchWhenLaidOut = true;
         InvalidateArrange();
         return true;
+    }
+
+    private static bool Holds<T>(IUIComponent at)
+    {
+        if (at == null || at is T)
+        {
+            return at != null;
+        }
+
+        foreach (var child in at.VisualChildren)
+        {
+            if (Holds<T>(child))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void SearchOnceLaidOut()
@@ -148,16 +181,7 @@ public partial class InfiniteCanvas
 
     private static void OnInspectorPlaced(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
-        if (component is not InfiniteCanvas canvas)
-        {
-            return;
-        }
-
-        canvas.PlaceInspector();
-        if (canvas._inspectorSplitter is not { IsDragging: true })
-        {
-            canvas.RememberLayout();
-        }
+        (component as InfiniteCanvas)?.PlaceInspector();
     }
 
     private void TakeInspector()
@@ -181,6 +205,7 @@ public partial class InfiniteCanvas
             {
                 part.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnInspectorPressed), true);
                 part.AddHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnInspectorReleased), true);
+                part.AddHandler(PointerEvents.PointerEnteredEvent, new PointerEventHandler(OnInspectorEntered), true);
                 Gestures.SetIsManipulationEnabled(part, true);
             }
         }
@@ -206,6 +231,7 @@ public partial class InfiniteCanvas
             {
                 part.RemoveHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnInspectorPressed));
                 part.RemoveHandler(PointerEvents.PointerReleasedEvent, new PointerReleasedEventHandler(OnInspectorReleased));
+                part.RemoveHandler(PointerEvents.PointerEnteredEvent, new PointerEventHandler(OnInspectorEntered));
             }
         }
 
@@ -219,6 +245,18 @@ public partial class InfiniteCanvas
 
     private static void OnInspectorReleased(object sender, PointerReleasedEventArgs e) => e.Handled = true;
 
+    // The tool's mark does not stay behind on the plane; the splitter's own moves are not heard by it.
+    private void OnInspectorEntered(object sender, PointerEventArgs e)
+    {
+        var had = _snap != null || _pointerInside;
+        _snap = null;
+        _pointerInside = false;
+        if (had)
+        {
+            RepaintGlass();
+        }
+    }
+
     private bool IsInspector(IUIComponent at) =>
         at != null && (ReferenceEquals(at, _inspectorPart) || ReferenceEquals(at, _inspectorSplitter));
 
@@ -230,6 +268,10 @@ public partial class InfiniteCanvas
             _inspectorColumn.Width is { GridUnitType: GridUnitType.Pixel } width)
         {
             SetCurrentValue(InspectorWidthProperty, width.Value);
+            if (_inspectorSplitter is not { IsDragging: true })
+            {
+                RememberLayout();
+            }
         }
     }
 

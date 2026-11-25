@@ -112,6 +112,32 @@ public class CanvasInspectorPanelTests
     }
 
     [Test]
+    public void FoldingThatHides_IsRemembered()
+    {
+        var canvas = Built<InfiniteCanvas>("Fluent");
+        canvas.HidesFoldedInspector = true;
+        canvas.FoldInspectorCommand.Execute(null);
+        var said = canvas.Layout;
+
+        var other = Built<InfiniteCanvas>("Fluent");
+        other.HidesFoldedInspector = true;
+        other.Layout = said;
+        Assert.That(other.ShowsInspector, Is.False);
+    }
+
+    // A control whose data is a control: a presenter shows a control given it as content.
+    [Test]
+    public void ACanvasWhoseDataIsAControl_KeepsItsPanel()
+    {
+        var canvas = Built<InfiniteCanvas>("Fluent");
+        canvas.DataContext = _window;
+        Settle(canvas);
+
+        Assert.That(Part(canvas, "PART_Inspector").VisualChildren.First(), Is.Not.SameAs(_window));
+        Assert.That(canvas.InspectorPanelData, Is.Null);
+    }
+
+    [Test]
     public void AWidthThatIsNoNumber_IsTheLeast()
     {
         var canvas = Built<InfiniteCanvas>("Fluent");

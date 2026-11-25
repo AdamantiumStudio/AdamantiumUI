@@ -159,7 +159,8 @@ public class CanvasLayoutTests
     {
         var canvas = Built();
         canvas.InspectorWidth = 280;
-        canvas.IsInspectorOpen = false;
+        Assert.That(canvas.Layout, Is.Null.Or.Empty, "what the application sets is not a person's doing");
+        canvas.FoldInspectorCommand.Execute(null);
         Settle(canvas);
 
         var other = Built();

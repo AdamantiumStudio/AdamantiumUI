@@ -443,47 +443,35 @@ public class CanvasInspector : Control, ICanvasPart
     private InfiniteCanvas _found;
 
     // Standing in a canvas and told of none, it is that canvas's: wherever in the panel's template it is, and whenever it
-    // is first shown.
+    // is first shown. Kept while it is out of the tree with its canvas - a tab turned away from.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Canvas == null)
+        if (Canvas == null || ReferenceEquals(Canvas, _found))
         {
-            for (var at = VisualParent; at != null; at = at.VisualParent)
+            InfiniteCanvas around = null;
+            for (var at = VisualParent; at != null && around == null; at = at.VisualParent)
             {
-                if (at is not InfiniteCanvas canvas)
-                {
-                    continue;
-                }
+                around = at as InfiniteCanvas;
+            }
 
-                _found = canvas;
-                SetCurrentValue(CanvasProperty, canvas);
-                break;
+            if (around != null && !ReferenceEquals(around, Canvas))
+            {
+                _found = around;
+                SetCurrentValue(CanvasProperty, around);
             }
         }
 
         return base.MeasureOverride(availableSize);
     }
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        LetGoOfFound();
-    }
-
     private void LetGoOfFound()
     {
-        if (_found == null)
-        {
-            return;
-        }
-
-        if (ReferenceEquals(Canvas, _found))
+        if (_found != null && ReferenceEquals(Canvas, _found))
         {
             SetCurrentValue(CanvasProperty, null);
         }
 
         _found = null;
-        InvalidateMeasure();
     }
 
     // A set handed in anew - a control's or the application's - is shown at once, not at the next pick.

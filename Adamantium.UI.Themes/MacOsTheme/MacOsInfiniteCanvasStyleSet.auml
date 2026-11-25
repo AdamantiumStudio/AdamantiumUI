@@ -122,7 +122,7 @@
                                   ResizeBehavior="PreviousAndNext"
                                   ToolTip="{Localize CanvasStrings.ResizePanel}"
                                   Background="{ObservableResource ControlStrokeColorDefault}"/>
-                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding DataContext}"
+                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding InspectorPanelData}"
                                       ContentTemplate="{TemplateBinding InspectorPanelTemplate}"/>
                     </Grid>
 
@@ -211,7 +211,7 @@
                                   ResizeBehavior="PreviousAndNext"
                                   ToolTip="{Localize CanvasStrings.ResizePanel}"
                                   Background="{ObservableResource ControlStrokeColorDefault}"/>
-                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding DataContext}"
+                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding InspectorPanelData}"
                                       ContentTemplate="{TemplateBinding InspectorPanelTemplate}"/>
                     </Grid>
 

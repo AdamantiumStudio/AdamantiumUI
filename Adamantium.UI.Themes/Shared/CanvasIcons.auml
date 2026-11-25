@@ -12,9 +12,6 @@
                          StrokeThickness="1.2"/>
     </DrawingImage>
 
-    <!-- Turn the panel: a bent arrow, which says "the same thing, the other way round". Its own button rather than
-         something the placement decides, because where a panel sits and which way its contents run are two separate
-         choices and a panel that reshaped itself every time it was moved was unusable. -->
     <!-- The inspector's panel folded away to the right, and opened again. -->
     <DrawingImage x:Key="CanvasFoldInspectorIcon">
         <DrawingGroup>
@@ -30,7 +27,9 @@
         </DrawingGroup>
     </DrawingImage>
 
-
+    <!-- Turn the panel: a bent arrow, which says "the same thing, the other way round". Its own button rather than
+         something the placement decides, because where a panel sits and which way its contents run are two separate
+         choices and a panel that reshaped itself every time it was moved was unusable. -->
     <DrawingImage x:Key="CanvasPaneTurnIcon">
         <GeometryDrawing Geometry="M2.5,1.5 L2.5,7.5 L8.5,7.5 M7,6 L8.5,7.5 L7,9"
                          Stroke="{ResourceReference TextFillColorSecondary}"

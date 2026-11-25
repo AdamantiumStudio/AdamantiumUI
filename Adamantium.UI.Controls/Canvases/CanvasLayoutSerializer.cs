@@ -38,6 +38,8 @@ public static class CanvasLayoutSerializer
                 WritePanes(writer, canvas);
                 writer.WriteStartObject("inspector");
                 writer.WriteBoolean("open", canvas.IsInspectorOpen);
+                // Hidden is folded where folding hides; otherwise whether there is an inspector is the application's.
+                if (canvas.HidesFoldedInspector) writer.WriteBoolean("shown", canvas.ShowsInspector);
                 if (Double.IsFinite(canvas.InspectorWidth)) writer.WriteNumber("width", canvas.InspectorWidth);
                 writer.WriteEndObject();
             }
@@ -109,6 +111,12 @@ public static class CanvasLayoutSerializer
                 {
                     canvas.SetCurrentValue(InfiniteCanvas.IsInspectorOpenProperty,
                         Flag(inspector, "open", canvas.IsInspectorOpen));
+                    if (canvas.HidesFoldedInspector)
+                    {
+                        canvas.SetCurrentValue(InfiniteCanvas.ShowsInspectorProperty,
+                            Flag(inspector, "shown", canvas.ShowsInspector));
+                    }
+
                     canvas.SetCurrentValue(InfiniteCanvas.InspectorWidthProperty, Math.Max(canvas.MinInspectorWidth,
                         Number(inspector, "width", canvas.InspectorWidth)));
                 }
