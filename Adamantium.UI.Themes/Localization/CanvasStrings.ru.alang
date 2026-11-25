@@ -10,6 +10,11 @@
     <Phrase Key="ToolsLayout" Text="Расположить инструменты в строку или в столбец"/>
     <Phrase Key="Properties" Text="Свойства выделенного"/>
     <Phrase Key="Layers" Text="Всё, что есть на плоскости, сверху вниз"/>
+    <Phrase Key="PropertiesFace" Text="Свойства"/>
+    <Phrase Key="LayersFace" Text="Слои"/>
+    <Phrase Key="Inspector" Text="Инспектор"/>
+    <Phrase Key="FoldInspector" Text="Свернуть инспектор"/>
+    <Phrase Key="UnfoldInspector" Text="Развернуть инспектор"/>
     <Phrase Key="CommentFrame" Text="Обвести выделенное рамкой комментария"/>
     <Phrase Key="AlignLeft" Text="Выровнять по левому краю"/>
     <Phrase Key="AlignCenter" Text="Выровнять по центру"/>

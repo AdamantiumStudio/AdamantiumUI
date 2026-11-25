@@ -33,7 +33,14 @@ public static class CanvasLayoutSerializer
             writer.WriteBoolean("tool", canvas.RemembersTool);
             writer.WriteEndObject();
 
-            if (canvas.RemembersPanes) WritePanes(writer, canvas);
+            if (canvas.RemembersPanes)
+            {
+                WritePanes(writer, canvas);
+                writer.WriteStartObject("inspector");
+                writer.WriteBoolean("open", canvas.IsInspectorOpen);
+                if (Double.IsFinite(canvas.InspectorWidth)) writer.WriteNumber("width", canvas.InspectorWidth);
+                writer.WriteEndObject();
+            }
 
             // The middle of the view in WORLD units, and each half only if it is wanted: what is not remembered is
             // not written down.
@@ -95,7 +102,17 @@ public static class CanvasLayoutSerializer
                 canvas.RemembersTool = Flag(remembers, "tool", canvas.RemembersTool);
             }
 
-            if (canvas.RemembersPanes) ReadPanes(root, canvas);
+            if (canvas.RemembersPanes)
+            {
+                ReadPanes(root, canvas);
+                if (root.TryGetProperty("inspector", out var inspector) && inspector.ValueKind == JsonValueKind.Object)
+                {
+                    canvas.SetCurrentValue(InfiniteCanvas.IsInspectorOpenProperty,
+                        Flag(inspector, "open", canvas.IsInspectorOpen));
+                    canvas.SetCurrentValue(InfiniteCanvas.InspectorWidthProperty, Math.Max(canvas.MinInspectorWidth,
+                        Number(inspector, "width", canvas.InspectorWidth)));
+                }
+            }
 
             if (root.TryGetProperty("home", out var home) && Read(home, out var homeAt, out var homeScale))
             {

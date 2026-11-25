@@ -370,7 +370,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower, ITrackpadPanTarge
     /// <summary>Whether the canvas shows its own inspector - the tool in hand and its settings with nothing selected,
     /// the properties of what is selected otherwise, and a list of everything on the plane.</summary>
     public static readonly AdamantiumProperty ShowsInspectorProperty = AdamantiumProperty.Register(
-        nameof(ShowsInspector), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+        nameof(ShowsInspector), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true, OnInspectorPlaced));
 
     /// <summary>Whether the inspector's number rows carry up/down buttons (on by default); a switch, since the buttons cost
     /// width.</summary>

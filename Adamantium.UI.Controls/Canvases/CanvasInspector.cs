@@ -437,6 +437,53 @@ public class CanvasInspector : Control, ICanvasPart
         base.OnDiscarded();
         _selectionSections?.Discard(shownToo: false);
         _toolSections?.Discard(shownToo: false);
+        LetGoOfFound();
+    }
+
+    private InfiniteCanvas _found;
+
+    // Standing in a canvas and told of none, it is that canvas's: wherever in the panel's template it is, and whenever it
+    // is first shown.
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
+    {
+        if (Canvas == null)
+        {
+            for (var at = VisualParent; at != null; at = at.VisualParent)
+            {
+                if (at is not InfiniteCanvas canvas)
+                {
+                    continue;
+                }
+
+                _found = canvas;
+                SetCurrentValue(CanvasProperty, canvas);
+                break;
+            }
+        }
+
+        return base.MeasureOverride(availableSize);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        LetGoOfFound();
+    }
+
+    private void LetGoOfFound()
+    {
+        if (_found == null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(Canvas, _found))
+        {
+            SetCurrentValue(CanvasProperty, null);
+        }
+
+        _found = null;
+        InvalidateMeasure();
     }
 
     // A set handed in anew - a control's or the application's - is shown at once, not at the next pick.

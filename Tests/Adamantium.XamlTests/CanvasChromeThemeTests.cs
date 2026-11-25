@@ -86,8 +86,8 @@ public class CanvasChromeThemeTests
         // The graph's node palette is the one pane a board does not bring.
         Assert.Multiple(() =>
         {
-            PanesAre(Built(theme), 5, theme);
-            PanesAre(Built<NodeGraph>(theme), 6, theme);
+            PanesAre(Built(theme), 4, theme);
+            PanesAre(Built<NodeGraph>(theme), 5, theme);
         });
     }
 
@@ -122,7 +122,7 @@ public class CanvasChromeThemeTests
             Assert.That(inside, Has.Some.InstanceOf<CanvasSelectionBar>(), "no selection bar");
             Assert.That(inside, Has.Some.InstanceOf<CanvasMiniMap>(), "no map");
             Assert.That(inside, Has.Some.InstanceOf<CanvasNodePalette>(), "no node palette");
-            Assert.That(inside, Has.Some.InstanceOf<CanvasInspector>(), "no inspector");
+            Assert.That(Piece<CanvasInspector>(canvas), Is.Not.Null, "no inspector");
         });
     }
 
@@ -145,9 +145,10 @@ public class CanvasChromeThemeTests
                 case CanvasSelectionBar bar: Assert.That(bar.Canvas, Is.SameAs(canvas)); break;
                 case CanvasMiniMap map: Assert.That(map.Canvas, Is.SameAs(canvas)); break;
                 case CanvasNodePalette palette: Assert.That(palette.Canvas, Is.SameAs(canvas)); break;
-                case CanvasInspector inspector: Assert.That(inspector.Canvas, Is.SameAs(canvas)); break;
             }
         }
+
+        Assert.That(Piece<CanvasInspector>(canvas).Canvas, Is.SameAs(canvas));
     }
 
     // ...and they are the LAYER's children, which is what makes them placed at all: a pane standing in the tree that
@@ -963,6 +964,18 @@ public class CanvasChromeThemeTests
             if (pane.Content is T wanted) return wanted;
         }
 
+        return Under<T>((IUIComponent)canvas.GetTemplateChild("PART_Inspector"));
+    }
+
+    private static T Under<T>(IUIComponent at) where T : class
+    {
+        if (at is T wanted) return wanted;
+
+        foreach (var child in at.VisualChildren)
+        {
+            if (Under<T>(child) is { } found) return found;
+        }
+
         return null;
     }
 
@@ -1534,7 +1547,7 @@ public class CanvasChromeThemeTests
 
             Settle(window);
 
-            var pane = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+            var pane = (IUIComponent)canvas.GetTemplateChild("PART_Inspector");
 
             foreach (var section in Rows<PropertySection>(canvas))
             {

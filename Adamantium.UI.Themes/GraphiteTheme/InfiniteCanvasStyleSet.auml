@@ -21,11 +21,56 @@
         <Setter Property="RubberBandBrush" Value="{ObservableResource CanvasBandColor}"/>
         <Setter Property="HandleSize" Value="8"/>
 
+        <!-- The inspector's panel - see Fluent's set. -->
+        <Setter Property="MinInspectorWidth" Value="190"/>
+        <Setter Property="InspectorWidth" Value="320"/>
+        <Setter Property="InspectorPanelTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border Background="{ObservableResource SolidBackgroundFillColorSecondary}">
+                        <Grid>
+                            <Grid x:Name="Open" Margin="8">
+                                <CanvasInspector ShowsDrawingActions="{Ancestor InfiniteCanvas, ShowsDrawingActions}"/>
+                                <Button x:Name="FoldButton" Width="26" Height="22" MinWidth="0" MinHeight="0" Padding="0"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                                        ToolTip="{Localize CanvasStrings.FoldInspector}"
+                                        Command="{Ancestor InfiniteCanvas, FoldInspectorCommand}">
+                                    <Image Source="{ObservableResource ChevronRightIcon}" Width="10" Height="10"/>
+                                </Button>
+                            </Grid>
+                            <StackPanel x:Name="Folded" Orientation="Vertical" Width="32" MinWidth="0" Margin="0 8"
+                                        Visibility="Collapsed">
+                                <Button x:Name="UnfoldButton" Width="26" Height="22" MinWidth="0" MinHeight="0" Padding="0"
+                                        HorizontalAlignment="Center"
+                                        ToolTip="{Localize CanvasStrings.UnfoldInspector}"
+                                        Command="{Ancestor InfiniteCanvas, FoldInspectorCommand}">
+                                    <Image Source="{ObservableResource ChevronLeftIcon}" Width="10" Height="10"/>
+                                </Button>
+                                <TextBlock Text="{Localize CanvasStrings.Inspector}" HorizontalAlignment="Center"
+                                           MarginTop="10" Foreground="{ObservableResource TextFillColorSecondary}">
+                                    <TextBlock.LayoutTransform>
+                                        <Transform RotationAngle="90"/>
+                                    </TextBlock.LayoutTransform>
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor InfiniteCanvas, IsInspectorOpen}" Value="false">
+                            <Setter TargetName="Open" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Folded" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+
         <!-- The overlay layer and its grip - see Fluent's set. Tighter margin, like everything in this theme. -->
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="InfiniteCanvas">
-                    <Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Grid x:Name="PART_Viewport">
                         <!-- What is on the plane, in the plane's own order - see Fluent's set: the canvas fills this
                              itself, a layer per run of neighbors of the same sort. -->
                         <Grid x:Name="PART_Layers"/>
@@ -65,16 +110,20 @@
                                                AutomationProperties.Name="{Localize CanvasStrings.WholePlane}"/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_Inspector" Placement="TopRight" Kind="Sheet"
-                                        CanResize="True" Width="320" MinResizeWidth="190">
-                                <CanvasInspector/>
-                            </CanvasPane>
-
                             <CanvasPane x:Name="PART_ViewBar" Placement="BottomCenter" Kind="Bar"
                                         IsDocked="True" MinWidth="232">
                                 <CanvasViewBar/>
                             </CanvasPane>
                         </CanvasChromeLayer>
+                    </Grid>
+
+                    <!-- The inspector's panel beside the plane - see Fluent's set. -->
+                    <GridSplitter x:Name="PART_InspectorSplitter" Grid.Column="1" Width="4"
+                                  ResizeBehavior="PreviousAndNext"
+                                  ToolTip="{Localize CanvasStrings.ResizePanel}"
+                                  Background="{ObservableResource ControlStrokeColorDefault}"/>
+                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding DataContext}"
+                                      ContentTemplate="{TemplateBinding InspectorPanelTemplate}"/>
                     </Grid>
 
                     <!-- IsWanted and not Visibility - see Fluent's set. -->
@@ -86,7 +135,10 @@
                             <Setter TargetName="PART_MiniMap" Property="IsWanted" Value="false"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ShowsInspector" Value="false">
-                            <Setter TargetName="PART_Inspector" Property="IsWanted" Value="false"/>
+                            <Setter TargetName="PART_Inspector" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsInspectorUnfolded" Value="false">
+                            <Setter TargetName="PART_InspectorSplitter" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ShowsSelectionBar" Value="false">
                             <Setter TargetName="PART_SelectionBar" Property="IsWanted" Value="false"/>
@@ -112,7 +164,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="NodeGraph">
-                    <Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Grid x:Name="PART_Viewport">
                         <Grid x:Name="PART_Layers"/>
 
                         <CanvasFrontLayer x:Name="PART_Front"/>
@@ -140,11 +193,6 @@
                                                AutomationProperties.Name="{Localize CanvasStrings.WholePlane}"/>
                             </CanvasPane>
 
-                            <CanvasPane x:Name="PART_Inspector" Placement="TopRight" Kind="Sheet"
-                                        CanResize="True" Width="320" MinResizeWidth="190">
-                                <CanvasInspector/>
-                            </CanvasPane>
-
                             <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="{Localize CanvasStrings.AddNode}"
                                         CanDrag="True" Width="190"
                                         IsNeeded="{TemplateBinding IsPaletteOpen}">
@@ -158,6 +206,15 @@
                         </CanvasChromeLayer>
                     </Grid>
 
+                    <!-- The inspector's panel beside the plane - see Fluent's set. -->
+                    <GridSplitter x:Name="PART_InspectorSplitter" Grid.Column="1" Width="4"
+                                  ResizeBehavior="PreviousAndNext"
+                                  ToolTip="{Localize CanvasStrings.ResizePanel}"
+                                  Background="{ObservableResource ControlStrokeColorDefault}"/>
+                    <ContentPresenter x:Name="PART_Inspector" Grid.Column="2" Content="{TemplateBinding DataContext}"
+                                      ContentTemplate="{TemplateBinding InspectorPanelTemplate}"/>
+                    </Grid>
+
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowsToolRail" Value="false">
                             <Setter TargetName="PART_ToolRail" Property="IsWanted" Value="false"/>
@@ -166,7 +223,10 @@
                             <Setter TargetName="PART_MiniMap" Property="IsWanted" Value="false"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ShowsInspector" Value="false">
-                            <Setter TargetName="PART_Inspector" Property="IsWanted" Value="false"/>
+                            <Setter TargetName="PART_Inspector" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="IsInspectorUnfolded" Value="false">
+                            <Setter TargetName="PART_InspectorSplitter" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ShowsNodePalette" Value="false">
                             <Setter TargetName="PART_NodePalette" Property="IsWanted" Value="false"/>
@@ -371,29 +431,23 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CanvasInspector">
                     <DockPanel LastChildFill="True">
-                        <!-- The panel NAMES itself with what it is about - and says nothing when one thing is selected,
-                             since the sections below already say what that thing is. It is a selection of SEVERAL that
-                             needs a word, because then no section can name them. -->
+                        <!-- The faces, at the far end of their row: the panel's fold button stands at the near one. -->
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" MarginBottom="8">
+                            <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
+                                         Height="22" MinWidth="0" MinHeight="0" Padding="8 0"
+                                         Content="{Localize CanvasStrings.PropertiesFace}"
+                                         ToolTip="{Localize CanvasStrings.Properties}"
+                                         IsChecked="{TemplateBinding ShowsProperties, Mode=TwoWay}"/>
+                            <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace" MarginLeft="4"
+                                         Height="22" MinWidth="0" MinHeight="0" Padding="8 0"
+                                         Content="{Localize CanvasStrings.LayersFace}"
+                                         ToolTip="{Localize CanvasStrings.Layers}"
+                                         IsChecked="{TemplateBinding ShowsStructure, Mode=TwoWay}"/>
+                        </StackPanel>
+
                         <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Header}"
                                    FontSize="12" MarginBottom="6"
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
-
-                        <!-- One row of pictogram radios: the inspector face. -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
-
-                            <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.Properties}"
-                                         IsChecked="{TemplateBinding ShowsProperties, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasFaceInspectorIcon}" Width="13" Height="13"/>
-                            </RadioButton>
-                            <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace" MarginLeft="4"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.Layers}"
-                                         IsChecked="{TemplateBinding ShowsStructure, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasFaceStructureIcon}" Width="13" Height="13"/>
-                            </RadioButton>
-                        </StackPanel>
 
                         <!-- ONE ROW OF ACTIONS ON THE WHOLE WORK - see Fluent's set for why these are pictures, why the
                              row wraps, and why everything but the bin belongs to a graph alone. -->
@@ -478,10 +532,8 @@
 
                         <Grid>
                             <!-- The FIRST face: the tool in hand and the surface under it. It SCROLLS rather than being
-                                 trimmed: a panel that runs off the bottom is one whose last row cannot be reached.
-                                 A MAX height and not a height - a stated one is claimed whether or not there is
-                                 anything to put in it, and a short face then leaves a tall empty strip. -->
-                            <ScrollViewer MaxHeight="300" Visibility="{TemplateBinding ToolFace}"
+                                 trimmed: a panel that runs off the bottom is one whose last row cannot be reached. -->
+                            <ScrollViewer Visibility="{TemplateBinding ToolFace}"
                                           VerticalScrollBarVisibility="Hidden"
                                           HorizontalScrollBarVisibility="Disabled">
                                 <!-- NO LINES WRITTEN HERE - see Fluent's set: what a tool is set by is CONTENT, and it
@@ -521,7 +573,7 @@
                                          ClearButtonToolTip="{Localize CanvasStrings.ClearFind}"
                                          Placeholder="{Localize CanvasStrings.FindOnPlane}"
                                          AutomationProperties.Name="{Localize CanvasStrings.FindOnPlane}"/>
-                                <TreeView MaxHeight="300" MinWidth="0"
+                                <TreeView MinWidth="0"
                                           AutomationProperties.Name="{Localize CanvasStrings.Layers}"
                                           ItemsSource="{TemplateBinding Structure}"
                                           SelectedItem="{TemplateBinding Listed, Mode=TwoWay}"

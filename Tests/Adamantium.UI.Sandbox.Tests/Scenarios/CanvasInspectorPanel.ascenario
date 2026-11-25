@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The inspector's panel beside the plane of a drawing board: its faces turned, folded to a strip and opened again by its button, pressed as a hand presses it, on the face it was left.">
+  <Select Target="id=GalleryTabs/id=DrawingBoard" />
+  <Wait Target="id=Canvas" />
+  <Expect Target="id=FoldButton" Offscreen="False" />
+  <Select Target="id=Canvas>name=Layers,type=RadioButton" />
+  <Expect Target="id=ItemCountLabel" Offscreen="False" />
+  <Click Target="id=FoldButton" />
+  <Expect Target="id=UnfoldButton" Offscreen="False" />
+  <Expect Target="id=FoldButton" Offscreen="True" />
+  <Expect Target="id=ItemCountLabel" Offscreen="True" />
+  <Click Target="id=UnfoldButton" />
+  <Expect Target="id=FoldButton" Offscreen="False" />
+  <Expect Target="id=UnfoldButton" Offscreen="True" />
+  <Expect Target="id=ItemCountLabel" Offscreen="False" />
+  <Select Target="id=Canvas>name=Properties,type=RadioButton" />
+  <!-- A search asked for while it is folded opens it, the caret in the search. -->
+  <Click Target="id=FoldButton" />
+  <Expect Target="id=UnfoldButton" Offscreen="False" />
+  <Key Keys="Ctrl+F" Into="id=Canvas" />
+  <Wait Target="id=FoldButton" Offscreen="False" />
+  <Wait Target="id=PART_Find" Focus="True" />
+  <Select Target="id=Canvas>name=Properties,type=RadioButton" />
+</Scenario>

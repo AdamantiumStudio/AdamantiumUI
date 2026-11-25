@@ -1174,6 +1174,7 @@ public partial class InfiniteCanvas : ICanvasCamera
 
         PlaceOverlay();
         TakeScrollBars();
+        TakeInspector();
     }
 
     public override void OnRemoveTemplate()
@@ -1190,6 +1191,7 @@ public partial class InfiniteCanvas : ICanvasCamera
         if (_overlayGrip != null) _overlayGrip.Click -= OnGripClicked;
 
         LeaveScrollBars();
+        LeaveInspector();
         Hosts(host => host.Owner = null);
         Drawn(drawn => drawn.Owner = null);
 
@@ -1563,6 +1565,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     // The plane's edits are laid out before what is on it is measured.
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
+        LimitInspector(Double.IsFinite(availableSize.Width) ? availableSize.Width : 0);
         LayOutEdits();
         return base.MeasureOverride(availableSize);
     }
@@ -1572,6 +1575,7 @@ public partial class InfiniteCanvas : ICanvasCamera
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
+        SearchOnceLaidOut();
         var viewport = _viewportPart?.RenderSize ?? finalSize;
         var resized = _viewport != viewport;
         _viewport = viewport;

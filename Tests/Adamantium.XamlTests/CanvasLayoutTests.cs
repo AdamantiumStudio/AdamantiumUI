@@ -71,7 +71,7 @@ public class CanvasLayoutTests
         var canvas = Built();
         var said = CanvasLayoutSerializer.Save(canvas);
 
-        Assert.That(said, Does.Contain("PART_Inspector").And.Contain("PART_ToolRail").And.Contain("PART_MiniMap"),
+        Assert.That(said, Does.Contain("PART_ViewBar").And.Contain("PART_ToolRail").And.Contain("PART_MiniMap"),
             "a panel with no name in the text cannot be found again");
     }
 
@@ -80,18 +80,18 @@ public class CanvasLayoutTests
     public void APanelComesBackWhereItWasLeft()
     {
         var canvas = Built();
-        var inspector = Named(canvas, "PART_Inspector");
+        var map = Named(canvas, "PART_MiniMap");
 
-        inspector.Placement = CanvasPanePlacement.Free;
-        inspector.Anchor = new Vector2<double>(0.25, 0.6);
-        inspector.Width = 360;
-        inspector.IsOpen = false;
+        map.Placement = CanvasPanePlacement.Free;
+        map.Anchor = new Vector2<double>(0.25, 0.6);
+        map.Width = 360;
+        map.IsOpen = false;
         Settle(canvas);
 
         var said = CanvasLayoutSerializer.Save(canvas);
 
         var other = Built();
-        var back = Named(other, "PART_Inspector");
+        var back = Named(other, "PART_MiniMap");
 
         Assert.That(CanvasLayoutSerializer.Load(other, said), Is.True, "the text was refused");
         Settle(other);
@@ -116,12 +116,12 @@ public class CanvasLayoutTests
     public void AFoldedPanelComesBackStandingWhereItWasCarried()
     {
         var canvas = Built();
-        var inspector = Named(canvas, "PART_Inspector");
+        var rail = Named(canvas, "PART_ToolRail");
         var map = Named(canvas, "PART_MiniMap");
 
-        inspector.IsOpen = false;
-        inspector.Placement = CanvasPanePlacement.Right;
-        inspector.KeepsOpenRoom = false;
+        rail.IsOpen = false;
+        rail.Placement = CanvasPanePlacement.Right;
+        rail.KeepsOpenRoom = false;
         map.IsOpen = false;
         Settle(canvas);
 
@@ -133,7 +133,7 @@ public class CanvasLayoutTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Named(other, "PART_Inspector").KeepsOpenRoom, Is.False, "carried to the edge, it came back away from it");
+            Assert.That(Named(other, "PART_ToolRail").KeepsOpenRoom, Is.False, "carried to the edge, it came back away from it");
             Assert.That(Named(other, "PART_MiniMap").KeepsOpenRoom, Is.True, "folded where it stood, it lost its place");
         });
     }
@@ -144,13 +144,31 @@ public class CanvasLayoutTests
     public void AWidthIsNeverNarrowerThanAPanelCanBeDragged()
     {
         var canvas = Built();
-        var inspector = Named(canvas, "PART_Inspector");
+        var map = Named(canvas, "PART_MiniMap");
 
         Assert.That(CanvasLayoutSerializer.Load(canvas, """
-            {"version":1,"panes":[{"name":"PART_Inspector","width":2}]}
+            {"version":1,"panes":[{"name":"PART_MiniMap","width":2}],"inspector":{"open":true,"width":2}}
             """), Is.True);
 
-        Assert.That(inspector.Width, Is.EqualTo(inspector.MinResizeWidth).Within(0.5));
+        Assert.That(map.Width, Is.EqualTo(map.MinResizeWidth).Within(0.5));
+        Assert.That(canvas.InspectorWidth, Is.EqualTo(canvas.MinInspectorWidth).Within(0.5));
+    }
+
+    [Test]
+    public void TheInspectorComesBackAsWideAndAsFoldedAsItWasLeft()
+    {
+        var canvas = Built();
+        canvas.InspectorWidth = 280;
+        canvas.IsInspectorOpen = false;
+        Settle(canvas);
+
+        var other = Built();
+        Assert.That(CanvasLayoutSerializer.Load(other, CanvasLayoutSerializer.Save(canvas)), Is.True);
+        Settle(other);
+
+        Assert.That(other.IsInspectorOpen, Is.False);
+        Assert.That(other.InspectorWidth, Is.EqualTo(280));
+        Assert.That(canvas.Layout, Does.Contain("\"open\": false").And.Contain("280"), "the canvas never said so itself");
     }
 
     [Test]
@@ -263,15 +281,15 @@ public class CanvasLayoutTests
     public void TheCanvasSaysSoItselfWhenSomethingSettles()
     {
         var canvas = Built();
-        var inspector = Named(canvas, "PART_Inspector");
+        var map = Named(canvas, "PART_MiniMap");
 
         Assert.That(canvas.Layout, Is.Null.Or.Empty, "it wrote itself down before anything happened");
 
-        inspector.Placement = CanvasPanePlacement.Free;
-        inspector.Anchor = new Vector2<double>(0.4, 0.4);
+        map.Placement = CanvasPanePlacement.Free;
+        map.Anchor = new Vector2<double>(0.4, 0.4);
         canvas.RememberLayout();
 
-        Assert.That(canvas.Layout, Does.Contain("PART_Inspector"), "the canvas never said how it is set up");
+        Assert.That(canvas.Layout, Does.Contain("PART_MiniMap"), "the canvas never said how it is set up");
     }
 
     // ...AND DRESSES ITSELF FROM ONE. A string written into it is the whole feature from the application's side.
@@ -349,14 +367,14 @@ public class CanvasLayoutTests
     public void TextThatCannotBeReadChangesNothing()
     {
         var canvas = Built();
-        var inspector = Named(canvas, "PART_Inspector");
-        var was = inspector.Placement;
+        var map = Named(canvas, "PART_MiniMap");
+        var was = map.Placement;
 
         Assert.Multiple(() =>
         {
             Assert.That(CanvasLayoutSerializer.Load(canvas, "{ this is not json"), Is.False);
             Assert.That(CanvasLayoutSerializer.Load(canvas, """{"version":99}"""), Is.False);
-            Assert.That(inspector.Placement, Is.EqualTo(was));
+            Assert.That(map.Placement, Is.EqualTo(was));
         });
     }
 }
