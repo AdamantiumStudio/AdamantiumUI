@@ -104,8 +104,8 @@ float ClipCoverageBySlot(float2 fragment, float slotIndex)
     float4 r4 = min(clip.World[1], float4(lim, lim, lim, lim));
 
     float d = SdRoundRectJoin(local, halfSize, r4, 2);
-    float aa = EdgeRamp(d, local, 1.0) + 1e-4;
-    return 1.0 - smoothstep(-aa, aa, d);
+    // A pixel wide, as a fill's edge (CompositeFillBorder): wider, it faded the first row inside a straight side.
+    return saturate(0.5 - d / EdgeRamp(d, local, 1.0));
 }
 
 // The fragment's coverage under that shape - no buffer access, so any pass can call it.
@@ -119,6 +119,6 @@ float ClipCoverage(float2 fragment, float4 box, float4 radii)
     float4 r4 = min(radii, float4(lim, lim, lim, lim));
 
     float d = SdRoundRectJoin(local, halfSize, r4, 2);
-    float aa = EdgeRamp(d, local, 1.0) + 1e-4;
-    return 1.0 - smoothstep(-aa, aa, d);
+    // A pixel wide, as a fill's edge (CompositeFillBorder): wider, it faded the first row inside a straight side.
+    return saturate(0.5 - d / EdgeRamp(d, local, 1.0));
 }

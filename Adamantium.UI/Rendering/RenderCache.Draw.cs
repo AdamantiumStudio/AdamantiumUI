@@ -2505,7 +2505,8 @@ public partial class RenderCache
         }
 
         var world = snap.RenderParent != null ? entry.Local * parentWorld : entry.Local;
-        _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode, snap.RenderParent, snap.Opacity, snap.SelfOpacity);
+        _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode,
+            snap.RenderParent, snap.Opacity, snap.SelfOpacity, snap.ClipRadii, snap.ClipInset);
         _worldCache[owner] = world;   // set directly: the _applySnap chain may be mid-recapture, so don't recompose off it
         _transformTable.SetMatrix(device, AcquireLiveSlot(device, owner.RenderId), world);
         entry.MarkApplied();   // tell the loop thread the render thread is drawing this - so its mirror stops re-baking it
