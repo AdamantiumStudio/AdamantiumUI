@@ -11,7 +11,5 @@
   template keeps the visual and only its data context goes.
 - Controls that show a chosen item's template now give none when nothing is chosen: `TabControl`
   (`SelectedContentTemplate`), `PaneGroup` (new `DockedContentTemplate` and `FlyoutContentTemplate`, the empty host's
-  is null) and `DropDown` (new read-only `DisplayContentTemplate`, as WPF's `SelectionBoxItemTemplate`: the item
-  template for a chosen item, none for the placeholder; the header's presenter takes `ItemTemplateSelector` as
-  before; `DisplayContent` is now read-only too, as its documentation said). A `PropertyRow` with no
+  is null) and `DropDown` (new `DisplayContentTemplate` and `DisplayContentTemplateSelector`). A `PropertyRow` with no
   editor to show sets no template, and a tab overflow row of a tab with no icon has no icon template.
