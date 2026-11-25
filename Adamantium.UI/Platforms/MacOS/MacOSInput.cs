@@ -18,7 +18,8 @@ namespace Adamantium.UI.Platforms.MacOS;
 /// them.</summary>
 internal sealed unsafe class MacOSInput : INativeMouse, INativeKeyboard, INativePlatformSettings
 {
-    private const int Hardware = 1;
+    // What the hardware and other applications - a remote control, an accessibility keyboard - have put in together.
+    private const int Session = 0;
 
     // How far AppKit lets a press move before it drags, in points: no setting says it.
     private const double DragPoints = 3;
@@ -58,8 +59,9 @@ internal sealed unsafe class MacOSInput : INativeMouse, INativeKeyboard, INative
         set
         {
             CoreGraphicsInterop.WarpCursor(_platform.Desktop.ToPointsFromTop(value.X, value.Y));
-            // Or the cursor stands still for a moment after.
-            CoreGraphicsInterop.AssociateMouseAndCursor(true);
+            // Or the cursor stands still for a moment after; held still by a window that looks by the mouse, it stays so.
+            if (!_platform.IsMouseRelative)
+                CoreGraphicsInterop.AssociateMouseAndCursor(true);
         }
     }
 
@@ -76,7 +78,7 @@ internal sealed unsafe class MacOSInput : INativeMouse, INativeKeyboard, INative
     {
         foreach (var keyCode in _platform.Keyboard.CodesOf(key))
         {
-            if (CoreGraphicsInterop.IsKeyDown(Hardware, keyCode))
+            if (CoreGraphicsInterop.IsKeyDown(Session, keyCode))
                 return true;
         }
 
@@ -84,7 +86,7 @@ internal sealed unsafe class MacOSInput : INativeMouse, INativeKeyboard, INative
     }
 
     public bool IsKeyToggled(Key key) => key == Key.CapsLock &&
-        ((NSEventModifierFlags)CoreGraphicsInterop.ModifierFlags(Hardware) & NSEventModifierFlags.CapsLock) != 0;
+        ((NSEventModifierFlags)CoreGraphicsInterop.ModifierFlags(Session) & NSEventModifierFlags.CapsLock) != 0;
 
     public bool HasRightToLeftLayout => _hasRightToLeftLayout;
 

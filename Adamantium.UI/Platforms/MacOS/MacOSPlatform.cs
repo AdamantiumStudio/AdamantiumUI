@@ -45,6 +45,8 @@ public class MacOSPlatform : IApplicationPlatform
         var applicationDelegate = NSObject.New(MacOSApplicationDelegate.Class);
         ObjCManagedObject.Attach(applicationDelegate, this);
         NSApplication.SetDelegate(applicationDelegate);
+        // A menu open takes the events the loop is woken by.
+        NSNotificationCenter.AddObserver(applicationDelegate, "menuClosed:", "NSMenuDidEndTrackingNotification");
         if (!IsHidden)
             ShowApplicationIcon();
         Desktop = new MacOSDisplays();
@@ -76,6 +78,15 @@ public class MacOSPlatform : IApplicationPlatform
         lock (host._guests)
             host._guests.Add(this);
     }
+
+    /// <summary>Whether a window has the mouse apart from the cursor.</summary>
+    internal bool IsMouseRelative
+    {
+        get => Volatile.Read(ref _isMouseRelative);
+        set => Volatile.Write(ref _isMouseRelative, value);
+    }
+
+    private bool _isMouseRelative;
 
     /// <summary>The keys of the keyboard layout in use.</summary>
     internal MacOSKeyboard Keyboard { get; } = new();
@@ -198,7 +209,9 @@ public class MacOSPlatform : IApplicationPlatform
         if (IsHidden)
             return IntPtr.Zero;
 
+        var pool = ObjCRuntime.PushAutoreleasePool();
         var number = NSWindow.NumberAt(Desktop.ToPoints(point.X, point.Y));
+        ObjCRuntime.PopAutoreleasePool(pool);
         foreach (var window in AllWindows())
         {
             if (window.IsNumbered(number, out var handle))
@@ -286,12 +299,18 @@ public class MacOSPlatform : IApplicationPlatform
     /// after.</summary>
     internal void RunOnMainThreadAndWait(Action action)
     {
-        if (IsOnUIThread)
-            RunOnMainThread(action);
-        else
-            (Dispatcher ?? Threading.Dispatcher.CurrentDispatcher).InvokeAsync(() => RunOnMainThread(action)).GetAwaiter()
-                .GetResult();
-        Signal();
+        try
+        {
+            if (IsOnUIThread)
+                RunOnMainThread(action);
+            else
+                (Dispatcher ?? Threading.Dispatcher.CurrentDispatcher).InvokeAsync(() => RunOnMainThread(action)).GetAwaiter()
+                    .GetResult();
+        }
+        finally
+        {
+            Signal();
+        }
     }
 
     /// <summary>The windows a shown <paramref name="owner"/> has, the splash window's side included, join it.</summary>

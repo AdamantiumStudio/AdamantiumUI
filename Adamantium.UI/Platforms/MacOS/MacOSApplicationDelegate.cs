@@ -18,6 +18,7 @@ internal static unsafe class MacOSApplicationDelegate
             (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, nint>)&ShouldTerminate, "q@:@")
         .AddMethod("applicationDidUnhide:",
             (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Unhidden, "v@:@")
+        .AddMethod("menuClosed:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&MenuClosed, "v@:@")
         .Register();
 
     [UnmanagedCallersOnly]
@@ -31,4 +32,8 @@ internal static unsafe class MacOSApplicationDelegate
     [UnmanagedCallersOnly]
     private static void Unhidden(IntPtr self, IntPtr selector, IntPtr notification) =>
         ObjCManagedObject.Get<MacOSPlatform>(self)?.JoinAllOwned();
+
+    [UnmanagedCallersOnly]
+    private static void MenuClosed(IntPtr self, IntPtr selector, IntPtr notification) =>
+        ObjCManagedObject.Get<MacOSPlatform>(self)?.Signal();
 }

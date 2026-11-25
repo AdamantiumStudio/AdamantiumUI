@@ -51,8 +51,17 @@ internal sealed class MacOSFileDialog(MacOSPlatform platform) : IFileDialogPlatf
         if (!string.IsNullOrEmpty(key))
             NSSavePanel.SetIdentifier(panel, IdentifierPrefix + key);
         // All the kinds at once: the system's dialog has no list to choose one from.
-        if (fileTypes is { Count: > 0 } && fileTypes.All(type => type.Extensions.Count > 0))
-            NSSavePanel.SetExtensions(panel, fileTypes.SelectMany(type => type.Extensions).Distinct());
+        if (Extensions(fileTypes) is { Length: > 0 } extensions)
+            NSSavePanel.SetExtensions(panel, extensions);
+    }
+
+    /// <summary>The extensions of all the kinds; none when one of them is of any file.</summary>
+    internal static string[] Extensions(IReadOnlyList<FileType> fileTypes)
+    {
+        var extensions = (fileTypes ?? []).SelectMany(type => type.Extensions).ToArray();
+        return fileTypes?.Any(type => type.Extensions.Count == 0) == true || extensions.Any(extension => extension is "*" or "*.*")
+            ? []
+            : extensions.Distinct().ToArray();
     }
 
     private string Ask(Func<string> ask)

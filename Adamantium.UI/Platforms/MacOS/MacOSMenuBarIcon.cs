@@ -92,7 +92,13 @@ internal sealed unsafe class MacOSMenuBarIcon : INotificationAreaIcon
         NSStatusItem.SetToolTip(_item, _toolTip);
         NSStatusItem.SetAction(_item, _target, "clicked:");
         if (ApplicationIcon.Load() is not { Pictures.Count: > 0 } icon)
+        {
+            // The one the system shows in the Dock for an application without.
+            var shown = NSImage.Copy(NSApplication.IconImage, new CGSize(IconPoints, IconPoints));
+            NSStatusItem.SetImage(_item, shown);
+            NSObject.Release(shown);
             return;
+        }
 
         // The smallest that is sharp on a Retina screen, or the largest there is.
         var picture = icon.Pictures[0];
@@ -146,7 +152,7 @@ internal sealed unsafe class MacOSMenuBarIcon : INotificationAreaIcon
         {
             if (row.IsSeparator)
                 NSMenu.AddSeparator(menu);
-            else if (row.Items.Count > 0)
+            else if (row.Items.Count > 0 && row.IsEnabled)
             {
                 var submenu = Build(row.Items);
                 NSMenu.AddSubmenu(menu, row.Text ?? string.Empty, submenu);

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Text;
 using Adamantium.UI.Platforms.MacOS;
@@ -117,6 +118,21 @@ public class MacOSSystemTests
         {
             Directory.Delete(folder, true);
         }
+    }
+
+    [Test]
+    public void AFileDialog_OffersTheFilesOfAllItsKinds_AndEveryFileForOneOfAny()
+    {
+        var pictures = new FileType("Pictures", "png", "jpg");
+        var png = new FileType("PNG", "png");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(MacOSFileDialog.Extensions([pictures, png]), Is.EqualTo(new[] { "png", "jpg" }));
+            Assert.That(MacOSFileDialog.Extensions([pictures, new FileType("All files", "*")]), Is.Empty);
+            Assert.That(MacOSFileDialog.Extensions([pictures, new FileType("Anything")]), Is.Empty);
+            Assert.That(MacOSFileDialog.Extensions(null), Is.Empty);
+        });
     }
 
     [Test]

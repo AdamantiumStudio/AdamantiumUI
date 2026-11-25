@@ -321,6 +321,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         BringCursorIn();
         _relativeMouse = true;
+        _platform.IsMouseRelative = true;
         CoreGraphicsInterop.AssociateMouseAndCursor(false);
         NSCursor.Hide();
     }
@@ -348,6 +349,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
 
         _relativeMouse = false;
+        _platform.IsMouseRelative = false;
         CoreGraphicsInterop.AssociateMouseAndCursor(true);
         NSCursor.Unhide();
     }
@@ -737,6 +739,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             LeaveRelativeMouse();
         else
         {
+            _number = NSWindow.NumberOf(_nsWindow);
             JoinOwner();
             _platform.JoinOwned(_nsWindow);
         }
