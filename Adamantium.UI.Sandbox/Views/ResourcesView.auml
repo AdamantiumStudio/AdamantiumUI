@@ -37,7 +37,7 @@
         <CheckBox Content="{Localize ResourcesStrings.CaptionLeft}" IsChecked="{Binding CaptionButtonsOnLeft, Mode=TwoWay}"
                   Margin="0,12,0,0"/>
 
-        <!-- Numbers and dates as bindings write them in the application's LANGUAGE, chosen in the diagnostics panel
+        <!-- Numbers and dates as bindings write them in the application's LANGUAGE, chosen in the settings panel
              with the theme: they follow it at once, with no template rebuilt. -->
         <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
             <TextBlock Text="{Localize ResourcesStrings.Formats}" VerticalAlignment="Center"/>
