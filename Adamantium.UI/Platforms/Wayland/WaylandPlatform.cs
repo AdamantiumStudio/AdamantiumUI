@@ -17,7 +17,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     private readonly int signalFd;
     private readonly Dictionary<nint, WaylandWindowWorker> windows = new();
     private readonly object _windowsLock = new();
-    private Linux.ApplicationIcon icon;
+    private ApplicationIcon icon;
     private bool iconRead;
 
     public WaylandPlatform() : this(true)
@@ -206,13 +206,13 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     public WpAlphaModifierV1 AlphaModifiers { get; private set; }
 
     /// <summary>The application's icon, read the first time it is asked for; null where it carries none.</summary>
-    internal Linux.ApplicationIcon Icon
+    internal ApplicationIcon Icon
     {
         get
         {
             if (!iconRead)
             {
-                icon = Linux.ApplicationIcon.Load();
+                icon = ApplicationIcon.Load();
                 iconRead = true;
             }
 

@@ -42,7 +42,7 @@ public partial class ResourcesViewModel : TabPageViewModel
     /// once with a setter; the checkbox is here so the switch can be seen live, on a real window, without a rebuild.
     /// <para>Written to every OPEN window rather than to a theme resource: the side is a property of a window's chrome,
     /// and a demo that changed only the main one would leave the tear-off windows disagreeing with it.</para></summary>
-    [Bindable] private bool _captionButtonsOnLeft;
+    [Bindable] private bool _captionButtonsOnLeft = OperatingSystem.IsMacOS();
 
     partial void OnCaptionButtonsOnLeftChanged(bool value)
     {

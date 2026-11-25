@@ -387,27 +387,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void LetGo()
     {
-        if (Window is not { } shown)
+        if (Window is { } shown)
         {
-            return;
+            BlockedWindowInput.LetGo(shown);
         }
-
-        if (Mouse.Pointer.Captured is IUIComponent captured && RootOf(captured) == shown)
-        {
-            Mouse.Pointer.Capture(null);
-        }
-
-        FocusManager.LeaveWindow(shown);
-    }
-
-    private static IUIComponent RootOf(IUIComponent node)
-    {
-        while (node?.VisualParent is { } parent)
-        {
-            node = parent;
-        }
-
-        return node;
     }
 
     /// <summary>Asks for the modal window keeping this one from input to be activated: the keyboard came here. Of modals

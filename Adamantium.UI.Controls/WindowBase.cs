@@ -667,7 +667,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// to the title bar. A platform theme therefore says "left" once instead of every window saying it.</summary>
     public static readonly AdamantiumProperty CaptionButtonPlacementProperty = AdamantiumProperty.Register(
         nameof(CaptionButtonPlacement), typeof(CaptionButtonPlacement), typeof(WindowBase),
-        new PropertyMetadata(CaptionButtonPlacement.Right, PropertyMetadataOptions.AffectsMeasure));
+        new PropertyMetadata(TitleBar.SystemCaptionButtonPlacement, PropertyMetadataOptions.AffectsMeasure));
 
     public CaptionButtonPlacement CaptionButtonPlacement
     {

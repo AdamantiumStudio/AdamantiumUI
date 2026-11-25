@@ -35,7 +35,7 @@
 		<ProjectReference Include="..\Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<AdamantiumVulkanReference Include="Adamantium.Vulkan" />
-		<PackageReference Include="Adamantium.Vulkan.ShaderObjectLayer" Version="1.0.2" />
+		<PackageReference Include="Adamantium.Vulkan.ShaderObjectLayer" Version="1.0.3" />
 	</ItemGroup>
 
 	<!-- For the applications this package goes into, not for this project: the AUML generator rides in this package -
@@ -123,6 +123,7 @@
 	<ItemGroup>
 		<!-- Lets the render-cache test harness construct the internal DrawingContext directly. -->
 		<InternalsVisibleTo Include="Adamantium.UITests" />
+		<InternalsVisibleTo Include="Adamantium.XamlTests" />
 		<!-- The input of a universe shown in its panel, the same for one of another process. -->
 		<InternalsVisibleTo Include="Adamantium.UI.Remote" />
 	</ItemGroup>

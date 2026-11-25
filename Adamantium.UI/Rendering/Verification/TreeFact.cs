@@ -1,5 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering.Verification;
 
@@ -20,4 +21,11 @@ internal readonly record struct TreeFact(
     bool Hidden,
     float SelfOpacity,
     Vector4F? TextColor,
-    bool Pending);
+    Brush TextBrush,
+    int TextBrushVersion,
+    bool Pending)
+{
+    /// <summary>Whether the text's brush was recolored in place after the record: that goes on screen at the next draw,
+    /// whichever record it draws, so this frame may show either color.</summary>
+    public bool TextRepainted => TextBrush != null && TextBrush.PaintVersion != TextBrushVersion;
+}

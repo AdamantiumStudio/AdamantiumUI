@@ -57,12 +57,13 @@ public static class ApplicationEntryPoint
             applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
     }
 
-    /// <summary>What the start reads of a blueprint before making it: its splash and startup windows, its limit on
-    /// copies, whether the graphics device debugs, how windows present.</summary>
+    /// <summary>What the start reads of a blueprint before making it: its splash and startup windows, its theme, its
+    /// limit on copies, whether the graphics device debugs, how windows present.</summary>
     public static EarlyBlueprintValues EarlyValuesOf(AumlMetadataContainer blueprint) => new()
     {
-        SplashWindow = WindowOf(blueprint, "SplashWindow"),
-        StartupWindow = WindowOf(blueprint, "StartupWindow"),
+        SplashWindow = TypeOf(blueprint, "SplashWindow"),
+        StartupWindow = TypeOf(blueprint, "StartupWindow"),
+        StartupTheme = TypeOf(blueprint, "StartupTheme"),
         MaxInstances = int.TryParse(PropertyOf(blueprint, "MaxInstances")?.GetTextValue(), NumberStyles.Integer,
             CultureInfo.InvariantCulture, out var count) ? count : 0,
         EnableGraphicsDebug = bool.TryParse(PropertyOf(blueprint, "EnableGraphicsDebug")?.GetTextValue(), out var debug) && debug,
@@ -76,7 +77,7 @@ public static class ApplicationEntryPoint
         return !string.IsNullOrEmpty(text) && text.All(char.IsLetter) ? text : null;
     }
 
-    private static string WindowOf(AumlMetadataContainer blueprint, string name)
+    private static string TypeOf(AumlMetadataContainer blueprint, string name)
     {
         var property = PropertyOf(blueprint, name);
         return property == null ? null : blueprint.TypeResolver.Resolve(property.GetFullTypeValue())?.QualifiedName;

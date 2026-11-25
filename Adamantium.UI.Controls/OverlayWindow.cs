@@ -68,6 +68,10 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     public static readonly AdamantiumProperty IsCollapsedProperty = AdamantiumProperty.Register(nameof(IsCollapsed),
         typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false, OnIsCollapsedChanged));
 
+    public static readonly AdamantiumProperty CaptionButtonPlacementProperty = AdamantiumProperty.Register(
+        nameof(CaptionButtonPlacement), typeof(CaptionButtonPlacement), typeof(OverlayWindow),
+        new PropertyMetadata(TitleBar.SystemCaptionButtonPlacement, PropertyMetadataOptions.AffectsMeasure));
+
     static OverlayWindow()
     {
         // A card stands off its content; the chrome property itself is Control's, only the default differs.
@@ -208,6 +212,14 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     {
         get => GetValue<bool>(IsCollapsedProperty);
         set => SetValue(IsCollapsedProperty, value);
+    }
+
+    /// <summary>Which side of the title bar the buttons sit on: by default where the operating system keeps a window's.
+    /// </summary>
+    public CaptionButtonPlacement CaptionButtonPlacement
+    {
+        get => GetValue<CaptionButtonPlacement>(CaptionButtonPlacementProperty);
+        set => SetValue(CaptionButtonPlacementProperty, value);
     }
 
     /// <summary>When true (default) the title bar can be dragged to move the window within the parent.</summary>

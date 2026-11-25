@@ -384,10 +384,8 @@ public class GpuRenderUnitTests
     {
         // VK_EXT_headless_surface is loader-provided and absent on some loaders (e.g. this dev box, loader
         // 1.4.321). Skip cleanly where it's unavailable; validate the window-less swapchain where it exists.
-        var hasExt = Adamantium.Vulkan.Core.Instance.EnumerateInstanceExtensionProperties()
-            .Any(e => e.ExtensionName == "VK_EXT_headless_surface");
-        if (!hasExt)
-            Assert.Ignore("VK_EXT_headless_surface not advertised by this Vulkan loader - headless-swapchain path unavailable here.");
+        if (!_device.MainDevice.VulkanInstance.IsExtensionEnabled("VK_EXT_headless_surface"))
+            Assert.Ignore("The instance has no VK_EXT_headless_surface - headless-swapchain path unavailable here.");
 
         var parameters = new PresentationParameters(PresenterType.Headless, 256, 256, IntPtr.Zero);
         var presenter = GraphicsPresenter.Create(_device, parameters, "test_headless");

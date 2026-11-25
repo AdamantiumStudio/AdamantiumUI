@@ -260,18 +260,23 @@ public class TextBlockTypographyTests
         }
     }
 
+    // A font with optical sizes is set in an instance of its own for the text's size.
+    private static bool IsSetAs(IFont font, IFont layoutFont) =>
+        font.FullName == layoutFont.FullName && font.Weight == layoutFont.Weight;
+
     [Test]
     public void ARunWithItsOwnWeight_IsSetInThatFace()
     {
         var text = new TextBlock();
         text.Inlines.Add(new Run { Text = "plain " });
         text.Inlines.Add(new Run { Text = "bold", FontWeight = FontWeight.Bold });
-        HostedUntil(text, () => text.Layout?.GetTextData().Any(g => g.Font.FullName.Contains("Bold")) == true);
+        // By weight: a variable UI font, as macOS's, keeps one name in every weight.
+        HostedUntil(text, () => text.Layout?.GetTextData().Any(g => g.Font.Weight == FontWeight.Bold) == true);
 
         var glyphs = text.Layout.GetTextData();
 
-        Assert.That(glyphs.Where(g => g.PositionInString < 5).All(g => g.Font == text.Layout.Font));
-        Assert.That(glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.FullName.Contains("Bold")));
+        Assert.That(glyphs.Where(g => g.PositionInString < 5).All(g => IsSetAs(g.Font, text.Layout.Font)));
+        Assert.That(glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.Weight == FontWeight.Bold));
     }
 
     [Test]
@@ -287,7 +292,7 @@ public class TextBlockTypographyTests
         HostedUntil(text, () => text.Layout?.GetTextData().Any(g => g.Font.FullName.Contains("Roboto Flex")) == true);
         var glyphs = text.Layout.GetTextData();
         var inFamily = glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.FullName.Contains("Roboto Flex"));
-        var plain = glyphs.Where(g => g.PositionInString < 5).All(g => g.Font == text.Layout.Font);
+        var plain = glyphs.Where(g => g.PositionInString < 5).All(g => IsSetAs(g.Font, text.Layout.Font));
 
         span.ClearOverrides();
 

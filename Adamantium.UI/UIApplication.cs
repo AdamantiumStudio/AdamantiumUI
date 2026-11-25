@@ -662,9 +662,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// and the splash window has closed.</summary>
     public bool IsStarting => _splash is { IsRunning: true };
 
-    /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the application's
-    /// own, which is added to the themes. The application's blueprint states it; a value set in code wins over the
-    /// blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
+    /// <summary>The theme the application opens on: Fluent, Graphite, MacOs or one of the application's own, which is added
+    /// to the themes; unset, MacOs on macOS and Fluent elsewhere. The application's blueprint states it; a value set in
+    /// code wins over the blueprint, and the ADAM_THEME environment variable, a theme's name, over both.</summary>
     public Type StartupTheme
     {
         get => GetValue<Type>(StartupThemeProperty);
@@ -959,12 +959,15 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         if (StartWithSplash())
         {
+            ApplicationPlatform.Wait(devices, CancellationToken.None);
             devices.GetAwaiter().GetResult();
             EntityWorld.Initialize();
             StartLoop();
+            AnswerSplash();
         }
 
         ReadBlueprint();
+        AnswerSplash();
         LoadThemes();
         LoadLanguage();
         devices.GetAwaiter().GetResult();
@@ -975,11 +978,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             EntityWorld.Initialize();
         }
 
+        AnswerSplash();
         OnInitialize();
+        AnswerSplash();
         RegisterServices(Container);
         _visualRenderer = Container.Resolve<IVisualRenderer>();   // its device is created on the first snapshot
         IsInitialized = true;
-        
+        AnswerSplash();
+
         if (MainWindow != null)
         {
             OnWindowCreated(MainWindow);
@@ -1090,7 +1096,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 done.SetException(e);
             }
         });
-        Task.WaitAny([done.Task], cancellationTokenSource.Token);
+        ApplicationPlatform.Wait(done.Task, cancellationTokenSource.Token);
         done.Task.GetAwaiter().GetResult();
         StartupCancellation.ThrowIfCancellationRequested();
     }
@@ -1113,6 +1119,13 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         OnLoop(() => Languages.Current = language);
     }
 
+    // The names the built-in themes give themselves, known before they are made.
+    internal const string FluentName = "Fluent";
+    internal const string GraphiteName = "Graphite";
+    internal const string MacOsName = "macOS";
+
+    private volatile bool _themesLoaded;
+
     private void LoadThemes()
     {
         // One theme with light and dark variants: two themes rebuilt every template just to change the colors.
@@ -1130,7 +1143,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // ADAM_THEME wins over StartupTheme: a theme is fully exercised only when current from the first frame.
         var requested = Environment.GetEnvironmentVariable("ADAM_THEME");
         var named = string.IsNullOrEmpty(StartupThemeName) ? null : ThemeManager[StartupThemeName];
-        var startOn = string.IsNullOrEmpty(requested) ? named ?? StartupThemeInstance() ?? fluent : ThemeManager[requested];
+        ITheme platformTheme = OperatingSystem.IsMacOS() ? macOs : fluent;
+        var startOn = string.IsNullOrEmpty(requested)
+            ? named ?? StartupThemeInstance() ?? platformTheme
+            : ThemeManager[requested];
         if (startOn == null)
         {
             throw new InvalidOperationException(
@@ -1148,6 +1164,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     (variant.FollowsSystem ? "; System needs a light and a dark one." : "."));
             }
         });
+        _themesLoaded = true;
     }
 
     private void SubscribeToEvents()
@@ -1408,6 +1425,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return true;
     }
 
+    private Platforms.IApplicationPlatform ApplicationPlatform => UIContext.Resolve<Platforms.IApplicationPlatform>();
+
+    // Between the steps of the start, where the splash window has no thread of its own to answer on.
+    private void AnswerSplash()
+    {
+        if (_splash is { IsRunning: true, IsOnApplicationThread: true })
+        {
+            ApplicationPlatform.Wait(Task.CompletedTask, CancellationToken.None);
+            StartupCancellation.ThrowIfCancellationRequested();
+        }
+    }
+
     /// <summary>What the splash window says while the application starts - the document it opens, say; null for
     /// nothing. Read once, as the start shows the window, before the services are made.</summary>
     protected virtual string StartupSplashMessage => null;
@@ -1434,7 +1463,37 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return splash;
     }
 
-    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement());
+    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement(), WearsMacOsTheme());
+
+    private bool WearsMacOsTheme() => _themesLoaded
+        ? ThemeManager.CurrentTheme is Themes.MacOsTheme.MacOs
+        : WillOpenOnMacOs(ThemeManager, Environment.GetEnvironmentVariable("ADAM_THEME"), StartupThemeName,
+            StartupTheme ?? BlueprintAttribute?.StartupTheme);
+
+    /// <summary>Whether <see cref="LoadThemes"/> will choose the MacOs theme, or one made from it: told before the built-in
+    /// themes are made, when <paramref name="themes"/> holds only what the application itself added.</summary>
+    internal static bool WillOpenOnMacOs(IThemeManager themes, string requested, string named, Type startup)
+    {
+        if (!string.IsNullOrEmpty(requested))
+        {
+            return themes[requested] is { } asked ? asked is Themes.MacOsTheme.MacOs : requested == MacOsName;
+        }
+
+        if (!string.IsNullOrEmpty(named))
+        {
+            if (themes[named] is { } chosen)
+            {
+                return chosen is Themes.MacOsTheme.MacOs;
+            }
+
+            if (named is FluentName or GraphiteName or MacOsName)
+            {
+                return named == MacOsName;
+            }
+        }
+
+        return startup == null ? OperatingSystem.IsMacOS() : typeof(Themes.MacOsTheme.MacOs).IsAssignableFrom(startup);
+    }
 
     private WindowPlacement StartupPlacement()
     {
@@ -1451,7 +1510,27 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private Type SplashWindowType()
     {
         var type = SplashType ?? BlueprintAttribute?.SplashWindow;
-        return Configuration.Platform is Platform.Linux or Platform.Windows ? type : null;
+        return SplashScreen.IsSupported ? type : null;
+    }
+
+    /// <summary>The system asks the application to quit: one still starting gives its start up, one that runs closes its
+    /// windows, any of which may refuse.</summary>
+    internal void OnQuitRequested()
+    {
+        if (!_startupDone)
+        {
+            _startupCancellation.Cancel();
+            return;
+        }
+
+        // The main window last: closing it may end the application before the others were asked.
+        var main = MainWindow;
+        foreach (var window in Windows.Where(window => window != main && window.Owner == null).ToArray())
+        {
+            window.Close();
+        }
+
+        main?.Close();
     }
 
     private void CancelStartup()

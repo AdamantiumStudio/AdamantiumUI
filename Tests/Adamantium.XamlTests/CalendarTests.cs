@@ -17,6 +17,7 @@ using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
+using CultureInfo = System.Globalization.CultureInfo;
 
 namespace Adamantium.XamlTests;
 
@@ -144,7 +145,11 @@ public class CalendarTests
             Assert.That(calendar.DayButtons[0].IsInactive, Is.True, "September's");
             Assert.That(calendar.DayButtons.Single(day => day.Date == new DateTime(2026, 10, 1)).IsInactive, Is.False);
             Assert.That(calendar.HeaderText, Does.Contain("2026"));
-            Assert.That(Texts(calendar.Months[0], "PART_DayNames")[0], Is.EqualTo(firstName));
+            // macOS's own culture data capitalizes the Russian names.
+            var name = OperatingSystem.IsMacOS()
+                ? CultureInfo.GetCultureInfo(language).DateTimeFormat.GetAbbreviatedDayName(calendar.DayButtons[0].Date.DayOfWeek)
+                : firstName;
+            Assert.That(Texts(calendar.Months[0], "PART_DayNames")[0], Is.EqualTo(name));
         });
     }
 

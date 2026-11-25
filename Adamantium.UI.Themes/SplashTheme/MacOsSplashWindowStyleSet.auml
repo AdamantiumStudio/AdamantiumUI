@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The MacOs theme's close light, at the place and of the size its metrics give it: they do not reach here. -->
+
+    <Style Selector="SplashWindow">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="SplashWindow">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                        <Grid>
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                    Margin="{TemplateBinding Padding}"/>
+                            <Button x:Name="PART_CloseButton" Classes="SplashLight"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top" Margin="11,11,0,0"
+                                    AutomationProperties.AutomationId="Close"
+                                    AutomationProperties.Name="Close">
+                                <Image x:Name="LightCross" Opacity="0" Width="8" Height="8"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Image.Source>
+                                        <DrawingImage>
+                                            <GeometryDrawing Geometry="M0,0 L6,6 M6,0 L0,6" Stroke="#99000000"
+                                                             StrokeThickness="1.8"/>
+                                        </DrawingImage>
+                                    </Image.Source>
+                                </Image>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="SplashWindow">
+        <PropertyTrigger SourceName="PART_CloseButton" Property="IsPointerOver" Value="true">
+            <Setter TargetName="LightCross" Property="Opacity" Value="1"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="Button.SplashLight">
+        <Setter Property="Background" Value="#FF5F57"/>
+        <Setter Property="Width" Value="14"/>
+        <Setter Property="Height" Value="14"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Focusable" Value="False"/>
+    </Style>
+
+    <Style Selector="Button.SplashLight">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>

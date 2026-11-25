@@ -15,12 +15,12 @@
     <!-- NOT HERE: the Mac title is semi-bold, and the engine has no font weight to say so with - neither TextBlock nor
          the themes carry one. Left undone rather than faked; it belongs with whatever adds weights. -->
 
-    <!-- The lights: 12 across, 8 apart, 20 in from the edge. Fixed, not derived from the caption's height - they are a
+    <!-- The lights: 14 across, 8 apart, 11 in from the edge. Fixed, not derived from the caption's height - they are a
          constant of the platform the way a scrollbar's width is, and a caption made taller does not grow them. -->
-    <sys:Double x:Key="TrafficLightSize">12</sys:Double>
+    <sys:Double x:Key="TrafficLightSize">14</sys:Double>
     <sys:Double x:Key="TrafficLightGap">8</sys:Double>
-    <sys:Double x:Key="TrafficLightsInset">20</sys:Double>
-    <CornerRadius x:Key="TrafficLightRadius">6</CornerRadius>
+    <sys:Double x:Key="TrafficLightsInset">11</sys:Double>
+    <CornerRadius x:Key="TrafficLightRadius">7</CornerRadius>
 
     <!-- The symbol inside a light: near-black and TRANSLUCENT, so it reads on all three colors without a per-light
          glyph color. Not a palette key - the lights it sits on are platform constants, so this is one too. -->

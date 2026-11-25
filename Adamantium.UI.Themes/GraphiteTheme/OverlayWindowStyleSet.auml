@@ -40,8 +40,8 @@
                                     BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                     BorderThickness="{ResourceReference TitleBarUnderline}"
                                     Height="{ResourceReference TitleBarHeight}">
-                                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-                                    <Grid x:Name="PART_TitleThumb" Grid.Column="0" Background="Transparent">
+                                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+                                    <Grid x:Name="PART_TitleThumb" Grid.Column="3" Background="Transparent">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                 Margin="{ResourceReference TitleBarTitleInset}">
                                             <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
@@ -59,7 +59,7 @@
                                          plate was a small square floating in the strip, and the hover read as landing
                                          beside the glyph rather than on the button. -->
                                     <!-- Collapse: a chevron up, turned down while collapsed - the way back to the content. -->
-                                    <Button x:Name="PART_CollapseButton" Grid.Column="1" Visibility="Collapsed"
+                                    <Button x:Name="PART_CollapseButton" Grid.Column="4" Visibility="Collapsed"
                                             AutomationProperties.AutomationId="Collapse"
                                             AutomationProperties.Name="{Localize WindowStrings.Collapse}"
                                             Classes="CaptionButton"
@@ -72,7 +72,7 @@
                                                 StrokeThickness="{ResourceReference StrokeThinValue}"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
-                                    <Button x:Name="PART_PinButton" Grid.Column="2" Visibility="Collapsed"
+                                    <Button x:Name="PART_PinButton" Grid.Column="5" Visibility="Collapsed"
                                             AutomationProperties.AutomationId="Pin"
                                             AutomationProperties.Name="{Localize WindowStrings.Pin}"
                                             Classes="CaptionButton"
@@ -90,7 +90,7 @@
                                                 Fill="Transparent"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
-                                    <Button x:Name="PART_CloseButton" Grid.Column="3"
+                                    <Button x:Name="PART_CloseButton" Grid.Column="6"
                                             AutomationProperties.AutomationId="Close"
                                             AutomationProperties.Name="{Localize WindowStrings.Close}"
                                             Classes="CaptionButton CloseButton"
@@ -127,6 +127,12 @@
     </Style>
 
     <Style Selector="OverlayWindow">
+        <!-- Buttons on the left: the order reverses, so closing stays outermost. -->
+        <PropertyTrigger Property="CaptionButtonPlacement" Value="Left">
+            <Setter TargetName="PART_CloseButton" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_PinButton" Property="Grid.Column" Value="1"/>
+            <Setter TargetName="PART_CollapseButton" Property="Grid.Column" Value="2"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="CanClose" Value="false">
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>

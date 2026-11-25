@@ -171,12 +171,11 @@ internal sealed class FrameVerifier : IRenderCacheObserver
                 world = component.WorldTransform;
             }
 
+            var textBrush = (component as Controls.Text.TextBlock)?.Foreground as Core.Media.SolidColorBrush;
             _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds, parent,
                 (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden,
                 (float)component.SelfOpacity,
-                component is Controls.Text.TextBlock { Foreground: Core.Media.SolidColorBrush foreground }
-                    ? foreground.Color.ToVector4()
-                    : null,
+                textBrush?.Color.ToVector4(), textBrush, textBrush?.PaintVersion ?? 0,
                 !component.IsGeometryValid);
             _byRenderId[component.RenderId] = component;
             RenderCache.PushChildrenInPaintOrder(_stack, component.VisualChildren, hidden);
@@ -423,8 +422,10 @@ internal sealed class FrameVerifier : IRenderCacheObserver
 
         // The color the TREE gives the text, not the one the cache holds for it: a stale brush in the cache agrees with
         // itself. A selected tab's caption is recolored by a trigger, which is exactly where the two can part.
-        var color = fact.TextColor ?? foreground.Color.ToVector4();
-        if (fact.TextColor is { } treeColor && (Math.Abs(glyph.Color.X - treeColor.X) > 0.02f
+        // Recolored since the record, its color is not told from here; how much of it shows still is.
+        var repainted = fact.TextRepainted;
+        var color = repainted ? glyph.Color : fact.TextColor ?? foreground.Color.ToVector4();
+        if (!repainted && fact.TextColor is { } treeColor && (Math.Abs(glyph.Color.X - treeColor.X) > 0.02f
                                                 || Math.Abs(glyph.Color.Y - treeColor.Y) > 0.02f
                                                 || Math.Abs(glyph.Color.Z - treeColor.Z) > 0.02f))
         {
