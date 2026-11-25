@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The main window's caption commands: the confirm dialog in the window's overlay and in a window of its own, About, and the overflow menu that holds the commands - each dialog called by its own title and closed by its answer.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The main window's caption commands: the confirm dialog in the window's overlay and in a window of its own, and About - each dialog called by its own title and closed by its answer.">
   <Invoke Target="id=ShowConfirm" />
   <Wait Target="id=ConfirmDialogView" />
   <Expect Target="id=OverlayWindow" Name="Confirm" />
@@ -28,10 +28,4 @@
   <Expect Target="id=Window" Name="Modal window" />
   <Invoke Target="id=ConfirmDialogView/name=Cancel" />
   <Absent Target="id=ConfirmDialogView" />
-  <!-- The overflow menu lists the caption's commands by their labels. -->
-  <Invoke Target="id=MoreWindowCommands" />
-  <Wait Target="id=PART_RightOverflowMenu/name=Help" />
-  <Expect Target="id=PART_RightOverflowMenu/id=ShowAbout" Name="Help" />
-  <Key Keys="Escape" Into="id=MainWindow" />
-  <Expect Target="id=PART_RightOverflowMenu" Offscreen="True" />
 </Scenario>

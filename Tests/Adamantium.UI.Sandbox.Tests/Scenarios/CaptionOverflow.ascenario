@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows Linux" Description="The caption's overflow menu lists the window's commands by their labels. The MacOs theme, which the scenarios start on on macOS, has no such menu.">
+  <Invoke Target="id=MoreWindowCommands" />
+  <Wait Target="id=PART_RightOverflowMenu/name=Help" />
+  <Expect Target="id=PART_RightOverflowMenu/id=ShowAbout" Name="Help" />
+  <Key Keys="Escape" Into="id=MainWindow" />
+  <Expect Target="id=PART_RightOverflowMenu" Offscreen="True" />
+</Scenario>
