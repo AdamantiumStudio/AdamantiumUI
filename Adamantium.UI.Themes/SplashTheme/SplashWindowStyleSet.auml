@@ -25,9 +25,20 @@
                                     Foreground="{TemplateBinding Foreground}"
                                     AutomationProperties.AutomationId="Close"
                                     AutomationProperties.Name="Close">
-                                <Path x:Name="Cross" Data="M0,0 L10,10 M10,0 L0,10"
-                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Grid>
+                                    <Path x:Name="Cross" Data="M0,0 L10,10 M10,0 L0,10"
+                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Image x:Name="LightCross" Visibility="Collapsed" Opacity="0" Width="8" Height="8"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Image.Source>
+                                            <DrawingImage>
+                                                <GeometryDrawing Geometry="M0,0 L6,6 M6,0 L0,6" Stroke="#99000000"
+                                                                 StrokeThickness="1.8"/>
+                                            </DrawingImage>
+                                        </Image.Source>
+                                    </Image>
+                                </Grid>
                             </Button>
                         </Grid>
                     </Border>
@@ -53,13 +64,11 @@
             <Setter TargetName="PART_CloseButton" Property="Background" Value="#FF5F57"/>
             <Setter TargetName="PART_CloseButton" Property="BackgroundPointerOver" Value="#FF5F57"/>
             <Setter TargetName="PART_CloseButton" Property="BackgroundPressed" Value="#E0443E"/>
-            <Setter TargetName="Cross" Property="Data" Value="M0.6,0.6 L6.6,6.6 M6.6,0.6 L0.6,6.6"/>
-            <Setter TargetName="Cross" Property="Stroke" Value="#99000000"/>
-            <Setter TargetName="Cross" Property="StrokeThickness" Value="1.8"/>
-            <Setter TargetName="Cross" Property="Opacity" Value="0"/>
+            <Setter TargetName="Cross" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="LightCross" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
         <PropertyTrigger SourceName="PART_CloseButton" Property="IsPointerOver" Value="true">
-            <Setter TargetName="Cross" Property="Opacity" Value="1"/>
+            <Setter TargetName="LightCross" Property="Opacity" Value="1"/>
         </PropertyTrigger>
     </Style>
 
