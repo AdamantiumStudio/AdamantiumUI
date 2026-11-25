@@ -70,13 +70,29 @@ public class MacOSDragDropTests
     }
 
     [Test]
-    public void APromisedFile_IsAFile()
+    public void PromisedFiles_GoAll()
     {
         var sent = new DataPackage();
-        sent.SetDeferred(DataFormats.Files, () => new[] { "/tmp/a.png" });
+        var files = new string[40];
+        for (var i = 0; i < files.Length; i++)
+            files[i] = $"/tmp/файл {i}.png";
+        sent.SetDeferred(DataFormats.Files, () => files);
         Put(sent);
 
-        Assert.That(new MacOSClipboard(_pasteboard).Read().Get(DataFormats.Files), Is.EqualTo(new[] { "/tmp/a.png" }));
+        Assert.That(new MacOSClipboard(_pasteboard).Read().Get(DataFormats.Files), Is.EqualTo(files));
+    }
+
+    [Test]
+    public void ABatchOfFiles_GoesWhole()
+    {
+        var files = new string[200];
+        for (var i = 0; i < files.Length; i++)
+            files[i] = $"/tmp/batch/{i}.txt";
+        var sent = new DataPackage();
+        sent.Set(DataFormats.Files, files);
+        Put(sent);
+
+        Assert.That(new MacOSClipboard(_pasteboard).Read().Get(DataFormats.Files), Is.EqualTo(files));
     }
 
     [Test]

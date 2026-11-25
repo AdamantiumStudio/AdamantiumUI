@@ -65,7 +65,8 @@ internal sealed class MacOSClipboard(IntPtr pasteboard) : IClipboard
         var files = new List<string>();
         foreach (var format in package.GetFormats())
         {
-            if (keepsPromises && package.IsDeferred(format))
+            // Files are an item each, so how many there are has to be known now: promised, they are made at once.
+            if (keepsPromises && package.IsDeferred(format) && format != DataFormats.Files)
                 promised.Add((TypesOf(format)[0], format));
             else if (format == DataFormats.Files)
                 files.AddRange((package.Get(format) as IEnumerable<string> ?? []).Where(path => !string.IsNullOrEmpty(path)));
@@ -95,7 +96,6 @@ internal sealed class MacOSClipboard(IntPtr pasteboard) : IClipboard
     /// <summary>A value of a format as a pasteboard has it of <paramref name="type"/>; null when there is none.</summary>
     internal static byte[] EncodeAs(string type, string format, object value) => type switch
     {
-        FileUrl => (value as IEnumerable<string>)?.FirstOrDefault() is { Length: > 0 } path ? FileBytes(path) : null,
         Png when value is byte[] picture => DragPicture.IsPng(picture) ? picture : DragPicture.Convert(picture, ImageFileType.Png),
         _ => Encode(format, value)?.Bytes
     };
