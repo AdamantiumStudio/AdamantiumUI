@@ -30,6 +30,8 @@ internal static unsafe class MacOSContentView
         .AddMethod("otherMouseDragged:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Moved, Event)
         .AddMethod("mouseExited:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Exited, Event)
         .AddMethod("scrollWheel:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Scrolled, Event)
+        .AddMethod("magnifyWithEvent:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Magnified, Event)
+        .AddMethod("rotateWithEvent:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&Rotated, Event)
         .AddMethod("keyDown:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&KeyDown, Event)
         .AddMethod("keyUp:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&KeyUp, Event)
         .AddMethod("flagsChanged:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&FlagsChanged, Event)
@@ -79,6 +81,14 @@ internal static unsafe class MacOSContentView
     [UnmanagedCallersOnly]
     private static void Scrolled(IntPtr self, IntPtr selector, IntPtr nsEvent) =>
         ObjCManagedObject.Get<MacOSWindowWorker>(self)?.OnScroll(nsEvent);
+
+    [UnmanagedCallersOnly]
+    private static void Magnified(IntPtr self, IntPtr selector, IntPtr nsEvent) =>
+        ObjCManagedObject.Get<MacOSWindowWorker>(self)?.OnMagnify(nsEvent);
+
+    [UnmanagedCallersOnly]
+    private static void Rotated(IntPtr self, IntPtr selector, IntPtr nsEvent) =>
+        ObjCManagedObject.Get<MacOSWindowWorker>(self)?.OnRotate(nsEvent);
 
     [UnmanagedCallersOnly]
     private static void KeyDown(IntPtr self, IntPtr selector, IntPtr nsEvent) =>
