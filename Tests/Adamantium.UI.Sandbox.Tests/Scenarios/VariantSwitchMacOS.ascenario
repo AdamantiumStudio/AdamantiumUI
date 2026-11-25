@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Scenario xmlns="http://adamantium/automation/scenario" Platforms="MacOS" Description="VariantSwitch from the MacOs theme, which the stand opens with on macOS: dark and light take the tabs along in it, in a theme swapped to and after swapping back.">
   <Select Target="id=Buttons" />
-  <Invoke Target="id=ToggleDiagnostics" />
+  <Invoke Target="id=ToggleSettings" />
   <Invoke Target="id=ToggleVariant" />
   <WaitIdle />
   <Expect Target="id=Buttons" Foreground="Color: R:0 G:0 B:0 A:140, Opacity: 1" />

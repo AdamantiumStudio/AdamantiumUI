@@ -41,7 +41,7 @@
   <Wait Target="id=WebPage" FindMatchCase="True" />
   <Toggle Target="id=WebFindMatchCase" />
   <!-- Kept by the view model: the search outlives the view made again on another theme. -->
-  <Invoke Target="id=ToggleDiagnostics" />
+  <Invoke Target="id=ToggleSettings" />
   <Select Target="id=ThemeChooser/name=Graphite" />
   <Invoke Target="id=SwitchTheme" />
   <WaitIdle />
@@ -50,7 +50,7 @@
   <Select Target="id=ThemeChooser/name=Fluent" />
   <Invoke Target="id=SwitchTheme" />
   <WaitIdle />
-  <Invoke Target="id=ToggleDiagnostics" />
+  <Invoke Target="id=ToggleSettings" />
   <Key Keys="Ctrl+F" Into="id=WebPage" />
   <Wait Target="id=WebFindText" Focus="True" />
   <Key Keys="Escape" Into="id=WebFindText" />

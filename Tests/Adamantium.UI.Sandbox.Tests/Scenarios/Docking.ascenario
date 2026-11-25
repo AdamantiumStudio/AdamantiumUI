@@ -69,7 +69,7 @@
   <Wait Target="id=DockingWindow,name=Console" />
   <Window Target="id=DockingWindow" Action="Maximize" />
   <Wait Target="id=DockingWindow" Window="Maximized" />
-  <Expand Target="class=SlidePanel,name=Diagnostics" />
+  <Expand Target="class=SlidePanel,name=Settings" />
   <Select Target="id=ThemeChooser/name=Graphite" />
   <Invoke Target="id=SwitchTheme" />
   <WaitIdle />
@@ -90,7 +90,7 @@
   <Absent Target="id=DockingWindow" />
   <Invoke Target="id=DockingView/type=TabItem,name=Assets/id=CloseTab" />
   <Absent Target="id=DockingView/type=TabItem,name=Assets" />
-  <Collapse Target="class=SlidePanel,name=Diagnostics" />
+  <Collapse Target="class=SlidePanel,name=Settings" />
   <!-- Back as the page opens. -->
   <Select Target="id=PaneChoice/name=Assets" />
   <Select Target="id=PlaceChoice/name=Center" />

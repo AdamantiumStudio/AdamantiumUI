@@ -47,10 +47,10 @@
                       HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,16,0"
                       IsChecked="{Binding DiagnosticsOpen, Mode=TwoWay}"/>
 
-        <!-- The settings of the application and its rendering, opened by the LEFT caption "Diagnostics" command
-             (DiagnosticsPanelOpen). The live statistics are the Diagnostics switch's window. -->
-        <SlidePanel Placement="Right" Width="264" Header="{Localize MainStrings.Diagnostics}"
-                    IsOpen="{Binding DiagnosticsPanelOpen, Mode=TwoWay}">
+        <!-- The settings of the application and its rendering, opened by the LEFT caption "Settings" command
+             (SettingsPanelOpen). The live statistics are the Diagnostics switch's window. -->
+        <SlidePanel Placement="Right" Width="264" Header="{Localize MainStrings.Settings}"
+                    IsOpen="{Binding SettingsPanelOpen, Mode=TwoWay}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Orientation="Vertical">
                     <!-- The application's language and theme, HERE because this panel opens from the caption of every page:
@@ -82,7 +82,7 @@
                     </Button>
                     <!-- Analytic AA on/off, live: the render service re-reads Window.AnalyticAntialiasing every frame, so
                          this flips the coverage fringe and feathered strokes WITHOUT rebuilding the render cache - an A/B of
-                         an edge artifact, which is why it belongs with the diagnostics rather than in the window chrome. -->
+                         an edge artifact. -->
                     <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
                                   IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
                                   Margin="0,0,0,12"/>

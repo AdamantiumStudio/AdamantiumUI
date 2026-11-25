@@ -29,7 +29,8 @@
     <Phrase Key="ShowConfirm" Text="Show a confirm dialog"/>
     <Phrase Key="Help" Text="Help"/>
     <Phrase Key="AboutSandbox" Text="About Adamantium Sandbox"/>
-    <Phrase Key="ToggleDiagnostics" Text="Toggle diagnostics panel"/>
+    <Phrase Key="Settings" Text="Settings"/>
+    <Phrase Key="ToggleSettings" Text="Toggle settings panel"/>
     <Phrase Key="ResizeMode" Text="Resize mode"/>
     <Phrase Key="ToggleGripResize" Text="Toggle grip-only resize"/>
 </Language>

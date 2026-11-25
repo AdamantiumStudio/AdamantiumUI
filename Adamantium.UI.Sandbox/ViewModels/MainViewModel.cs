@@ -79,8 +79,6 @@ public partial class MainViewModel
     // right-side Diagnostics ToggleSwitch; the window's close button turns the switch off.
     [Bindable] private bool _diagnosticsOpen;
 
-    [Command] private void ToggleDiagnostics() => DiagnosticsOpen = !DiagnosticsOpen;
-
     partial void OnDiagnosticsOpenChanged(bool value)
     {
         if (!value)
@@ -111,16 +109,14 @@ public partial class MainViewModel
         }
     }
 
-    // Opens the diagnostics SLIDEPANEL (slides in from the right). Driven by the LEFT caption "Diagnostics" command -
-    // kept separate from the plate so the two diagnostics surfaces are toggled independently.
-    [Bindable] private bool _diagnosticsPanelOpen;
+    // Opens the settings SLIDEPANEL (slides in from the right). Driven by the LEFT caption "Settings" command.
+    [Bindable] private bool _settingsPanelOpen;
 
-    [Command] private void ToggleDiagnosticsPanel() => DiagnosticsPanelOpen = !DiagnosticsPanelOpen;
+    [Command] private void ToggleSettingsPanel() => SettingsPanelOpen = !SettingsPanelOpen;
 
-    // Analytic AA (the coverage fringe on fills + feathered strokes), bound to the window's AnalyticAntialiasing. It
-    // lives in the diagnostics panel rather than the chrome because it is a comparison switch, not a setting: the flag
-    // is re-read per frame, so flipping it re-renders WITHOUT rebuilding the render cache - which is what makes an A/B
-    // of an edge artifact possible at all.
+    // Analytic AA (the coverage fringe on fills + feathered strokes), bound to the window's AnalyticAntialiasing. The
+    // flag is re-read per frame, so flipping it re-renders WITHOUT rebuilding the render cache - which is what makes an
+    // A/B of an edge artifact possible at all.
     [Bindable] private bool _analyticAa = true;
 
     /// <summary>The application's frame verifier: while on, what the render cache draws with is checked against the tree,
@@ -334,7 +330,7 @@ public partial class MainViewModel
     private List<WindowCommand> _leftWindowCommands;
     public IEnumerable LeftWindowCommands => _leftWindowCommands ??= new()
     {
-        new WindowCommand { IconKey = "DiagnosticsIcon", Label = MainStrings.Diagnostics, ToolTip = MainStrings.ToggleDiagnostics, Command = ToggleDiagnosticsPanelCommand, AutomationId = "ToggleDiagnostics" },
+        new WindowCommand { IconKey = "SettingsIcon", Label = MainStrings.Settings, ToolTip = MainStrings.ToggleSettings, Command = ToggleSettingsPanelCommand, AutomationId = "ToggleSettings" },
         new WindowCommand { IconKey = "GripResizeIcon", Label = MainStrings.ResizeMode, ToolTip = MainStrings.ToggleGripResize, Command = ToggleGripResizeCommand, AutomationId = "ToggleGripResize" },
     };
 }

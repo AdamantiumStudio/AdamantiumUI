@@ -29,7 +29,8 @@
     <Phrase Key="ShowConfirm" Text="Показать диалог подтверждения"/>
     <Phrase Key="Help" Text="Справка"/>
     <Phrase Key="AboutSandbox" Text="О песочнице Adamantium"/>
-    <Phrase Key="ToggleDiagnostics" Text="Показать или скрыть панель диагностики"/>
+    <Phrase Key="Settings" Text="Настройки"/>
+    <Phrase Key="ToggleSettings" Text="Показать или скрыть панель настроек"/>
     <Phrase Key="ResizeMode" Text="Изменение размера"/>
     <Phrase Key="ToggleGripResize" Text="Менять размер только за уголок"/>
 </Language>

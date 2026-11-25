@@ -57,14 +57,15 @@
         </DrawingGroup>
     </DrawingImage>
 
-    <DrawingImage x:Key="DiagnosticsIcon">
+    <!-- Two sliders. -->
+    <DrawingImage x:Key="SettingsIcon">
         <DrawingGroup>
             <GeometryDrawing>
                 <GeometryDrawing.Geometry>
                     <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
                 </GeometryDrawing.Geometry>
             </GeometryDrawing>
-            <GeometryDrawing Geometry="M1,13 L1,7 M6,13 L6,2 M11,13 L11,9"
+            <GeometryDrawing Geometry="M0,3 L7,3 M11,3 L13,3 M7,1 L11,1 L11,5 L7,5 Z M0,10 L2,10 M6,10 L13,10 M2,8 L6,8 L6,12 L2,12 Z"
                              Stroke="CurrentColor"
                              StrokeThickness="1"/>
         </DrawingGroup>
