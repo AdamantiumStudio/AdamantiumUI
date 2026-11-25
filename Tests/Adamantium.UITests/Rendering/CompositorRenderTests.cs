@@ -179,30 +179,36 @@ public class CompositorRenderTests
         Assert.That(Compositor.EntryFor(transform), Is.Not.Null, "the slide must be composited");
 
         Assert.That(renderer.RenderFrame(root), Is.True);
-        var before = LitPixels(renderer);
-        for (var frame = 0; frame < 4; frame++)
+        var before = LitPixels(renderer, out var startsAt);
+        RenderDirty.Clear();
+        for (var frame = 0; frame < 2; frame++)
         {
             Thread.Sleep(150);
             Assert.That(renderer.RenderFrame(root), Is.True);
         }
 
-        var after = LitPixels(renderer);
+        var after = LitPixels(renderer, out var movedTo);
         Assert.Multiple(() =>
         {
             Assert.That(before, Is.InRange(400, 500), "a disc 24 across");
             Assert.That(after, Is.EqualTo(before).Within(40), "the same disc further right");
+            Assert.That(movedTo, Is.GreaterThan(startsAt + 4), "it moved");
         });
     }
 
-    private static int LitPixels(OffscreenTestRenderer renderer)
+    private static int LitPixels(OffscreenTestRenderer renderer, out int left)
     {
+        left = int.MaxValue;
         using var image = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)image.TotalSizeInBytes];
         System.Runtime.InteropServices.Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
         var lit = 0;
         for (var i = 0; i < pixels.Length; i += 4)
         {
-            if (pixels[i] + pixels[i + 1] + pixels[i + 2] > 120) lit++;
+            if (pixels[i] + pixels[i + 1] + pixels[i + 2] <= 120) continue;
+
+            lit++;
+            left = Math.Min(left, i / 4 % 64);
         }
 
         return lit;
