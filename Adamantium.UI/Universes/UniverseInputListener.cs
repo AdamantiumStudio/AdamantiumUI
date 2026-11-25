@@ -199,6 +199,7 @@ internal sealed class UniverseInputListener : IDisposable
         component.PointerWheelChanged += OnPointerWheelChanged;
         component.RawMouseMove += OnRawMouseMove;
         component.SetValue(Gestures.IsManipulationEnabledProperty, true, ValuePriority.Default);
+        component.SetValue(Gestures.IsTrackpadPanEnabledProperty, true, ValuePriority.Default);
         component.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
         component.AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled),
             handledEventsToo: true);
@@ -214,6 +215,7 @@ internal sealed class UniverseInputListener : IDisposable
         _component.PointerWheelChanged -= OnPointerWheelChanged;
         _component.RawMouseMove -= OnRawMouseMove;
         _component.ClearValue(Gestures.IsManipulationEnabledProperty, ValuePriority.Default);
+        _component.ClearValue(Gestures.IsTrackpadPanEnabledProperty, ValuePriority.Default);
         _component.RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
         _component.RemoveHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled));
     }
@@ -249,6 +251,11 @@ internal sealed class UniverseInputListener : IDisposable
             return;
         }
 
+        if (e.Translation != Vector2<double>.Zero)
+        {
+            HoldAlt(e.Modifiers);
+        }
+
         _target.TakeGestureInput(new GestureInput
         {
             Translation = new Vector2F((float)e.Translation.X, (float)e.Translation.Y) * _target.PixelsPerPoint,
@@ -256,6 +263,19 @@ internal sealed class UniverseInputListener : IDisposable
             Rotation = (float)e.Rotation
         });
         e.Handled = true;
+    }
+
+    // Alt with a pan orbits too. A gesture does not press the view, so it is focused here, for Alt's release to come to it;
+    // in a window that is not active the keyboard is not its.
+    private void HoldAlt(InputModifiers modifiers)
+    {
+        if ((modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0 &&
+            _component.RootVisual?.Window is { IsActive: true } &&
+            (_component.IsKeyboardFocused || _component.Focus()))
+        {
+            HoldModifier(modifiers, InputModifiers.LeftAlt, Keys.LeftAlt);
+            HoldModifier(modifiers, InputModifiers.RightAlt, Keys.RightAlt);
+        }
     }
 
     private void OnRawMouseMove(object sender, UnboundMouseEventArgs e)

@@ -18,7 +18,7 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>An unbounded plane to draw and design on: panning moves the camera (<see cref="Offset"/>), the scene is in double
 /// world coordinates (screen = world * Scale + Offset), and only visible grid lines are drawn.</summary>
-public partial class InfiniteCanvas : Control, ISceneFollower
+public partial class InfiniteCanvas : Control, ISceneFollower, ITrackpadPanTarget
 {
     private readonly EasedValue _zoom;
     private readonly PanInertia _coast;

@@ -23,6 +23,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private const int WheelNotch = 120;
     private const int MinWidth = 320;
     private const int MinHeight = 120;
+    private const double SmallestPinch = 0.01;
 
     private readonly MacOSPlatform _platform;
     private IWindow _window;
@@ -35,6 +36,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private volatile Placement _placement = new(Rect.Empty, default);
     private InputModifiers _buttons;
     private IntPtr _pressEvent;
+    private bool _relativeMouse;
+    private bool _wantsRelativeMouse;
+    private bool _fingersRest;
+    private double _pinchNotches;
     private CGRect _restoreFrame;
     private bool _topmost;
     private volatile bool _closed;
@@ -249,6 +254,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void HideWindow() => OnMainThread(() =>
     {
+        LeaveRelativeMouse();
         LeaveOwner();
         _platform.LeaveOwned(_nsWindow);
         NSWindow.OrderOut(_nsWindow);
@@ -281,8 +287,59 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         return new PixelPoint(client.X + origin.X, client.Y + origin.Y);
     }
 
-    public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen)
+    // The cursor stays where it was let go of, so it comes back there by itself.
+    public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen) => OnMainThread(() =>
     {
+        _wantsRelativeMouse = enabled;
+        if (!enabled)
+            LeaveRelativeMouse();
+        else
+            EnterRelativeMouse();
+    });
+
+    // The window takes the keyboard for it: a right press gives none, and it is by losing it that the cursor is let go of.
+    // In an application that is not active it waits for that.
+    private void EnterRelativeMouse()
+    {
+        if (_relativeMouse || !_wantsRelativeMouse || !NSApplication.IsActive)
+            return;
+
+        if (!NSWindow.IsKeyWindow(_nsWindow))
+            NSWindow.MakeKeyAndOrderFront(_nsWindow);
+        if (_relativeMouse || !NSWindow.IsKeyWindow(_nsWindow))
+            return;
+
+        BringCursorIn();
+        _relativeMouse = true;
+        CoreGraphicsInterop.AssociateMouseAndCursor(false);
+        NSCursor.Hide();
+    }
+
+    // The mouse's moves come to what the cursor is over, and it may be elsewhere when looking begins from the keyboard.
+    private void BringCursorIn()
+    {
+        var client = NSWindow.ContentRectForFrame(_nsWindow, NSWindow.FrameOf(_nsWindow));
+        var cursor = NSEvent.MouseLocation;
+        var screens = NSScreen.All;
+        if (screens.Length == 0 ||
+            cursor.X >= client.Origin.X && cursor.X < client.Origin.X + client.Size.Width &&
+            cursor.Y >= client.Origin.Y && cursor.Y < client.Origin.Y + client.Size.Height)
+        {
+            return;
+        }
+
+        var fromTop = NSScreen.FrameOf(screens[0]).Size.Height - (client.Origin.Y + client.Size.Height / 2);
+        CoreGraphicsInterop.WarpCursor(new CGPoint(client.Origin.X + client.Size.Width / 2, fromTop));
+    }
+
+    private void LeaveRelativeMouse()
+    {
+        if (!_relativeMouse)
+            return;
+
+        _relativeMouse = false;
+        CoreGraphicsInterop.AssociateMouseAndCursor(true);
+        NSCursor.Unhide();
     }
 
     public void SetInputMethodEnabled(bool enabled)
@@ -324,6 +381,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
         }
 
+        if (_relativeMouse && type is RawPointerEventType.Move or RawPointerEventType.LeaveWindow)
+        {
+            if (type == RawPointerEventType.Move)
+                ReportDelta(window, nsEvent);
+            return;
+        }
+
         if (type == RawPointerEventType.Down && button == MouseButtons.Left)
         {
             NSObject.Release(_pressEvent);
@@ -353,7 +417,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnScroll(IntPtr nsEvent)
     {
         var window = _window;
-        if (window == null || _closed || _modality.IsBlocked)
+        if (window == null || _closed)
             return;
 
         var precise = NSEvent.HasPreciseScrollingDeltas(nsEvent);
@@ -361,19 +425,115 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         var position = PositionOf(nsEvent);
         var modifiers = Modifiers(nsEvent);
         var time = TimeOf(nsEvent);
-        var vertical = (int)Math.Round(NSEvent.ScrollingDeltaYOf(nsEvent) * perNotch);
-        var horizontal = (int)Math.Round(-NSEvent.ScrollingDeltaXOf(nsEvent) * perNotch);
-        if (vertical != 0)
-        {
-            var args = new RawPointerWheelEventArgs(vertical, window, position, modifiers, time, false);
-            Report(() => PointerDevice.Current.ProcessEvent(args));
-        }
+        var across = NSEvent.ScrollingDeltaXOf(nsEvent);
+        var down = NSEvent.ScrollingDeltaYOf(nsEvent);
+        var vertical = (int)Math.Round(down * perNotch);
+        var horizontal = (int)Math.Round(-across * perNotch);
+        var pan = precise ? PanOf(nsEvent, window, position, modifiers, time, new Vector2<double>(across, down)) : null;
+        if (pan == null && vertical == 0 && horizontal == 0)
+            return;
 
-        if (horizontal != 0)
+        var blocked = _modality.IsBlocked;
+        if (blocked && (pan == null || IsKeptFrom(pan.Type)))
+            return;
+
+        Report(() =>
         {
-            var args = new RawPointerWheelEventArgs(horizontal, window, position, modifiers, time, true);
-            Report(() => PointerDevice.Current.ProcessEvent(args));
-        }
+            if (pan != null && PointerDevice.Current.ProcessTrackpad(pan) || blocked)
+                return;
+
+            if (vertical != 0)
+                PointerDevice.Current.ProcessEvent(
+                    new RawPointerWheelEventArgs(vertical, window, position, modifiers, time, false));
+            if (horizontal != 0 && !_closed)
+                PointerDevice.Current.ProcessEvent(
+                    new RawPointerWheelEventArgs(horizontal, window, position, modifiers, time, true));
+        });
+    }
+
+    // The end of a gesture still goes to a window a modal one has come over, as a release does.
+    private bool IsKeptFrom(RawTrackpadEventType type) => _modality.IsBlocked && type != RawTrackpadEventType.Completed;
+
+    // Null for a wheel, which has no phases. Fingers put down begin the pan already: they stop what coasts under them.
+    private RawTrackpadEventArgs PanOf(IntPtr nsEvent, IWindow window, Vector2<double> position,
+        InputModifiers modifiers, uint time, Vector2<double> delta)
+    {
+        var phase = NSEvent.PhaseOf(nsEvent);
+        var type = NSEvent.MomentumPhaseOf(nsEvent) != NSEventPhase.None ? RawTrackpadEventType.Inertia
+            : phase == NSEventPhase.MayBegin ? RawTrackpadEventType.Started
+            : phase == NSEventPhase.Began && _fingersRest ? RawTrackpadEventType.Delta
+            : TypeOf(phase);
+        _fingersRest = phase == NSEventPhase.MayBegin;
+        if (type is not { } known)
+            return null;
+
+        // With the fingers, whichever way the system scrolls.
+        return new RawTrackpadEventArgs(known, ManipulationKinds.Pan, window, position, modifiers, time)
+        {
+            Translation = NSEvent.IsDirectionInvertedFromDevice(nsEvent) ? delta : -delta
+        };
+    }
+
+    private static RawTrackpadEventType? TypeOf(NSEventPhase phase) => phase switch
+    {
+        NSEventPhase.Began => RawTrackpadEventType.Started,
+        NSEventPhase.Changed or NSEventPhase.Stationary => RawTrackpadEventType.Delta,
+        NSEventPhase.Ended or NSEventPhase.Cancelled => RawTrackpadEventType.Completed,
+        _ => null
+    };
+
+    internal void OnMagnify(IntPtr nsEvent)
+    {
+        var window = _window;
+        if (window == null || _closed || TypeOf(NSEvent.PhaseOf(nsEvent)) is not { } type || IsKeptFrom(type))
+            return;
+
+        var scale = Math.Max(1 + NSEvent.MagnificationOf(nsEvent), SmallestPinch);
+        var args = new RawTrackpadEventArgs(type, ManipulationKinds.Pinch, window, PositionOf(nsEvent),
+            Modifiers(nsEvent), TimeOf(nsEvent)) { Scale = scale };
+        Report(() =>
+        {
+            if (!PointerDevice.Current.ProcessTrackpad(args))
+                TurnWheelByPinch(args);
+        });
+    }
+
+    // What takes no pinch is zoomed by it as by the wheel with Control: a whole notch for every tenth, as some step once for
+    // every event, however small.
+    private void TurnWheelByPinch(RawTrackpadEventArgs e)
+    {
+        if (e.Type == RawTrackpadEventType.Started)
+            _pinchNotches = 0;
+
+        _pinchNotches += Math.Log(e.Scale) / Math.Log(1.1);
+        var notches = (int)Math.Truncate(_pinchNotches);
+        if (notches == 0)
+            return;
+
+        _pinchNotches -= notches;
+        PointerDevice.Current.ProcessEvent(new RawPointerWheelEventArgs(notches * WheelNotch, e.RootComponent, e.Position,
+            e.InputModifiers | InputModifiers.LeftControl, e.Timestamp));
+    }
+
+    internal void OnRotate(IntPtr nsEvent)
+    {
+        var window = _window;
+        if (window == null || _closed || TypeOf(NSEvent.PhaseOf(nsEvent)) is not { } type || IsKeptFrom(type))
+            return;
+
+        var args = new RawTrackpadEventArgs(type, ManipulationKinds.Rotate, window, PositionOf(nsEvent),
+            Modifiers(nsEvent), TimeOf(nsEvent)) { Rotation = -NSEvent.RotationOf(nsEvent) };
+        Report(() => PointerDevice.Current.ProcessTrackpad(args));
+    }
+
+    private void ReportDelta(IWindow window, IntPtr nsEvent)
+    {
+        var moved = new Vector2<double>(NSEvent.DeltaXOf(nsEvent), NSEvent.DeltaYOf(nsEvent)) * _scale;
+        if (moved == Vector2<double>.Zero)
+            return;
+
+        var args = new RawMouseDeltaEventArgs(moved, window, Modifiers(nsEvent), TimeOf(nsEvent));
+        Report(() => PointerDevice.Current.ProcessDelta(args));
     }
 
     internal void OnKey(IntPtr nsEvent, bool down)
@@ -410,11 +570,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     }
 
     // ⌃⌘F, as every Mac application has it.
-    private static bool IsFullScreenShortcut(IntPtr nsEvent, NSEventModifierFlags flags)
+    private bool IsFullScreenShortcut(IntPtr nsEvent, NSEventModifierFlags flags)
     {
         const NSEventModifierFlags shortcut = NSEventModifierFlags.Command | NSEventModifierFlags.Control;
         const NSEventModifierFlags held = shortcut | NSEventModifierFlags.Shift | NSEventModifierFlags.Option;
-        return (flags & held) == shortcut && MacOSKeys.ToKey(NSEvent.KeyCodeOf(nsEvent)) == Key.F;
+        return (flags & held) == shortcut && _platform.Keyboard.KeyOf(nsEvent) == Key.F;
     }
 
     internal void OnFlagsChanged(IntPtr nsEvent)
@@ -457,7 +617,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             PhysicalKey = MacOSKeys.ToHidUsage(code),
             PressTime = time
         };
-        var key = MacOSKeys.ToKey(code);
+        var key = _platform.Keyboard.KeyOf(nsEvent, down);
         var type = down ? RawKeyboardEventType.KeyDown : RawKeyboardEventType.KeyUp;
         Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, type, press, modifiers, time), window));
@@ -535,6 +695,12 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnKeyWindowChanged(bool isKey)
     {
+        // Another application gets its mouse back, whatever the window still thinks it looks by.
+        if (isKey)
+            EnterRelativeMouse();
+        else
+            LeaveRelativeMouse();
+
         // A window a modal one keeps from input is not the active one: the keyboard coming to it is handed on.
         if (isKey && _modality.IsBlocked)
         {
@@ -557,7 +723,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnMiniaturized(bool miniaturized)
     {
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, miniaturized);
-        if (!miniaturized)
+        if (miniaturized)
+            LeaveRelativeMouse();
+        else
         {
             JoinOwner();
             _platform.JoinOwned(_nsWindow);
@@ -711,6 +879,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         _window.SetHandle(IntPtr.Zero);
         OnMainThread(() =>
         {
+            LeaveRelativeMouse();
             NSWindow.SetDelegate(_nsWindow, IntPtr.Zero);
             ParentTo(IntPtr.Zero);
             _platform.LeaveOwned(_nsWindow);
@@ -759,19 +928,32 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         var flags = NSEvent.ModifierFlagsOf(nsEvent);
         var modifiers = _buttons;
-        if ((flags & NSEventModifierFlags.Shift) != 0)
-            modifiers |= InputModifiers.LeftShift;
-        if ((flags & NSEventModifierFlags.Command) != 0)
-            modifiers |= InputModifiers.LeftControl;
-        if ((flags & NSEventModifierFlags.Control) != 0)
-            modifiers |= InputModifiers.LeftWindows;
-        if ((flags & NSEventModifierFlags.Option) != 0)
-            modifiers |= InputModifiers.LeftAlt;
-
+        Add(NSEventModifierFlags.Shift, NSEventModifierFlags.LeftShift, NSEventModifierFlags.RightShift,
+            InputModifiers.LeftShift, InputModifiers.RightShift);
+        Add(NSEventModifierFlags.Command, NSEventModifierFlags.LeftCommand, NSEventModifierFlags.RightCommand,
+            InputModifiers.LeftControl, InputModifiers.RightControl);
+        Add(NSEventModifierFlags.Control, NSEventModifierFlags.LeftControl, NSEventModifierFlags.RightControl,
+            InputModifiers.LeftWindows, InputModifiers.RightWindows);
+        Add(NSEventModifierFlags.Option, NSEventModifierFlags.LeftOption, NSEventModifierFlags.RightOption,
+            InputModifiers.LeftAlt, InputModifiers.RightAlt);
         return modifiers;
+
+        // An event that does not say which side - one made, not pressed - is the left one's.
+        void Add(NSEventModifierFlags either, NSEventModifierFlags leftFlag, NSEventModifierFlags rightFlag,
+            InputModifiers left, InputModifiers right)
+        {
+            if ((flags & either) == 0)
+                return;
+
+            if ((flags & rightFlag) != 0)
+                modifiers |= right;
+            if ((flags & leftFlag) != 0 || (flags & rightFlag) == 0)
+                modifiers |= left;
+        }
     }
 
-    private static uint TimeOf(IntPtr nsEvent) => (uint)(NSEvent.TimestampOf(nsEvent) * 1000);
+    // Wraps after 49 days of the system up, as every platform's does: a double cast straight to uint would stay at the last.
+    private static uint TimeOf(IntPtr nsEvent) => unchecked((uint)(ulong)(NSEvent.TimestampOf(nsEvent) * 1000));
 
     private static double InitialExtent(double preferred, double fallback, int defaultExtent)
     {

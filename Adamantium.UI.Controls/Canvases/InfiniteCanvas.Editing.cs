@@ -1794,7 +1794,9 @@ public partial class InfiniteCanvas
             _coast.ResetTracking();
             _zoomCoast.ResetTracking();
 
-            if (TakesManyPointers) return;
+            // Fingers on a trackpad pressed nothing that could have begun a stroke: what the tool is in the middle of - a
+            // line put down point by point - goes on, as through a pan with the middle button.
+            if (TakesManyPointers || e.IsTrackpad) return;
 
             LetGo();
             while (_editDepth > 0 && History != null && Scene != null)
@@ -1839,6 +1841,11 @@ public partial class InfiniteCanvas
 
         e.Handled = true;
     }
+
+    // Where the wheel zooms, two fingers on a trackpad move the plane: it has no middle button to drag it with, and a pinch
+    // to zoom by. Where the wheel scrolls they turn it, as everywhere.
+    bool ITrackpadPanTarget.TakesTrackpadPan(IInputComponent hit) =>
+        WheelMode == CanvasWheelMode.Zoom && !WheelStaysWith(hit);
 
     private bool WheelStaysWith(object source)
     {

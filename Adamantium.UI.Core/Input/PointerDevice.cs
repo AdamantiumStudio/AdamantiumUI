@@ -12,6 +12,7 @@ public sealed class PointerDevice
     public const uint MouseId = 1;
 
     private readonly Dictionary<uint, Pointer> _pointers = new();
+    private readonly TrackpadRecognizer _trackpad = new();
 
     // The finger lifted last, whose taps the next finger's are counted on from.
     private Pointer _lastTap;
@@ -33,6 +34,7 @@ public sealed class PointerDevice
         }
 
         _lastTap?.ForgetReleased();
+        _trackpad.ForgetReleased();
     }
 
     public static PointerDevice Current { get; } = new();
@@ -90,6 +92,11 @@ public sealed class PointerDevice
                 break;
         }
     }
+
+    /// <summary>Hands a step of a gesture on a trackpad to the element under the pointer that takes it, as a
+    /// <see cref="Gestures.ManipulationEvent"/>. False when none does: the platform turns the wheel then.</summary>
+    public bool ProcessTrackpad(RawTrackpadEventArgs e) => _trackpad.Take(e,
+        () => MousePointer.Captured == null ? HitTestTopmost(e.RootComponent, e.Position) : null);
 
     /// <summary>Hands how far the mouse itself moved to the focused element.</summary>
     public void ProcessDelta(RawMouseDeltaEventArgs e)
