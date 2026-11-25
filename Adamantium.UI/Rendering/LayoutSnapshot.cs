@@ -14,7 +14,7 @@ internal readonly struct LayoutSnapshot(
     float opacity = 1f,
     float selfOpacity = 1f,
     Vector4F clipRadii = default,
-    Vector4F clipInset = default) : System.IEquatable<LayoutSnapshot>
+    float clipInset = 0f) : System.IEquatable<LayoutSnapshot>
 {
     // A FIELD, not a get-only property: 64 bytes that Equals wants to compare by reference, and a property cannot be
     // passed as `in` (it is not addressable, so the compiler copies it first - the very copy this avoids).
@@ -27,8 +27,8 @@ internal readonly struct LayoutSnapshot(
     /// clip, which is what a scissor already does. Frozen here with the rest, so the draw never reads it live.</summary>
     public Vector4F ClipRadii { get; } = clipRadii;
 
-    /// <summary>How far inside its edge (left, top, right, bottom) this clip cuts what it holds: its stroke.</summary>
-    public Vector4F ClipInset { get; } = clipInset;
+    /// <summary>How far inside its edge this clip cuts what it holds: its stroke.</summary>
+    public float ClipInset { get; } = clipInset;
 
     /// <summary>The element's OWN opacity - the part that composites DOWN onto descendants. The bake multiplies this up the
     /// <see cref="RenderParent"/> chain (see RenderCache.EffectiveOpacity); frozen here so the draw never reads the live

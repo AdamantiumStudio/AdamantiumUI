@@ -333,10 +333,10 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <inheritdoc />
     /// <remarks>A clip rounded by its container's own corners cuts inside the stroke painted there; one given a radius
     /// of its own is taken as given.</remarks>
-    public Vector4F ClipInset => HasExplicitClipRadius ? Vector4F.Zero : OwnStroke();
+    public float ClipInset => HasExplicitClipRadius ? 0f : OwnStroke();
 
     /// <summary>The stroke this container paints along its edge, for <see cref="ClipInset"/>. None here.</summary>
-    protected virtual Vector4F OwnStroke() => Vector4F.Zero;
+    protected virtual float OwnStroke() => 0f;
 
     private bool HasExplicitClipRadius
     {

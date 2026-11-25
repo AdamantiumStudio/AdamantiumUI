@@ -53,11 +53,12 @@ public class Border : Decorator
    }
 
    /// <inheritdoc />
-   /// <remarks>The thickness, whatever the brush: what it holds is laid out inside it, and is cut there too.</remarks>
-   protected override Vector4F OwnStroke()
+   /// <remarks>The thickness, whatever the brush: what it holds is laid out inside it, and is cut there too. Sides of
+   /// unequal thickness round their inner corners as ellipses, which no clip is: the edge cuts there.</remarks>
+   protected override float OwnStroke()
    {
       var t = BorderThickness;
-      return new Vector4F((float)t.Left, (float)t.Top, (float)t.Right, (float)t.Bottom);
+      return t.IsUniform ? (float)t.Left : 0f;
    }
 
    // Only rounded corners are clipped inside the stroke; a square clip is the same whatever it is.

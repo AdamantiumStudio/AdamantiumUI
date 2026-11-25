@@ -489,8 +489,7 @@ public partial class RenderCache
     // Only a CLIP has rounded corners worth freezing - everything else paints its own and needs nothing here.
     private static Vector4F ClipRadiiOf(IUIComponent c) => c.ClipToBounds ? c.ClipRadii : Vector4F.Zero;
 
-    private static Vector4F ClipInsetOf(IUIComponent c) =>
-        c.ClipToBounds && c.ClipRadii != Vector4F.Zero ? c.ClipInset : Vector4F.Zero;
+    internal static float ClipInsetOf(IUIComponent c) => c.ClipToBounds && c.ClipRadii != Vector4F.Zero ? c.ClipInset : 0f;
 
     // Record one component's frozen layout into the recorder's map AND this frame's delta (the applier's replica is built
     // from nothing else). Memoized: an unchanged component is captured once and never re-sent.
@@ -1177,45 +1176,51 @@ public partial class RenderCache
     private (Vector4F Box, Vector4F Radii) ClipShape(IUIComponent owner, LayoutSnapshot s, bool inner,
         Vulkan.Core.Rect2D fullScissor)
     {
+        var world = World(owner);
         var radii = s.ClipRadii * (float)_renderScale;
-        if (!inner || InnerBox(s.RenderSize, s.ClipInset, World(owner)) is not { } box)
+        if (inner && InnerClipBox(owner, s.RenderSize, s.ClipInset, world, fullScissor) is { } box)
         {
-            return (ClipBox(owner, EdgeBox(s.RenderSize, World(owner)), fullScissor), radii);
+            var stroke = (float)StrokePixels(s.ClipInset, 1, snapped: IsPlainOffset(world));
+            return (box, new Vector4F(System.Math.Max(0, radii.X - stroke), System.Math.Max(0, radii.Y - stroke),
+                System.Math.Max(0, radii.Z - stroke), System.Math.Max(0, radii.W - stroke)));
         }
 
-        // Unequal sides round the inner corner as an ellipse; the rounder circle never lets what is held over the stroke.
-        float left = StrokePixels(s.ClipInset.X, 1), top = StrokePixels(s.ClipInset.Y, 1);
-        float right = StrokePixels(s.ClipInset.Z, 1), bottom = StrokePixels(s.ClipInset.W, 1);
-        return (ClipBox(owner, box, fullScissor), new Vector4F(
-            System.Math.Max(0, radii.X - System.Math.Min(left, top)),
-            System.Math.Max(0, radii.Y - System.Math.Min(right, top)),
-            System.Math.Max(0, radii.Z - System.Math.Min(right, bottom)),
-            System.Math.Max(0, radii.W - System.Math.Min(left, bottom))));
+        return (ClipBox(owner, EdgeBox(s.RenderSize, world), fullScissor), radii);
     }
 
     private static Rect EdgeBox(Size<double> size, Matrix4x4F world) =>
         new Rect(0, 0, size.Width, size.Height).TransformToAABB(world);
 
-    // The box inside a stroke, taken off the edge's own pixels in whole ones, as the stroke is drawn: rounded apart, the
-    // two parted by a pixel at fractional scales. Null for a stroke that leaves nothing inside, which a shader would read
-    // as no clip at all: the edge cuts then.
-    private Rect? InnerBox(Size<double> size, Vector4F inset, Matrix4x4F world)
+    // The box inside a stroke, in device pixels, taken off the edge's own ones as the stroke is drawn: rounded apart, the
+    // two parted by a pixel at fractional scales. Null when nothing of it shows, which a shader would read as no clip at
+    // all: the edge cuts then.
+    private Vector4F? InnerClipBox(IUIComponent owner, Size<double> size, float inset, Matrix4x4F world,
+        Vulkan.Core.Rect2D fullScissor)
     {
         var edge = EdgeBox(size, world);
-        var across = System.Math.Sqrt(world.M11 * world.M11 + world.M12 * world.M12);
-        var down = System.Math.Sqrt(world.M21 * world.M21 + world.M22 * world.M22);
-        var left = DevicePixels.ToDevicePixel(edge.X, _renderScale) + StrokePixels(inset.X, across);
-        var top = DevicePixels.ToDevicePixel(edge.Y, _renderScale) + StrokePixels(inset.Y, down);
-        var right = DevicePixels.ToDevicePixel(edge.Right, _renderScale) - StrokePixels(inset.Z, across);
-        var bottom = DevicePixels.ToDevicePixel(edge.Bottom, _renderScale) - StrokePixels(inset.W, down);
-        return right > left && bottom > top
-            ? new Rect(left / _renderScale, top / _renderScale, (right - left) / _renderScale, (bottom - top) / _renderScale)
-            : null;
+        var plain = IsPlainOffset(world);
+        var across = StrokePixels(inset, System.Math.Sqrt(world.M11 * world.M11 + world.M21 * world.M21), plain);
+        var down = StrokePixels(inset, System.Math.Sqrt(world.M12 * world.M12 + world.M22 * world.M22), plain);
+        var left = DevicePixels.ToDevicePixel(edge.X, _renderScale) + across;
+        var top = DevicePixels.ToDevicePixel(edge.Y, _renderScale) + down;
+        var right = DevicePixels.ToDevicePixel(edge.Right, _renderScale) - across;
+        var bottom = DevicePixels.ToDevicePixel(edge.Bottom, _renderScale) - down;
+        if (right <= left || bottom <= top) return null;
+
+        var box = ClipBox(owner, new Rect(left / _renderScale, top / _renderScale, (right - left) / _renderScale,
+            (bottom - top) / _renderScale), fullScissor);
+        return box.Z > 0 && box.W > 0 ? box : null;
     }
 
-    // As a stroke is rounded where it is drawn (DevicePixels.Snap): never below a pixel.
-    private int StrokePixels(double thickness, double scale) =>
-        thickness > 0 ? System.Math.Max(1, DevicePixels.ToDevicePixel(thickness * scale, _renderScale)) : 0;
+    // As a stroke is drawn (DevicePixels.Snap): in whole pixels, never below one, under a plain offset; else as it comes.
+    private double StrokePixels(float thickness, double scale, bool snapped) =>
+        snapped
+            ? System.Math.Max(1, DevicePixels.ToDevicePixel(thickness, _renderScale))
+            : thickness * scale * _renderScale;
+
+    private static bool IsPlainOffset(Matrix4x4F world) =>
+        System.Math.Abs(world.M11 - 1) < 1e-4f && System.Math.Abs(world.M22 - 1) < 1e-4f
+        && System.Math.Abs(world.M12) < 1e-4f && System.Math.Abs(world.M21) < 1e-4f;
 
     // A rounded clip's box in device pixels, cut to the window - but whole inside a layer drawn whole, which draws past
     // the window and would have the clip's corners come round at the window's edge.
@@ -1264,7 +1269,7 @@ public partial class RenderCache
 
             // What the owner paints itself - its stroke - is cut by its edge, what it holds by the stroke's inner one. An
             // adorner - a focus ring, a selection's frame - is drawn over the stroke, so the edge cuts it too.
-            var inner = !ReferenceEquals(owner, c) && !adorns && s.ClipInset != Vector4F.Zero;
+            var inner = !ReferenceEquals(owner, c) && !adorns && s.ClipInset > 0;
             var shape = ClipShape(owner, s, inner, fullScissor);
             slot = _transformTable.AcquireClipSlot(owner.RenderId, inner);
             _transformTable.SetClip(null, slot, shape.Box, shape.Radii);
@@ -1291,12 +1296,13 @@ public partial class RenderCache
         return slot >= 0 && _clipShapeCache.TryGetValue(c, out var shape) ? shape : default;
     }
 
-    /// <summary>The rounded clip that cuts what <paramref name="holder"/> holds: its own inner one where it has a stroke.
-    /// </summary>
-    private (Vector4F Box, Vector4F Radii) RoundedClipShapeWithin(IUIComponent holder, Vulkan.Core.Rect2D fullScissor)
+    /// <summary>The rounded clip that cuts <paramref name="held"/>, laid down on <paramref name="holder"/>: the holder's
+    /// inner one where it has a stroke, unless it adorns the holder.</summary>
+    private (Vector4F Box, Vector4F Radii) RoundedClipShapeOn(IUIComponent holder, IUIComponent held,
+        Vulkan.Core.Rect2D fullScissor)
     {
         var s = ApplySnap(holder);
-        return s.ClipInset != Vector4F.Zero
+        return s.ClipInset > 0 && held.ClippedByRenderParent
             ? ClipShape(holder, s, inner: true, fullScissor)
             : RoundedClipShape(holder, fullScissor);
     }

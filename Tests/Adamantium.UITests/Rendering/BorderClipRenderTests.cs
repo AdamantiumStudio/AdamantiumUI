@@ -112,6 +112,35 @@ public class BorderClipRenderTests
         Assert.That(At(pixels, 2, 2), Is.EqualTo("black"));
     }
 
+    // Unequal sides have an inner corner no clip is: the edge cuts, as before, and nothing shows past it.
+    [Test]
+    public void UnequalSides_ClipAtTheEdge()
+    {
+        var box = Box();
+        box.BorderThickness = new Thickness(0, 12, 0, 0);
+        var pixels = Render(Root(box));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(At(pixels, 2, 2), Is.EqualTo("black"));
+            Assert.That(At(pixels, 2, 87), Is.EqualTo("black"));
+            Assert.That(At(pixels, 1, 45), Is.EqualTo("white"));
+        });
+    }
+
+    // Only the stroke's side still in the window: what is held stays cut by the rounded edge.
+    [Test]
+    public void AnInnerBoxOffTheWindow_IsCutByTheEdge()
+    {
+        var box = Box();
+        box.Child = new Border { Background = Brushes.White, Margin = new Thickness(-Stroke) };
+        box.RenderTransform = new Transform { TranslateX = -106 };
+        var pixels = Render(Root(box));
+
+        // Rounded by what shows of the box, cut to the window; with no clip at all the corner would be white.
+        Assert.That(At(pixels, 3, 0), Is.Not.EqualTo("white"));
+    }
+
     // Drawn over the stroke, as a focus ring is, an adorner is not cut inside it.
     [Test]
     public void AnAdorner_IsDrawnOverTheStroke()

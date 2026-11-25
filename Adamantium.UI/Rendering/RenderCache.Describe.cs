@@ -173,12 +173,12 @@ public partial class RenderCache
 
     /// <summary>The clip rectangle a clip owner of <paramref name="size"/> at <paramref name="world"/> makes, by the same
     /// conversion the draw uses - for the verifier to feed it the tree's place.</summary>
-    internal Vector4F ClipBoxOf(IUIComponent owner, Size<double> size, Matrix4x4F world, int slot)
+    internal Vector4F ClipBoxOf(IUIComponent owner, Size<double> size, float inset, Matrix4x4F world, int slot)
     {
         var inner = _transformTable?.IsInnerClip(owner.RenderId, slot) == true
-            ? InnerBox(size, ClipInsetOf(owner), world)
+            ? InnerClipBox(owner, size, inset, world, _frameScissor)
             : null;
-        return ClipBox(owner, inner ?? EdgeBox(size, world), _frameScissor);
+        return inner ?? ClipBox(owner, EdgeBox(size, world), _frameScissor);
     }
 
     /// <summary>The matrix the shaders read from <paramref name="slot"/>.</summary>
