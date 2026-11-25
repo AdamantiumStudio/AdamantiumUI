@@ -217,6 +217,7 @@ public partial class RenderCache
     private void ReleaseSlotsOfUndrawn()
     {
         ReleaseSlotsOf(_clipOwners, NotDrawn, ReleaseClipSlot);
+        ReleaseSlotsOf(_innerClipOwners, NotDrawn, ReleaseInnerClipSlot);
         ReleaseSlotsOf(_fadeOwners, NotDrawn, ReleaseFadeSlot);
         ReleaseSlotsOf(_nodeRefreshed, NotDrawn, ReleaseNodeSlot);
         _drawnChains.Clear();
@@ -436,6 +437,7 @@ public partial class RenderCache
         // of the scene these units drew.
         _built = false;
         _clipOwners.Clear();
+        _innerClipOwners.Clear();
         _fadeOwners.Clear();
         _copyFades.Clear();
         _copyFadeSlots.Clear();
@@ -487,13 +489,15 @@ public partial class RenderCache
     // Only a CLIP has rounded corners worth freezing - everything else paints its own and needs nothing here.
     private static Vector4F ClipRadiiOf(IUIComponent c) => c.ClipToBounds ? c.ClipRadii : Vector4F.Zero;
 
+    internal static float ClipInsetOf(IUIComponent c) => c.ClipToBounds && c.ClipRadii != Vector4F.Zero ? c.ClipInset : 0f;
+
     // Record one component's frozen layout into the recorder's map AND this frame's delta (the applier's replica is built
     // from nothing else). Memoized: an unchanged component is captured once and never re-sent.
     private LayoutSnapshot Snap(IUIComponent c)
     {
         if (_snap.TryGetValue(c, out var s)) return s;
         s = new LayoutSnapshot(c.LocalTransform, c.RenderSize, c.ClipToBounds, c.IsRenderMotionNode, c.RenderParent,
-            (float)c.Opacity, (float)c.SelfOpacity, ClipRadiiOf(c));
+            (float)c.Opacity, (float)c.SelfOpacity, ClipRadiiOf(c), ClipInsetOf(c));
         if (c is Core.FundamentalUIComponent { IsDiscarded: true })
         {
             return s;
@@ -510,7 +514,7 @@ public partial class RenderCache
     {
         if (_applySnap.TryGetValue(c, out var s)) return s;
         s = new LayoutSnapshot(c.LocalTransform, c.RenderSize, c.ClipToBounds, c.IsRenderMotionNode, c.RenderParent,
-            (float)c.Opacity, (float)c.SelfOpacity, ClipRadiiOf(c));
+            (float)c.Opacity, (float)c.SelfOpacity, ClipRadiiOf(c), ClipInsetOf(c));
 
         // ...but a part the teardown DESTROYED is not cached. This miss-fallback is the third way into the map and the
         // one that kept re-adding what the sweep had just removed: 39 dead controls a swap survived both a sweep taking
@@ -551,6 +555,7 @@ public partial class RenderCache
         _releasedSnaps.Clear();
 
         ReleaseSlotsOf(_clipOwners, ReleasedBeforeApplied, ReleaseClipSlot);
+        ReleaseSlotsOf(_innerClipOwners, ReleasedBeforeApplied, ReleaseInnerClipSlot);
         ReleaseSlotsOf(_fadeOwners, ReleasedBeforeApplied, ReleaseFadeSlot);
         ReleaseSlotsOf(_nodeRefreshed, ReleasedBeforeApplied, ReleaseNodeSlot);
     }
@@ -659,7 +664,7 @@ public partial class RenderCache
 
         var snapshot = new LayoutSnapshot(component.LocalTransform, component.RenderSize, component.ClipToBounds,
             component.IsRenderMotionNode, component.RenderParent, (float)component.Opacity, (float)component.SelfOpacity,
-            ClipRadiiOf(component));
+            ClipRadiiOf(component), ClipInsetOf(component));
 
         // Publish explicitly (the delta is the applier's only source), but only on a real change: any delta entry makes
         // the applier refuse the clean-frame replay.
@@ -689,7 +694,7 @@ public partial class RenderCache
         if (element == null) return;
         var s = ApplySnap(element);
         _applySnap[element] = new LayoutSnapshot(Matrix4x4F.Identity, s.RenderSize, s.ClipToBounds, false, null,
-            s.Opacity, s.SelfOpacity, s.ClipRadii);
+            s.Opacity, s.SelfOpacity, s.ClipRadii, s.ClipInset);
         _worldCache.Clear();    // drop any absolute transforms/clips memoized during the build so ProcessCommands recomputes rebased
         _relWorldCache.Clear();
         _clipCache.Clear();
@@ -1142,26 +1147,83 @@ public partial class RenderCache
     // the slot is the only thing that can carry it, so its contents are refreshed per frame from here.
     private readonly Dictionary<IUIComponent, int> _clipOwners = new();
 
+    // The same for the inner clip of an owner with a stroke, which cuts what it holds.
+    private readonly Dictionary<IUIComponent, int> _innerClipOwners = new();
+
     /// <summary>Rewrite every live clip slot from its owner's current shape. One 32-byte write per clip, and it is what
     /// makes a rounded clip follow a resize or an animated radius without the frame being re-recorded.</summary>
     private void RefreshClipSlots(Vulkan.Core.Rect2D fullScissor)
     {
-        if (_clipOwners.Count == 0 || _transformTable == null) return;
+        if (_transformTable == null) return;
 
-        foreach (var (owner, slot) in _clipOwners)
+        RefreshClipSlots(_clipOwners, inner: false, fullScissor);
+        RefreshClipSlots(_innerClipOwners, inner: true, fullScissor);
+    }
+
+    private void RefreshClipSlots(Dictionary<IUIComponent, int> owners, bool inner, Vulkan.Core.Rect2D fullScissor)
+    {
+        foreach (var (owner, slot) in owners)
         {
             var s = ApplySnap(owner);
             if (!s.ClipToBounds || s.ClipRadii == Vector4F.Zero) continue;
 
-            _transformTable.SetClip(null, slot, ClipBox(owner, s, fullScissor), s.ClipRadii * (float)_renderScale);
+            var (box, radii) = ClipShape(owner, s, inner, fullScissor);
+            _transformTable.SetClip(null, slot, box, radii);
         }
     }
 
+    // A rounded clip in device pixels: its edge, or the inner edge of its stroke, for what it holds.
+    private (Vector4F Box, Vector4F Radii) ClipShape(IUIComponent owner, LayoutSnapshot s, bool inner,
+        Vulkan.Core.Rect2D fullScissor)
+    {
+        var world = World(owner);
+        var radii = s.ClipRadii * (float)_renderScale;
+        if (inner && InnerClipBox(owner, s.RenderSize, s.ClipInset, world, fullScissor) is { } box)
+        {
+            var stroke = (float)StrokePixels(s.ClipInset, 1, snapped: IsPlainOffset(world));
+            return (box, new Vector4F(System.Math.Max(0, radii.X - stroke), System.Math.Max(0, radii.Y - stroke),
+                System.Math.Max(0, radii.Z - stroke), System.Math.Max(0, radii.W - stroke)));
+        }
+
+        return (ClipBox(owner, EdgeBox(s.RenderSize, world), fullScissor), radii);
+    }
+
+    private static Rect EdgeBox(Size<double> size, Matrix4x4F world) =>
+        new Rect(0, 0, size.Width, size.Height).TransformToAABB(world);
+
+    // The box inside a stroke, in device pixels, taken off the edge's own ones as the stroke is drawn: rounded apart, the
+    // two parted by a pixel at fractional scales. Null when nothing of it shows, which a shader would read as no clip at
+    // all: the edge cuts then.
+    private Vector4F? InnerClipBox(IUIComponent owner, Size<double> size, float inset, Matrix4x4F world,
+        Vulkan.Core.Rect2D fullScissor)
+    {
+        var edge = EdgeBox(size, world);
+        var plain = IsPlainOffset(world);
+        var across = StrokePixels(inset, System.Math.Sqrt(world.M11 * world.M11 + world.M21 * world.M21), plain);
+        var down = StrokePixels(inset, System.Math.Sqrt(world.M12 * world.M12 + world.M22 * world.M22), plain);
+        var left = DevicePixels.ToDevicePixel(edge.X, _renderScale) + across;
+        var top = DevicePixels.ToDevicePixel(edge.Y, _renderScale) + down;
+        var right = DevicePixels.ToDevicePixel(edge.Right, _renderScale) - across;
+        var bottom = DevicePixels.ToDevicePixel(edge.Bottom, _renderScale) - down;
+        if (right <= left || bottom <= top) return null;
+
+        var box = ClipBox(owner, new Rect(left / _renderScale, top / _renderScale, (right - left) / _renderScale,
+            (bottom - top) / _renderScale), fullScissor);
+        return box.Z > 0 && box.W > 0 ? box : null;
+    }
+
+    // As a stroke is drawn (DevicePixels.Snap): in whole pixels, never below one, under a plain offset; else as it comes.
+    private double StrokePixels(float thickness, double scale, bool snapped) =>
+        snapped
+            ? System.Math.Max(1, DevicePixels.ToDevicePixel(thickness, _renderScale))
+            : thickness * scale * _renderScale;
+
+    private static bool IsPlainOffset(Matrix4x4F world) =>
+        System.Math.Abs(world.M11 - 1) < 1e-4f && System.Math.Abs(world.M22 - 1) < 1e-4f
+        && System.Math.Abs(world.M12) < 1e-4f && System.Math.Abs(world.M21) < 1e-4f;
+
     // A rounded clip's box in device pixels, cut to the window - but whole inside a layer drawn whole, which draws past
     // the window and would have the clip's corners come round at the window's edge.
-    private Vector4F ClipBox(IUIComponent owner, LayoutSnapshot s, Vulkan.Core.Rect2D fullScissor) =>
-        ClipBox(owner, new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height).TransformToAABB(World(owner)), fullScissor);
-
     private Vector4F ClipBox(IUIComponent owner, Rect box, Vulkan.Core.Rect2D fullScissor)
     {
         if (!InsideWhole(owner))
@@ -1193,6 +1255,7 @@ public partial class RenderCache
         if (_clipSlotCache.TryGetValue(c, out var cached)) return cached;
 
         var slot = -1;
+        var adorns = false;
         for (var owner = c; owner != null; owner = ApplySnap(owner).RenderParent)
         {
             var s = ApplySnap(owner);
@@ -1200,15 +1263,18 @@ public partial class RenderCache
             {
                 // What a layer drawn whole holds is not cut above it: its composite takes those clips.
                 if (DrawsWhole(owner)) break;
+                adorns |= !owner.ClippedByRenderParent;
                 continue;
             }
 
-            var boxVec = ClipBox(owner, s, fullScissor);
-            var radiiVec = s.ClipRadii * (float)_renderScale;
-            slot = _transformTable.AcquireClipSlot(owner.RenderId);
-            _transformTable.SetClip(null, slot, boxVec, radiiVec);
-            _clipShapeCache[c] = (boxVec, radiiVec);
-            _clipOwners[owner] = slot;   // so a replayed frame can refresh it - see RefreshClipSlots
+            // What the owner paints itself - its stroke - is cut by its edge, what it holds by the stroke's inner one. An
+            // adorner - a focus ring, a selection's frame - is drawn over the stroke, so the edge cuts it too.
+            var inner = !ReferenceEquals(owner, c) && !adorns && s.ClipInset > 0;
+            var shape = ClipShape(owner, s, inner, fullScissor);
+            slot = _transformTable.AcquireClipSlot(owner.RenderId, inner);
+            _transformTable.SetClip(null, slot, shape.Box, shape.Radii);
+            _clipShapeCache[c] = shape;
+            (inner ? _innerClipOwners : _clipOwners)[owner] = slot;   // so a replayed frame can refresh it
             break;
         }
 
@@ -1228,6 +1294,17 @@ public partial class RenderCache
     {
         var slot = RoundedClipSlot(c, fullScissor);
         return slot >= 0 && _clipShapeCache.TryGetValue(c, out var shape) ? shape : default;
+    }
+
+    /// <summary>The rounded clip that cuts <paramref name="held"/>, laid down on <paramref name="holder"/>: the holder's
+    /// inner one where it has a stroke, unless it adorns the holder.</summary>
+    private (Vector4F Box, Vector4F Radii) RoundedClipShapeOn(IUIComponent holder, IUIComponent held,
+        Vulkan.Core.Rect2D fullScissor)
+    {
+        var s = ApplySnap(holder);
+        return s.ClipInset > 0 && held.ClippedByRenderParent
+            ? ClipShape(holder, s, inner: true, fullScissor)
+            : RoundedClipShape(holder, fullScissor);
     }
 
     // The nearest ClipToBounds ancestor-or-self, or null. Segments group by this owner, not by the resulting rect, since

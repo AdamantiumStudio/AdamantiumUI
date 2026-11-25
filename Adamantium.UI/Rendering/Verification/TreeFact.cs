@@ -12,6 +12,7 @@ internal readonly record struct TreeFact(
     Matrix4x4F Local,
     Size<double> Size,
     bool Clips,
+    float ClipInset,
     IUIComponent Parent,
     float Opacity,
     Matrix4x4F World,

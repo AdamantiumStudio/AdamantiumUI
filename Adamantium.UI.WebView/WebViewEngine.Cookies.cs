@@ -133,23 +133,6 @@ public sealed unsafe partial class WebViewEngine
         return callback.Deleted;
     }
 
-    private CefCookieManager* TakeCookieManager()
-    {
-        if (!IsAvailable || !CanInitialize)
-        {
-            return null;
-        }
-
-        try
-        {
-            EnsureInitialized();
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or FileNotFoundException)
-        {
-            Serilog.Log.Logger.Warning(exception, "CEF could not be started for the profile's cookies");
-            return null;
-        }
-
-        return CefInterop.CefCookieManagerGetGlobalManager(null);
-    }
+    private CefCookieManager* TakeCookieManager() =>
+        TryInitializeFor("the profile's cookies") ? CefInterop.CefCookieManagerGetGlobalManager(null) : null;
 }

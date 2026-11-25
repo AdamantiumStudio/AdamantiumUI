@@ -69,7 +69,12 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
     protected override void RegisterServices(IContainerRegistry containerRegistry)
     {
         base.RegisterServices(containerRegistry);
-        containerRegistry.AddWebView(options => options.ColorScheme = WebViewColorScheme.Light);
+        containerRegistry.AddWebView(options =>
+        {
+            options.ColorScheme = WebViewColorScheme.Light;
+            // The web page plays what sites protect too, besides the components every web view has.
+            options.Components |= WebViewComponents.Widevine;
+        });
         // Register the app's own window shell under "workspace"; the Workspace command opens the second window in it.
         Container.Resolve<IWindowShellRegistry>().Register<WorkspaceWindow>("workspace");
         // A dedicated shell for the drag-drop cross-window demo, so items can be dragged between it and the main window.

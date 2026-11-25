@@ -2468,7 +2468,7 @@ public partial class RenderCache
         // Keep the snapshot's own value in step, so EffectiveOpacity (which the slot-blind families still bake with)
         // reads the alpha the compositor just applied.
         _applySnap[owner] = new LayoutSnapshot(snap.LocalTransform, snap.RenderSize, snap.ClipToBounds,
-            snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii);
+            snap.IsMotionNode, snap.RenderParent, entry.Alpha, snap.SelfOpacity, snap.ClipRadii, snap.ClipInset);
     }
 
     // TRANSFORM: one 64-byte matrix write moves the whole node, and it lands in TWO places. The transform table is what the

@@ -1,0 +1,182 @@
+diff --git a/chrome/common/media/cdm_registration.cc b/chrome/common/media/cdm_registration.cc
+index 60a79ace428e9..400fabfd57537 100644
+--- a/chrome/common/media/cdm_registration.cc
++++ b/chrome/common/media/cdm_registration.cc
+@@ -37,6 +37,7 @@
+ #include "base/native_library.h"
+ #include "chrome/common/chrome_paths.h"
+ #include "chrome/common/media/component_widevine_cdm_hint_file_linux.h"
++#include "components/component_updater/component_updater_switches.h"  // nogncheck
+ #include "media/cdm/cdm_paths.h"  // nogncheck
+ #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+ #endif  // BUILDFLAG(ENABLE_WIDEVINE)
+@@ -135,6 +136,13 @@ std::unique_ptr<content::CdmInfo> GetBundledWidevine() {
+ // and it looks valid, return the CdmInfo for that CDM. Otherwise return
+ // nullptr.
+ std::unique_ptr<content::CdmInfo> GetHintedWidevine() {
++  // A copy Component Updater left is not loaded while --allowed-components
++  // leaves Widevine out (widevine_cdm_component_installer.cc names its id).
++  if (!component_updater::IsComponentAllowed(
++          "oimompecagnajdejgnnjijobebaeigek")) {
++    return nullptr;
++  }
++
+   // Ideally this would cache the result, as Component Update may run and
+   // download a new version once Chrome has been running for a while. However,
+   // RegisterCdmInfo() will be called by different processes (the pre-zygote
+diff --git a/components/component_updater/component_updater_service.cc b/components/component_updater/component_updater_service.cc
+index 446968669083c..489e3de39e476 100644
+--- a/components/component_updater/component_updater_service.cc
++++ b/components/component_updater/component_updater_service.cc
+@@ -30,6 +30,7 @@
+ #include "base/timer/timer.h"
+ #include "components/component_updater/component_installer.h"
+ #include "components/component_updater/component_updater_service_internal.h"
++#include "components/component_updater/component_updater_switches.h"
+ #include "components/component_updater/component_updater_utils.h"
+ #include "components/component_updater/pref_names.h"
+ #include "components/component_updater/required_components_controller.h"
+@@ -208,6 +209,12 @@ bool CrxUpdateService::RegisterComponent(
+     return false;
+   }
+ 
++  // Refused, the installer neither updates the component nor makes a copy on
++  // disk ready.
++  if (!IsComponentAllowed(component.app_id)) {
++    return false;
++  }
++
+   // Cancel any pending unregistration for this component.
+   std::erase(components_pending_unregistration_, component.app_id);
+ 
+@@ -230,6 +237,14 @@ bool CrxUpdateService::RegisterComponent(
+       component_states_.insert(std::make_pair(component.app_id, item));
+   CHECK(inserted);
+ 
++  auto [awaiting, awaiting_end] =
++      updates_awaiting_registration_.equal_range(component.app_id);
++  for (auto update = awaiting; update != awaiting_end; ++update) {
++    OnDemandUpdateInternal(component.app_id, update->second.first,
++                           std::move(update->second.second));
++  }
++  updates_awaiting_registration_.erase(awaiting, awaiting_end);
++
+ #if BUILDFLAG(CHROME_FOR_TESTING)
+   if (required_components_controller_ &&
+       required_components_controller_->RequestComponentUpdate(component)) {
+@@ -388,6 +403,13 @@ void CrxUpdateService::OnDemandUpdate(const std::string& id,
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+ 
+   if (!GetComponent(id)) {
++    // One the embedder allowed registers soon: its update waits for it.
++    if (IsComponentListed(id)) {
++      updates_awaiting_registration_.emplace(
++          id, std::make_pair(priority, std::move(callback)));
++      return;
++    }
++
+     if (!callback.is_null()) {
+       base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+           FROM_HERE, base::BindOnce(std::move(callback),
+diff --git a/components/component_updater/component_updater_service_internal.h b/components/component_updater/component_updater_service_internal.h
+index bf85ec6264b62..1199e9baa1a1e 100644
+--- a/components/component_updater/component_updater_service_internal.h
++++ b/components/component_updater/component_updater_service_internal.h
+@@ -132,6 +132,12 @@ class CrxUpdateService : public ComponentUpdateService,
+       std::multimap<std::string, base::OnceClosure>;
+   ResourceThrottleCallbacks ready_callbacks_;
+ 
++  // On-demand updates of components --allowed-components lists, asked for
++  // before the component registered - components register a while after
++  // start: each runs as its component registers.
++  std::multimap<std::string, std::pair<Priority, Callback>>
++      updates_awaiting_registration_;
++
+   // Contains the state of the component.
+   using ComponentStates = std::map<std::string, CrxUpdateItem>;
+   ComponentStates component_states_;
+diff --git a/components/component_updater/component_updater_switches.cc b/components/component_updater/component_updater_switches.cc
+index e65baccc8bebe..10cfe9d36a2c2 100644
+--- a/components/component_updater/component_updater_switches.cc
++++ b/components/component_updater/component_updater_switches.cc
+@@ -4,8 +4,20 @@
+ 
+ #include "components/component_updater/component_updater_switches.h"
+ 
++#include <algorithm>
++#include <string>
++
++#include "base/command_line.h"
++#include "base/strings/string_split.h"
++
+ namespace switches {
+ 
++// Comma-separated ids of the only components that are registered, wherever
++// they are registered from; present and empty, no component is. An embedder
++// that must not fetch anything it was not asked for passes it. Only valid for
++// the browser process.
++constexpr char kAllowedComponents[] = "allowed-components";
++
+ // Comma-separated options to troubleshoot the component updater. Only valid
+ // for the browser process.
+ constexpr char kComponentUpdater[] = "component-updater";
+@@ -29,3 +41,25 @@ constexpr char kDemoModeTestTag[] = "demo-app-test-tag";
+ constexpr char kEnableComponentUninstall[] = "enable-component-uninstall";
+ 
+ }  // namespace switches
++
++namespace component_updater {
++
++bool IsComponentListed(std::string_view id) {
++  const base::CommandLine* command_line =
++      base::CommandLine::ForCurrentProcess();
++  return command_line->HasSwitch(switches::kAllowedComponents) &&
++         std::ranges::contains(
++             base::SplitString(command_line->GetSwitchValueASCII(
++                                   switches::kAllowedComponents),
++                               ",", base::TRIM_WHITESPACE,
++                               base::SPLIT_WANT_NONEMPTY),
++             id);
++}
++
++bool IsComponentAllowed(std::string_view id) {
++  return !base::CommandLine::ForCurrentProcess()->HasSwitch(
++             switches::kAllowedComponents) ||
++         IsComponentListed(id);
++}
++
++}  // namespace component_updater
+diff --git a/components/component_updater/component_updater_switches.h b/components/component_updater/component_updater_switches.h
+index 514a4ffa107e8..6c16f5699c2e0 100644
+--- a/components/component_updater/component_updater_switches.h
++++ b/components/component_updater/component_updater_switches.h
+@@ -5,10 +5,13 @@
+ #ifndef COMPONENTS_COMPONENT_UPDATER_COMPONENT_UPDATER_SWITCHES_H_
+ #define COMPONENTS_COMPONENT_UPDATER_COMPONENT_UPDATER_SWITCHES_H_
+ 
++#include <string_view>
++
+ namespace switches {
+ 
+ // All switches in alphabetical order. The switches should be documented
+ // alongside the definition of their values in the .cc file.
++extern const char kAllowedComponents[];
+ extern const char kComponentUpdater[];
+ extern const char kComponentUpdaterTrustTokensComponentPath[];
+ extern const char kCampaignsTestTag[];
+@@ -17,4 +20,15 @@ extern const char kEnableComponentUninstall[];
+ 
+ }  // namespace switches
+ 
++namespace component_updater {
++
++// Whether --allowed-components is there and lists the component `id`.
++bool IsComponentListed(std::string_view id);
++
++// Whether the component `id` may be registered: always, without
++// --allowed-components; with it, only when it lists `id`.
++bool IsComponentAllowed(std::string_view id);
++
++}  // namespace component_updater
++
+ #endif  // COMPONENTS_COMPONENT_UPDATER_COMPONENT_UPDATER_SWITCHES_H_

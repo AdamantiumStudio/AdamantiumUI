@@ -96,6 +96,69 @@ public class NumericUpDownScrubTests
         });
     }
 
+    // 0.1 is not a double: twelve of its steps made 1.2000000000000002.
+    [Test]
+    public void AStepThatIsNotADouble_IsSnappedToTheNumberItReads()
+    {
+        _boxes[0].SmallChange = 0.1;
+        _boxes[0].SnapsToSmallChange = true;
+        _boxes[0].Value = 1;
+
+        Send(RawPointerEventType.Down, new Vector2<double>(100, 15), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, new Vector2<double>(108, 15), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Up, new Vector2<double>(108, 15), InputModifiers.None, MouseButtons.Left);
+
+        Assert.That(_boxes[0].Value, Is.EqualTo(1.2));
+    }
+
+    // A greyed-out button's press is its own too.
+    [Test]
+    public void APressOnAStepButtonAtItsLimit_StartsNoScrub()
+    {
+        _boxes[0].Value = 100;
+        var increase = (RepeatButton)_boxes[0].GetTemplateChild("PART_Increase");
+        increase.Visibility = Visibility.Visible;
+        increase.Width = 40;
+        increase.HorizontalAlignment = HorizontalAlignment.Right;
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        Send(RawPointerEventType.Down, new Vector2<double>(185, 15), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, new Vector2<double>(170, 15), InputModifiers.LeftMouseButton);
+        var drifted = _boxes[0].Value;
+        Send(RawPointerEventType.Up, new Vector2<double>(170, 15), InputModifiers.None, MouseButtons.Left);
+
+        Assert.That(drifted, Is.EqualTo(100));
+    }
+
+    // A hand drifting with a step button held: the press is the button's, not the start of a drag.
+    [Test]
+    public void APressOnAStepButton_StartsNoScrub()
+    {
+        var increase = (RepeatButton)_boxes[0].GetTemplateChild("PART_Increase");
+        increase.Visibility = Visibility.Visible;
+        increase.Width = 40;
+        increase.HorizontalAlignment = HorizontalAlignment.Right;
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        Send(RawPointerEventType.Down, new Vector2<double>(170, 15), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        var stepped = _boxes[0].Value;
+        Send(RawPointerEventType.Move, new Vector2<double>(195, 15), InputModifiers.LeftMouseButton);
+        var drifted = _boxes[0].Value;
+        Send(RawPointerEventType.Up, new Vector2<double>(195, 15), InputModifiers.None, MouseButtons.Left);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stepped, Is.EqualTo(6), "the button stepped");
+            Assert.That(drifted, Is.EqualTo(6), "and the drift dragged nothing");
+        });
+    }
+
     private void Scrub(double y)
     {
         Send(RawPointerEventType.Down, new Vector2<double>(100, y), InputModifiers.LeftMouseButton, MouseButtons.Left);

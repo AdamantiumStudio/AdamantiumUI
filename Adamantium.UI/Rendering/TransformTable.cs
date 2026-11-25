@@ -328,22 +328,26 @@ internal sealed class TransformTable
 
     // ---- CLIP SLOTS ---------------------------------------------------------------------------------------------
     // Rounded clips travel in slots: matrix row 0 = rect in device px, row 1 = radii; Params.X marks a clip.
+    // An owner with a stroke has two: its edge, and the inner one for what it holds.
     private readonly System.Collections.Generic.Dictionary<Guid, int> _clipSlotByOwner = new();
+    private readonly System.Collections.Generic.Dictionary<Guid, int> _innerClipSlotByOwner = new();
 
-    public int AcquireClipSlot(Guid ownerId)
+    public int AcquireClipSlot(Guid ownerId, bool inner = false)
     {
-        if (_clipSlotByOwner.TryGetValue(ownerId, out var slot)) return slot;
+        var slots = inner ? _innerClipSlotByOwner : _clipSlotByOwner;
+        if (slots.TryGetValue(ownerId, out var slot)) return slot;
 
         slot = AcquireFreeSlot();
         _cpu[slot].Params.X = 0f;   // a recycled slot carries a stranger's clip until the first SetClip
         _version[slot]++;
-        _clipSlotByOwner[ownerId] = slot;
+        slots[ownerId] = slot;
         return slot;
     }
 
-    public void ReleaseClipSlot(Guid ownerId)
+    public void ReleaseClipSlot(Guid ownerId, bool inner = false)
     {
-        if (!_clipSlotByOwner.Remove(ownerId, out var slot)) return;
+        var slots = inner ? _innerClipSlotByOwner : _clipSlotByOwner;
+        if (!slots.Remove(ownerId, out var slot)) return;
 
         _cpu[slot].Params.X = 0f;
         _version[slot]++;
@@ -455,9 +459,14 @@ internal sealed class TransformTable
         foreach (var (node, slot) in _slotByNode) uses[slot] = (SlotUse.Matrix, node);
         foreach (var (owner, slot) in _opacitySlotByOwner) uses[slot] = (SlotUse.Opacity, owner.Owner);
         foreach (var (owner, slot) in _clipSlotByOwner) uses[slot] = (SlotUse.Clip, owner);
+        foreach (var (owner, slot) in _innerClipSlotByOwner) uses[slot] = (SlotUse.Clip, owner);
         foreach (var (slot, owner) in _effectSlotOwner) uses[slot] = (SlotUse.Effect, owner);
         return uses;
     }
+
+    /// <summary>Whether <paramref name="slot"/> is the owner's inner clip, for the frame verifier.</summary>
+    internal bool IsInnerClip(Guid ownerId, int slot) =>
+        _innerClipSlotByOwner.TryGetValue(ownerId, out var inner) && inner == slot;
 
     /// <summary>The matrix a shader reads from <paramref name="slot"/>, for the frame verifier.</summary>
     internal Matrix4x4F MatrixAt(int slot) => slot >= 0 && slot < _count ? _cpu[slot].World : Matrix4x4F.Identity;
@@ -489,6 +498,7 @@ internal sealed class TransformTable
 
         _slotByNode.Clear();
         _clipSlotByOwner.Clear();
+        _innerClipSlotByOwner.Clear();
         _opacitySlotByOwner.Clear();
         _effectSlotOwner.Clear();
         _fadeChildren.Clear();
