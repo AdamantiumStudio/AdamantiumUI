@@ -25,9 +25,9 @@ public static class Program
           start --exe <path> [--tab <Id>] [--theme <Name>]   start an instance with the agent and wait for its window;
                                                               beside the sandbox, the sandbox when no --exe is named;
                                                               where nobody sees it - a desktop of its own on Windows,
-                                                              a virtual monitor of its own on Linux (Mutter): it
-                                                              shows nowhere and takes no one's focus; on macOS, or
-                                                              with no Mutter, on the desktop
+                                                              a virtual monitor of its own on Linux (Mutter), no
+                                                              windows of the system on macOS: it shows nowhere and
+                                                              takes no one's focus; with no Mutter, on the desktop
           start ... --visible                                 on the desktop instead, for someone to watch, or for
                                                               input through the system's own pointer (--os)
           start ... --screen <id>                             its windows on the monitor whose id ends with <id>, as

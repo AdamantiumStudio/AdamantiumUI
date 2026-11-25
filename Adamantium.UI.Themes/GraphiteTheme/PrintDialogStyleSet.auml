@@ -218,6 +218,11 @@
                                               ItemsSource="{TemplateBinding MediaTypes}"
                                               SelectedItem="{TemplateBinding MediaType, Mode=TwoWay}"/>
                                 </Grid>
+                                <Grid x:Name="DriverSettingsRow" ColumnDefinitions="140,*" MarginBottom="8" Visibility="Collapsed">
+                                    <Button x:Name="PART_DriverSettings" Grid.Column="1" HorizontalAlignment="Left"
+                                            Content="{Localize PrintStrings.PrinterSettings}"
+                                            Command="{Ancestor PrintDialog, DriverSettingsCommand}"/>
+                                </Grid>
                             </StackPanel>
                         </ScrollViewer>
 
@@ -265,6 +270,9 @@
         </PropertyTrigger>
         <PropertyTrigger Property="PrintsToFile" Value="true">
             <Setter TargetName="PART_Print" Property="Content" Value="{Localize PrintStrings.Save}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowsDriverSettings" Value="true">
+            <Setter TargetName="DriverSettingsRow" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsPrinterState" Value="true">
             <Setter TargetName="PART_PrinterState" Property="Visibility" Value="Visible"/>

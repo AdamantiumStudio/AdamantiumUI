@@ -3,6 +3,7 @@ using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Printing;
 using Adamantium.UI.Core.Text;
 using Adamantium.Win32;
 
@@ -47,6 +48,7 @@ public class WindowsPlatform : IApplicationPlatform
         FileManager.Platform = new ExplorerFileManager();
         Trash.Platform = new RecycleBinTrash();
         NotificationArea.Platform = new WindowsNotificationArea();
+        SystemPrinting.Platform = new Printing.WindowsPrintPlatform();   // the spooler's printers, jobs as XPS
         WindowsOle.Initialize();   // OLE on THIS (the UI) thread - the precondition for OS drag-drop on every window
     }
 

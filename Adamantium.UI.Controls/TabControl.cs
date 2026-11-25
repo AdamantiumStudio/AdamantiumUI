@@ -525,8 +525,10 @@ public class TabControl : Selector
         SelectedContent = tab != null ? tab.Content : item;
         if (!ReferenceEquals(previous, tab)) previous?.ShowPage(this, false);
 
-        SelectedContentTemplate = tab?.ContentTemplate ?? ContentTemplate;
-        SelectedContentTemplateSelector = tab?.ContentTemplateSelector ?? ContentTemplateSelector;
+        // Nothing chosen, no page: the template is the chosen tab's, so there is none to build.
+        var chosen = item != null;
+        SelectedContentTemplate = chosen ? tab?.ContentTemplate ?? ContentTemplate : null;
+        SelectedContentTemplateSelector = chosen ? tab?.ContentTemplateSelector ?? ContentTemplateSelector : null;
     }
 
     internal void SelectTab(TabItem container)

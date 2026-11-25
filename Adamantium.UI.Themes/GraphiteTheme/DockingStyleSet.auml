@@ -202,7 +202,7 @@
                                  flyout, and one piece of content belongs to one tree. -->
                             <ContentPresenter x:Name="PART_SelectedContentHost"
                                     Content="{TemplateBinding DockedContent}"
-                                    ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                    ContentTemplate="{TemplateBinding DockedContentTemplate}"
                                     ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"/>
                         </Border>
 
@@ -323,7 +323,7 @@
                                             ClipToBounds="True">
                                         <ContentPresenter x:Name="PART_FlyoutContentHost"
                                                 Content="{TemplateBinding FlyoutContent}"
-                                                ContentTemplate="{TemplateBinding SelectedContentTemplate}"
+                                                ContentTemplate="{TemplateBinding FlyoutContentTemplate}"
                                                 ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"/>
                                     </Border>
                                 </Grid>

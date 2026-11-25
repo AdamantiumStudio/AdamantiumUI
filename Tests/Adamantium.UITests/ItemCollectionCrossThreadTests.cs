@@ -19,6 +19,30 @@ public class ItemCollectionCrossThreadTests
 {
     private static void OnAnotherThread(Action change) => Task.Run(change).Wait();
 
+    // A view-model on the dispatcher adds an item and chooses it in one breath, while the list lives on the loop: the
+    // choice waits for its item to come, instead of being cleared - and the clearing written back through a TwoWay
+    // binding, losing the view-model's own choice.
+    [Test]
+    public void AnItemAddedAndChosenOnAnotherThread_IsChosenWhenItArrives()
+    {
+        LoopSignal.Drain();
+        var source = new Adamantium.Core.Collections.TrackingCollection<string> { "a" };
+        var list = new DropDown { ItemsSource = source };
+
+        OnAnotherThread(() =>
+        {
+            source.Add("b");
+            list.SelectedItem = "b";
+        });
+
+        Assert.That(list.SelectedItem, Is.EqualTo("b"), "not cleared while its item is on its way");
+
+        LoopSignal.Drain();
+
+        Assert.That(list.SelectedItem, Is.EqualTo("b"));
+        Assert.That(list.SelectedIndex, Is.EqualTo(1));
+    }
+
     [Test]
     public void AnItemAddedOnAnotherThread_ArrivesOnTheUIThread()
     {

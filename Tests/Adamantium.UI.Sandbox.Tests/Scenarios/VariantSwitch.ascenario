@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="Dark and light take the tabs along with the rest, the selected one and one not selected, in the theme the stand opens with and in one swapped to: a variant recolors the palette in place, and a tab still holding a brush from before kept its dark color while everything around it went light.">
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows Linux" Description="Dark and light take the tabs along with the rest, the selected one and one not selected, in the theme the stand opens with and in one swapped to: a variant recolors the palette in place, and a tab still holding a brush from before kept its dark color while everything around it went light. On macOS, where the stand opens with the MacOs theme, VariantSwitchMacOS.">
   <Select Target="id=Buttons" />
   <Invoke Target="id=ToggleDiagnostics" />
   <Invoke Target="id=ToggleVariant" />

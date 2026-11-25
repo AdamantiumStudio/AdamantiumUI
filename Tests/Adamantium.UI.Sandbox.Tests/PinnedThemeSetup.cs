@@ -1,8 +1,8 @@
 using System;
 using NUnit.Framework;
 
-/// <summary>The scenarios start the sandbox on one theme, on every system: the caption they press is that theme's, and
-/// the default one is the platform's. ADAM_THEME set outside still wins.</summary>
+/// <summary>The scenarios start the sandbox on the platform's own theme: MacOs on macOS, Fluent elsewhere. ADAM_THEME set
+/// outside still wins.</summary>
 [SetUpFixture]
 public class PinnedThemeSetup
 {
@@ -12,6 +12,6 @@ public class PinnedThemeSetup
     public void PinTheme()
     {
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ThemeVariable)))
-            Environment.SetEnvironmentVariable(ThemeVariable, "Fluent");
+            Environment.SetEnvironmentVariable(ThemeVariable, OperatingSystem.IsMacOS() ? "macOS" : "Fluent");
     }
 }
