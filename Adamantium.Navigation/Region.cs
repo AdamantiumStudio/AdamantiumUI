@@ -70,6 +70,30 @@ public sealed class Region : IRegion
     public Task<NavigationResult> NavigateToInstanceAsync(object viewModel, string viewKey, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
         => NavigateCoreAsync(viewModel?.GetType(), viewKey, viewModel, parameters, cancellationToken);
 
+    public async Task<NavigationResult> RefreshAsync(object viewModel, NavigationParameters parameters = null,
+        CancellationToken cancellationToken = default)
+    {
+        var context = new NavigationContext(this, NavigationService, viewModel.GetType(), viewModel, parameters,
+            NavigationMode.Refresh, cancellationToken) { TargetViewModel = viewModel };
+        try
+        {
+            if (viewModel is INavigationAware aware)
+            {
+                await aware.OnNavigatedToAsync(context, cancellationToken);
+            }
+
+            return NavigationResult.Ok(viewModel);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return NavigationResult.Vetoed();
+        }
+        catch (Exception ex)
+        {
+            return NavigationResult.Failed(ex);
+        }
+    }
+
     public Task<NavigationResult> NavigateToViewAsync(Type viewModelType, string viewKey, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
         => NavigateCoreAsync(viewModelType, viewKey, null, parameters, cancellationToken);
 

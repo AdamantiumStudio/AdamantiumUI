@@ -34,6 +34,7 @@
     <Phrase Key="Quality" Text="Quality"/>
     <Phrase Key="Tray" Text="Paper source"/>
     <Phrase Key="MediaType" Text="Paper type"/>
+    <Phrase Key="PrinterSettings" Text="Printer settings…"/>
     <Phrase Key="SheetOfCount" Text="Sheet {sheet} of {count}"/>
     <Phrase Key="PreviousSheet" Text="Previous sheet"/>
     <Phrase Key="NextSheet" Text="Next sheet"/>

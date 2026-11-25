@@ -1,10 +1,12 @@
 <Language>
-    <Phrase Key="About" Text="A sample document printed through the print service: to a PDF file, or - with the sample printers on - to made-up printers that each offer different things."/>
+    <Phrase Key="About" Text="A sample document printed through the print service: to the system's printers, to a PDF file, or - with the sample printers on - to made-up printers that each offer different things."/>
     <Phrase Key="Pages" Text="Pages"/>
+    <Phrase Key="SystemPrinters" Text="The system's printers"/>
     <Phrase Key="SamplePrinters" Text="Sample printers"/>
     <Phrase Key="Print" Text="Print…"/>
     <Phrase Key="Printed" Text="Sent to"/>
+    <Phrase Key="PrintedBySystem" Text="Sent to the printer."/>
     <Phrase Key="Saved" Text="Saved as PDF."/>
     <Phrase Key="Canceled" Text="Not printed."/>
-    <Phrase Key="Failed" Text="The PDF file could not be written there."/>
+    <Phrase Key="Failed" Text="Not printed: the printer, or the place to save it, would not take it."/>
 </Language>

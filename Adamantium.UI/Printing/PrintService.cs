@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Navigation;
@@ -31,15 +32,27 @@ internal sealed class PrintService(IDialogService dialogs) : IPrintService
             return PrintResult.Canceled;
         }
 
-        var capabilities = settings.Printer.IsFile || platform == null
-            ? PrinterCapabilities.Pdf
-            : await platform.CapabilitiesAsync(settings.Printer, cancellation);
-        var sheets = new PrintSheets(document, settings, capabilities, currentPage);
-        if (!settings.Printer.IsFile)
+        if (!settings.Printer.IsFile && platform != null)
         {
-            await platform!.PrintAsync(sheets, settings, Unwatched.Instance, cancellation);
-            return PrintResult.Printed;
+            try
+            {
+                var capabilities = await platform.CapabilitiesAsync(settings.Printer, cancellation);
+                await platform.PrintAsync(new PrintSheets(document, settings, capabilities, currentPage), settings,
+                    Unwatched.Instance, cancellation);
+                return PrintResult.Printed;
+            }
+            catch (OperationCanceledException)
+            {
+                return PrintResult.Canceled;
+            }
+            catch (Exception exception) when (exception is ExternalException or IOException)
+            {
+                // The system would not take the job - a printer gone off the network, a driver that failed.
+                return PrintResult.Failed;
+            }
         }
+
+        var sheets = new PrintSheets(document, settings, PrinterCapabilities.Pdf, currentPage);
 
         var path = FileDialog.Save(new SaveFileRequest
         {

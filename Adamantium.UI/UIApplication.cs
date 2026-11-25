@@ -599,7 +599,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             case Platform.Windows:
                 return new Win32WindowWorker(uiContext);
             case Platform.OSX:
-                return new MacOSWindowWorker(uiContext);
+                return MacOSPlatform.IsHidden ? new MacOSHiddenWindowWorker(uiContext) : new MacOSWindowWorker(uiContext);
             case Platform.Linux:
                 return new Platforms.Wayland.WaylandWindowWorker(uiContext);
             default:

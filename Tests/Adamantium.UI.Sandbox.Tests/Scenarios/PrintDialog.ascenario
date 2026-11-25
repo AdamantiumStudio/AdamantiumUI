@@ -2,7 +2,8 @@
           Description="The print dialog: the PDF file alone without printers; with the sample printers, each printer's rows come and go with what it offers, a range that is no pages stops printing, and printing reaches the printer.">
     <Select Target="id=GalleryTabs/name=Printing" />
 
-    <!-- No system printers: the PDF file alone, saved, and no printer's rows. -->
+    <!-- No printers: the PDF file alone, saved, and no printer's rows. -->
+    <Toggle Target="name=The system's printers" />
     <Invoke Target="id=PrintSample" />
     <Wait Target="id=PART_Printer" />
     <Expect Target="id=PART_Printer" Value="Save as PDF" />
@@ -51,4 +52,5 @@
     <Absent Target="id=PART_Printer" />
     <Expect Target="id=PrintOutcome" Name="Sent to Photo inkjet (sample): 1 × 1" />
     <Toggle Target="name=Sample printers" />
+    <Toggle Target="name=The system's printers" />
 </Scenario>

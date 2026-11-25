@@ -41,6 +41,9 @@ internal sealed class MacOSDragGhost : IDragGhost
 
     public void Show(byte[] premultipliedBgra, int width, int height, int screenX, int screenY)
     {
+        if (MacOSPlatform.IsHidden)
+            return;
+
         var pixels = (byte[])premultipliedBgra.Clone();
         _platform.RunOnMainThread(() =>
         {

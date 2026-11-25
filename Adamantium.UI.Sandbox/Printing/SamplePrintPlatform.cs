@@ -67,6 +67,9 @@ internal sealed class SamplePrintPlatform : IPrintPlatform
             },
         });
 
+    /// <summary>The samples have no drivers of their own, so no settings window: never asked.</summary>
+    public PrintSettings EditDriverSettings(PrinterCapabilities capabilities, PrintSettings settings) => null;
+
     /// <summary>As a printer driver would: glossy photo paper is printed on one side only.</summary>
     public PrintSettings Reconcile(PrinterCapabilities capabilities, PrintSettings settings) =>
         settings.MediaType == GlossyPhoto && settings.Duplex != DuplexMode.OneSided

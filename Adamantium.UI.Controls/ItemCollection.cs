@@ -30,6 +30,10 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
 
     internal bool HasSource => _sourceSnapshot != null;
 
+    /// <summary>Whether the source has changed on another thread and those changes wait to come here: an item just put
+    /// into the source may not be among these yet.</summary>
+    internal bool IsCatchingUp => _changes.IsWaiting;
+
     private IList<object> Active => _sourceSnapshot ?? (IList<object>)_direct;
 
     public int Count => Active.Count;
