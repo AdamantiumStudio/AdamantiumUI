@@ -1177,27 +1177,45 @@ public partial class RenderCache
     private (Vector4F Box, Vector4F Radii) ClipShape(IUIComponent owner, LayoutSnapshot s, bool inner,
         Vulkan.Core.Rect2D fullScissor)
     {
-        var inset = inner && HoldsAnything(s.RenderSize, s.ClipInset) ? s.ClipInset : Vector4F.Zero;
-        var box = ClipRect(s.RenderSize, inset);
+        var radii = s.ClipRadii * (float)_renderScale;
+        if (!inner || InnerBox(s.RenderSize, s.ClipInset, World(owner)) is not { } box)
+        {
+            return (ClipBox(owner, EdgeBox(s.RenderSize, World(owner)), fullScissor), radii);
+        }
 
         // Unequal sides round the inner corner as an ellipse; the rounder circle never lets what is held over the stroke.
-        var r = s.ClipRadii;
-        var radii = new Vector4F(
-            System.Math.Max(0, r.X - System.Math.Min(inset.X, inset.Y)),
-            System.Math.Max(0, r.Y - System.Math.Min(inset.Z, inset.Y)),
-            System.Math.Max(0, r.Z - System.Math.Min(inset.Z, inset.W)),
-            System.Math.Max(0, r.W - System.Math.Min(inset.X, inset.W)));
-        return (ClipBox(owner, box.TransformToAABB(World(owner)), fullScissor), radii * (float)_renderScale);
+        float left = StrokePixels(s.ClipInset.X, 1), top = StrokePixels(s.ClipInset.Y, 1);
+        float right = StrokePixels(s.ClipInset.Z, 1), bottom = StrokePixels(s.ClipInset.W, 1);
+        return (ClipBox(owner, box, fullScissor), new Vector4F(
+            System.Math.Max(0, radii.X - System.Math.Min(left, top)),
+            System.Math.Max(0, radii.Y - System.Math.Min(right, top)),
+            System.Math.Max(0, radii.Z - System.Math.Min(right, bottom)),
+            System.Math.Max(0, radii.W - System.Math.Min(left, bottom))));
     }
 
-    // A stroke as wide as its element leaves no inner box, which a shader would read as no clip at all: the edge cuts then.
-    private static bool HoldsAnything(Size<double> size, Vector4F inset) =>
-        size.Width > inset.X + inset.Z && size.Height > inset.Y + inset.W;
+    private static Rect EdgeBox(Size<double> size, Matrix4x4F world) =>
+        new Rect(0, 0, size.Width, size.Height).TransformToAABB(world);
 
-    private static Rect ClipRect(Size<double> size, Vector4F inset) =>
-        HoldsAnything(size, inset)
-            ? new Rect(inset.X, inset.Y, size.Width - inset.X - inset.Z, size.Height - inset.Y - inset.W)
-            : new Rect(0, 0, size.Width, size.Height);
+    // The box inside a stroke, taken off the edge's own pixels in whole ones, as the stroke is drawn: rounded apart, the
+    // two parted by a pixel at fractional scales. Null for a stroke that leaves nothing inside, which a shader would read
+    // as no clip at all: the edge cuts then.
+    private Rect? InnerBox(Size<double> size, Vector4F inset, Matrix4x4F world)
+    {
+        var edge = EdgeBox(size, world);
+        var across = System.Math.Sqrt(world.M11 * world.M11 + world.M12 * world.M12);
+        var down = System.Math.Sqrt(world.M21 * world.M21 + world.M22 * world.M22);
+        var left = DevicePixels.ToDevicePixel(edge.X, _renderScale) + StrokePixels(inset.X, across);
+        var top = DevicePixels.ToDevicePixel(edge.Y, _renderScale) + StrokePixels(inset.Y, down);
+        var right = DevicePixels.ToDevicePixel(edge.Right, _renderScale) - StrokePixels(inset.Z, across);
+        var bottom = DevicePixels.ToDevicePixel(edge.Bottom, _renderScale) - StrokePixels(inset.W, down);
+        return right > left && bottom > top
+            ? new Rect(left / _renderScale, top / _renderScale, (right - left) / _renderScale, (bottom - top) / _renderScale)
+            : null;
+    }
+
+    // As a stroke is rounded where it is drawn (DevicePixels.Snap): never below a pixel.
+    private int StrokePixels(double thickness, double scale) =>
+        thickness > 0 ? System.Math.Max(1, DevicePixels.ToDevicePixel(thickness * scale, _renderScale)) : 0;
 
     // A rounded clip's box in device pixels, cut to the window - but whole inside a layer drawn whole, which draws past
     // the window and would have the clip's corners come round at the window's edge.
