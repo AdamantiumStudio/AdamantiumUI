@@ -136,8 +136,7 @@ void LayerPartsAt(float2 inRegion, float2 pixel, out float4 drawn, out float4 ba
 
 // How far the reflection lies on a window row, its opacity aside: none above the floor, gathering to full by where the
 // mirrored element begins - or half its sideways offset down, moved aside it meets the glow above in another place -
-// full on to where its fade begins, nothing past its end. It takes the floor's bands away by this; its opacity fades
-// only what it shows.
+// full on to where its fade begins, nothing past its end.
 float MirrorReach(float row)
 {
     float gather = max(max(Mirror.y - Mirror.w, MirrorQuad.w), 1.0);
@@ -172,9 +171,10 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
 // and the mirror image, mixed by the reflection's strength. Laid one over the other they added up, and the glow came
 // out brighter below the floor than above it - a seam along it.
 //
-// A reflected layer's shadows, drawn apart (BandsOn 2), lie on the floor under all of it: the reflection does not
-// mirror them - they are on the floor - and where it lies they do not show through it, whatever its opacity, which
-// fades only what it shows. Past it, the shadow is there as before.
+// A reflected layer's shadows, drawn apart (BandsOn 2), lie on the floor, as a glossy floor shows them: the floor is
+// its own color, darkened by the shadow, plus the light it mirrors. The reflection does not mirror them - they are on
+// the floor - and adds its light over them; the shadow fades by how much of a mirror the floor is, the reflection's
+// opacity, alike under it and beside it, and is gone on a perfect mirror.
 //
 // A soft-edged layer's bands are all apart (BandsOn 1), its glow with its shadows: the reflection lies over them,
 // taking their place as far as it covers them - mixed, so the glow meets its own mirror image without a seam, and made
@@ -201,24 +201,22 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 
     float under = role > 0.5 && here.y >= Mirror.w && here.y < MirrorQuad.z
                   && here.x >= MirrorQuad.x && here.x < MirrorQuad.y ? 1.0 : 0.0;
-    float reach = MirrorReach(here.y);
+    // How much of the floor is mirror here: what it reflects comes as that much of its light.
+    float mirrored = Mirror.x * MirrorReach(here.y);
     // Only where the element itself leaves room: what it draws solid stays in front of the floor.
     float4 front = shadowsApart ? drawn * cover : self;
-    float4 reflected = lerp(front, mirror, Mirror.x * reach * (1.0 - front.a));
-    // Its shadows under it, seen through the reflection as much as the reflection, opaque, would let them through - its
-    // opacity fades it, not what it hides: none under the mirrored element, and under its mirrored glow as much as the
-    // glow itself lets them through above the floor, so nothing steps at the floor. From where the mirrored element
-    // begins - in a gap above it the floor has no reflection yet - to where it fades out.
-    float lies = step(Mirror.y, here.y) * saturate((Mirror.z - here.y) / max(MirrorFade.x, 1.0));
+    float4 reflected = lerp(front, mirror, mirrored * (1.0 - front.a));
+    // Its shadows darken the light the floor scatters, the rest of it: under the reflection and beside it alike, behind
+    // what the element draws; on a perfect mirror there is none to darken.
     float4 shadow = shadowsApart
-        ? bands * cover * saturate((1.0 - mirror.a * lies) / max(1.0 - reflected.a, 1e-5))
+        ? bands * cover * ((1.0 - mirrored) * (1.0 - drawn.a))
         : float4(0.0, 0.0, 0.0, 0.0);
-    float4 below = reflected + shadow * (1.0 - reflected.a);
+    float4 below = reflected + shadow;
     if (BandsOn > 0.5 && !shadowsApart)
     {
         float4 lying = bands * cover;
         float covers = mirror.a / max(max(mirror.a, lying.a), 1e-5);
-        float4 mixed = lerp(lying, mirror, Mirror.x * reach * covers);
+        float4 mixed = lerp(lying, mirror, mirrored * covers);
         float4 ground = mixed + lying * (saturate(lying.a - mixed.a) / max(lying.a, 1e-5));
         below = drawn * cover + ground * (1.0 - drawn.a);
     }

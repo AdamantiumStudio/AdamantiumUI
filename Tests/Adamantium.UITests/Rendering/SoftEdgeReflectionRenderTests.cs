@@ -679,8 +679,8 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(renderer.Cache.LayersHoldingBands, Is.Zero);
     }
 
-    // The reflection lies on the floor over the element's shadow: a shadow takes the light the floor scatters, not what
-    // it mirrors. Past the reflection the shadow is there as before.
+    // The reflection lies on the floor over the element's shadow, adding its light: a shadow takes the light the floor
+    // scatters, not what it mirrors. A perfect mirror scatters none, so no shadow shows on it beside the reflection either.
     [Test]
     public void AReflection_LiesOverTheShadow()
     {
@@ -697,51 +697,31 @@ public class SoftEdgeReflectionRenderTests
         Assert.Multiple(() =>
         {
             Assert.That(Green(px[0]), Is.GreaterThan(200), "the lime reflection, not darkened by the shadow");
-            Assert.That(Blue(px[1]), Is.LessThan(40), "the shadow below the floor beside the reflection, over the blue");
+            Assert.That(Blue(px[1]), Is.GreaterThan(200), "on a perfect mirror, no shadow beside the reflection");
         });
     }
 
-    // A translucent reflection - its opacity below one - fades only itself: the shadow under it does not show through
-    // it; the floor does.
+    // A translucent reflection is a floor that half mirrors: the other half scatters, and the shadow darkens that half -
+    // through the reflection and beside it alike, while above the floor it is whole.
     [Test]
-    public void ATranslucentReflection_DoesNotShowTheShadowThroughIt()
+    public void ATranslucentReflection_ShowsTheShadowAsMuchAsTheFloorBesideIt()
     {
         var (root, _) = Element(e =>
         {
-            e.Shadow = new Shadow { OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
+            e.Shadow = new Shadow { OffsetX = 10, OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
             e.Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0 };
         });
 
-        // Row 54, under the floor at 44: the lime row 34 mirrored at half, over the floor's blue - no black under it.
-        var px = Render(root, (24, 54));
+        // The floor at row 44: row 54 mirrors the lime row 34 over the shadow; column 50 is past the element's columns,
+        // in the shadow, below the floor and above it.
+        var px = Render(root, (24, 54), (50, 54), (50, 40));
 
         Assert.Multiple(() =>
         {
             Assert.That(Green(px[0]), Is.InRange(100, 160), "half the lime reflection");
-            Assert.That(Blue(px[0]), Is.InRange(100, 160), "half the floor's blue - no shadow darkening it");
-        });
-    }
-
-    // A translucent element's reflection is as see-through as the element: the shadow shows through it as it would
-    // through the element - no floor beside, no hole.
-    [Test]
-    public void ATranslucentElementsReflection_LetsItsShadowThroughAsTheElementWould()
-    {
-        var (root, _) = Element(e =>
-        {
-            e.RenderAction = s => s.DrawRectangle(new SolidColorBrush(new Color((byte)0, (byte)255, (byte)0, (byte)128)),
-                new Rect(0, 0, 40, 40));
-            e.Shadow = new Shadow { OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
-            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
-        });
-
-        // Row 60, under the floor at 44: half lime mirrored over the solid shadow - no floor's blue through it.
-        var px = Render(root, (24, 60));
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(Green(px[0]), Is.InRange(100, 160), "the half lime reflection");
-            Assert.That(Blue(px[0]), Is.LessThan(20), "the shadow through it, no hole to the floor");
+            Assert.That(Blue(px[0]), Is.LessThan(20), "the scattering half darkened by the shadow under it");
+            Assert.That(Blue(px[1]), Is.InRange(100, 160), "beside it, the mirrored blue - the scattering half darkened");
+            Assert.That(Blue(px[2]), Is.LessThan(20), "above the floor, the whole shadow");
         });
     }
 
@@ -762,22 +742,27 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(Green(px[0]), Is.GreaterThan(200), "the lime reflection, not darkened by the shadow");
     }
 
-    // Beside the element, its shadow goes on across the floor without a step: under the mirrored glow it shows as much
-    // as through the glow above.
+    // Down a gap under the element the floor gathers its mirror, and the shadow beside the element fades along with it:
+    // no step at the floor, nor where the mirrored element begins.
     [Test]
-    public void TheShadowBesideTheElement_GoesOnAcrossTheFloorWithoutAStep()
+    public void TheShadowBesideTheElement_FadesIntoTheFloorWithoutAStep()
     {
         var (root, _) = Element(e =>
         {
             e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 0.8 };
             e.Shadow = new Shadow { OffsetX = 10, OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
-            e.Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0, OffsetY = 10 };
         });
 
-        // Column 48, in the glow beside the element, over the shadow: one row above the floor at 44, one below.
-        var px = Render(root, (48, 43), (48, 45));
+        // Column 48, in the glow beside the element, over the shadow: a row either side of the floor at 44, and of the
+        // mirrored element's first row at 54.
+        var px = Render(root, (48, 43), (48, 45), (48, 53), (48, 55));
 
-        Assert.That(Blue(px[1]), Is.EqualTo(Blue(px[0])).Within(20), "no step at the floor");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Blue(px[1]), Is.EqualTo(Blue(px[0])).Within(20), "no step at the floor");
+            Assert.That(Blue(px[3]), Is.EqualTo(Blue(px[2])).Within(20), "no step where the reflection begins");
+        });
     }
 
     // The reflection mirrors what the element draws, not the shadow it casts: a shadow lies on the floor.
