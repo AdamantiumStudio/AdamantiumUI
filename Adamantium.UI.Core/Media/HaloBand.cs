@@ -6,14 +6,19 @@ namespace Adamantium.UI.Core.Media;
 /// <see cref="Shadow"/> bake to it. Immutable, captured at record time.</summary>
 public readonly struct HaloBand
 {
-    public HaloBand(Vector2F offset, float spread, float softness, Vector4F color, bool inner)
+    public HaloBand(Vector2F offset, float spread, float softness, Vector4F color, bool inner, bool isShadow = false)
     {
         Offset = offset;
         Spread = spread;
         Softness = softness;
         Color = color;
         Inner = inner;
+        IsShadow = isShadow;
     }
+
+    /// <summary>Whether it is a <see cref="Media.Shadow"/>'s band - the floor's, which a reflection lies over - rather than
+    /// an aura's, light the element gives.</summary>
+    public bool IsShadow { get; }
 
     /// <summary>Where the band is thrown, in logical pixels. Zero for an aura, which has no direction.</summary>
     public Vector2F Offset { get; }

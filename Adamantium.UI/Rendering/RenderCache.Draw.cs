@@ -1245,11 +1245,13 @@ public partial class RenderCache
                 }
                 // Both sides are collected HERE, before the fill - only their FLUSH positions differ, and the flush is
                 // what decides paint order. Collecting the inner one later would mean finding this unit again. The outer
-                // ones of a soft-edged layer went down under it already.
+                // ones of a soft-edged layer went down under it already; a reflected layer's shadows did, its glow not.
                 var drawnUnder = ReferenceEquals(group, _bandsDrawnUnder);
-                var under = !drawnUnder && CollectHalo(device, unit, wt, scissor, inner: false);
+                var allUnder = drawnUnder && _bandsDrawnUnderPick == HaloPick.All;
+                var under = !allUnder && CollectHalo(device, unit, wt, scissor, inner: false,
+                    pick: drawnUnder ? HaloPick.Glows : HaloPick.All);
                 var over = CollectHalo(device, unit, wt, scissor, inner: true);
-                under |= !drawnUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
+                under |= !allUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
                 over |= CollectLivingHalo(device, unit, wt, scissor, inner: true);
                 if ((under || over || drawnUnder) && _recording)
                 {
@@ -3143,6 +3145,8 @@ public partial class RenderCache
         }
         if (CountBands(bands, inner: false, opacity) != runs.UnderCount) return false;
         if (CountBands(bands, inner: true, opacity) != runs.OverCount) return false;
+        // A reflected layer's shadows, drawn apart, hold the same records again - or none.
+        if (runs.ShadowCount != 0 && runs.ShadowCount != runs.UnderCount) return false;
 
         // Same question for the living band, and asked the same way: a band the bake would drop is a band the arena does
         // not hold, whatever the property still says.
@@ -3188,7 +3192,12 @@ public partial class RenderCache
             ? u.Component.SoftEdge
             : 0;
         PatchStillHalo(device, _haloUnder, u.RenderData.Halo, inner: false, runs.UnderFirst, runs.UnderCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth,
+            runs.UnderPick);
+        // A reflected layer's shadows, drawn apart from its glow.
+        PatchStillHalo(device, _haloUnder, u.RenderData.Halo, inner: false, runs.ShadowFirst, runs.ShadowCount,
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth,
+            HaloPick.Shadows);
         PatchStillHalo(device, _haloOver, u.RenderData.Halo, inner: true, runs.OverFirst, runs.OverCount,
             shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
 
@@ -3203,13 +3212,13 @@ public partial class RenderCache
     private void PatchStillHalo(IGraphicsDevice device, HaloRectCollector batch, Core.Media.HaloBand[] bands, bool inner,
         int first, int count, Rect shape, ProceduralGeometry.CornerRadius corners, HaloShape kind,
         Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot,
-        double underWidth)
+        double underWidth, HaloPick pick = HaloPick.All)
     {
         if (batch == null || count <= 0 || bands == null) return;
 
         var room = System.Math.Min(count, _haloPatchStage.Length);
         var written = HaloRectCollector.BakeInto(_haloPatchStage.AsSpan(0, room), bands, inner, shape, corners, kind,
-            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth);
+            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth, pick);
 
         // Fewer bands than the walk recorded means one went dark; the splice owns that, and rewriting a PREFIX here
         // would leave the rest painting the old color. Left to the refusal above.

@@ -905,15 +905,18 @@ internal sealed class OffscreenLayers : IDisposable
         LeaveSpace(gd);
         var softTexture = soft > 0f ? entry.SoftRing?[open.Slot] : null;
         var bands = entry.BandsFrame == _frame && entry.BandsLatest >= 0 ? entry.BandsRing[entry.BandsLatest] : null;
+        // Without a soft edge, bands drawn apart are a reflected layer's shadows alone.
+        var shadowsOnly = soft <= 0f;
         if (alpha > 0f)
         {
             if (mirror.Shows)
             {
-                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, bands, mirror, 2f, clipBox, clipRadii);
+                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, bands, shadowsOnly, mirror, 2f, clipBox,
+                    clipRadii);
             }
 
-            Composite(gd, open, alpha, scissor, mask, softTexture, bands, mirror, mirror.Shows ? 1f : 0f, clipBox,
-                clipRadii);
+            Composite(gd, open, alpha, scissor, mask, softTexture, bands, shadowsOnly, mirror,
+                mirror.Shows ? 1f : 0f, clipBox, clipRadii);
         }
     }
 
@@ -1024,7 +1027,8 @@ internal sealed class OffscreenLayers : IDisposable
             ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, name);
 
     private void Composite(IGraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
-        IRenderTarget soft, IRenderTarget bands, in LayerMirror mirror, float role, Vector4F clipBox, Vector4F clipRadii)
+        IRenderTarget soft, IRenderTarget bands, bool shadowsOnly, in LayerMirror mirror, float role, Vector4F clipBox,
+        Vector4F clipRadii)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -1064,7 +1068,8 @@ internal sealed class OffscreenLayers : IDisposable
         _composite.ClipRadii.SetValue(clipRadii);
         _composite.SoftOn.SetValue(soft != null ? 1f : 0f);
         _composite.SoftTexture.SetResource(soft ?? open.Color);
-        _composite.BandsOn.SetValue(bands != null ? 1f : 0f);
+        // 0 none apart, 1 all its bands (a soft edge), 2 a reflected layer's shadows alone.
+        _composite.BandsOn.SetValue(bands == null ? 0f : shadowsOnly ? 2f : 1f);
         _composite.BandsTexture.SetResource(bands ?? open.Color);
         _composite.LayerTexels.SetValue(new Vector4F(
             region.Extent.Width / (float)open.TextureWidth, region.Extent.Height / (float)open.TextureHeight, 0, 0));

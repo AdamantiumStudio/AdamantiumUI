@@ -25,8 +25,10 @@ public partial class RenderCache
     private OffscreenLayers _offscreenLayers;
     private long _framePaintEpoch;
 
-    // The group whose own outer bands this walk drew apart from its layer, so its units do not draw them in it again.
+    // The group whose own outer bands this walk drew apart from its layer, so its units do not draw them in it again -
+    // all of them for a soft-edged layer, its shadows alone for one only reflected.
     private ControlGroup _bandsDrawnUnder;
+    private HaloPick _bandsDrawnUnderPick;
 
     // A soft-edged layer's sides its ancestors cut short, from the scan that opened it to the close that blurs it.
     private readonly Dictionary<IUIComponent, Vector4F> _softCut = new();
@@ -49,13 +51,17 @@ public partial class RenderCache
                 : 0f);
     }
 
-    // A soft-edged layer keeps its own outer bands apart from what it draws: they are laid down under it, with it. So
-    // does a reflected one that has any: its reflection lies on the floor over its shadow, under what it draws.
+    // A soft-edged layer keeps its own outer bands apart from what it draws: they are laid down under it, with it. A
+    // reflected one keeps its shadows apart: the reflection lies on the floor over them - not mirroring them, a shadow is
+    // on the floor - and under what it draws, its glow among it.
     private bool DrawsOwnBandsUnder(IUIComponent layer) =>
-        SoftOf(layer) > 0f || layer.Reflection is { Shows: true } && HasOwnBands(layer);
+        SoftOf(layer) > 0f || layer.Reflection is { Shows: true } && HasOwnShadow(layer);
 
-    // Whether the layer's own element wears a glow or a shadow.
-    private bool HasOwnBands(IUIComponent layer)
+    // Which of its own bands the layer draws apart.
+    private HaloPick OwnBandsPicked(IUIComponent layer) => SoftOf(layer) > 0f ? HaloPick.All : HaloPick.Shadows;
+
+    // Whether the layer's own element casts a shadow outside its outline.
+    private bool HasOwnShadow(IUIComponent layer)
     {
         if (!_groupById.TryGetValue(layer.RenderId, out var group))
         {
@@ -64,9 +70,12 @@ public partial class RenderCache
 
         foreach (var unit in group.Units)
         {
-            if (HaloRectCollector.WantsBatch(unit.RenderData) || HaloLivingCollector.WantsBatch(unit.RenderData))
+            foreach (var band in unit.RenderData?.Halo ?? [])
             {
-                return true;
+                if (band.IsShadow && !band.Inner && !band.IsEmpty)
+                {
+                    return true;
+                }
             }
         }
 
@@ -120,9 +129,11 @@ public partial class RenderCache
         }
 
         fullScissor = OpenBands(device, group.Component, fullScissor, start, end);
+        var pick = OwnBandsPicked(group.Component);
         foreach (var unit in group.Units)
         {
-            if (!HaloRectCollector.WantsBatch(unit.RenderData) && !HaloLivingCollector.WantsBatch(unit.RenderData))
+            if (!HaloRectCollector.WantsBatch(unit.RenderData) &&
+                (pick == HaloPick.Shadows || !HaloLivingCollector.WantsBatch(unit.RenderData)))
             {
                 continue;
             }
@@ -141,8 +152,13 @@ public partial class RenderCache
             unit.RenderData.RoundedClipBox = clipBox;
             unit.RenderData.RoundedClipRadii = clipRadii;
             unit.Update(wt, _projectionMatrix, _renderScale);
-            CollectHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge);
-            CollectLivingHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge);
+            CollectHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge, pick);
+
+            // A living band is glow, never a shadow: a reflected layer draws it with what it draws.
+            if (pick == HaloPick.All)
+            {
+                CollectLivingHalo(device, unit, wt, scissor, inner: false, underWidth: group.Component.SoftEdge);
+            }
         }
 
         FlushBatches(device, fullScissor, ref scissorNarrowed);
@@ -153,6 +169,7 @@ public partial class RenderCache
         }
 
         _bandsDrawnUnder = group;
+        _bandsDrawnUnderPick = pick;
     }
 
     // The pairs below open and close a layer, and its bands, in the space it draws in. Whether it is drawn whole is asked
@@ -494,9 +511,11 @@ public partial class RenderCache
 
         reusable = Core.Media.Brush.PaintEpoch == _framePaintEpoch && !MovedByTheCompositor(layer);
         var hasText = false;
-        // A soft-edged layer's own bands are drawn under it, not in it.
+        // A soft-edged layer's own bands are drawn under it, not in it; a reflected one's shadows. Which of them it holds
+        // is part of what it drew.
         var soft = SoftOf(layer) > 0f;
         var ownBands = DrawsOwnBandsUnder(layer);
+        Mix(ref print, ownBands ? (int)OwnBandsPicked(layer) + 1 : 0);
         var drawnLeft = double.MaxValue;
         var drawnTop = double.MaxValue;
         var drawnRight = double.MinValue;

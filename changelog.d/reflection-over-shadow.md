@@ -1,7 +1,8 @@
 ### Fixed
 
-- An element's reflection lay under its shadow, darkened by it where the shadow fell across the floor. The reflection
-  now lies over the shadow - a shadow takes the light the floor scatters, not what it mirrors - and under what the
-  element itself draws below its edge; past the reflection, the shadow is as before. A reflected layer that wears a
-  glow or a shadow keeps them apart from what it draws, as a soft-edged one already did. The shadows of elements inside
-  it are still drawn with them, in front of the reflection.
+- An element's reflection lay under its shadow, darkened by it where the shadow fell across the floor. A reflected
+  element's shadow is now drawn apart from it and lies on the floor under the reflection: the reflection does not
+  mirror it - it is on the floor - and does not let it show through, whatever its opacity, which fades only the
+  reflection; past the reflection, the shadow is as before. The glow stays with the element and is mirrored with it.
+  A soft-edged reflected element keeps all its bands apart, as before, and lays its reflection over them. The shadows
+  of elements inside a reflected one are still drawn with them, in front of the reflection.

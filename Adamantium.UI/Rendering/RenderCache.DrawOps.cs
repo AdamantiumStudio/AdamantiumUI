@@ -278,7 +278,7 @@ public partial class RenderCache
     // or a full ellipse has a signed distance to read, and arbitrary geometry is a separate story (a distance field baked
     // per mesh key). A shape that has none simply wears no band rather than getting a wrong one.
     private bool CollectHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner,
-        double underWidth = 0)
+        double underWidth = 0, HaloPick pick = HaloPick.All)
     {
         var bands = unit.RenderData.Halo;
         if (!HaloRectCollector.HasSide(bands, inner)) return false;
@@ -312,13 +312,13 @@ public partial class RenderCache
         FadeBySlot(unit);   // the chain comes from the slot now - the color carries the element's own alpha only
         if (!batch.TryAdd(bands, inner, shape, corners, kind, bakeWorld,
                 unit.RenderData.Opacity, scissor, haloBounds, slot, field, fieldRange,
-                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot, underWidth))
+                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot, underWidth, pick))
         {
             return false;
         }
 
         // Note where they landed, so a repaint can re-bake them in place instead of waiting for the next walk.
-        if (_recording) NoteHaloRun(unit, inner, batch.LastFirst, batch.LastCount, living: false);
+        if (_recording) NoteHaloRun(unit, inner, batch.LastFirst, batch.LastCount, living: false, pick);
 
         if (inner) _haloOverOwner = unit.Component;
         _batchScissor = scissor;
@@ -329,7 +329,8 @@ public partial class RenderCache
 
     // Remember which halo records this unit took. Four ranges per unit at most - a still band and a living one, each on
     // either side of the fill - and a unit that wears none is never in the map at all.
-    private void NoteHaloRun(IRenderUnit unit, bool inner, int first, int count, bool living)
+    private void NoteHaloRun(IRenderUnit unit, bool inner, int first, int count, bool living,
+        HaloPick pick = HaloPick.All)
     {
         if (!_haloRunsByUnit.TryGetValue(unit, out var runs))
             runs = new HaloRuns { LivingUnder = -1, LivingOver = -1 };
@@ -342,9 +343,13 @@ public partial class RenderCache
         {
             runs.OverFirst = first; runs.OverCount = count;
         }
+        else if (pick == HaloPick.Shadows)
+        {
+            runs.ShadowFirst = first; runs.ShadowCount = count;
+        }
         else
         {
-            runs.UnderFirst = first; runs.UnderCount = count;
+            runs.UnderFirst = first; runs.UnderCount = count; runs.UnderPick = pick;
         }
 
         _haloRunsByUnit[unit] = runs;

@@ -650,14 +650,15 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(renderer.Cache.LayersRedrawn + renderer.Cache.LayersReused, Is.Zero);
     }
 
-    // Its bands are kept apart while the layer is soft-edged or reflected - the reflection lies over its shadow - and
-    // given up when it is neither, the layer staying.
+    // Its bands are kept apart while the layer is soft-edged or reflected with a shadow - the reflection lies over it -
+    // and given up when it is neither, the layer staying.
     [Test]
     public void ASoftEdgeAndAReflectionTakenAway_GiveUpTheBandsTexturesOfALayerThatStays()
     {
         var (root, element) = Element(e =>
         {
             e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 };
+            e.Shadow = new Shadow { OffsetY = 6, BlurRadius = 4, Color = Colors.Black, Opacity = 1 };
             e.Reflection = new Reflection { Size = 1, Opacity = 1 };
             e.SoftEdge = 6;
             e.IsLayer = true;
@@ -700,9 +701,31 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
-    // A translucent element's reflection is light laid over its solid shadow: it leaves no thinner patch in it.
+    // A translucent reflection - its opacity below one - fades only itself: the shadow under it does not show through
+    // it; the floor does.
     [Test]
-    public void ATranslucentReflection_LeavesNoHoleInTheShadow()
+    public void ATranslucentReflection_DoesNotShowTheShadowThroughIt()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Shadow = new Shadow { OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0 };
+        });
+
+        // Row 54, under the floor at 44: the lime row 34 mirrored at half, over the floor's blue - no black under it.
+        var px = Render(root, (24, 54));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Green(px[0]), Is.InRange(100, 160), "half the lime reflection");
+            Assert.That(Blue(px[0]), Is.InRange(100, 160), "half the floor's blue - no shadow darkening it");
+        });
+    }
+
+    // A translucent element's reflection is a reflection all the same: the shadow under it does not show through it;
+    // the floor does.
+    [Test]
+    public void ATranslucentElementsReflection_ShowsTheFloorNotTheShadow()
     {
         var (root, _) = Element(e =>
         {
@@ -712,13 +735,51 @@ public class SoftEdgeReflectionRenderTests
             e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
         });
 
-        // Row 60, under the floor at 44: the solid shadow, and over it the half lime of the mirrored element.
+        // Row 60, under the floor at 44: half lime mirrored over the floor's blue - no black under it.
         var px = Render(root, (24, 60));
 
         Assert.Multiple(() =>
         {
-            Assert.That(Blue(px[0]), Is.LessThan(20), "no blue through the shadow");
-            Assert.That(Green(px[0]), Is.GreaterThan(40), "the reflection over it");
+            Assert.That(Green(px[0]), Is.InRange(100, 160), "the half lime reflection");
+            Assert.That(Blue(px[0]), Is.InRange(100, 160), "the floor through it, not the shadow");
+        });
+    }
+
+    // Soft-edged too, the element's reflection lies over its shadow.
+    [Test]
+    public void ASoftEdgedElementsReflection_LiesOverItsShadow()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Shadow = new Shadow { OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
+            e.SoftEdge = 2;
+        });
+
+        // Row 54 mirrors the lime row 34, deep inside the soft edge.
+        var px = Render(root, (24, 54));
+
+        Assert.That(Green(px[0]), Is.GreaterThan(200), "the lime reflection, not darkened by the shadow");
+    }
+
+    // The reflection mirrors what the element draws, not the shadow it casts: a shadow lies on the floor.
+    [Test]
+    public void AReflection_DoesNotMirrorTheShadow()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Shadow = new Shadow { OffsetX = 20, OffsetY = -10, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
+        });
+
+        // The shadow lies over rows -6 to 34, columns 24 to 64, and shows right of the element; all of it above the
+        // floor at 44. Mirrored, its row 28 would lie at row 60: there is only the floor's blue.
+        var px = Render(root, (54, 28), (54, 60));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Blue(px[0]), Is.LessThan(40), "the shadow beside the element");
+            Assert.That(Blue(px[1]), Is.GreaterThan(200), "no mirrored shadow below the floor");
         });
     }
 
