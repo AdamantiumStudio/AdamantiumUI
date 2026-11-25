@@ -173,8 +173,8 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
 //
 // A reflected layer's shadows, drawn apart (BandsOn 2), lie on the floor, as a glossy floor shows them: the floor is
 // its own color, darkened by the shadow, plus the light it mirrors. The reflection does not mirror them - they are on
-// the floor - and adds its light over them; the shadow fades by how much of a mirror the floor is, the reflection's
-// opacity, alike under it and beside it, and is gone on a perfect mirror.
+// the floor - and adds its light over them: where it shows the element, the shadow fades by its opacity, gone under a
+// perfect mirror; beside the image the floor mirrors what is around it - the floor - and the shadow is as before.
 //
 // A soft-edged layer's bands are all apart (BandsOn 1), its glow with its shadows: the reflection lies over them,
 // taking their place as far as it covers them - mixed, so the glow meets its own mirror image without a seam, and made
@@ -206,10 +206,11 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
     // Only where the element itself leaves room: what it draws solid stays in front of the floor.
     float4 front = shadowsApart ? drawn * cover : self;
     float4 reflected = lerp(front, mirror, mirrored * (1.0 - front.a));
-    // Its shadows darken the light the floor scatters, the rest of it: under the reflection and beside it alike, behind
-    // what the element draws; on a perfect mirror there is none to darken.
+    // Its shadows darken the floor under the light the reflection adds: through it as much as the mirror image lets
+    // the floor show - none under a whole image on a perfect mirror - and as before where it shows nothing, behind what
+    // the element draws. So the shadow changes along the image's own outline, not along the edges of the floor.
     float4 shadow = shadowsApart
-        ? bands * cover * ((1.0 - mirrored) * (1.0 - drawn.a))
+        ? bands * cover * ((1.0 - mirrored * mirror.a) * (1.0 - drawn.a))
         : float4(0.0, 0.0, 0.0, 0.0);
     float4 below = reflected + shadow;
     if (BandsOn > 0.5 && !shadowsApart)
