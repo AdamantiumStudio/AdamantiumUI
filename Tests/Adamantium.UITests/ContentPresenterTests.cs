@@ -322,7 +322,8 @@ public class ContentPresenterTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(built, Is.EqualTo(2), "each presenter builds its own visual from the template");
+            Assert.That(built, Is.EqualTo(3),
+                "each presenter builds its own visual from the template, and the emptied one the template alone");
             Assert.That(second.VisualChildren, Is.Not.Empty, "and the surviving one still shows its own");
         });
     }

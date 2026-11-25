@@ -660,9 +660,11 @@ public class PropertyRow : Control
         if (_valueHost == null) return;
 
         // A composite row has no value of its own; a read-only one shows text. Everything else gets its editor, and
-        // keeps it - the editor is the row, not a state of it.
+        // keeps it - the editor is the row, not a state of it. An editor with no empty state shows nothing for objects
+        // that disagree; an unset value still gets an editor.
         Definition.Meet(ValueType);
-        var template = HasChildren
+        var shown = !HasChildren && (Definition.EditorCanShowNothing || !IsMixed);
+        var template = !shown
             ? null
             : IsReadOnly ? Definition.ValueFor() : Definition.EditorFor() ?? Definition.ValueFor();
         var rebuilt = !ReferenceEquals(_valueHost.ContentTemplate, template);
@@ -670,14 +672,7 @@ public class PropertyRow : Control
         if (rebuilt) UnhookEditor();
 
         _valueHost.ContentTemplate = template;
-
-        // Null content builds no editor, so give empty content to keep one for disagreeing objects, unless the editor has
-        // no empty state. An unset value still gets an editor.
-        var nothing = template != null && (Definition.EditorCanShowNothing || !IsMixed);
-
-        _valueHost.Content = HasChildren
-            ? (Definition as CompositeProperty)?.Summary
-            : Value ?? (nothing ? string.Empty : null);
+        _valueHost.Content = HasChildren ? (Definition as CompositeProperty)?.Summary : Value;
 
         if (rebuilt || _editor == null) _pendingEditor = template != null && !IsReadOnly;
         else Fill();

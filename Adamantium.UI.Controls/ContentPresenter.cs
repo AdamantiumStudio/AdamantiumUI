@@ -226,8 +226,11 @@ public class ContentPresenter : InputUIComponent
         _builtFor = null;
         _label = null;
 
+        // No content, a template given: the template alone, an icon that needs no data.
         if (newContent != null)
             BuildCurrent(newContent);
+        else if (ContentTemplate != null)
+            BuildFromTemplate(null, ContentTemplate);
 
         // The slide distance is the laid-out size, so it starts at the next arrange.
         _transitionPending = animate && (_currentRoot != null || _outgoingRoot != null);
