@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,6 +97,44 @@ public class WindowsWordPredictorTests
 
         Assert.That(words, Does.Contain("morning"));
     }
+
+    // Windows' input service fails an ask now and then: it is asked once more.
+    [Test]
+    public async Task AFailedAsk_IsAskedOnceMore()
+    {
+        var asked = 0;
+
+        var words = await WindowsWordPredictor.AskAsync(
+            () => ++asked == 1 ? Failed() : Task.FromResult<IReadOnlyList<string>>(["hello"]), CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(words, Is.EqualTo(new[] { "hello" }));
+            Assert.That(asked, Is.EqualTo(2));
+        });
+    }
+
+    [TestCase(false, 2)]
+    [TestCase(true, 1)]
+    public async Task AnAskFailingAlways_HasNoWords_AndIsNotAskedAgainOnceCanceled(bool canceled, int times)
+    {
+        var asked = 0;
+
+        var words = await WindowsWordPredictor.AskAsync(() =>
+        {
+            asked++;
+            return Failed();
+        }, new CancellationToken(canceled));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(words, Is.Empty);
+            Assert.That(asked, Is.EqualTo(times));
+        });
+    }
+
+    private static Task<IReadOnlyList<string>> Failed() =>
+        Task.FromException<IReadOnlyList<string>>(new COMException("failed", unchecked((int)0x87B20803)));
 
     [Test]
     public async Task ManyAsksAtOnce_AllEnd()
