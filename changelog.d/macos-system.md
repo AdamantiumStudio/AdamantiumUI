@@ -19,4 +19,5 @@ A hidden run (`ADAM_HIDDEN_WINDOWS=1`) keeps from what is the user's: their clip
 
 ### Fixed
 
+- Curve fills: no covered pixels outside a corner whose edge runs through pixel centres.
 - Sandbox: the multitouch page's ten columns fit the page beside the tabs on the left.
