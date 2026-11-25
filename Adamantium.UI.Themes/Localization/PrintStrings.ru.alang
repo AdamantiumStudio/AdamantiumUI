@@ -34,6 +34,7 @@
     <Phrase Key="Quality" Text="Качество"/>
     <Phrase Key="Tray" Text="Лоток"/>
     <Phrase Key="MediaType" Text="Тип бумаги"/>
+    <Phrase Key="PrinterSettings" Text="Настройки принтера…"/>
     <Phrase Key="SheetOfCount" Text="Лист {sheet} из {count}"/>
     <Phrase Key="PreviousSheet" Text="Предыдущий лист"/>
     <Phrase Key="NextSheet" Text="Следующий лист"/>

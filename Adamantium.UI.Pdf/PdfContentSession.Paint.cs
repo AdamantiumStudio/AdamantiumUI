@@ -5,6 +5,7 @@ using Adamantium.Pdf.Graphics;
 using Adamantium.Pdf.Objects;
 using Adamantium.Pdf.Writing;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics.Vector;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Curves;
 
@@ -14,13 +15,6 @@ namespace Adamantium.UI.Pdf;
 // the renderer lays it - its points a fraction of them - and its stops' alpha a soft mask of the same shape.
 public sealed partial class PdfContentSession
 {
-    /// <summary>How many stops a gradient is drawn through when its colors run in OKLab: each span between two stops is
-    /// cut into this many, the color of each cut worked out in OKLab, and PDF runs straight between them.</summary>
-    private const int OklabSteps = 16;
-
-    /// <summary>How many repeats of a repeated or reflected gradient are written at most.</summary>
-    private const int MaxRepeats = 64;
-
     /// <param name="gradientBox">The box a gradient is laid over, in the geometry's units; null for the geometry's own
     /// bounds.</param>
     private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform, Rect? gradientBox = null)
@@ -372,7 +366,7 @@ public sealed partial class PdfContentSession
             return null;
         }
 
-        var stops = Stops(brush, _tint);
+        var stops = GradientRamp.Of(brush, _tint);
         if (stops.Count == 0)
         {
             return null;
@@ -392,28 +386,16 @@ public sealed partial class PdfContentSession
                     return null;
                 }
 
-                var first = 0;
-                var last = 1;
-                if (brush.SpreadMethod != GradientSpreadMethod.Pad)
-                {
-                    var low = double.PositiveInfinity;
-                    var high = double.NegativeInfinity;
-                    foreach (var corner in Corners)
-                    {
-                        var along = ((corner.X - start.X) * axis.X + (corner.Y - start.Y) * axis.Y) / squared;
-                        low = Math.Min(low, along);
-                        high = Math.Max(high, along);
-                    }
+                var (first, last) = brush.SpreadMethod != GradientSpreadMethod.Pad
+                    ? GradientRamp.LinearRepeats(start, end)
+                    : (0, 1);
 
-                    (first, last) = Repeats(low, high);
-                }
-
-                var periods = Repeated(stops, brush.SpreadMethod, first, last);
+                var periods = GradientRamp.Repeated(stops, brush.SpreadMethod, first, last);
                 var from = start + axis * first;
                 var to = start + axis * last;
                 return new Shading(
                     PdfShadings.Axial(from.X, from.Y, to.X, to.Y, Colors(periods)),
-                    Opaque(periods) ? null : PdfShadings.Axial(from.X, from.Y, to.X, to.Y, Alphas(periods), true),
+                    GradientRamp.IsOpaque(periods) ? null : PdfShadings.Axial(from.X, from.Y, to.X, to.Y, Alphas(periods), true),
                     toShape);
             }
             case RadialGradientBrush radial:
@@ -429,24 +411,18 @@ public sealed partial class PdfContentSession
                 var center = new Vector2<double>(radial.Center.X, radial.Center.Y * squash);
                 var startRadius = Math.Max(0, radial.GradientOriginRadius) * radial.RadiusX;
                 var endRadius = radial.RadiusX;
-                var last = 1;
-                if (brush.SpreadMethod != GradientSpreadMethod.Pad)
-                {
-                    last = 1;
-                    while (last < MaxRepeats && !Covers(origin, center, startRadius, endRadius, last, squash))
-                    {
-                        last++;
-                    }
-                }
+                var last = brush.SpreadMethod != GradientSpreadMethod.Pad
+                    ? GradientRamp.RadialRepeats(origin, center, startRadius, endRadius, squash)
+                    : 1;
 
-                var periods = Repeated(stops, brush.SpreadMethod, 0, last);
+                var periods = GradientRamp.Repeated(stops, brush.SpreadMethod, 0, last);
                 var farCenter = origin + (center - origin) * last;
                 var farRadius = startRadius + (endRadius - startRadius) * last;
                 toShape = new PdfMatrix(bounds.Width, 0, 0, bounds.Height / squash, bounds.X, bounds.Y);
                 return new Shading(
                     PdfShadings.Radial(origin.X, origin.Y, startRadius, farCenter.X, farCenter.Y, farRadius,
                         Colors(periods)),
-                    Opaque(periods)
+                    GradientRamp.IsOpaque(periods)
                         ? null
                         : PdfShadings.Radial(origin.X, origin.Y, startRadius, farCenter.X, farCenter.Y, farRadius,
                             Alphas(periods), true),
@@ -457,125 +433,7 @@ public sealed partial class PdfContentSession
         }
     }
 
-    private static readonly Vector2<double>[] Corners = [new(0, 0), new(1, 0), new(0, 1), new(1, 1)];
-
-    private static (int First, int Last) Repeats(double low, double high)
-    {
-        var first = (int)Math.Floor(Math.Max(low, -MaxRepeats));
-        var last = (int)Math.Ceiling(Math.Min(high, MaxRepeats));
-        if (last <= first)
-        {
-            last = first + 1;
-        }
-
-        if (last - first > MaxRepeats)
-        {
-            var middle = (first + last) / 2;
-            first = middle - MaxRepeats / 2;
-            last = first + MaxRepeats;
-        }
-
-        return (first, last);
-    }
-
-    /// <summary>Whether the circle <paramref name="times"/> repeats out reaches every corner of the bounds.</summary>
-    private static bool Covers(Vector2<double> origin, Vector2<double> center, double startRadius, double endRadius,
-        int times, double squash)
-    {
-        var at = origin + (center - origin) * times;
-        var radius = startRadius + (endRadius - startRadius) * times;
-        foreach (var corner in Corners)
-        {
-            var offset = new Vector2<double>(corner.X, corner.Y * squash) - at;
-            if (Math.Sqrt(offset.X * offset.X + offset.Y * offset.Y) > radius)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /// <summary>The stops the renderer draws - the first <see cref="GradientBrush.MaxRenderedStops"/> by offset - as
-    /// colors 0..1, cut finer where they run in OKLab.</summary>
-    private static List<Stop> Stops(GradientBrush brush, Color tint)
-    {
-        var sorted = new List<GradientStop>(brush.GradientStops);
-        sorted.Sort((one, other) => one.Offset.CompareTo(other.Offset));
-        if (sorted.Count > GradientBrush.MaxRenderedStops)
-        {
-            sorted.RemoveRange(GradientBrush.MaxRenderedStops, sorted.Count - GradientBrush.MaxRenderedStops);
-        }
-
-        var stops = new List<Stop>(sorted.Count);
-        foreach (var stop in sorted)
-        {
-            stops.Add(new Stop(Math.Clamp(stop.Offset, 0, 1), stop.Color.R / 255.0 * tint.R / 255.0,
-                stop.Color.G / 255.0 * tint.G / 255.0, stop.Color.B / 255.0 * tint.B / 255.0, stop.Color.A / 255.0));
-        }
-
-        if (brush.ColorInterpolationMode != ColorInterpolationMode.Oklab || stops.Count < 2)
-        {
-            return stops;
-        }
-
-        var fine = new List<Stop>(stops.Count * OklabSteps);
-        for (var index = 0; index + 1 < stops.Count; index++)
-        {
-            for (var step = 0; step < OklabSteps; step++)
-            {
-                fine.Add(Oklab.Between(stops[index], stops[index + 1], step / (double)OklabSteps));
-            }
-        }
-
-        fine.Add(stops[^1]);
-        return fine;
-    }
-
-    /// <summary>The stops laid out over the repeats from <paramref name="first"/> to <paramref name="last"/>, each
-    /// reflected repeat backwards, as offsets 0..1 of the whole. Each repeat holds its end colors to its own ends, so
-    /// one meets the next at a hard edge, as on screen.</summary>
-    private static List<Stop> Repeated(List<Stop> stops, GradientSpreadMethod spread, int first, int last)
-    {
-        if (spread == GradientSpreadMethod.Pad || last - first <= 1 && first == 0)
-        {
-            return stops;
-        }
-
-        if (stops[0].Offset > 0 || stops[^1].Offset < 1)
-        {
-            var whole = new List<Stop>(stops.Count + 2);
-            if (stops[0].Offset > 0)
-            {
-                whole.Add(stops[0] with { Offset = 0 });
-            }
-
-            whole.AddRange(stops);
-            if (stops[^1].Offset < 1)
-            {
-                whole.Add(stops[^1] with { Offset = 1 });
-            }
-
-            stops = whole;
-        }
-
-        var span = (double)(last - first);
-        var all = new List<Stop>(stops.Count * (last - first));
-        for (var repeat = first; repeat < last; repeat++)
-        {
-            var backwards = spread == GradientSpreadMethod.Reflect && (repeat & 1) != 0;
-            for (var index = 0; index < stops.Count; index++)
-            {
-                var stop = stops[backwards ? stops.Count - 1 - index : index];
-                var offset = backwards ? 1 - stop.Offset : stop.Offset;
-                all.Add(stop with { Offset = (repeat - first + offset) / span });
-            }
-        }
-
-        return all;
-    }
-
-    private static List<PdfGradientStop> Colors(List<Stop> stops)
+    private static List<PdfGradientStop> Colors(List<RampStop> stops)
     {
         var colors = new List<PdfGradientStop>(stops.Count);
         foreach (var stop in stops)
@@ -586,7 +444,7 @@ public sealed partial class PdfContentSession
         return colors;
     }
 
-    private static List<PdfGradientStop> Alphas(List<Stop> stops)
+    private static List<PdfGradientStop> Alphas(List<RampStop> stops)
     {
         var alphas = new List<PdfGradientStop>(stops.Count);
         foreach (var stop in stops)
@@ -597,75 +455,7 @@ public sealed partial class PdfContentSession
         return alphas;
     }
 
-    private static bool Opaque(List<Stop> stops)
-    {
-        foreach (var stop in stops)
-        {
-            if (stop.Alpha < 1)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /// <summary>A gradient's color, 0..1, straight alpha.</summary>
-    private readonly record struct Stop(double Offset, double Red, double Green, double Blue, double Alpha);
-
     /// <summary>A gradient as PDF draws it: its color shading, its alpha's (null when opaque), and the matrix from
     /// their space to the shape's units.</summary>
     private sealed record Shading(PdfDictionary Color, PdfDictionary Alpha, PdfMatrix ToShape);
-
-    /// <summary>Colors mixed in OKLab (Björn Ottosson, 2020), as the renderer mixes them when asked: sRGB to linear to
-    /// LMS to OKLab, mixed, and back.</summary>
-    private static class Oklab
-    {
-        public static Stop Between(Stop from, Stop to, double share)
-        {
-            var one = ToLab(from);
-            var two = ToLab(to);
-            var mixed = new Vector3<double>(
-                one.X + (two.X - one.X) * share,
-                one.Y + (two.Y - one.Y) * share,
-                one.Z + (two.Z - one.Z) * share);
-            var color = ToRgb(mixed);
-            return new Stop(from.Offset + (to.Offset - from.Offset) * share, color.X, color.Y, color.Z,
-                from.Alpha + (to.Alpha - from.Alpha) * share);
-        }
-
-        private static Vector3<double> ToLab(Stop stop)
-        {
-            var red = Linear(stop.Red);
-            var green = Linear(stop.Green);
-            var blue = Linear(stop.Blue);
-            var longCone = Math.Cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue);
-            var middleCone = Math.Cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue);
-            var shortCone = Math.Cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue);
-            return new Vector3<double>(
-                0.2104542553 * longCone + 0.7936177850 * middleCone - 0.0040720468 * shortCone,
-                1.9779984951 * longCone - 2.4285922050 * middleCone + 0.4505937099 * shortCone,
-                0.0259040371 * longCone + 0.7827717662 * middleCone - 0.8086757660 * shortCone);
-        }
-
-        private static Vector3<double> ToRgb(Vector3<double> lab)
-        {
-            var longCone = Math.Pow(lab.X + 0.3963377774 * lab.Y + 0.2158037573 * lab.Z, 3);
-            var middleCone = Math.Pow(lab.X - 0.1055613458 * lab.Y - 0.0638541728 * lab.Z, 3);
-            var shortCone = Math.Pow(lab.X - 0.0894841775 * lab.Y - 1.2914855480 * lab.Z, 3);
-            return new Vector3<double>(
-                Encoded(4.0767416621 * longCone - 3.3077115913 * middleCone + 0.2309699292 * shortCone),
-                Encoded(-1.2684380046 * longCone + 2.6097574011 * middleCone - 0.3413193965 * shortCone),
-                Encoded(-0.0041960863 * longCone - 0.7034186147 * middleCone + 1.7076147010 * shortCone));
-        }
-
-        private static double Linear(double value) =>
-            value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
-
-        private static double Encoded(double value)
-        {
-            value = Math.Clamp(value, 0, 1);
-            return value <= 0.0031308 ? value * 12.92 : 1.055 * Math.Pow(value, 1 / 2.4) - 0.055;
-        }
-    }
 }

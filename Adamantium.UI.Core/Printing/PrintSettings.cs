@@ -42,6 +42,11 @@ public sealed record PrintSettings
 
     public string MediaType { get; init; }
 
+    /// <summary>What the printer driver's own window was left with - its settings beyond the dialog's, as the system
+    /// keeps them; null for the driver's defaults. Belongs to <see cref="Printer"/>: another printer starts without.
+    /// </summary>
+    public object DriverSettings { get; init; }
+
     /// <summary>These settings with each of the printer's choices one <paramref name="capabilities"/> offers - a
     /// choice it does not offer goes back to its default - and the platform's own kept in their bounds.</summary>
     public PrintSettings FitTo(PrinterCapabilities capabilities)
