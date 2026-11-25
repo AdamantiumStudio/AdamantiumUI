@@ -124,12 +124,14 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         shell: bash
         run: |
-          if [ "$RUNNER_OS" = macOS ]; then
-            sysctl hw.memsize hw.ncpu hw.physicalcpu machdep.cpu.brand_string kern.hv_vmm_present
-            (set +eo pipefail; while sleep 15; do echo "SAMPLE $(date +%T) $(sysctl -n vm.swapusage) load $(sysctl -n vm.loadavg) $(memory_pressure -Q | tail -1) $(vm_stat | awk '/Pageouts|Swapouts|occupied by compressor|stored in compressor/{printf "%s ", $NF}')"; ps -Ao rss,pcpu,time,command -r | head -10 | cut -c1-110; done) &
-          fi
+          # The compilers the build left running hold a gigabyte the tests need.
+          dotnet build-server shutdown
+          # The macOS machine has 3 cores and 7 GB: everything at once swapped there, and took up to ten times as long.
+          atOnce=8
+          if [ "$RUNNER_OS" = macOS ]; then atOnce=3; fi
           pids=(); logs=()
           run() {
+            while [ "$(jobs -rp | wc -l)" -ge "$atOnce" ]; do sleep 1; done
             local log="$RUNNER_TEMP/$1.log"; shift
             # A test that hangs is stopped after 10 minutes; the blame sequence, uploaded below, says which it was.
             dotnet test "$@" -c Release --no-build --blame-hang-timeout 10m --blame-hang-dump-type none > "$log" 2>&1 &
