@@ -805,6 +805,68 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
+    // Moved sideways, the reflection leaves the element's own glow below the floor as it was: it shows nothing there to
+    // take its place.
+    [TestCase(0.5)]
+    [TestCase(1.0)]
+    public void AReflectionMovedSideways_LeavesTheGlowBelowTheFloorWhole(double opacity)
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = opacity, Fade = 0, OffsetX = 12 };
+        });
+        var (bare, _) = Element(e => e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 });
+
+        // Row 47, in the glow three rows under the floor at 44. The reflection begins at column 16 with its own glow,
+        // as white, from 8: short of it there is nothing to take the glow's place, across it nothing darker than the glow.
+        var at = new[] { (4, 47), (6, 47), (8, 47), (9, 47), (10, 47), (11, 47), (12, 47), (13, 47), (14, 47) };
+        var px = Render(root, at);
+        var alone = Render(bare, at);
+
+        Assert.Multiple(() =>
+        {
+            for (var i = 0; i < at.Length; i++)
+            {
+                Assert.That(Red(px[i]), Is.GreaterThanOrEqualTo(Red(alone[i]) - 2), $"the glow at column {at[i].Item1}");
+            }
+
+            Assert.That(Red(px[0]), Is.EqualTo(Red(alone[0])).Within(2), "and no brighter short of the reflection");
+        });
+    }
+
+    // A clip above cuts the element and its reflection alike: no hole is left in the shadow where the reflection is cut.
+    [Test]
+    public void AReflectionCutByAClipAbove_LeavesNoHoleInTheShadow()
+    {
+        var root = new TestRoot(64, 128);
+        var viewport = new TestControl { ClipToBounds = true };
+        viewport.Bounds = new Rect(0, 0, 64, 60);
+        viewport.RenderSize = new Size<double>(64, 60);
+        var element = new TestControl
+        {
+            Shadow = new Shadow { OffsetX = 10, OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 },
+            Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0 },
+            RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 40))
+        };
+        element.Bounds = new Rect(4, 4, 40, 40);
+        element.RenderSize = new Size<double>(40, 40);
+        viewport.Add(element);
+        root.Add(viewport);
+
+        // The shadow lies over rows 34 to 74, columns 14 to 54; the viewport ends at row 60.
+        var px = Render(root, (24, 50), (50, 40), (50, 50), (24, 66), (50, 66));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Green(px[0]), Is.InRange(100, 160), "half the reflection over the shadow");
+            Assert.That(Blue(px[0]), Is.LessThan(20), "and the shadow through it");
+            Assert.That(Blue(px[1]), Is.EqualTo(Blue(px[2])).Within(12), "the shadow beside it, above the floor and below");
+            Assert.That(Blue(px[3]), Is.GreaterThan(240), "past the viewport, nothing");
+            Assert.That(Blue(px[4]), Is.GreaterThan(240), "past the viewport, nothing");
+        });
+    }
+
     // The reflection mirrors what the element draws, not the shadow it casts: a shadow lies on the floor.
     [Test]
     public void AReflection_DoesNotMirrorTheShadow()
