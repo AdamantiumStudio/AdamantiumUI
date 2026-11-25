@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Adamantium.ProceduralGeometry;
@@ -356,12 +357,44 @@ public class DropDown : Selector
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
+        Languages.Changed -= OnLanguagesChanged;
+        Languages.Changed += OnLanguagesChanged;
+        if (!ReferenceEquals(_said, Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         _commandListener?.Detached();
+        Languages.Changed -= OnLanguagesChanged;
+    }
+
+    // The language the items were last said in.
+    private CultureInfo _said = Languages.Culture;
+
+    // Items with no template are shown by their own words, which the language decides: the rows and the header ask for
+    // them again.
+    private void OnLanguagesChanged(object sender, EventArgs e)
+    {
+        _said = Languages.Culture;
+        if (ItemTemplate != null || ItemTemplateSelector != null)
+        {
+            ShowText();
+            return;
+        }
+
+        for (var index = 0; index < Items.Count; index++)
+        {
+            var item = Items[index];
+            if (item is null or string or IUIComponent || ItemContainerGenerator.ContainerFromIndex(index) is not DropDownItem row)
+                continue;
+
+            row.Content = null;
+            row.Content = FormatForDisplay(item);
+        }
+
+        if (SelectedItem is not (null or string or IUIComponent)) DisplayContent = null;
+        UpdateDisplayContent();
     }
 
     // Whether the command can run; a list with none can be used.

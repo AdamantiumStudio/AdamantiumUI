@@ -197,7 +197,9 @@ public class DockingRegionTests
             var (area, _, docking, _, _) = Docking();
             await docking.OpenAsync<Hierarchy>();
 
+
             Languages.Current = "ru";
+            BindingUpdateQueue.Flush();
 
             Assert.That(area.PaneById(nameof(Hierarchy)).Header, Is.EqualTo("Иерархия"));
         }
@@ -205,6 +207,26 @@ public class DockingRegionTests
         {
             Languages.Current = language;
         }
+    }
+
+    [Test]
+    public void APaneRenamed_RenamesTheCaptionOfItsPanel_WhileItIsTheOneShown()
+    {
+        var log = new Pane { Header = "Log" };
+        var output = new Pane { Header = "Output" };
+        var group = new PaneGroup { Items = { log, output } };
+        group.SelectedItem = output;
+
+        output.Header = "Вывод";
+        var renamed = group.Title;
+        group.SelectedItem = log;
+        output.Header = "Output";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(renamed, Is.EqualTo("Вывод"));
+            Assert.That(group.Title, Is.EqualTo("Log"), "another pane's name is not the caption's");
+        });
     }
 
     [Test]

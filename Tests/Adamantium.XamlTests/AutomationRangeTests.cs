@@ -177,6 +177,46 @@ public class AutomationRangeTests
         });
     }
 
+    private sealed class Word(string english, string russian)
+    {
+        public override string ToString() => Adamantium.Localization.Languages.Current == "ru" ? russian : english;
+    }
+
+    [Test]
+    public async Task ANumberAndAChoice_AreSaidInTheNewLanguage_AndAnEntryHalfTypedIsLeft()
+    {
+        Adamantium.Localization.Languages.Current = "en";
+        try
+        {
+            var numeric = new NumericUpDown { Value = 9.81 };
+            var typed = new NumericUpDown { Value = 1.5 };
+            var opaque = new Word("Opaque", "Непрозрачный");
+            var choice = new DropDown { ItemsSource = new[] { opaque }, SelectedItem = opaque };
+            var (session, window) = await Driving(new StackPanel { Children = { numeric, typed, choice } });
+            await using var _ = session;
+            var number = (TextBox)numeric.GetTemplateChild("PART_TextBox");
+            var entry = (TextBox)typed.GetTemplateChild("PART_TextBox");
+            entry.Text = "12.";
+            var english = number.Text;
+
+            Adamantium.Localization.Languages.Current = "ru";
+            await session.WaitForIdleAsync();
+            var said = choice.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text).ToList();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(english, Is.EqualTo("9.81"));
+                Assert.That(number.Text, Is.EqualTo("9,81"));
+                Assert.That(entry.Text, Is.EqualTo("12."));
+                Assert.That(said, Does.Contain("Непрозрачный"));
+            });
+        }
+        finally
+        {
+            Adamantium.Localization.Languages.Current = null;
+        }
+    }
+
     [Test]
     public async Task AScrollViewer_ScrollsToPercents_AxisByAxis()
     {

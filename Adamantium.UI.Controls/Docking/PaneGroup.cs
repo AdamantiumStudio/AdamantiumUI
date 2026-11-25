@@ -476,13 +476,32 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         // this again.
         if (Items == null) return;
 
-        Title = (SelectedItem as Pane)?.Header ?? Items.OfType<Pane>().FirstOrDefault()?.Header;
+        var first = Items.OfType<Pane>().FirstOrDefault();
+        FollowTitleOf(SelectedItem as Pane ?? first);
+        Title = _titled?.Header ?? first?.Header;
 
         // A window showing ONE panel has nothing to choose between, and a strip of one tab is a row of buttons that all
         // do what is already done - it only takes room away from the thing being looked at. The window's title bar
         // names it instead. Drop a second panel in and the strip comes back, because then there is a choice to make.
         // NO tabs at all is the emptied document area, which holds its place without drawing a bar of nothing.
         ShowTabStrip = Items.Count > 0 && (!IsFloatingRoot || Items.Count > 1);
+    }
+
+    // The pane the caption is named after: renamed, or its words said in another language, it renames the caption.
+    private Pane _titled;
+
+    private void FollowTitleOf(Pane pane)
+    {
+        if (ReferenceEquals(pane, _titled)) return;
+
+        if (_titled != null) _titled.PropertyChanged -= OnTitledPaneChanged;
+        _titled = pane;
+        if (_titled != null) _titled.PropertyChanged += OnTitledPaneChanged;
+    }
+
+    private void OnTitledPaneChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == TabItem.HeaderProperty) SyncChrome();
     }
 
     private ButtonBase _autoHideButton;
