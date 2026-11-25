@@ -5,7 +5,8 @@
   language.
 - macOS: the open, save and folder dialogs (`FileDialog`).
 - macOS: spelling and word completion (`ISpellChecker`, `IWordPredictor`) by the system's dictionaries.
-- macOS: icons in the menu bar (`NotificationArea`), starting at sign-in (`ISystemStartup`), gamepads, without vibration.
+- macOS: icons in the menu bar (`NotificationArea`), starting at sign-in (`ISystemStartup`), gamepads with
+  vibration, of the triggers too where the gamepad gives it.
 - macOS: the system's light or dark appearance (`ThemeVariant.System`), the user's languages, the times of a double click
   and a repeated key, how far a press drags, the live state of the mouse and keyboard.
 - macOS: `IApplicationPlatform.WindowFromScreenPoint`.

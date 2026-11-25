@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.GameController;
 using Adamantium.MacOS.ObjectiveC;
@@ -31,6 +32,15 @@ internal sealed class MacOSGamepad : Gamepad
     private static readonly IntPtr LeftTriggerProperty = Property("leftTrigger");
     private static readonly IntPtr RightTriggerProperty = Property("rightTrigger");
 
+    private const int LowMotor = 0;
+    private const int HighMotor = 1;
+    private const int LeftTriggerMotor = 2;
+    private const int RightTriggerMotor = 3;
+    private const float Deep = 0;
+    private const float Fine = 1;
+
+    private readonly MacOSGamepadMotors _motors;
+    private readonly bool _hasMotorsApart;
     private IntPtr _controller;
 
     internal MacOSGamepad(IntPtr controller)
@@ -47,6 +57,29 @@ internal sealed class MacOSGamepad : Gamepad
         }
 
         SupportedButtons = supported;
+
+        // One with no motors told by their place runs them together.
+        var low = MotorAt(GCController.LeftHandle, Deep);
+        var high = MotorAt(GCController.RightHandle, Fine);
+        _hasMotorsApart = low != null || high != null;
+        _motors = new MacOSGamepadMotors(_hasMotorsApart ? low : MotorAt(GCController.DefaultLocality, Deep), high,
+            MotorAt(GCController.LeftTrigger, Fine), MotorAt(GCController.RightTrigger, Fine));
+    }
+
+    private MacOSHapticMotor MotorAt(IntPtr locality, float sharpness) => GCController.HasMotorAt(_controller, locality)
+        ? new MacOSHapticMotor(_controller, locality, sharpness)
+        : null;
+
+    public override void SetVibration(float lowFrequency, float highFrequency)
+    {
+        _motors.Run(LowMotor, _hasMotorsApart ? lowFrequency : Math.Max(lowFrequency, highFrequency));
+        _motors.Run(HighMotor, highFrequency);
+    }
+
+    public override void SetTriggerVibration(float left, float right)
+    {
+        _motors.Run(LeftTriggerMotor, left);
+        _motors.Run(RightTriggerMotor, right);
     }
 
     internal IntPtr Controller => _controller;
@@ -75,8 +108,14 @@ internal sealed class MacOSGamepad : Gamepad
 
     internal void Disconnect()
     {
-        NSObject.Release(_controller);
+        if (_controller == IntPtr.Zero)
+            return;
+
+        // A motor may still be starting on it: the controller goes when the last is let go of.
+        _motors.Close();
+        var controller = _controller;
         _controller = IntPtr.Zero;
+        _motors.Applying.ContinueWith(_ => NSObject.Release(controller), TaskScheduler.Default);
     }
 
     private static GamepadState Read(IntPtr gamepad)
