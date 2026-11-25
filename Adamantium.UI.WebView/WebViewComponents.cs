@@ -10,7 +10,8 @@ public enum WebViewComponents
     None = 0,
 
     /// <summary>Google's Widevine, which plays the video and music sites protect - their encrypted media. Software
-    /// decryption: a site that asks for a browser Google has signed (VMP) refuses its licence.</summary>
+    /// decryption: a site that asks for a browser Google has signed (VMP) refuses its licence. On Linux Chromium loads
+    /// it as it starts, so one fetched while the application runs plays from its next start.</summary>
     Widevine = 1,
 
     /// <summary>The dictionaries a page's text is hyphenated with (CSS <c>hyphens: auto</c>); without them words are not

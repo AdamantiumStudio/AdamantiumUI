@@ -71,20 +71,22 @@ public unsafe partial class WebViewFrameTests
     }
 
     // Asked for, Widevine is fetched at once - not a minute later, when Chromium would get to it - and a page has it
-    // from then on. Without it a page is told the key system is not supported.
+    // from then on. Without it a page is told the key system is not supported. On Linux Chromium loads it only as it
+    // starts: fetched while running, a page has it from the next start.
     [Test]
     public void Widevine_AskedFor_IsInstalled_AndPagesHaveItFromThen()
     {
         string before = null;
         string after = null;
+        var installedAtStart = false;
         WebComponentStatus installed = null;
         WebComponentStatus asked = null;
         using var site = new LocalSite("<title>Protected</title>");
         loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
         {
             Pump(() => view.Title == "Protected", TimeSpan.FromSeconds(5));
-            var wasInstalled = engine.GetComponentStatus(WebViewComponents.Widevine).IsInstalled;
-            before = wasInstalled ? null : Await(browser.EvaluateAsync(AskWidevine));
+            installedAtStart = engine.GetComponentStatus(WebViewComponents.Widevine).IsInstalled;
+            before = installedAtStart ? null : Await(browser.EvaluateAsync(AskWidevine));
             var install = engine.InstallComponentAsync(WebViewComponents.Widevine);
             Pump(() => install.IsCompleted, TimeSpan.FromSeconds(60));
             installed = install.IsCompletedSuccessfully ? install.Result : null;
@@ -98,7 +100,9 @@ public unsafe partial class WebViewFrameTests
             Assert.That(installed?.IsInstalled, Is.True, "installed");
             Assert.That(Version.TryParse(installed?.Version, out _), Is.True, $"a version: {installed?.Version}");
             Assert.That(asked, Is.EqualTo(installed), "the status asked after");
-            Assert.That(after, Is.EqualTo("\"com.widevine.alpha\""));
+            Assert.That(after, Is.EqualTo(OperatingSystem.IsLinux() && !installedAtStart
+                ? "\"NotSupportedError\""
+                : "\"com.widevine.alpha\""));
         });
     }
 }
