@@ -63,4 +63,20 @@ public class ContentPresenterTemplateOnlyTests
 
         Assert.That(built.DataContext, Is.Null);
     }
+
+    // As WPF: the same template keeps its visual, only the data goes. An editor built for a value stays the one its
+    // owner listens to when the value is cleared.
+    [Test]
+    public void ContentCleared_UnderTheSameTemplate_KeepsTheVisual()
+    {
+        var presenter = new ContentPresenter { ContentTemplate = Named("Editor"), Content = "value" };
+        Shown(presenter);
+        var built = (Border)presenter.VisualChildren.Single();
+
+        presenter.Content = null;
+        Shown(presenter);
+
+        Assert.That(presenter.VisualChildren.Single(), Is.SameAs(built));
+        Assert.That(built.DataContext, Is.Null);
+    }
 }

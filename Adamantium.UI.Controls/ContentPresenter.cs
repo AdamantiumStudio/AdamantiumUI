@@ -169,10 +169,13 @@ public class ContentPresenter : InputUIComponent
         // per scroll frame ran the device out of memory. Not a visual kept between visits (x:KeepAlive): it belongs to
         // the content it was built for, which comes back to it, and handed another it would show that one in its place.
         // Only where an owner of items lets it go with its item; anywhere else nothing would ever let it go.
-        if (newContent != null && newContent is not IUIComponent && _currentRoot != null && _currentTemplate != null
+        // Content going to null keeps it too, as WPF does: the template alone is built for no content.
+        if (newContent is not IUIComponent && _currentRoot != null && _currentTemplate != null
             && !_deferInFlight && !(TemplatedParent is ItemsControl && ParkedVisuals.ShouldKeep(_currentRoot)))
         {
-            var reuseTemplate = ContentTemplate ?? ContentTemplateSelector?.SelectTemplate(newContent, this);
+            var reuseTemplate = newContent == null
+                ? ContentTemplate
+                : ContentTemplate ?? ContentTemplateSelector?.SelectTemplate(newContent, this);
             if (ReferenceEquals(reuseTemplate, _currentTemplate))
             {
                 SetContentContext(newContent);

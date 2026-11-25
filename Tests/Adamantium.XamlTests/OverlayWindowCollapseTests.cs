@@ -237,12 +237,21 @@ public class OverlayWindowCollapseTests
             Content = new TextBlock { Text = "content" }
         };
         Settle(window);
+        var chevronShown = GlyphOf<Path>(window, theme);
+        var pictureShown = GlyphOf<Image>(window, theme);
+        var labelShown = GlyphOf<TextBlock>(window, theme)?.Text;
         window.IsCollapsed = true;
         Settle(window);
 
-        var texts = GlyphOf<TextBlock>(window, theme)?.Text;
-
-        Assert.That(texts, Is.Null.Or.Empty);
+        Assert.Multiple(() =>
+        {
+            Assert.That(chevronShown, Is.Null, "no chevron while shown");
+            Assert.That(pictureShown, Is.Null, "no picture while shown");
+            Assert.That(labelShown, Is.Null.Or.Empty, "no label while shown");
+            Assert.That(GlyphOf<Path>(window, theme), Is.Null, "no chevron while collapsed");
+            Assert.That(GlyphOf<Image>(window, theme), Is.Null, "no picture while collapsed");
+            Assert.That(GlyphOf<TextBlock>(window, theme)?.Text, Is.Null.Or.Empty, "no label while collapsed");
+        });
     }
 
     [TestCase("Fluent", 300)]

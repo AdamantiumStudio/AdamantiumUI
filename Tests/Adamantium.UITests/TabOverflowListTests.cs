@@ -83,6 +83,18 @@ public class TabOverflowListTests
         });
     }
 
+    /// <summary>A tab with no icon gives its row no icon template: a template alone would be built, an empty slot pushing
+    /// the name aside.</summary>
+    [Test]
+    public void ARowOfATabWithNoIcon_HasNoIconTemplate()
+    {
+        var iconTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() });
+        var tc = new TabControl { IconTemplate = iconTemplate };
+        tc.Items.Add(new TabItem { Header = "Scene" });
+
+        Assert.That(RowsOf(tc)[0].IconTemplate, Is.Null);
+    }
+
     /// <summary>A tab's own icon template wins over the strip's, exactly as a tab may override any other inherited look.</summary>
     [Test]
     public void ATabsOwnIconTemplate_WinsOverTheStrips()
