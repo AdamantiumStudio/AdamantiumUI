@@ -97,7 +97,7 @@ namespace Probe
             .Where(p => p.Length > 0)
             .Append(typeof(RoutedEventArgs).Assembly.Location)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(p => MetadataReferenceCache.Shared.Get(p))
+            .Select(p => MetadataReferenceCache.Shared.Get(p) ?? throw new FileNotFoundException(null, p))
             .ToArray();
 
     private static (string Generated, Diagnostic[] Diagnostics) Run(string source, params MetadataReference[] more)

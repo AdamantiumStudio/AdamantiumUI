@@ -11,9 +11,10 @@ using NUnit.Framework.Interfaces;
 
 [assembly: ReleaseVisuals]
 
-/// <summary>Lets go of what a test built once it is over, and of the fixture's once its tests are. Their windows are never
-/// closed, and an open window is kept by what outlives it - a brush shared by the process, the marks of a frame never drawn - with its whole theme; NUnit
-/// keeps the fixture itself to the end of the run.</summary>
+/// <summary>Lets go of what a test built once it is over, and of the fixture's once the next fixture's tests begin. Their
+/// windows are never closed, and an open window is kept by what outlives it - a brush shared by the process, the marks of a
+/// frame never drawn - with its whole theme; NUnit keeps the fixture itself to the end of the run. A window of the
+/// fixture's loses its running animations and its marks after each test.</summary>
 [AttributeUsage(AttributeTargets.Assembly)]
 internal sealed class ReleaseVisualsAttribute : Attribute, ITestAction
 {
@@ -24,16 +25,28 @@ internal sealed class ReleaseVisualsAttribute : Attribute, ITestAction
         (IEnumerable<KeyValuePair<IUIComponent, LayoutManager>>)typeof(LayoutManager)
             .GetField("Managers", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null);
 
-    // What the fixture built before its tests stays until it is over; weakly, so that nothing is kept by being listed.
+    // The process's one tool tip, shown in window after window.
+    private static readonly FieldInfo SharedToolTip =
+        typeof(ToolTipService).GetField("_toolTip", BindingFlags.Static | BindingFlags.NonPublic)!;
+
+    // What was there before the test, weakly, so that nothing is kept by being listed.
     private readonly ConditionalWeakTable<IUIComponent, object> _builtBefore = new();
+    private object _fixture;
 
-    public ActionTargets Targets => ActionTargets.Suite | ActionTargets.Test;
+    public ActionTargets Targets => ActionTargets.Test;
 
+    // NUnit tells an assembly's action of no fixture's end: the next one's first test stands for it.
     public void BeforeTest(ITest test)
     {
-        if (test.IsSuite)
+        if (!ReferenceEquals(test.Fixture, _fixture))
         {
-            return;
+            if (_fixture != null)
+            {
+                ForgetFields(_fixture);
+                Release(root => _builtBefore.TryGetValue(root, out _));
+            }
+
+            _fixture = test.Fixture;
         }
 
         _builtBefore.Clear();
@@ -43,24 +56,16 @@ internal sealed class ReleaseVisualsAttribute : Attribute, ITestAction
         }
     }
 
-    public void AfterTest(ITest test)
+    public void AfterTest(ITest test) => Release(root => !_builtBefore.TryGetValue(root, out _));
+
+    private static void Release(Func<IUIComponent, bool> isDone)
     {
-        if (test.IsSuite)
-        {
-            if (test.Fixture is not { } fixture)
-            {
-                return;
-            }
-
-            ForgetFields(fixture);
-            _builtBefore.Clear();
-        }
-
         LoopSignal.Drain();   // what a test posted to a loop that never ran
         AnimationManager.Reset();
-        // The tool tip is the process's one, shown in window after window.
+        var toolTip = SharedToolTip.GetValue(null);
         DiscardedVisuals.ReleaseNow(LayoutRoots.Select(root => root.Key)
-            .Where(root => root is not ToolTip && !_builtBefore.TryGetValue(root, out _)).ToList());
+            .Where(root => !ReferenceEquals(root, toolTip) && isDone(root)).ToList());
+        LoopSignal.Drain();   // what letting go posted
         foreach (var scope in RenderDirtyRouter.All())
         {
             scope.Clear();

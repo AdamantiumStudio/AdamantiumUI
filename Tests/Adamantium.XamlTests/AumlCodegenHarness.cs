@@ -184,7 +184,7 @@ internal static class AumlCodegenHarness
 
         var references = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-            .Select(a => MetadataReferenceCache.Shared.Get(a.Location))
+            .Select(a => MetadataReferenceCache.Shared.Get(a.Location) ?? throw new System.IO.FileNotFoundException(null, a.Location))
             .ToList();
 
         if (AppDomain.CurrentDomain.GetAssemblies().All(a => a.GetName().Name != "System.Runtime"))

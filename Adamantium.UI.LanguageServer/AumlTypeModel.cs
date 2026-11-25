@@ -65,7 +65,7 @@ public sealed class AumlTypeModel
         {
             if (!path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
             if (MetadataReferenceCache.Shared.Get(path) is { } reference)
-                references.Add(reference);   // none for a native or otherwise non-managed dll
+                references.Add(reference);   // none for a file that cannot be read
         }
 
         // The project's own C# source is compiled in as syntax trees so its types/properties resolve live

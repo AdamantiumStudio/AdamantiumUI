@@ -168,7 +168,7 @@ namespace Probe
         var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Where(path => path.Length > 0)
-            .Select(path => MetadataReferenceCache.Shared.Get(path))
+            .Select(path => MetadataReferenceCache.Shared.Get(path) ?? throw new FileNotFoundException(null, path))
             .ToArray();
         var compilation = CSharpCompilation.Create("WebHostProbe",
             [CSharpSyntaxTree.ParseText(Attribute), CSharpSyntaxTree.ParseText(source)],

@@ -36,7 +36,7 @@
       <!-- The mouse's events raised on an element: hover comes as it does from the input system. -->
       <Compile Include="..\Adamantium.UITests\PointerInput.cs" Link="PointerInput.cs" />
       <Compile Include="..\Adamantium.UI.WebView.Tests\NoDevices.cs" Link="WebView\NoDevices.cs" />
-      <!-- What a fixture built goes with it, in every suite that builds windows. -->
+      <!-- What a test built goes with it. -->
       <Compile Include="..\ReleaseVisualsAttribute.cs" Link="ReleaseVisualsAttribute.cs" />
     </ItemGroup>
 
