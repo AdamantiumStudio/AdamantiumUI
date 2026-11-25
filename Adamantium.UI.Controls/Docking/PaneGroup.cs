@@ -6,6 +6,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.Docking;
 
@@ -96,7 +97,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         // Which host holds the body follows the CONTENT as well as the state - the selected pane changes under both.
         PropertyChanged += (_, e) =>
         {
-            if (e.Property == SelectedContentProperty) SyncContentHost();
+            if (e.Property == SelectedContentProperty || e.Property == SelectedContentTemplateProperty) SyncContentHost();
         };
 
         // SyncFold too: a rebuild ADDS panes after the state that caused the fold was set, so a pane arriving later
@@ -379,6 +380,28 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         private set => SetValue(FlyoutContentProperty, value);
     }
 
+    // Each host's template goes with its content: the host without the body has no page to build either.
+
+    public static readonly AdamantiumProperty DockedContentTemplateProperty = AdamantiumProperty.Register(
+        nameof(DockedContentTemplate), typeof(DataTemplate), typeof(PaneGroup), new PropertyMetadata(null));
+
+    /// <summary>The active pane's template while the panel is docked, null while it is revealed.</summary>
+    public DataTemplate DockedContentTemplate
+    {
+        get => GetValue<DataTemplate>(DockedContentTemplateProperty);
+        private set => SetValue(DockedContentTemplateProperty, value);
+    }
+
+    public static readonly AdamantiumProperty FlyoutContentTemplateProperty = AdamantiumProperty.Register(
+        nameof(FlyoutContentTemplate), typeof(DataTemplate), typeof(PaneGroup), new PropertyMetadata(null));
+
+    /// <summary>The active pane's template while the panel is revealed, null at every other time.</summary>
+    public DataTemplate FlyoutContentTemplate
+    {
+        get => GetValue<DataTemplate>(FlyoutContentTemplateProperty);
+        private set => SetValue(FlyoutContentTemplateProperty, value);
+    }
+
     private void SyncContentHost()
     {
         var revealed = State == PaneGroupState.Revealed;
@@ -388,11 +411,15 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         if (revealed)
         {
             DockedContent = null;
+            DockedContentTemplate = null;
+            FlyoutContentTemplate = SelectedContentTemplate;
             FlyoutContent = SelectedContent;
         }
         else
         {
             FlyoutContent = null;
+            FlyoutContentTemplate = null;
+            DockedContentTemplate = SelectedContentTemplate;
             DockedContent = SelectedContent;
         }
     }
