@@ -42,18 +42,20 @@
                                     Height="{ResourceReference TitleBarHeight}">
                                 <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
                                     <Grid x:Name="PART_TitleThumb" Grid.Column="3" Background="Transparent">
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        <!-- A Grid, not a StackPanel: the title gets the room left beside the buttons and
+                                             ends in an ellipsis, rather than running on under them. -->
+                                        <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
                                                 Margin="{ResourceReference TitleBarTitleInset}">
                                             <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
                                                     Foreground="{TemplateBinding TitleForeground}"
                                                     VerticalAlignment="Center"
                                                     Margin="{ResourceReference TitleBarIconGap}"/>
-                                            <ContentPresenter x:Name="PART_Title" Content="{TemplateBinding Title}"
-                                                    TextBlock.IsTextSelectionEnabled="False"
+                                            <ContentPresenter x:Name="PART_Title" Grid.Column="1" Content="{TemplateBinding Title}"
+                                                    TextBlock.IsTextSelectionEnabled="False" TextTrimming="CharEllipses"
                                                     Foreground="{TemplateBinding TitleForeground}"
                                                     FontSize="{ResourceReference FontSizeChrome}"
                                                     VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                        </Grid>
                                     </Grid>
                                     <!-- FULL HEIGHT of the caption, as a window's buttons are: given a size of its own the
                                          plate was a small square floating in the strip, and the hover read as landing

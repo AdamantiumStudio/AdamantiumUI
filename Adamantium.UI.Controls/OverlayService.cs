@@ -76,6 +76,10 @@ public sealed class OverlayService : IOverlayService
             StartupLocation = aware?.StartupLocation ?? OverlayStartupLocation.CenterOwner,
             Content = _viewLocator.ResolveView(viewModel)
         };
+        if (aware?.AutomationId is { } automationId)
+        {
+            Core.Automation.AutomationProperties.SetAutomationId(window, automationId);
+        }
 
         // Live title: the view model may change its Title while open; reflect it on the bar.
         if (aware is INotifyPropertyChanged inpc)
@@ -96,11 +100,20 @@ public sealed class OverlayService : IOverlayService
             // path doesn't resolve, so the binding no-ops). Set up before Show so a Manual window opens at the VM's value.
             window.SetBinding(OverlayWindow.LeftProperty, new Binding(nameof(IOverlayAware.Left)) { Source = aware, Mode = BindingMode.TwoWay });
             window.SetBinding(OverlayWindow.TopProperty, new Binding(nameof(IOverlayAware.Top)) { Source = aware, Mode = BindingMode.TwoWay });
+            window.SetBinding(OverlayWindow.WidthProperty,
+                new Binding(nameof(IOverlayAware.Width)) { Source = aware, Mode = BindingMode.TwoWay });
+            window.SetBinding(OverlayWindow.IsCollapsedProperty,
+                new Binding(nameof(IOverlayAware.IsCollapsed)) { Source = aware, Mode = BindingMode.TwoWay });
             window.Closed += (_, _) => aware.RequestClose -= OnRequestClose;
         }
 
-        // Made for this showing alone: closed, it goes, its view with it.
-        window.Closed += (_, _) => DiscardedVisuals.PublishSubtree(window);
+        // Made for this showing alone: closed, it goes, its view with it - and its view model, resolved for it, as a
+        // closed document's is.
+        window.Closed += (_, _) =>
+        {
+            DiscardedVisuals.PublishSubtree(window);
+            (viewModel as IDisposable)?.Dispose();
+        };
 
         return await OverlayWindowManager.GetFor(host).ShowAsync(window);
     }

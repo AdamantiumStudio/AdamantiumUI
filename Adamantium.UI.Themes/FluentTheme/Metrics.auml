@@ -48,6 +48,11 @@
     <!-- A caption button is WIDER than it is tall - the target is the strip's full height, and the width is what keeps
          three of them from reading as one block. -->
     <sys:Double x:Key="TitleBarButtonWidth">46</sys:Double>
+    <!-- A panel's header button, a square, and the width of a card's (its height the card's title bar): close to its
+         neighbours - a header is narrow, and window-wide caption buttons ate most of it. -->
+    <sys:Double x:Key="DockHeaderButtonSize">28</sys:Double>
+    <!-- A card's title bar over the page: lower than a window's, its buttons the header's squares. -->
+    <sys:Double x:Key="OverlayTitleBarHeight">34</sys:Double>
 
     <!-- ── Control extents ────────────────────────────────────────────────────────────────────────────────────────
          How wide a control is before anything is put in it. One number, written out six times - a drop-down, a spin

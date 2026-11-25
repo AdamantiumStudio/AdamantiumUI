@@ -257,9 +257,8 @@ public partial class RibbonShellViewModel : IWindowAware
         _diagnosticsWindow = shown;
         try
         {
-            // Under the switch, which stands at the document's top-right, below the band.
             await _overlays.ShowOverlayAsync<DiagnosticsOverlayViewModel>(
-                new NavigationParameters().Add("presentation", this).Add("top", 260.0), shown.Token);
+                new NavigationParameters().Add("presentation", this), shown.Token);
         }
         finally
         {

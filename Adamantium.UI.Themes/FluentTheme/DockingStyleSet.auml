@@ -150,9 +150,11 @@
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding Title}"
                                         Foreground="{ThemeResource AccentForegroundColor}"/>
-                                <!-- Both header buttons are 28x28 touch-sized squares with centered glyphs. -->
+                                <!-- Both header buttons are touch-sized squares with centered glyphs. -->
                                 <Button x:Name="PART_AutoHideButton" Grid.Column="1" AutomationProperties.Name="{Localize PaneStrings.AutoHide}"
-                                        Width="28" Height="28" MinWidth="0" MinHeight="0" Padding="0"
+                                        Width="{ResourceReference DockHeaderButtonSize}"
+                                        Height="{ResourceReference DockHeaderButtonSize}"
+                                        MinWidth="0" MinHeight="0" Padding="0"
                                         Classes="CaptionButton"
 
                                         BackgroundPointerOver="{ResourceReference OnAccentOverlayPointerOver}"
@@ -171,7 +173,9 @@
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                                 <Button x:Name="PART_CloseButton" Grid.Column="2" AutomationProperties.Name="{Localize PaneStrings.CloseActive}"
-                                        Width="28" Height="28" MinWidth="0" MinHeight="0" Padding="0"
+                                        Width="{ResourceReference DockHeaderButtonSize}"
+                                        Height="{ResourceReference DockHeaderButtonSize}"
+                                        MinWidth="0" MinHeight="0" Padding="0"
                                         Classes="CaptionButton CloseButton"
 
                                         BackgroundPointerOver="{ResourceReference OnAccentOverlayPointerOver}"
@@ -272,7 +276,9 @@
                                                     Content="{TemplateBinding Title}"
                                                     Foreground="{ThemeResource AccentForegroundColor}"/>
                                             <Button x:Name="PART_FlyoutAutoHideButton" Grid.Column="1" AutomationProperties.Name="{Localize PaneStrings.AutoHide}"
-                                                    Width="28" Height="28" MinWidth="0" MinHeight="0" Padding="0"
+                                                    Width="{ResourceReference DockHeaderButtonSize}"
+                                                    Height="{ResourceReference DockHeaderButtonSize}"
+                                                    MinWidth="0" MinHeight="0" Padding="0"
                                                     Classes="CaptionButton"
                                                     BackgroundPointerOver="{ResourceReference OnAccentOverlayPointerOver}"
                                                     BackgroundPressed="{ResourceReference OnAccentOverlayPressed}"
@@ -286,7 +292,9 @@
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                             <Button x:Name="PART_FlyoutCloseButton" Grid.Column="2" AutomationProperties.Name="{Localize PaneStrings.CloseActive}"
-                                                    Width="28" Height="28" MinWidth="0" MinHeight="0" Padding="0"
+                                                    Width="{ResourceReference DockHeaderButtonSize}"
+                                                    Height="{ResourceReference DockHeaderButtonSize}"
+                                                    MinWidth="0" MinHeight="0" Padding="0"
                                                     Classes="CaptionButton CloseButton"
                                                     BackgroundPointerOver="{ResourceReference OnAccentOverlayPointerOver}"
                                                     BackgroundPressed="{ResourceReference OnAccentOverlayPressed}"

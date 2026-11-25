@@ -35,24 +35,29 @@
                             <!-- Title bar: PART_TitleThumb (transparent, hit-testable) drags the whole strip; pin + close sit
                                  in their own columns so they stay clickable. -->
                             <Grid x:Name="PART_TitleBar" Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto"
-                                    Background="{TemplateBinding TitleBarBackground}" Height="40">
+                                    Background="{TemplateBinding TitleBarBackground}"
+                                    Height="{ResourceReference OverlayTitleBarHeight}">
                                 <Grid x:Name="PART_TitleThumb" Grid.Column="3" Background="Transparent">
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                                    <!-- A Grid, not a StackPanel: the title gets the room left beside the buttons and ends
+                                         in an ellipsis, rather than running on under them. -->
+                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center" Margin="16,0,0,0">
                                         <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
                                                 Foreground="{TemplateBinding TitleForeground}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <ContentPresenter x:Name="PART_Title" Content="{TemplateBinding Title}"
-                                                TextBlock.IsTextSelectionEnabled="False"
+                                        <ContentPresenter x:Name="PART_Title" Grid.Column="1" Content="{TemplateBinding Title}"
+                                                TextBlock.IsTextSelectionEnabled="False" TextTrimming="CharEllipses"
                                                 Foreground="{TemplateBinding TitleForeground}" FontSize="{ResourceReference FontSizeSubtitle}"
                                                 VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    </Grid>
                                 </Grid>
 
                                 <!-- Collapse: a chevron up, turned down while collapsed - the way back to the content. -->
                                 <Button x:Name="PART_CollapseButton" Grid.Column="4" Visibility="Collapsed"
                                         AutomationProperties.AutomationId="Collapse"
                                         AutomationProperties.Name="{Localize WindowStrings.Collapse}"
-                                        Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch">
+                                        Classes="CaptionButton"
+                                        Width="{ResourceReference DockHeaderButtonSize}"
+                                        MinWidth="0" MinHeight="0" Padding="0" VerticalAlignment="Stretch">
                                     <Path x:Name="CollapseGlyph" Data="M0,5 L5,0 L10,5"
                                             Stroke="{TemplateBinding TitleForeground}" StrokeThickness="1"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -61,7 +66,9 @@
                                 <Button x:Name="PART_PinButton" Grid.Column="5" Visibility="Collapsed"
                                         AutomationProperties.AutomationId="Pin"
                                         AutomationProperties.Name="{Localize WindowStrings.Pin}"
-                                        Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch">
+                                        Classes="CaptionButton"
+                                        Width="{ResourceReference DockHeaderButtonSize}"
+                                        MinWidth="0" MinHeight="0" Padding="0" VerticalAlignment="Stretch">
                                     <!-- Thumbtack, symmetric about x=7: cap (5..9), flared shoulders (3..11), tapering neck
                                          (6..8), point at (7,12) - the classic push-pin silhouette. -->
                                     <Path x:Name="PinGlyph"
@@ -73,8 +80,9 @@
                                 <Button x:Name="PART_CloseButton" Grid.Column="6"
                                         AutomationProperties.AutomationId="Close"
                                         AutomationProperties.Name="{Localize WindowStrings.Close}"
-                                        Classes="CaptionButton CloseButton" Height="40" MinWidth="46"
-                                        VerticalAlignment="Stretch">
+                                        Classes="CaptionButton CloseButton"
+                                        Width="{ResourceReference DockHeaderButtonSize}"
+                                        MinWidth="0" MinHeight="0" Padding="0" VerticalAlignment="Stretch">
                                     <Path Data="M0,0 L10,10 M10,0 L0,10"
                                             Stroke="{TemplateBinding TitleForeground}" StrokeThickness="1"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>

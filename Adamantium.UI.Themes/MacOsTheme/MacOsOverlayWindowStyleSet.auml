@@ -66,17 +66,19 @@
                                 </StackPanel>
 
                                 <Grid x:Name="PART_TitleThumb" Grid.Column="1" Background="Transparent">
-                                    <StackPanel Orientation="Horizontal"
+                                    <!-- A Grid, not a StackPanel: centered, the title still gets no more than the room
+                                         beside the lights and ends in an ellipsis, rather than running on under them. -->
+                                    <Grid ColumnDefinitions="Auto,*"
                                             HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
                                                 Foreground="{TemplateBinding TitleForeground}"
                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                        <ContentPresenter x:Name="PART_Title" Content="{TemplateBinding Title}"
-                                                TextBlock.IsTextSelectionEnabled="False"
+                                        <ContentPresenter x:Name="PART_Title" Grid.Column="1" Content="{TemplateBinding Title}"
+                                                TextBlock.IsTextSelectionEnabled="False" TextTrimming="CharEllipses"
                                                 Foreground="{TemplateBinding TitleForeground}"
                                                 FontSize="{ResourceReference FontSizeChrome}"
                                                 VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    </Grid>
                                 </Grid>
                             </Grid>
 
