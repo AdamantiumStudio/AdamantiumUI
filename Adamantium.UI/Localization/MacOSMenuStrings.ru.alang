@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="About" Text="О программе {application}"/>
+    <Phrase Key="Services" Text="Службы"/>
+    <Phrase Key="Hide" Text="Скрыть {application}"/>
+    <Phrase Key="HideOthers" Text="Скрыть остальные"/>
+    <Phrase Key="ShowAll" Text="Показать все"/>
+    <Phrase Key="Quit" Text="Завершить {application}"/>
+    <Phrase Key="Window" Text="Окно"/>
+    <Phrase Key="Minimize" Text="Убрать в Dock"/>
+    <Phrase Key="Zoom" Text="Изменить масштаб"/>
+    <Phrase Key="BringAllToFront" Text="Все окна — на передний план"/>
+</Language>

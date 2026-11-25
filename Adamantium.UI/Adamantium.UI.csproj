@@ -87,6 +87,13 @@
 		<AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" PrivateAssets="none" />
 	</ItemGroup>
 
+	<!-- The platforms' own strings. -->
+	<ItemGroup>
+		<AdditionalFiles Include="$(ProjectDir)Localization\*.alang" />
+		<CompilerVisibleProperty Include="RootNamespace" />
+		<CompilerVisibleProperty Include="NeutralLanguage" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<AdamantiumEngineReference Include="Adamantium.ECS" />
 		<AdamantiumEngineReference Include="Adamantium.Multiverse" />

@@ -39,6 +39,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private bool _relativeMouse;
     private bool _wantsRelativeMouse;
     private bool _fingersRest;
+    private volatile nint _number;
     private double _pinchNotches;
     private CGRect _restoreFrame;
     private bool _topmost;
@@ -211,6 +212,13 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         });
     }
 
+    /// <summary>Whether the window server's number of the window is this; its handle when so.</summary>
+    internal bool IsNumbered(nint number, out IntPtr handle)
+    {
+        handle = _nsWindow;
+        return number > 0 && number == _number && handle != IntPtr.Zero;
+    }
+
     private void Minimize()
     {
         // A window on a full screen of its own does not go to the Dock.
@@ -233,6 +241,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             NSWindow.MakeKeyAndOrderFront(_nsWindow);
         else
             NSWindow.OrderFront(_nsWindow);
+        // It has one once it is on screen.
+        _number = NSWindow.NumberOf(_nsWindow);
         JoinOwner();
         _platform.JoinOwned(_nsWindow);
     }

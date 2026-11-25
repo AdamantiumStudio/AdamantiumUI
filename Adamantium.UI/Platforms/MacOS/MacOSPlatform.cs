@@ -49,8 +49,12 @@ public class MacOSPlatform : IApplicationPlatform
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
         ObjCRuntime.PopAutoreleasePool(pool);
-        if (!IsHidden)
-            Cursor.Platform = new MacOSCursors(this);
+        if (IsHidden)
+            return;
+
+        // Hidden, it keeps to a clipboard of its own: that of who sits at the computer is theirs.
+        Cursor.Platform = new MacOSCursors(this);
+        Clipboard.Current = new MacOSClipboard(NSPasteboard.General);
     }
 
     /// <summary>The splash window's side of <paramref name="host"/>: the same thread and event loop, with signals and
@@ -98,7 +102,11 @@ public class MacOSPlatform : IApplicationPlatform
     {
         using var wake = token.Register(Signal);
         if (!IsHidden)
+        {
+            MacOSMenu.Show(this);
             NSApplication.Activate();
+        }
+
         Signal();   // what was asked for while a wait took the wake
         while (!token.IsCancellationRequested)
             AnswerNext(NSDate.DistantFuture, true);
@@ -175,9 +183,21 @@ public class MacOSPlatform : IApplicationPlatform
         ObjCRuntime.PopAutoreleasePool(pool);
     }
 
-    // TODO(macOS): NSWindow.windowNumberAtPoint:belowWindowWithWindowNumber: -> the window number, mapped back to our
-    // handle. Zero until then, which makes the drag fall back to client-bounds containment.
-    public IntPtr WindowFromScreenPoint(PixelPoint point) => IntPtr.Zero;
+    // Another application's window is given by its number, which is no window's handle here.
+    public IntPtr WindowFromScreenPoint(PixelPoint point)
+    {
+        if (IsHidden)
+            return IntPtr.Zero;
+
+        var number = NSWindow.NumberAt(Desktop.ToPoints(point.X, point.Y));
+        foreach (var window in AllWindows())
+        {
+            if (window.IsNumbered(number, out var handle))
+                return handle;
+        }
+
+        return number;
+    }
 
     internal void Register(MacOSWindowWorker worker)
     {
