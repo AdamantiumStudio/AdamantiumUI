@@ -94,7 +94,10 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
     });
 
     public void SetSize(double clientWidth, double clientHeight) => Move(placement =>
-        new Rect(placement.Bounds.X, placement.Bounds.Y, clientWidth * placement.Scale, clientHeight * placement.Scale));
+        // A side not given stays as it is: a layer throws at one that is not a number.
+        new Rect(placement.Bounds.X, placement.Bounds.Y,
+            double.IsFinite(clientWidth) ? clientWidth * placement.Scale : placement.Bounds.Width,
+            double.IsFinite(clientHeight) ? clientHeight * placement.Scale : placement.Bounds.Height));
 
     public void UpdateOverlayTraits()
     {
@@ -285,8 +288,14 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
     private void SizeLayer()
     {
         var placement = Current;
+        // Whole pixels, as the swapchain's, and one at least, as its smallest.
+        var width = Math.Max(1, Math.Round(placement.Bounds.Width));
+        var height = Math.Max(1, Math.Round(placement.Bounds.Height));
         CAMetalLayer.SetContentsScale(_layer, placement.Scale);
-        CAMetalLayer.SetDrawableSize(_layer, new CGSize(placement.Bounds.Width, placement.Bounds.Height));
+        CAMetalLayer.SetDrawableSize(_layer, new CGSize(width, height));
+        // No view hosts the layer to give it its size. The driver takes the surface's from it, and calls every present
+        // suboptimal while it differs - so the window was drawn again and again.
+        CALayer.SetBounds(_layer, new CGRect(0, 0, width / placement.Scale, height / placement.Scale));
     }
 
     private void OnWindowClosed(object sender, EventArgs e)
@@ -326,10 +335,10 @@ internal sealed class MacOSHiddenWindowWorker : AdamantiumComponent, IWindowWork
 
     private static double Extent(double preferred, double fallback, int defaultExtent)
     {
-        if (!double.IsNaN(preferred) && preferred > 0)
+        if (double.IsFinite(preferred) && preferred > 0)
             return preferred;
 
-        return !double.IsNaN(fallback) && fallback > 0 ? fallback : defaultExtent;
+        return double.IsFinite(fallback) && fallback > 0 ? fallback : defaultExtent;
     }
 
     // In physical pixels of the desktop.
