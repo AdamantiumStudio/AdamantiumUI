@@ -762,22 +762,27 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(Green(px[0]), Is.GreaterThan(200), "the lime reflection, not darkened by the shadow");
     }
 
-    // Beside the element, its shadow goes on across the floor without a step: under the mirrored glow it shows nearly as
-    // much as through the glow above.
-    [Test]
-    public void TheShadowBesideTheElement_GoesOnAcrossTheFloorWithoutAStep()
+    // Beside the element, its shadow goes on across the floor without a step: under the mirrored glow it shows as much
+    // as through the glow above, and the floor does not show through either.
+    [TestCase(0.5)]
+    [TestCase(1.0)]
+    public void TheShadowBesideTheElement_GoesOnAcrossTheFloorWithoutAStep(double opacity)
     {
         var (root, _) = Element(e =>
         {
             e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 0.8 };
             e.Shadow = new Shadow { OffsetX = 10, OffsetY = 30, BlurRadius = 1, Color = Colors.Black, Opacity = 1 };
-            e.Reflection = new Reflection { Size = 1, Opacity = 0.5, Fade = 0 };
+            e.Reflection = new Reflection { Size = 1, Opacity = opacity, Fade = 0 };
         });
 
-        // Column 48, in the glow beside the element, over the shadow: one row above the floor at 44, one below.
-        var px = Render(root, (48, 43), (48, 45));
+        // Columns 46 and 48, in the glow beside the element, over the shadow: one row above the floor at 44, one below.
+        var px = Render(root, (46, 43), (46, 45), (48, 43), (48, 45));
 
-        Assert.That(Blue(px[1]), Is.EqualTo(Blue(px[0])).Within(20), "no step at the floor");
+        Assert.Multiple(() =>
+        {
+            Assert.That(Blue(px[1]), Is.EqualTo(Blue(px[0])).Within(12), "no step at the floor, column 46");
+            Assert.That(Blue(px[3]), Is.EqualTo(Blue(px[2])).Within(12), "no step at the floor, column 48");
+        });
     }
 
     // Where a short reflection ends, the shadow beside it goes on: the floor is no less glossy past it.

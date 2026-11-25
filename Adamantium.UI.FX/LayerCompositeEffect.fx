@@ -208,9 +208,11 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
     float4 reflected = lerp(front, mirror, mirrored * (1.0 - front.a));
     // Its shadows darken the floor under the light the reflection adds: through it as much as the mirror image lets
     // the floor show - none under a whole image on a perfect mirror - and as before where it shows nothing, behind what
-    // the element draws. So the shadow changes along the image's own outline, not along the edges of the floor.
+    // the element draws. So the shadow changes along the image's own outline, not along the edges of the floor. It lies
+    // under what is laid over it, all of it, so nothing shows through; behind the element, as above the floor, by what
+    // the element draws and not by what its mask leaves.
     float4 shadow = shadowsApart
-        ? bands * cover * ((1.0 - mirrored * mirror.a) * (1.0 - drawn.a))
+        ? bands * cover * ((1.0 - reflected.a) * (1.0 - drawn.a) / max(1.0 - front.a, 1e-5))
         : float4(0.0, 0.0, 0.0, 0.0);
     float4 below = reflected + shadow;
     if (BandsOn > 0.5 && !shadowsApart)
