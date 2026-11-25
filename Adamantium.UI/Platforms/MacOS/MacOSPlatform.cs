@@ -10,6 +10,7 @@ using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Core.Text;
 using Adamantium.UI.Platforms.Cups;
 
 namespace Adamantium.UI.Platforms.MacOS;
@@ -48,13 +49,21 @@ public class MacOSPlatform : IApplicationPlatform
             ShowApplicationIcon();
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
-        ObjCRuntime.PopAutoreleasePool(pool);
-        if (IsHidden)
-            return;
+        // Hidden, it keeps from what is whose who sits at the computer: their cursor and keys, clipboard, and screen.
+        if (!IsHidden)
+        {
+            var input = new MacOSInput(this);
+            Mouse.Platform = input;
+            Core.Input.Keyboard.Platform = input;
+            PlatformSettings.Platform = input;
+            Cursor.Platform = new MacOSCursors(this);
+            Clipboard.Current = new MacOSClipboard(NSPasteboard.General);
+            FileDialog.Platform = new MacOSFileDialog(this);
+            NotificationArea.Platform = new MacOSMenuBar(this);
+            MacOSAppearance.Follow();
+        }
 
-        // Hidden, it keeps to a clipboard of its own: that of who sits at the computer is theirs.
-        Cursor.Platform = new MacOSCursors(this);
-        Clipboard.Current = new MacOSClipboard(NSPasteboard.General);
+        ObjCRuntime.PopAutoreleasePool(pool);
     }
 
     /// <summary>The splash window's side of <paramref name="host"/>: the same thread and event loop, with signals and
@@ -273,6 +282,18 @@ public class MacOSPlatform : IApplicationPlatform
         }
     }
 
+    /// <summary>The same, and waits for it. A modal panel in it takes the events the loop is woken by, so it is woken
+    /// after.</summary>
+    internal void RunOnMainThreadAndWait(Action action)
+    {
+        if (IsOnUIThread)
+            RunOnMainThread(action);
+        else
+            (Dispatcher ?? Threading.Dispatcher.CurrentDispatcher).InvokeAsync(() => RunOnMainThread(action)).GetAwaiter()
+                .GetResult();
+        Signal();
+    }
+
     /// <summary>The windows a shown <paramref name="owner"/> has, the splash window's side included, join it.</summary>
     internal void JoinOwned(IntPtr owner)
     {
@@ -330,6 +351,12 @@ public class MacOSPlatform : IApplicationPlatform
     {
         resolver.RegisterSingleton<IApplicationPlatform, MacOSPlatform>();
         resolver.RegisterSingleton<IDragGhost, MacOSDragGhost>();
+        var spelling = new MacOSSpelling();
+        resolver.RegisterInstance<ISpellChecker>(spelling);
+        resolver.RegisterInstance<IWordPredictor>(spelling);
+        resolver.RegisterSingleton<ISystemStartup, LaunchAgentStartup>();
+        if (!IsHidden)
+            resolver.RegisterSingleton<Multiverse.Input.IGamepadBackend, MacOSGamepadBackend>();
         FileManager.Platform = new FinderFileManager();
         Trash.Platform = new FinderTrash();
         SystemPrinting.Platform = new CupsPrintPlatform();
