@@ -43,8 +43,11 @@ public class ListBoxEdgeTests
 
     private static Border EdgeOf(ListBox list)
     {
-        var window = new Window { Width = 400, Height = 300, Content = list };
+        // The window themed first, as an app's is: the list joins a tree whose theme resources are there.
+        var window = new Window { Width = 400, Height = 300 };
         window.ApplyCurrentTheme();
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        window.Content = list;
         for (var i = 0; i < 4; i++)
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
@@ -54,18 +57,22 @@ public class ListBoxEdgeTests
         return list.VisualChildren.OfType<Border>().Single();
     }
 
+    // The edges each theme drew before the edge became the list's own properties.
     [Test]
-    [TestCase("Fluent")]
-    [TestCase("Graphite")]
-    [TestCase("MacOs")]
-    public void AListIsOutlinedByDefault(string theme)
+    [TestCase("Fluent", 1, 4)]
+    [TestCase("MacOs", 1, 6)]
+    public void AListIsOutlinedByDefault(string theme, double thickness, double corner)
     {
         Use(theme);
 
         var edge = EdgeOf(new ListBox { ItemsSource = new[] { "One", "Two" } });
 
-        Assert.That(edge.BorderThickness.Left, Is.GreaterThan(0));
-        Assert.That(edge.BorderBrush, Is.Not.Null);
+        Assert.Multiple(() =>
+        {
+            Assert.That(edge.BorderThickness, Is.EqualTo(new Thickness(thickness)));
+            Assert.That(edge.CornerRadius.TopLeft, Is.EqualTo(corner));
+            Assert.That(edge.BorderBrush, Is.Not.Null);
+        });
     }
 
     [Test]
