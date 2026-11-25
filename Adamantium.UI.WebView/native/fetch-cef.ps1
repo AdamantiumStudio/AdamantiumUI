@@ -19,11 +19,11 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $version = "156.0.26+g8ea0c73+chromium-156.0.8078.88"
-$release = "cef-156.0.26-1"
+$release = "cef-156.0.26-2"
 $releases = "https://github.com/AdamantiumStudio/AdamantiumUI/releases/download/$release"
 $ours = @{
-    "win-x64" = @{ Platform = "windows64"; Sha256 = "e9cf5c307a9149d10aa1a781acd73fd77c01dd1fb142393607b6d0c9358dda18"; FFmpeg = "ffmpeg.dll" }
-    "linux-x64" = @{ Platform = "linux64"; Sha256 = "6cd72d1c42d5edd18a5041aa211342cfcd1f4cf6c024fb845eabcb4f919b59ad"; FFmpeg = "libffmpeg.so" }
+    "win-x64" = @{ Platform = "windows64"; Sha256 = "355d830130c8131eb767d9a96fd6f9d4502f029f03c731a36d6c278e5a573ba0"; FFmpeg = "ffmpeg.dll" }
+    "linux-x64" = @{ Platform = "linux64"; Sha256 = "31a3af296be28ffbca833c0a6655d84fe6c64d3b291032c861512c4c9143a96f"; FFmpeg = "libffmpeg.so" }
 }
 $build = $ours[$Rid]
 if ($build) {

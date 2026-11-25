@@ -51,7 +51,12 @@ public partial class WebViewFrameTests
         {
             devices = new GraphicsDeviceService(new GraphicsDeviceFactory(), false, GraphicsSettings.CreateDefault());
             devices.CreateMainDevice("WebViewFrameTests");
-            options = new WebViewOptions { ProfileFolder = profile, ColorScheme = WebViewColorScheme.System };
+            options = new WebViewOptions
+            {
+                ProfileFolder = profile,
+                ColorScheme = WebViewColorScheme.System,
+                Components = WebViewComponents.Widevine,
+            };
             engine = new WebViewEngine(devices, null, options);
         });
     }

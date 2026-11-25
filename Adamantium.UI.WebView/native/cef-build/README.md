@@ -11,6 +11,11 @@ differences:
   (H.264 and AAC decoders) and one built with Chromium's (without them). They export the same functions, so either
   stands in as the file. The release archive carries the one without; the one with is kept apart (see below).
 - **No OpenH264**: `media_use_openh264=false`, or `proprietary_codecs` would link its H.264 encoder into libcef itself.
+- **The application chooses the components.** `patches/chromium-allowed-components.patch` adds
+  `--allowed-components=<id>,<id>`: Component Updater registers only the components it lists, wherever they are
+  registered from, and none when it is empty, so nothing is fetched from Google that the application did not ask for.
+  A component left out is not updated, and a copy it left on disk is not loaded - Widevine's on Linux too, which is
+  otherwise read from its hint file at start. Without the switch every component is registered, as in CEF's build.
 - `make_distrib` ships FFmpeg (`patches/cef-make-distrib-ffmpeg.patch`).
 
 The WebView turns the feature on when the FFmpeg beside CEF decodes H.264 and AAC.

@@ -15,4 +15,9 @@ public sealed class WebViewOptions
     /// <see cref="WebViewEngine.ColorScheme"/>. The page is asked directly; Chromium's own scheme - about:blank, its own
     /// pages, and what else of the profile follows it, as a frame of another site or the DevTools - is set to match.</summary>
     public WebViewColorScheme ColorScheme { get; set; } = WebViewColorScheme.Application;
+
+    /// <summary>The components Chromium may fetch from Google and keep up to date; none by default, so nothing is
+    /// fetched that the application did not ask for. A component left out is not loaded either, though an earlier run
+    /// fetched it.</summary>
+    public WebViewComponents Components { get; set; }
 }
