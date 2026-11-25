@@ -80,6 +80,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void SetWindow(IWindow window)
     {
+        // AppKit aborts the process over a window made on any other thread.
+        if (!_platform.IsOnUIThread)
+            throw new Exceptions.DispatcherException("A window is made on the main thread: use IUIApplication.ExecuteOnUIThread");
+
         _window = window;
         window.Closed += OnWindowClosed;
 
