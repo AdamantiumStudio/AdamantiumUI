@@ -243,6 +243,7 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorDisabled}"/>
             <Setter TargetName="PART_TextBox" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="UnitText" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
     </Style>
 

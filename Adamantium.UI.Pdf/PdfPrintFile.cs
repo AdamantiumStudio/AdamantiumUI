@@ -7,7 +7,7 @@ using Adamantium.UI.Core.Printing;
 namespace Adamantium.UI.Pdf;
 
 /// <summary>A document printed to a PDF file instead of a printer: each page drawn as it is on screen, in vector -
-/// shapes, gradients, pictures - on a sheet of the size asked for.</summary>
+/// shapes, gradients, pictures - its text to be selected and found, on a sheet of the size asked for.</summary>
 public static class PdfPrintFile
 {
     /// <summary>The PDF's units to the inch; the document draws in DIPs, 96 to the inch.</summary>
@@ -40,7 +40,7 @@ public static class PdfPrintFile
         {
             cancellation.ThrowIfCancellationRequested();
             var content = new PdfContentBuilder();
-            var session = new PdfContentSession(content, toPage, pictures);
+            var session = new PdfContentSession(content, toPage, pictures, writer);
             document.DrawPage(index, session);
             session.CloseGroups();
             writer.AddPage(new PdfRectangle(0, 0, width, height), content);

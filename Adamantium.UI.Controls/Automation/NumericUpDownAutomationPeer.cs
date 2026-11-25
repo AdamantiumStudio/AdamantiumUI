@@ -18,6 +18,9 @@ public class NumericUpDownAutomationPeer : UIComponentAutomationPeer, IValueProv
 
     public override AutomationControlType ControlType => AutomationControlType.Spinner;
 
+    // The unit, which the value leaves out, unless the application gives its own help text.
+    public override string HelpText => base.HelpText is { Length: > 0 } own ? own : _numeric.Unit ?? string.Empty;
+
     public string Value => _numeric.Value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
     public bool IsReadOnly => _numeric.IsReadOnly;

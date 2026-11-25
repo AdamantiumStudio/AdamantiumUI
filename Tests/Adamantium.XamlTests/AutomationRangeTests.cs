@@ -158,6 +158,26 @@ public class AutomationRangeTests
     }
 
     [Test]
+    public void ANumericUpDown_SaysItsUnitInItsHelpText_UnlessGivenItsOwn()
+    {
+        var numeric = new NumericUpDown { Value = 1 };
+        var peer = numeric.GetAutomationPeer();
+
+        var without = peer.HelpText;
+        numeric.Unit = "m/s";
+        var unit = peer.HelpText;
+        AutomationProperties.SetHelpText(numeric, "The fastest a body moves");
+        var own = peer.HelpText;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(without, Is.Empty);
+            Assert.That(unit, Is.EqualTo("m/s"));
+            Assert.That(own, Is.EqualTo("The fastest a body moves"));
+        });
+    }
+
+    [Test]
     public async Task AScrollViewer_ScrollsToPercents_AxisByAxis()
     {
         var viewer = new ScrollViewer

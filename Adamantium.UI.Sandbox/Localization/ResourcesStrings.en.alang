@@ -19,7 +19,7 @@
     <Phrase Key="CycleGlobal" Text="Cycle global accent"/>
 
     <Phrase Key="ScopeTitle" Text="Theme scope — a subtree with a variant of its own"/>
-    <Phrase Key="ScopeHint" Text="Each pane names its own variant, so toggling the application's light/dark in the diagnostics panel leaves them where they are."/>
+    <Phrase Key="ScopeHint" Text="Each pane names its own variant, so toggling the application's light/dark in the settings panel leaves them where they are."/>
     <Phrase Key="VariantLight" Text="Variant: Light"/>
     <Phrase Key="VariantDark" Text="Variant: Dark"/>
     <Phrase Key="VariantSystem" Text="Variant: System"/>
