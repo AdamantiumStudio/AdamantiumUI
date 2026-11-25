@@ -72,6 +72,37 @@ public class NumericUpDownTests
         }
     }
 
+    // Every step reads as it is written, whatever its decimals.
+    [Test]
+    public void EverySnappedStep_ReadsAsWritten([Values("0.1", "0.01", "0.001", "0.05", "0.2", "0.3")] string written)
+    {
+        var step = decimal.Parse(written, CultureInfo.InvariantCulture);
+        var box = NewBox(value: 0, max: 1000);
+        box.IsSpeedupEnabled = false;
+        box.SmallChange = double.Parse(written, CultureInfo.InvariantCulture);
+        box.SnapsToSmallChange = true;
+        for (var i = 1; i <= 1000; i++)
+        {
+            Press(box, "PART_Increase");
+            var read = double.Parse((step * i).ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+            Assert.That(box.Value, Is.EqualTo(read));
+        }
+    }
+
+    // A step with no short decimal is the product's: three thirds are a whole.
+    [Test]
+    public void ThreeSnappedThirds_AreAWhole()
+    {
+        var box = NewBox(value: 0);
+        box.IsSpeedupEnabled = false;
+        box.SmallChange = 1.0 / 3;
+        box.SnapsToSmallChange = true;
+        for (var i = 0; i < 3; i++)
+            Press(box, "PART_Increase");
+
+        Assert.That(box.Value, Is.EqualTo(1));
+    }
+
     // A step button is the box's own part: its click steps the value and goes no further than the box.
     [Test]
     public void AStepButtonsClick_StepsTheValue_AndGoesNoFurtherThanTheBox()

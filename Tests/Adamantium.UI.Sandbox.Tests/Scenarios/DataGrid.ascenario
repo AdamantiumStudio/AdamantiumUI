@@ -55,11 +55,14 @@
   <Absent Target="id=PART_SortPanel/type=DataItem" />
   <Toggle Target="id=DataGridView/name=Sorting panel" />
   <Toggle Target="id=DataGridView/name=Grouping panel" />
+  <!-- The column stands past the pinned one until the table is scrolled to it. -->
+  <Scroll Target="id=Table" Horizontal="100" />
   <Drop Target="id=Table/type=HeaderItem,name=Region" Onto="id=PART_GroupPanel" />
   <Expect Target="id=PART_GroupPanel/type=DataItem" Name="Region" />
   <Invoke Target="id=PART_GroupPanel/name=Region/type=Button" />
   <Absent Target="id=PART_GroupPanel/type=DataItem" />
   <Toggle Target="id=DataGridView/name=Grouping panel" />
+  <Scroll Target="id=Table" Horizontal="0" />
   <Drop Target="id=Table/type=HeaderItem,name=Name" Onto="id=Table/type=HeaderItem,name=Owner" Side="Before" />
   <Expect Target="id=Table/type=HeaderItem[2]" Name="Name" />
   <Drop Target="id=Table/type=HeaderItem,name=Name" Onto="id=Table/type=HeaderItem,name=Owner" Side="After" />

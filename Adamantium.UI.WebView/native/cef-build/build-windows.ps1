@@ -52,6 +52,7 @@ if (-not $Resume) {
 }
 
 Invoke-PatchOnce $src "$patches\chromium-proprietary-codecs-gate.patch"
+Invoke-PatchOnce $src "$patches\chromium-allowed-components.patch"
 Invoke-PatchOnce "$src\cef" "$patches\cef-make-distrib-ffmpeg.patch"
 Write-Output "== args"
 Get-Content "$src\out\Release_GN_x64\args.gn"

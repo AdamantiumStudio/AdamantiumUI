@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Controls;
 
@@ -27,6 +28,15 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
     }
 
     public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+    /// <summary>Raised when the view these come through has wholly taken in a change of its source, in its place among
+    /// the changes: see <see cref="CollectionView.SourceTaken"/>.</summary>
+    internal event Action SourceTaken;
+
+    private void OnSourceTaken()
+    {
+        if (SourceTaken != null && !_changes.Defer(null)) SourceTaken.Invoke();
+    }
 
     internal bool HasSource => _sourceSnapshot != null;
 
@@ -68,6 +78,8 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
 
             if (source is INotifyCollectionChanged observable)
                 observable.CollectionChanged += OnSourceCollectionChanged;
+            if (source is CollectionView view)
+                view.SourceTaken += OnSourceTaken;
         }
 
         Raise(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -81,6 +93,11 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
             if (_source is INotifyCollectionChanged observable)
             {
                 observable.CollectionChanged -= OnSourceCollectionChanged;
+            }
+
+            if (_source is CollectionView view)
+            {
+                view.SourceTaken -= OnSourceTaken;
             }
 
             _changes.Clear();
@@ -100,6 +117,12 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
     private void Apply(NotifyCollectionChangedEventArgs e)
     {
         if (_sourceSnapshot == null) return;
+
+        if (e == null)
+        {
+            SourceTaken?.Invoke();
+            return;
+        }
 
         // A change that does not fit the snapshot - a source that announced it wrongly - is answered by reading the
         // source again.

@@ -1,9 +1,11 @@
 using System.Linq;
+using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.Resources.Triggers;
@@ -80,6 +82,232 @@ public class TabControlTests
     {
         public System.Collections.ObjectModel.ObservableCollection<string> Tabs { get; } = new();
         public string Selected { get; set; }
+    }
+
+    private sealed class ParkedView : Border
+    {
+        public override NavigationCacheMode KeepAlive => NavigationCacheMode.Required;
+    }
+
+    // Tabs A to F bound through a view that shows B, D and F, D selected.
+    private static (TabControl Tabs, TabsVm Vm, CollectionView View) Filtered()
+    {
+        var vm = new TabsVm();
+        foreach (var name in new[] { "A", "B", "C", "D", "E", "F" }) vm.Tabs.Add(name);
+        var view = new CollectionView(vm.Tabs);
+        var tabs = new TabControl { ItemsSource = view, SelectedItem = "D" };
+        view.Filter = tab => tab is "B" or "D" or "F";
+        return (tabs, vm, view);
+    }
+
+    [Test]
+    public void AFilter_KeepsTheSelectedTabSelected_AndTheHiddenTabsOpen()
+    {
+        var (tabs, _, view) = Filtered();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tabs.Items, Is.EqualTo(new[] { "B", "D", "F" }));
+            Assert.That(tabs.SelectedItem, Is.EqualTo("D"));
+            Assert.That(tabs.HoldsContent("A"), Is.True, "hidden, its page is not let go of");
+            Assert.That(tabs.HoldsContent("none"), Is.False);
+        });
+
+        view.Filter = null;
+
+        Assert.That(tabs.SelectedItem, Is.EqualTo("D"));
+        Assert.That(tabs.SelectedIndex, Is.EqualTo(3));
+    }
+
+    [TestCase("F")]
+    [TestCase("none")]
+    public void ASelectedTabAFilterHides_StaysSelected_AndComesBackWithIt(string shown)
+    {
+        var (tabs, _, view) = Filtered();
+        var changes = 0;
+        tabs.SelectionChanged += (_, _) => changes++;
+
+        view.Filter = tab => tab is string name && name == shown;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tabs.SelectedItem, Is.EqualTo("D"), "still the one read");
+            Assert.That(tabs.SelectedContent, Is.EqualTo("D"));
+            Assert.That(tabs.SelectedIndex, Is.EqualTo(-1), "it has no place in the strip");
+        });
+
+        view.Filter = null;
+
+        Assert.That(tabs.SelectedIndex, Is.EqualTo(3));
+        Assert.That(changes, Is.Zero, "nothing else was opened on the way");
+    }
+
+    [Test]
+    public void ASelectedHiddenTab_ClosedElsewhere_GivesTheSelectionUp()
+    {
+        var (tabs, vm, view) = Filtered();
+        view.Filter = tab => tab is "F";
+
+        vm.Tabs.Remove("D");
+
+        Assert.That(tabs.SelectedItem, Is.EqualTo("F"));
+    }
+
+    [Test]
+    public void AHiddenTabSelectedFromOutside_ShowsItsPage()
+    {
+        var (tabs, _, view) = Filtered();
+
+        tabs.SelectedItem = "A";
+
+        Assert.That(tabs.SelectedContent, Is.EqualTo("A"));
+        view.Filter = null;
+        Assert.That(tabs.SelectedIndex, Is.Zero);
+    }
+
+    [Test]
+    public void ATabClosedThroughAView_LeavesTheListItLooksAt()
+    {
+        var (tabs, vm, _) = Filtered();
+
+        tabs.RequestCloseItem("F");
+
+        Assert.That(vm.Tabs, Is.EqualTo(new[] { "A", "B", "C", "D", "E" }));
+        Assert.That(tabs.Items, Is.EqualTo(new[] { "B", "D" }));
+        Assert.That(tabs.HoldsContent("F"), Is.False, "closed for good");
+    }
+
+    [Test]
+    public void AHiddenTab_KeepsItsPage_UntilItLeavesTheList()
+    {
+        ParkedVisuals.Clear();
+        var (tabs, vm, view) = Filtered();
+        view.Filter = null;
+        ParkedVisuals.Keep(tabs, "A", new ParkedView());
+
+        view.Filter = tab => tab is "B" or "D";
+        view.Refresh();
+        Assert.That(ParkedVisuals.TryTake(tabs, "A", null, out var kept, out _, out _, out _), Is.True, "hidden, kept");
+
+        ParkedVisuals.Keep(tabs, "A", kept);
+        vm.Tabs.Remove("A");
+        Assert.That(ParkedVisuals.TryTake(tabs, "A", null, out _, out _, out _, out _), Is.False, "closed, let go of");
+        ParkedVisuals.Clear();
+    }
+
+    [Test]
+    public void OfEqualTabs_TheOneDraggedIsTheOneMoved()
+    {
+        var first = new string("same");
+        var second = new string("same");
+        var vm = new TabsVm();
+        vm.Tabs.Add(first);
+        vm.Tabs.Add("other");
+        vm.Tabs.Add(second);
+        var tabs = new TabControl { ItemsSource = new CollectionView(vm.Tabs) };
+
+        tabs.MoveItem(2, 1);
+
+        Assert.That(vm.Tabs[0], Is.SameAs(first));
+        Assert.That(vm.Tabs[1], Is.SameAs(second));
+    }
+
+    [Test]
+    public void ASortedView_KeepsTheOrderOfTheListItLooksAt()
+    {
+        var (tabs, vm, view) = Filtered();
+        view.SortDescriptions.Add(new SortDescription("Length", SortDirection.Ascending));
+
+        tabs.MoveItem(0, 2);
+
+        Assert.That(string.Join(",", vm.Tabs), Is.EqualTo("A,B,C,D,E,F"));
+    }
+
+    [Test]
+    public void SeveralTabsAddedAtOncePastTheCap_LeaveTheViewAndItsListAgreeing()
+    {
+        var list = new TrackingCollection<string>(["A", "B"]);
+        var tabs = new TabControl { ItemsSource = new CollectionView(list), MaxOpenedTabs = 3 };
+
+        Assert.DoesNotThrow(() => list.AddRange(["C", "D", "E"]));
+        Assert.That(tabs.Items, Is.EqualTo(list));
+    }
+
+    [Test]
+    public void ATabTheCapClosesAsAnotherCloses_IsTheOldest()
+    {
+        var vm = new TabsVm();
+        foreach (var name in new[] { "A", "B", "C", "D" }) vm.Tabs.Add(name);
+        var tabs = new TabControl { ItemsSource = new CollectionView(vm.Tabs), SelectedItem = "D" };
+        var keep = true;
+        tabs.TabCloseRequested += (_, e) => e.Cancel = keep;
+        tabs.MaxOpenedTabs = 2;
+        keep = false;
+
+        tabs.RequestCloseItem("A");
+
+        Assert.That(vm.Tabs, Is.EqualTo(new[] { "C", "D" }));
+        Assert.That(tabs.Items, Is.EqualTo(new[] { "C", "D" }));
+    }
+
+    [Test]
+    public void AHiddenTabOpenedPastTheCap_ClosesTheOldestAtOnce()
+    {
+        var (tabs, vm, _) = Filtered();
+        tabs.MaxOpenedTabs = 6;
+
+        vm.Tabs.Add("hidden");
+
+        Assert.That(string.Join(",", vm.Tabs), Is.EqualTo("B,C,D,E,F,hidden"));
+    }
+
+    [Test]
+    public void ATabMoved_IsNoYoungerUnderTheCap()
+    {
+        var (tabs, vm, view) = Filtered();
+        view.Filter = null;
+        tabs.MaxOpenedTabs = 6;
+        tabs.MoveItem(0, 1);
+
+        vm.Tabs.Add("G");
+
+        Assert.That(vm.Tabs, Does.Not.Contain("A"));
+        Assert.That(vm.Tabs, Does.Contain("B"));
+    }
+
+    [Test]
+    public void TheCapCountsTheHiddenTabsToo()
+    {
+        var (tabs, vm, _) = Filtered();
+
+        tabs.MaxOpenedTabs = 4;
+
+        Assert.That(string.Join(",", vm.Tabs), Is.EqualTo("C,D,E,F"), "the oldest go, hidden or not");
+    }
+
+    [TestCase(0, 2, "A,C,D,E,F,B")]
+    [TestCase(2, 0, "A,F,B,C,D,E")]
+    [TestCase(1, 0, "A,D,B,C,E,F")]
+    public void ATabMovedThroughAView_StandsBesideTheOneItWasDroppedAt(int from, int to, string expected)
+    {
+        var (tabs, vm, _) = Filtered();
+
+        tabs.MoveItem(from, to);
+
+        Assert.That(string.Join(",", vm.Tabs), Is.EqualTo(expected));
+        Assert.That(tabs.SelectedItem, Is.EqualTo("D"));
+    }
+
+    [TestCase(0, "A,X,B,C,D,E,F")]
+    [TestCase(2, "A,B,C,D,E,X,F")]
+    [TestCase(3, "A,B,C,D,E,F,X")]
+    public void ATabCarriedIntoAView_StandsBeforeTheOneShownThere(int index, string expected)
+    {
+        var (tabs, vm, _) = Filtered();
+
+        tabs.InsertIntoSource(index, "X");
+
+        Assert.That(string.Join(",", vm.Tabs), Is.EqualTo(expected));
     }
 
     [Test]

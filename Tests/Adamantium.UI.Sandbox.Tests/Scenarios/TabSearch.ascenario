@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The field over the gallery's tabs: as it is typed into, the strip shows the tabs whose title has what is typed and no other, the open page staying open; a tab dragged among them keeps its place; emptied, it shows them all.">
+  <Select Target="id=GalleryTabs/id=Buttons" />
+  <Wait Target="id=ButtonsView/id=ClickCount" Timeout="20s" />
+  <Click Target="id=TabSearch" />
+  <Key Keys="L" Into="id=TabSearch" />
+  <Expect Target="id=GalleryTabs/id=Lists" Name="Lists" />
+  <Expect Target="id=GalleryTabs/id=Layout" Name="Layout" />
+  <Absent Target="id=GalleryTabs/id=Trees" />
+  <!-- The open page stays, its tab hidden with the others. -->
+  <Set Target="id=TabSearch" Value="BRUS" />
+  <Expect Target="id=GalleryTabs/type=TabItem[0]" Name="Brushes" Selected="False" />
+  <Absent Target="id=GalleryTabs/type=TabItem[1]" />
+  <Wait Target="id=ButtonsView/id=ClickCount" />
+  <Set Target="id=TabSearch" Value="zzzz" />
+  <Absent Target="id=GalleryTabs/type=TabItem" />
+  <Wait Target="id=ButtonsView/id=ClickCount" />
+  <Set Target="id=TabSearch" Value="" />
+  <Expect Target="id=GalleryTabs/id=Buttons" Selected="True" />
+  <Set Target="id=TabSearch" Value="list" />
+  <Click Target="id=GalleryTabs/id=Lists" />
+  <Expect Target="id=GalleryTabs/id=Lists" Selected="True" />
+  <Set Target="id=TabSearch" Value="" />
+  <Expect Target="id=GalleryTabs/id=Lists" Selected="True" />
+  <!-- Dragged among the found ones, before Tabs, with the hidden ones around; then back after Toolbars. -->
+  <Set Target="id=TabSearch" Value="t" />
+  <Drop Target="id=GalleryTabs/id=Trees" Onto="id=GalleryTabs/id=Tabs" Side="Before" />
+  <Set Target="id=TabSearch" Value="" />
+  <Expect Target="id=GalleryTabs/id=Trees/next" Name="Tabs" />
+  <Drop Target="id=GalleryTabs/id=Trees" Onto="id=GalleryTabs/id=ToolBars" Side="After" />
+  <Expect Target="id=GalleryTabs/id=ToolBars/next" Name="Trees" />
+</Scenario>

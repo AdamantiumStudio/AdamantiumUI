@@ -261,6 +261,8 @@ public partial class RenderCache
     private struct HaloRuns
     {
         public int UnderFirst, UnderCount;             // _haloUnder    - still bands drawn beneath the fill
+        public HaloPick UnderPick;                     //               - which of them that run lays down
+        public int ShadowFirst, ShadowCount;           // _haloUnder    - a reflected layer's shadows, drawn apart
         public int OverFirst, OverCount;               // _haloOver     - ...and inside the outline, drawn over it
         public int LivingUnder, LivingOver;            // _haloLivingUnder / _haloLivingOver, one record each; -1 = none
     }

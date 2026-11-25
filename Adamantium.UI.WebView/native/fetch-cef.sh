@@ -8,12 +8,12 @@
 set -euo pipefail
 
 version="156.0.26+g8ea0c73+chromium-156.0.8078.88"
-release="cef-156.0.26-1"
+release="cef-156.0.26-2"
 rid="${1:-linux-x64}"
 codecs="${2:-}"
 case "$rid" in
-  win-x64) platform=windows64; sha256=e9cf5c307a9149d10aa1a781acd73fd77c01dd1fb142393607b6d0c9358dda18; ffmpeg=ffmpeg.dll ;;
-  linux-x64) platform=linux64; sha256=6cd72d1c42d5edd18a5041aa211342cfcd1f4cf6c024fb845eabcb4f919b59ad; ffmpeg=libffmpeg.so ;;
+  win-x64) platform=windows64; sha256=148c5a94a1ab0f75019ce9105fbd9d154027c983ca78ffc2f810079446f8ddd6; ffmpeg=ffmpeg.dll ;;
+  linux-x64) platform=linux64; sha256=d1685756daf0988d7c304d43de2bc96ab2a63fb49e6c215b1ed590d83d789c59; ffmpeg=libffmpeg.so ;;
   osx-arm64) platform=macosarm64; sha256= ;;
   *) echo "Unknown runtime identifier '$rid'." >&2; exit 1 ;;
 esac

@@ -9,6 +9,10 @@ namespace Adamantium.UI.LanguageServer;
 /// </summary>
 public sealed class MetadataReferenceCache
 {
+    /// <summary>The process's own, for models built one after another from the same assemblies: each reference keeps a copy
+    /// of its dll outside the managed heap, where the collector does not see it.</summary>
+    public static MetadataReferenceCache Shared { get; } = new();
+
     private readonly Dictionary<string, (long Stamp, MetadataReference Reference)> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public MetadataReference Get(string path)
