@@ -1,5 +1,7 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -23,6 +25,42 @@ public class BrushOwnerReleaseTests
         DiscardedVisuals.Drain(int.MaxValue);
 
         Assert.That(shared.IsOwnedBy(element), Is.False);
+    }
+
+    // A part a control builds anew while its view is not shown yet - built off the loop thread - leaves no tree, and nobody
+    // discards it: a theme brush kept the calendar's first months, and with them the whole page, at every visit.
+    [Test]
+    public void APartDroppedFromATreeNotShownYet_IsNoLongerOwnedByItsBrush()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var nested = new Border { Background = shared };
+        var part = new Border { Background = shared, Child = nested };
+        var holder = new StackPanel();
+        holder.Children.Add(part);
+        Assume.That(shared.IsOwnedBy(part) && shared.IsOwnedBy(nested));
+
+        holder.Children.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shared.IsOwnedBy(part), Is.False, "the part");
+            Assert.That(shared.IsOwnedBy(nested), Is.False, "what it holds");
+        });
+    }
+
+    [Test]
+    public void APartDroppedAndShownAfterAll_PaintsWithItsBrushAgain()
+    {
+        var shared = new SolidColorBrush(Colors.Red);
+        var part = new Border { Background = shared };
+        var holder = new StackPanel();
+        holder.Children.Add(part);
+        holder.Children.Clear();
+
+        var window = new Window { Width = 200, Height = 100, Content = part };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.That(shared.IsOwnedBy(part), Is.True);
     }
 
     // ...however it took the brush. Leaving gave up what the element's properties held at that moment, so a brush taken

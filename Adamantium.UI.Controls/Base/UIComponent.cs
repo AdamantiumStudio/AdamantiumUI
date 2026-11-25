@@ -1795,6 +1795,16 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             var e = new VisualTreeAttachmentEventArgs(RootVisual, this);
             DetachedFromVisualTree(e);
         }
+        else if (parent == null && !IsParked && !RenderAttachmentsReleased)
+        {
+            _droppedUnshown = true;
+            ReleaseRenderAttachmentsOfSubtree();
+        }
+        else if (parent != null && _droppedUnshown)
+        {
+            _droppedUnshown = false;
+            TakeBackRenderAttachmentsOfSubtree();
+        }
 
         if (VisualParent is IRootVisualComponent || VisualParent?.IsAttachedToVisualTree == true)
         {
@@ -1809,6 +1819,33 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         }
 
         OnVisualParentChanged(old, parent);
+    }
+
+    // A part dropped from a tree not shown yet - a view built off the loop thread builds some of its parts anew - is told of
+    // no detach, and the brushes it drew with would hold it, and the whole view by its parents. Given a parent again, it
+    // takes them again.
+    private bool _droppedUnshown;
+
+    private void TakeBackRenderAttachmentsOfSubtree()
+    {
+        TakeBackRenderAttachments();
+        if (_visualChildren == null) return;
+
+        foreach (var child in _visualChildren)
+        {
+            (child as UIComponent)?.TakeBackRenderAttachmentsOfSubtree();
+        }
+    }
+
+    private void ReleaseRenderAttachmentsOfSubtree()
+    {
+        ReleaseRenderAttachments();
+        if (_visualChildren == null) return;
+
+        foreach (var child in _visualChildren)
+        {
+            (child as UIComponent)?.ReleaseRenderAttachmentsOfSubtree();
+        }
     }
 
     private void AttachedToVisualTree(VisualTreeAttachmentEventArgs e)

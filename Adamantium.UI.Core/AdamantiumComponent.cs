@@ -115,6 +115,25 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         _renderAttachmentsReleased = false;
     }
 
+    /// <summary>As <see cref="TakeRenderAttachments"/>, of the values last read: an inherited one is not resolved anew, so a
+    /// change to come still starts from what was shown.</summary>
+    internal void TakeBackRenderAttachments()
+    {
+        if (!_renderAttachmentsReleased) return;
+        Walk(values);
+        Walk(attachedValues);
+        _renderAttachmentsReleased = false;
+
+        void Walk(ConcurrentDictionary<AdamantiumProperty, ValueContainer> map)
+        {
+            if (map == null) return;
+            foreach (var (property, container) in map)
+            {
+                if (property.CanAttachToOwner) (container.Effective as IRenderAttachable)?.AttachTo(this);
+            }
+        }
+    }
+
     // Driven by the value maps rather than by the type's registered properties: only a property that was actually GIVEN
     // a value ever raised the change that took the link, so a declared DEFAULT brush was never attached and must not
     // start being. Attached properties carry values too, hence both maps.
