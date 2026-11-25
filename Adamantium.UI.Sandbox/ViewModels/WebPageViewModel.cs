@@ -117,9 +117,9 @@ public partial class WebPageViewModel : TabPageViewModel
         }
 
         var trimmed = text.Trim();
-        // A page written into the address itself - data: - goes as typed, as in other browsers.
+        // A page written into the address itself - data: - goes as typed, as in other browsers, and so does a page's source.
         return Uri.TryCreate(trimmed, UriKind.Absolute, out var absolute) &&
-               absolute.Scheme is "http" or "https" or "file" or "about" or "data"
+               absolute.Scheme is "http" or "https" or "file" or "about" or "data" or "view-source"
             ? absolute
             : Uri.TryCreate("https://" + trimmed, UriKind.Absolute, out var web) ? web : null;
     }

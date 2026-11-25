@@ -578,8 +578,7 @@ and are put here at a release.
   `WebViewBridge.NewWindowRequested`: its `WebViewNewPage`, given to another `WebView`'s `NewPage`, is shown there - for
   `window.open` the page Chromium made, its `window.opener` still the page that opened it; `WebNewWindowKind` says
   how it was asked to open. Unhandled, the page goes there itself, as before; one a script opens on its own is
-  refused. The menu has no "Print" row: off screen Chromium prints nothing. The sandbox shows the page opened beside
-  the one that opened it. A page's file field asks the view model through `WebViewBridge.FileDialogRequested`
+  refused. The menu has no "Print" row: off screen Chromium prints nothing. A page's file field asks the view model through `WebViewBridge.FileDialogRequested`
   (`WebFileDialogMode`, the field's `accept` as `WebFileFilter`s); `AnswerFromFileDialog` asks the platform's
   `FileDialog` and gives the page what was chosen; unhandled, the page gets no file - Chromium shows no window of its
   own. A site asking for the camera, the microphone, the screen, the device's place, notifications or the clipboard
