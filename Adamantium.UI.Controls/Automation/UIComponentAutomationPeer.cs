@@ -232,7 +232,9 @@ public class UIComponentAutomationPeer : AutomationPeer
 
         foreach (var child in element.VisualChildren)
         {
-            if (child is UIComponent component)
+            // A container waiting in its list's pool for the next item still holds the last one's elements: no part of
+            // the list until it is handed out again.
+            if (child is UIComponent { Lifecycle: not VisualLifecycle.Recycled } component)
             {
                 CollectOne(component, into);
             }
