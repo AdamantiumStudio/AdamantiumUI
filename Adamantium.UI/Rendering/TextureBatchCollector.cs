@@ -125,21 +125,21 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         // A VECTOR source has no pixels to sample, so this is where the raster fallback earns its keep: hand over the
         // bake if there is one, and otherwise queue it and draw nothing this frame - the same "not ready yet" answer a
         // picture still being decoded gives. Baked at the rect it is DRAWN in, not at the fill box, so it carries the
-        // aspect Stretch asked for (see ImageTiling.BakeSize). A nine-slice always fills its box.
+        // aspect Stretch asked for (see TileBrushLayout.BakeSize). A nine-slice always fills its box.
         if (source is DrawingImage vector)
         {
-            // Baked to the VIEWBOX's slice at the slice's own resolution - see ImageTiling.BakeSize. The layout is told
+            // Baked to the VIEWBOX's slice at the slice's own resolution - see TileBrushLayout.BakeSize. The layout is told
             // the same thing (Layout's sourceIsSlice), so what it names in uv is a fraction of the slice, not of the
             // whole drawing. A FRAME asks a different question and answers it itself (NineSlice.BakeSize): its pieces
             // are not drawn at the shape's scale, so the shape's size is the wrong thing to bake at.
             var tileBrush = brush as TileBrush;
             var bakeSize = brush switch
             {
-                TileBrush tiled => ImageTiling.BakeSize(tiled, size),
+                TileBrush tiled => TileBrushLayout.BakeSize(tiled, size),
                 NineSliceBrush frame => NineSlice.BakeSize(frame, size),
                 _ => size
             };
-            var slice = tileBrush != null ? ImageTiling.SliceOf(tileBrush) : default;
+            var slice = tileBrush != null ? TileBrushLayout.SliceOf(tileBrush) : default;
             // Get answers with the exact bake, or a stand-in, or nothing - and queues the exact one itself either way,
             // so a stand-in cannot swallow the order for the bake it is standing in for.
             var baked = DrawingImageRaster.Get(vector, bakeSize, owner, slice);
@@ -358,13 +358,13 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     }
 
     // One record for the plain textured fill. WHERE it is drawn and WHAT it samples come from the brush's tiling and
-    // stretch (see ImageTiling) - stretched across the shape, fitted inside it, or repeated.
+    // stretch (see TileBrushLayout) - stretched across the shape, fitted inside it, or repeated.
     private static TextureItem Single(TileBrush brush, Rect bounds, float radius, Vector4F radii, double opacity, int transformSlot, int fadeSlot,
         double scaleX, double scaleY)
     {
         var tint = RectBatchCollector.WithOpacity(brush.Tint, opacity * brush.Opacity);
 
-        var layout = ImageTiling.Layout(brush, bounds, scaleX, scaleY, SourceIsSlice(brush));
+        var layout = TileBrushLayout.Layout(brush, bounds, scaleX, scaleY, SourceIsSlice(brush));
 
         // The SHAPE stays the shape; only the content inside each tile is fitted. Handing the fitted rect over as the
         // bounds shrank the SDF itself, so a Uniform fill turned a circle into an oval.
