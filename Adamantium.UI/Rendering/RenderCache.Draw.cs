@@ -827,11 +827,7 @@ public partial class RenderCache
         // packet changes the snapshot it is derived from. Dropping it here instead cost a recursive walk up the chain
         // per unit per frame: measured on the grid tab at rest, 453 -> 336 fps and draw 1,6 -> 2,2 ms.
 
-        // Rounded clips, refreshed from their owners BEFORE the clean-frame early-out - for the same reason the
-        // composited animations below run there: a replayed frame re-records nothing, so a clip that changed shape
-        // reaches the screen only through its slot.
         _frameScissor = fullScissor;   // the frame's own, for anything that has to ask RoundedClipSlot outside the walk
-        RefreshClipSlots(fullScissor);
         DrawSetupMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
         phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
 
@@ -843,6 +839,11 @@ public partial class RenderCache
         if (_transformTable != null) _transformTable.CompositedWrite = true;
         ApplyCompositedAnimations(device);
         if (_transformTable != null) _transformTable.CompositedWrite = false;
+
+        // Rounded clips, refreshed from their owners BEFORE the clean-frame early-out - for the same reason: a replayed
+        // frame re-records nothing, so a clip that changed shape reaches the screen only through its slot. After the
+        // animations, whose owners carry their clips: before them, a clip stood where its owner was a frame ago.
+        RefreshClipSlots(fullScissor);
         DrawAnimMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
         var paint0 = System.Diagnostics.Stopwatch.GetTimestamp();
 
@@ -2507,7 +2508,8 @@ public partial class RenderCache
         }
 
         var world = snap.RenderParent != null ? entry.Local * parentWorld : entry.Local;
-        _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode, snap.RenderParent, snap.Opacity, snap.SelfOpacity);
+        _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode,
+            snap.RenderParent, snap.Opacity, snap.SelfOpacity, snap.ClipRadii, snap.ClipInset);
         _worldCache[owner] = world;   // set directly: the _applySnap chain may be mid-recapture, so don't recompose off it
         _transformTable.SetMatrix(device, AcquireLiveSlot(device, owner.RenderId), world);
         entry.MarkApplied();   // tell the loop thread the render thread is drawing this - so its mirror stops re-baking it
