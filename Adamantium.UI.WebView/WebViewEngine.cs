@@ -525,6 +525,27 @@ public sealed unsafe partial class WebViewEngine : IDisposable
         }
     }
 
+    /// <summary>Initializes CEF for a call of the profile's - its cookies, its components: false, logged, with no CEF
+    /// beside the application, before the main graphics device on Windows, or where CEF refuses.</summary>
+    private bool TryInitializeFor(string purpose)
+    {
+        if (!IsAvailable || !CanInitialize)
+        {
+            return false;
+        }
+
+        try
+        {
+            EnsureInitialized();
+            return true;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or FileNotFoundException)
+        {
+            Serilog.Log.Logger.Warning(exception, "CEF could not be started for {Purpose}", purpose);
+            return false;
+        }
+    }
+
     /// <summary>A browser for one WebView, its frames written on the engine's device on the UI's main device: copied
     /// from Chromium's textures when <paramref name="allowSharedTexture"/> and the device takes them, else written from
     /// pixels in memory.</summary>
@@ -781,6 +802,13 @@ public sealed unsafe partial class WebViewEngine : IDisposable
             switches.Add(new(WebViewApp.EnableFeaturesSwitch, ProprietaryCodecs.Feature));
         }
 
+        // Chromium fetches from Google only the components the application lets it - with none, nothing.
+        switches.Add(new(CefComponents.AllowedSwitch, CefComponents.Allowed(options.Components)));
+
+        // Chromium holds its lowest tasks - writing a component's download to disk among them - until its start is over,
+        // which a page that loaded tells it: with none, after three minutes. This ends the wait without a page in five
+        // seconds.
+        switches.Add(new(WebViewApp.EnableFeaturesSwitch, "ImprovedStartupBestEffortDelay"));
         return switches;
     }
 

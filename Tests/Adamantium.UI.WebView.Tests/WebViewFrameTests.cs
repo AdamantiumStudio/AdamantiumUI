@@ -51,7 +51,12 @@ public partial class WebViewFrameTests
         {
             devices = new GraphicsDeviceService(new GraphicsDeviceFactory(), false, GraphicsSettings.CreateDefault());
             devices.CreateMainDevice("WebViewFrameTests");
-            options = new WebViewOptions { ProfileFolder = profile, ColorScheme = WebViewColorScheme.System };
+            options = new WebViewOptions
+            {
+                ProfileFolder = profile,
+                ColorScheme = WebViewColorScheme.System,
+                Components = WebViewComponents.Widevine,
+            };
             engine = new WebViewEngine(devices, null, options);
         });
     }
@@ -728,7 +733,9 @@ public partial class WebViewFrameTests
                         "window.heard = ''; matchMedia('(prefers-color-scheme: dark)').onchange = e => window.heard = e.matches ? 'dark' : 'light'; 1"));
                     engine.ColorScheme = WebViewColorScheme.Dark;
                     Pump(() => (changed = Await(browser.EvaluateAsync(ask))) == "\"dark\"", TimeSpan.FromSeconds(5));
-                    heard = Await(browser.EvaluateAsync("window.heard"));
+                    // The page hears the change in an event of its own, after the scheme it is asked has changed.
+                    Pump(() => (heard = Await(browser.EvaluateAsync("window.heard"))) == "\"dark\"",
+                        TimeSpan.FromSeconds(5));
                     engine.ColorScheme = WebViewColorScheme.Application;
                     Pump(() => (application = Await(browser.EvaluateAsync(ask))) == "\"light\"", TimeSpan.FromSeconds(5));
                     viewTold = view.ColorSchemeChanges - toldBefore;

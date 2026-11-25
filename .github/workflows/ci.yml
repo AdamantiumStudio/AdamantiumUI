@@ -124,8 +124,14 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         shell: bash
         run: |
+          # The compilers the build left running hold a gigabyte the tests need.
+          dotnet build-server shutdown
+          # The macOS machine has 3 cores and 7 GB: everything at once swapped there, and took up to ten times as long.
+          atOnce=8
+          if [ "$RUNNER_OS" = macOS ]; then atOnce=3; fi
           pids=(); logs=()
           run() {
+            while [ "$(jobs -rp | wc -l)" -ge "$atOnce" ]; do sleep 1; done
             local log="$RUNNER_TEMP/$1.log"; shift
             # A test that hangs is stopped after 10 minutes; the blame sequence, uploaded below, says which it was.
             dotnet test "$@" -c Release --no-build --blame-hang-timeout 10m --blame-hang-dump-type none > "$log" 2>&1 &

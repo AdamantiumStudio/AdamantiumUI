@@ -198,7 +198,7 @@ public class LanguageFileToolingTests
     public void AGeneratedTable_IsFoundWithItsTextAndPlaceholders()
     {
         var project = LanguageProject.Load(Path.Combine(_project, "App.csproj"));
-        var compilation = CSharpCompilation.Create("Tables", [], References().Select(r => MetadataReference.CreateFromFile(r)),
+        var compilation = CSharpCompilation.Create("Tables", [], References().Select(MetadataReferenceCache.Shared.Get),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var tables = LanguageTables.Collect(LanguageTableRun.Run(compilation, project, LanguageTableRun.Texts(project, _ => null), out _));
