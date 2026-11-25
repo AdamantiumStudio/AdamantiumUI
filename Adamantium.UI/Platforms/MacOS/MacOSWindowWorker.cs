@@ -38,6 +38,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr _pressEvent;
     private bool _relativeMouse;
     private bool _wantsRelativeMouse;
+    private bool _fingersRest;
     private double _pinchNotches;
     private CGRect _restoreFrame;
     private bool _topmost;
@@ -253,6 +254,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     public void HideWindow() => OnMainThread(() =>
     {
+        LeaveRelativeMouse();
         LeaveOwner();
         _platform.LeaveOwned(_nsWindow);
         NSWindow.OrderOut(_nsWindow);
@@ -307,9 +309,27 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         if (_relativeMouse || !NSWindow.IsKeyWindow(_nsWindow))
             return;
 
+        BringCursorIn();
         _relativeMouse = true;
         CoreGraphicsInterop.AssociateMouseAndCursor(false);
         NSCursor.Hide();
+    }
+
+    // The mouse's moves come to what the cursor is over, and it may be elsewhere when looking begins from the keyboard.
+    private void BringCursorIn()
+    {
+        var client = NSWindow.ContentRectForFrame(_nsWindow, NSWindow.FrameOf(_nsWindow));
+        var cursor = NSEvent.MouseLocation;
+        var screens = NSScreen.All;
+        if (screens.Length == 0 ||
+            cursor.X >= client.Origin.X && cursor.X < client.Origin.X + client.Size.Width &&
+            cursor.Y >= client.Origin.Y && cursor.Y < client.Origin.Y + client.Size.Height)
+        {
+            return;
+        }
+
+        var fromTop = NSScreen.FrameOf(screens[0]).Size.Height - (client.Origin.Y + client.Size.Height / 2);
+        CoreGraphicsInterop.WarpCursor(new CGPoint(client.Origin.X + client.Size.Width / 2, fromTop));
     }
 
     private void LeaveRelativeMouse()
@@ -425,7 +445,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             if (vertical != 0)
                 PointerDevice.Current.ProcessEvent(
                     new RawPointerWheelEventArgs(vertical, window, position, modifiers, time, false));
-            if (horizontal != 0)
+            if (horizontal != 0 && !_closed)
                 PointerDevice.Current.ProcessEvent(
                     new RawPointerWheelEventArgs(horizontal, window, position, modifiers, time, true));
         });
@@ -434,13 +454,16 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     // The end of a gesture still goes to a window a modal one has come over, as a release does.
     private bool IsKeptFrom(RawTrackpadEventType type) => _modality.IsBlocked && type != RawTrackpadEventType.Completed;
 
-    // Null for a wheel, which has no phases, and for fingers that only rest on the trackpad.
-    private static RawTrackpadEventArgs PanOf(IntPtr nsEvent, IWindow window, Vector2<double> position,
+    // Null for a wheel, which has no phases. Fingers put down begin the pan already: they stop what coasts under them.
+    private RawTrackpadEventArgs PanOf(IntPtr nsEvent, IWindow window, Vector2<double> position,
         InputModifiers modifiers, uint time, Vector2<double> delta)
     {
-        var type = NSEvent.MomentumPhaseOf(nsEvent) != NSEventPhase.None
-            ? RawTrackpadEventType.Inertia
-            : TypeOf(NSEvent.PhaseOf(nsEvent));
+        var phase = NSEvent.PhaseOf(nsEvent);
+        var type = NSEvent.MomentumPhaseOf(nsEvent) != NSEventPhase.None ? RawTrackpadEventType.Inertia
+            : phase == NSEventPhase.MayBegin ? RawTrackpadEventType.Started
+            : phase == NSEventPhase.Began && _fingersRest ? RawTrackpadEventType.Delta
+            : TypeOf(phase);
+        _fingersRest = phase == NSEventPhase.MayBegin;
         if (type is not { } known)
             return null;
 
@@ -475,19 +498,20 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         });
     }
 
-    // What takes no pinch is zoomed by it as by the wheel with Control, a notch for every tenth.
+    // What takes no pinch is zoomed by it as by the wheel with Control: a whole notch for every tenth, as some step once for
+    // every event, however small.
     private void TurnWheelByPinch(RawTrackpadEventArgs e)
     {
         if (e.Type == RawTrackpadEventType.Started)
             _pinchNotches = 0;
 
         _pinchNotches += Math.Log(e.Scale) / Math.Log(1.1);
-        var delta = (int)Math.Truncate(_pinchNotches * WheelNotch);
-        if (delta == 0)
+        var notches = (int)Math.Truncate(_pinchNotches);
+        if (notches == 0)
             return;
 
-        _pinchNotches -= (double)delta / WheelNotch;
-        PointerDevice.Current.ProcessEvent(new RawPointerWheelEventArgs(delta, e.RootComponent, e.Position,
+        _pinchNotches -= notches;
+        PointerDevice.Current.ProcessEvent(new RawPointerWheelEventArgs(notches * WheelNotch, e.RootComponent, e.Position,
             e.InputModifiers | InputModifiers.LeftControl, e.Timestamp));
     }
 
@@ -550,7 +574,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         const NSEventModifierFlags shortcut = NSEventModifierFlags.Command | NSEventModifierFlags.Control;
         const NSEventModifierFlags held = shortcut | NSEventModifierFlags.Shift | NSEventModifierFlags.Option;
-        return (flags & held) == shortcut && _platform.Keyboard.KeyOf(NSEvent.KeyCodeOf(nsEvent)) == Key.F;
+        return (flags & held) == shortcut && _platform.Keyboard.KeyOf(nsEvent) == Key.F;
     }
 
     internal void OnFlagsChanged(IntPtr nsEvent)
@@ -593,7 +617,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             PhysicalKey = MacOSKeys.ToHidUsage(code),
             PressTime = time
         };
-        var key = _platform.Keyboard.KeyOf(code, down);
+        var key = _platform.Keyboard.KeyOf(nsEvent, down);
         var type = down ? RawKeyboardEventType.KeyDown : RawKeyboardEventType.KeyUp;
         Report(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, type, press, modifiers, time), window));
@@ -699,7 +723,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnMiniaturized(bool miniaturized)
     {
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(_window, miniaturized);
-        if (!miniaturized)
+        if (miniaturized)
+            LeaveRelativeMouse();
+        else
         {
             JoinOwner();
             _platform.JoinOwned(_nsWindow);
@@ -926,7 +952,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         }
     }
 
-    private static uint TimeOf(IntPtr nsEvent) => (uint)(NSEvent.TimestampOf(nsEvent) * 1000);
+    // Wraps after 49 days of the system up, as every platform's does: a double cast straight to uint would stay at the last.
+    private static uint TimeOf(IntPtr nsEvent) => unchecked((uint)(ulong)(NSEvent.TimestampOf(nsEvent) * 1000));
 
     private static double InitialExtent(double preferred, double fallback, int defaultExtent)
     {

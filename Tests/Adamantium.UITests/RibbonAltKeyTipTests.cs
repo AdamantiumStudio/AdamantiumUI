@@ -40,6 +40,21 @@ public class RibbonAltKeyTipTests
         Assert.That(ribbon.ShowsKeyTips, Is.False);
     }
 
+    [Test]
+    public void AGestureOnATrackpadUnderAlt_ShowsNoKeyTips()
+    {
+        var (window, ribbon) = RibbonInAWindow();
+
+        Alt(window, Keyboard.PreviewKeyDownEvent);
+        window.RaiseEvent(new ManipulationEventArgs(ManipulationState.Delta, InputModifiers.LeftAlt, 0)
+        {
+            RoutedEvent = Gestures.ManipulationEvent
+        });
+        Alt(window, Keyboard.PreviewKeyUpEvent);
+
+        Assert.That(ribbon.ShowsKeyTips, Is.False);
+    }
+
     // A ribbon put away - collapsed itself, or in a collapsed part of the window, as when an application shows its tool
     // bars instead - leaves Alt to the window: no key tips over a strip nobody sees, no letters taken from the text.
     [TestCase(false)]
