@@ -93,20 +93,27 @@ public sealed class DockingRegion : IDockingRegion
         return saved;
     }
 
-    /// <summary>Opens the document of this key, or brings it forward if it is open: either way it is navigated to with
-    /// the parameters, so an open one hears what it is asked to show now.</summary>
+    /// <summary>Opens the document of this key, or brings it forward if it is open: an open one is handed the parameters
+    /// (<see cref="IRegion.RefreshAsync"/>), so it hears what it is asked to show now.</summary>
     public async Task<T> OpenDocumentAsync<T>(string key, NavigationParameters parameters = null,
         CancellationToken cancellationToken = default) where T : class
     {
-        parameters = (parameters ?? new NavigationParameters()).Add(KeyParameter, key);
-        if (Find<T>(open => open is IDockablePane pane && pane.PaneId == key) is { } existing)
+        // A copy: the caller's own parameters are not written into.
+        var asked = new NavigationParameters();
+        foreach (var parameter in parameters ?? [])
         {
-            var reached = await Region.NavigateToInstanceAsync(existing, null, parameters, cancellationToken);
-            Activate(existing);
-            return reached.Success ? existing : null;
+            asked.Add(parameter.Key, parameter.Value);
         }
 
-        var result = await Region.NavigateToAsync<T>(parameters, cancellationToken);
+        asked.Add(KeyParameter, key);
+        if (Find<T>(open => open is IDockablePane pane && pane.PaneId == key) is { } existing)
+        {
+            Activate(existing);
+            await Region.RefreshAsync(existing, asked, cancellationToken);
+            return existing;
+        }
+
+        var result = await Region.NavigateToAsync<T>(asked, cancellationToken);
         return result.Success ? result.ViewModel as T : null;
     }
 

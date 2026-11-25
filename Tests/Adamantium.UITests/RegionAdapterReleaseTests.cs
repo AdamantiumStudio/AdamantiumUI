@@ -83,6 +83,10 @@ public class RegionAdapterReleaseTests
             NavigationParameters parameters = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<NavigationResult> RefreshAsync(object viewModel, NavigationParameters parameters = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<NavigationResult> GoBackAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

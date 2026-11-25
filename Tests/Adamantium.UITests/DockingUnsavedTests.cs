@@ -129,7 +129,8 @@ public class DockingUnsavedTests
 
     // --- Through a region --------------------------------------------------------------------------------------------
 
-    private sealed class Script : INotifyPropertyChanged, IDockablePane, IDocument, INavigationAware, IDisposable
+    private sealed class Script : INotifyPropertyChanged, IDockablePane, IDocument, INavigationAware, IConfirmNavigation,
+        IDisposable
     {
         private bool _dirty;
 
@@ -139,6 +140,9 @@ public class DockingUnsavedTests
         public int Saves { get; private set; }
         public bool Disposed { get; private set; }
         public int Line { get; private set; }
+        public NavigationMode Mode { get; private set; }
+        public int LeavesAsked { get; private set; }
+        public int LeftFor { get; private set; }
 
         public string PaneId => Key;
         public string PaneTitle => Key;
@@ -166,11 +170,21 @@ public class DockingUnsavedTests
         {
             Key = context.Parameters.GetValue(DockingRegion.KeyParameter, Key);
             Line = context.Parameters.GetValue("line", Line);
+            Mode = context.Mode;
             return Task.CompletedTask;
         }
 
-        public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+        public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default)
+        {
+            LeftFor++;
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> CanNavigateAwayAsync(NavigationContext context, CancellationToken cancellationToken = default)
+        {
+            LeavesAsked++;
+            return Task.FromResult(true);
+        }
 
         public bool IsNavigationTarget(NavigationContext context) => false;
 
@@ -275,8 +289,33 @@ public class DockingUnsavedTests
             Assert.That(again, Is.SameAs(main));
             Assert.That(resolver.Made, Is.EqualTo(2));
             Assert.That(main.Line, Is.EqualTo(7), "what it is asked to show now");
+            Assert.That(main.Mode, Is.EqualTo(NavigationMode.Refresh));
             Assert.That(main.Key, Is.EqualTo("main.cs"));
             Assert.That(docking.ActivePane, Is.SameAs(main), "brought to the front");
+        });
+    }
+
+    [Test]
+    public async Task OpeningAnOpenDocument_LeavesNothing_AndKeepsTheCallersParameters()
+    {
+        var (_, region, docking, _) = Docking();
+        var main = await docking.OpenDocumentAsync<Script>("main.cs");
+        var other = await docking.OpenDocumentAsync<Script>("other.cs");
+        var journal = region.Journal.BackStack.Count;
+        var (mainLeaves, otherLeaves, mainLeft, otherLeft) = (main.LeavesAsked, other.LeavesAsked, main.LeftFor, other.LeftFor);
+        var asked = new NavigationParameters().Add("line", 7);
+
+        await docking.OpenDocumentAsync<Script>("other.cs", asked);
+        await docking.OpenDocumentAsync<Script>("main.cs", asked);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(main.LeavesAsked + other.LeavesAsked, Is.EqualTo(mainLeaves + otherLeaves),
+                "no tab is left by bringing one forward - not even itself");
+            Assert.That(main.LeftFor + other.LeftFor, Is.EqualTo(mainLeft + otherLeft));
+            Assert.That(region.Journal.BackStack.Count, Is.EqualTo(journal), "not a move");
+            Assert.That(asked.ContainsKey(DockingRegion.KeyParameter), Is.False, "the caller's own are not written into");
+            Assert.That(docking.ActivePane, Is.SameAs(main));
         });
     }
 }
