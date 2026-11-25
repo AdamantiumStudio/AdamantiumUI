@@ -14,7 +14,8 @@ public class TabCloseRequestedEventArgs : EventArgs
         Item = item;
     }
 
-    /// <summary>The tab container whose close button was clicked.</summary>
+    /// <summary>The tab container whose close button was clicked; null for a tab that has none - not realized, or hidden by
+    /// a view's filter - that <see cref="TabControl.MaxOpenedTabs"/> closes. <see cref="Item"/> is always set.</summary>
     public TabItem Tab { get; }
 
     /// <summary>The item behind the tab: the data item for a data-bound tab, or the <see cref="Tab"/> itself when authored.</summary>

@@ -253,9 +253,16 @@ public abstract class Selector : ItemsControl
     /// selection properties (guarded), reflects onto the containers, and raises <see cref="SelectionChanged"/> on change.</summary>
     protected void SelectSingle(int index)
     {
-        _pendingSelection = null;
         if (index < 0 || index >= Items.Count) index = -1;
-        var item = index >= 0 ? Items[index] : null;
+        SelectSingle(index, index >= 0 ? Items[index] : null);
+    }
+
+    /// <summary>Makes <paramref name="item"/> the selection though it is not among the items shown: it has no index.</summary>
+    protected void SelectHidden(object item) => SelectSingle(-1, item);
+
+    private void SelectSingle(int index, object item)
+    {
+        _pendingSelection = null;
         // Compare against our own tracked selection, NOT SelectedIndex/SelectedItem: when this runs from a property
         // callback the DP value is ALREADY updated, so a SelectedIndex==index check would always read "unchanged".
         var changed = !Equals(item, _selectedItemTracked);

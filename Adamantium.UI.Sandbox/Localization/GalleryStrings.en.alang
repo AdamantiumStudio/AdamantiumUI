@@ -3,6 +3,7 @@
     <Phrase Key="ContentSlide" Text="Content slide:"/>
     <Phrase Key="Indicator" Text="Indicator:"/>
     <Phrase Key="Loading" Text="Loading..."/>
+    <Phrase Key="FindTab" Text="Find a tab"/>
 
     <Phrase Key="Top" Text="Top"/>
     <Phrase Key="Bottom" Text="Bottom"/>
