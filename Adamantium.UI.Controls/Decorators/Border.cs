@@ -20,7 +20,8 @@ public class Border : Decorator
    public static readonly AdamantiumProperty BorderThicknessProperty =
       AdamantiumProperty.Register(nameof(BorderThickness),
          typeof (Thickness), typeof (Border),
-         new PropertyMetadata(default(Thickness), PropertyMetadataOptions.AffectsMeasure));
+         new PropertyMetadata(default(Thickness), PropertyMetadataOptions.AffectsMeasure,
+            (d, _) => OnStrokeChanged((Border)d)));
 
    public static readonly AdamantiumProperty BackgroundProperty = AdamantiumProperty.Register(nameof(Background),
       typeof (Brush), typeof (Border),
@@ -49,6 +50,21 @@ public class Border : Decorator
    {
       var r = CornerRadius;
       return new Vector4F((float)r.TopLeft, (float)r.TopRight, (float)r.BottomRight, (float)r.BottomLeft);
+   }
+
+   /// <inheritdoc />
+   /// <remarks>The thickness, whatever the brush: what it holds is laid out inside it, and is cut there too.</remarks>
+   protected override Vector4F OwnStroke()
+   {
+      var t = BorderThickness;
+      return new Vector4F((float)t.Left, (float)t.Top, (float)t.Right, (float)t.Bottom);
+   }
+
+   // Only rounded corners are clipped inside the stroke; a square clip is the same whatever it is.
+   private static void OnStrokeChanged(Border border)
+   {
+      if (border.OwnCornerRadii() != Vector4F.Zero)
+         NotifyOwnCornersChanged(border);
    }
 
    public Thickness BorderThickness

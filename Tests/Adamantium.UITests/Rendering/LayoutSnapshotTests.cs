@@ -55,5 +55,7 @@ public class LayoutSnapshotTests
         Assert.That(baseline.Equals(new LayoutSnapshot(Matrix4x4F.Identity, new Size<double>(100, 50), false, true, Parent)), Is.False, "motion node");
         Assert.That(baseline.Equals(new LayoutSnapshot(Matrix4x4F.Identity, new Size<double>(100, 50), false, false, new Border())), Is.False, "parent");
         Assert.That(baseline.Equals(new LayoutSnapshot(Matrix4x4F.Identity, new Size<double>(100, 50), false, false, Parent, 1f, 0.5f)), Is.False, "self opacity");
+        Assert.That(baseline.Equals(new LayoutSnapshot(Matrix4x4F.Identity, new Size<double>(100, 50), false, false, Parent,
+            clipInset: new Vector4F(1, 1, 1, 1))), Is.False, "clip inset");
     }
 }

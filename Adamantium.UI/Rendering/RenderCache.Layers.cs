@@ -209,7 +209,7 @@ public partial class RenderCache
         var cut = soft > 0f && _softCut.Remove(layer, out var sides) ? sides : default;
         // Drawn whole, the rounded clip above it cuts what it lays down; otherwise it cut what it drew already.
         var (clipBox, clipRadii) = whole && ApplySnap(layer).RenderParent is { } parent
-            ? RoundedClipShape(parent, fullScissor)
+            ? RoundedClipShapeWithin(parent, fullScissor)
             : default;
         _offscreenLayers.End(device, alpha, scissor, mask, soft, cut, mirror,
             mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor, clipBox, clipRadii);
@@ -609,6 +609,10 @@ public partial class RenderCache
             Mix(ref print, s.ClipRadii.Y);
             Mix(ref print, s.ClipRadii.Z);
             Mix(ref print, s.ClipRadii.W);
+            Mix(ref print, s.ClipInset.X);
+            Mix(ref print, s.ClipInset.Y);
+            Mix(ref print, s.ClipInset.Z);
+            Mix(ref print, s.ClipInset.W);
             return;
         }
 

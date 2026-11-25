@@ -1105,6 +1105,7 @@ public partial class RenderCache
         }
 
         removed += ReleaseSlotsOf(_clipOwners, Departed, ReleaseClipSlot);
+        removed += ReleaseSlotsOf(_innerClipOwners, Departed, ReleaseInnerClipSlot);
         removed += ReleaseSlotsOf(_fadeOwners, Departed, ReleaseFadeSlot);
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
@@ -1138,6 +1139,8 @@ public partial class RenderCache
     }
 
     private void ReleaseClipSlot(IUIComponent owner) => _transformTable?.ReleaseClipSlot(owner.RenderId);
+
+    private void ReleaseInnerClipSlot(IUIComponent owner) => _transformTable?.ReleaseClipSlot(owner.RenderId, inner: true);
 
     private void ReleaseFadeSlot(IUIComponent owner)
     {

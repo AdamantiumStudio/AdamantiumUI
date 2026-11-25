@@ -315,10 +315,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get
         {
-            var explicitRadius = ClipCornerRadius;
-            if (explicitRadius.TopLeft > 0 || explicitRadius.TopRight > 0
-                || explicitRadius.BottomRight > 0 || explicitRadius.BottomLeft > 0)
+            if (HasExplicitClipRadius)
             {
+                var explicitRadius = ClipCornerRadius;
                 return new Vector4F((float)explicitRadius.TopLeft, (float)explicitRadius.TopRight,
                     (float)explicitRadius.BottomRight, (float)explicitRadius.BottomLeft);
             }
@@ -331,15 +330,29 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// the types that actually have a CornerRadius override it.</summary>
     protected virtual Vector4F OwnCornerRadii() => Vector4F.Zero;
 
-    /// <summary>Announces new corners on a container that clips by its own corners; every CornerRadius feeding
-    /// <see cref="OwnCornerRadii"/> must call it, since the clip belongs to the whole subtree.</summary>
+    /// <inheritdoc />
+    /// <remarks>A clip rounded by its container's own corners cuts inside the stroke painted there; one given a radius
+    /// of its own is taken as given.</remarks>
+    public Vector4F ClipInset => HasExplicitClipRadius ? Vector4F.Zero : OwnStroke();
+
+    /// <summary>The stroke this container paints along its edge, for <see cref="ClipInset"/>. None here.</summary>
+    protected virtual Vector4F OwnStroke() => Vector4F.Zero;
+
+    private bool HasExplicitClipRadius
+    {
+        get
+        {
+            var radius = ClipCornerRadius;
+            return radius.TopLeft > 0 || radius.TopRight > 0 || radius.BottomRight > 0 || radius.BottomLeft > 0;
+        }
+    }
+
+    /// <summary>Announces new corners or a new stroke on a container that clips by its own corners; every property feeding
+    /// <see cref="OwnCornerRadii"/> or <see cref="OwnStroke"/> must call it, since the clip belongs to the whole subtree.
+    /// </summary>
     protected static void NotifyOwnCornersChanged(AdamantiumComponent d)
     {
-        if (d is not UIComponent { ClipToBounds: true } component) return;
-
-        var explicitRadius = component.ClipCornerRadius;
-        if (explicitRadius.TopLeft > 0 || explicitRadius.TopRight > 0
-            || explicitRadius.BottomRight > 0 || explicitRadius.BottomLeft > 0) return;
+        if (d is not UIComponent { ClipToBounds: true, HasExplicitClipRadius: false } component) return;
 
         VisualTreeNotifications.RaiseClipChanged(component);
     }
