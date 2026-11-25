@@ -155,7 +155,11 @@ internal sealed class MacOSGamepadMotor
         if (IsWaitingAfterFailure)
             return Step.None;
 
-        if (_asked != _applied || _pulse > 0 && _applied == 0 || _asked > 0 && (_failed || _motor.WasStopped))
+        if (_asked != _applied || _pulse > 0 && _applied == 0 || _asked > 0 && _failed)
+            return Step.Run;
+
+        // Not at once for one stopped again as soon as it is started.
+        if (_asked > 0 && _motor.WasStopped && Stopwatch.GetElapsedTime(_appliedAt) >= AfterFailure)
             return Step.Run;
 
         return _isHeld && _applied == 0 && Stopwatch.GetElapsedTime(_appliedAt) >= Ready ? Step.LetGo : Step.None;

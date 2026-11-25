@@ -100,12 +100,33 @@ public class MacOSTextInputTests
         Press(() => Insert("x"));
         Press(() => Insert("a"));
         Press(() => { });
-        Assert.That(_input.SelectedRange, Is.EqualTo(new NSRange(2, 0)));
+        Assert.That(_input.SelectedRange, Is.EqualTo(new NSRange(1, 0)), "only what was typed last is told");
         _target.Seen.Clear();
-        Press(() => _input.Insert("á", new NSRange(1, 1)));
+        Press(() => _input.Insert("á", new NSRange(0, 1)));
 
-        Assert.That(_target.Seen, Is.EqualTo(new[] { "erase 1", "type á" }));
-        Assert.That(_input.Text, Is.EqualTo("xá"));
+        Assert.That(_target.Seen, Is.EqualTo(new[] { "erase a", "type á" }));
+        Assert.That(_input.Text, Is.EqualTo("á"));
+    }
+
+    // Dictation corrects a word of what it typed.
+    [Test]
+    public void AWordAmongWhatWasTyped_IsReplaced()
+    {
+        Insert("their cat");
+        _target.Seen.Clear();
+        _input.Insert("there", new NSRange(0, 5));
+
+        Assert.That(_target.Seen, Is.EqualTo(new[] { "erase their cat", "type there cat" }));
+    }
+
+    // A function key may come as a character of AppKit's own.
+    [TestCase("")]
+    [TestCase("\n")]
+    public void WhatIsNoText_IsNotTyped(string text)
+    {
+        Press(() => Insert(text));
+
+        Assert.That(_target.Seen, Is.EqualTo(new[] { "key" }));
     }
 
     [Test]
@@ -118,7 +139,7 @@ public class MacOSTextInputTests
         Press(() => Insert("à"));
 
         Assert.That(_target.Seen, Is.EqualTo(new[]
-            { "erase 1", "Started ", "Changed á 1", "Changed à 1", "type à", "Ended " }));
+            { "erase a", "Started ", "Changed á 1", "Changed à 1", "type à", "Ended " }));
     }
 
     [Test]
@@ -141,7 +162,7 @@ public class MacOSTextInputTests
 
         _target.Seen.Clear();
         _input.Insert("🙂", new NSRange(0, 4));
-        Assert.That(_target.Seen, Is.EqualTo(new[] { "erase 1", "type 🙂" }), "taken back as one character");
+        Assert.That(_target.Seen, Is.EqualTo(new[] { "erase 👍🏽", "type 🙂" }));
     }
 
     [Test]
@@ -203,6 +224,6 @@ public class MacOSTextInputTests
         public void Compose(RawTextCompositionEventType type, string text, int cursor) =>
             Seen.Add(type == RawTextCompositionEventType.Changed ? $"{type} {text} {cursor}" : $"{type} ");
 
-        public void Erase(int count) => Seen.Add($"erase {count}");
+        public void Erase(string text) => Seen.Add($"erase {text}");
     }
 }

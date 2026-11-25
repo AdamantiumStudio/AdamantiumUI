@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using Adamantium.MacOS.Foundation;
 using Adamantium.UI.Core.Input.Raw;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
 /// <summary>Where what the input method makes of the keys goes: what it composes, what it types, and the keys it has no use
-/// for. The input method is told of the text typed since the caret was last moved - what it may take back, as the letter
-/// held down does for its accents.</summary>
+/// for. The input method is told of the text typed last, unless the caret was moved since - what it may take back, as the
+/// letter held down does for its accents.</summary>
 internal sealed class MacOSTextInput(ITextInputTarget target)
 {
-    private const int MostRemembered = 256;
-
     private readonly List<Action> _made = [];
     private string _typed = string.Empty;
     private string _composed = string.Empty;
@@ -35,6 +33,9 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
         : new NSRange(_typed.Length, 0);
 
     internal bool IsComposing => _isComposing;
+
+    /// <summary>Which composition this is, the last one's when none is.</summary>
+    internal int CompositionNumber { get; private set; }
 
     /// <summary>Hands a key to the input method - <paramref name="interpret"/> - and reports what it made of it, with the
     /// key itself - <paramref name="reportKey"/> - unless the input method kept the key: it works on what is composed, or
@@ -80,10 +81,13 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
     internal void Insert(string text, NSRange replaced)
     {
         _wasTold = true;
-        Erase(replaced);
-        Remember(text);
-        if (!string.IsNullOrEmpty(text))
+        text = Printable(text) + Erase(replaced);
+        if (text.Length > 0)
+        {
+            _typed = text;
             Report(() => target.Type(text));
+        }
+
         EndComposing();
     }
 
@@ -91,7 +95,13 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
     internal void Compose(string text, NSRange selected, NSRange replaced)
     {
         _wasTold = true;
-        Erase(replaced);
+        // Composed among what was typed, it would be shown at the caret: what stands after it goes before.
+        if (Erase(replaced) is { Length: > 0 } kept)
+        {
+            _typed += kept;
+            Report(() => target.Type(kept));
+        }
+
         if (string.IsNullOrEmpty(text))
         {
             EndComposing();
@@ -104,6 +114,7 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
         if (!_isComposing)
         {
             _isComposing = true;
+            CompositionNumber++;
             Report(() => target.Compose(RawTextCompositionEventType.Started, string.Empty, 0));
         }
 
@@ -136,20 +147,25 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
         return actual.Length > 0 ? text.Substring((int)actual.Location, (int)actual.Length) : null;
     }
 
-    // What was typed is taken back by Backspace, as it was typed by its keys. Only its end is before the caret.
-    private void Erase(NSRange replaced)
+    // What was typed is taken back to the caret, from where the range starts; the answer is what stands after the range, to
+    // be typed again.
+    private string Erase(NSRange replaced)
     {
-        if (!replaced.IsFound || replaced.Length <= 0 || _composed.Length > 0 || replaced.Location < 0 ||
-            replaced.End != _typed.Length)
-        {
-            return;
-        }
+        if (!replaced.IsFound || replaced.Length <= 0 || replaced.Location < 0 || replaced.Location >= _typed.Length)
+            return string.Empty;
 
-        var count = new StringInfo(_typed[(int)replaced.Location..]).LengthInTextElements;
+        var erased = _typed[(int)replaced.Location..];
+        var kept = replaced.End < _typed.Length ? _typed[(int)replaced.End..] : string.Empty;
         _typed = _typed[..(int)replaced.Location];
         _replaced = _inKey;
-        Report(() => target.Erase(count));
+        Report(() => target.Erase(erased));
+        return kept;
     }
+
+    // A key that types nothing may come as a character of AppKit's own.
+    private static string Printable(string text) => string.IsNullOrEmpty(text)
+        ? string.Empty
+        : string.Concat(text.Where(character => !char.IsControl(character) && character is < '' or > ''));
 
     private void EndComposing()
     {
@@ -159,13 +175,6 @@ internal sealed class MacOSTextInput(ITextInputTarget target)
 
         _isComposing = false;
         Report(() => target.Compose(RawTextCompositionEventType.Ended, string.Empty, 0));
-    }
-
-    private void Remember(string text)
-    {
-        _typed += text;
-        if (_typed.Length > MostRemembered)
-            _typed = string.Empty;
     }
 
     private void Report(Action report)

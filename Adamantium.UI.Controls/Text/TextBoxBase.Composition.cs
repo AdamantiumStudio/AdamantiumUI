@@ -36,11 +36,34 @@ public abstract partial class TextBoxBase
         _composition = string.IsNullOrEmpty(e.Text) ? null : e.Text;
         _compositionCursor = Math.Clamp(e.CursorPosition, 0, e.Text?.Length ?? 0);
         InvalidateSurface(true);
+        if (_compositionLayoutManager == null)
+        {
+            // Once the box is laid out with it: before, there is nowhere to scroll to.
+            _compositionLayoutManager = LayoutManager.For(this);
+            _compositionLayoutManager.LayoutUpdated += OnCompositionLaidOut;
+        }
+    }
+
+    private LayoutManager _compositionLayoutManager;
+
+    private void OnCompositionLaidOut(object sender, EventArgs e)
+    {
+        StopAwaitingCompositionLayout();
         ScrollCompositionIntoView();
+    }
+
+    private void StopAwaitingCompositionLayout()
+    {
+        if (_compositionLayoutManager != null)
+        {
+            _compositionLayoutManager.LayoutUpdated -= OnCompositionLaidOut;
+            _compositionLayoutManager = null;
+        }
     }
 
     private void EndComposition()
     {
+        StopAwaitingCompositionLayout();
         _composing = false;   // a composition the focus left unended composes nothing here any more
         InvalidateSurface(_composition != null);
         _composition = null;

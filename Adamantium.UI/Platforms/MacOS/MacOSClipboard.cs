@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Adamantium.Imaging;
 using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Input;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -43,19 +45,75 @@ internal sealed class MacOSClipboard(IntPtr pasteboard) : IClipboard
         if (package == null)
             return;
 
+        InPool(() =>
+        {
+            var items = CreateItems(package, keepsPromises: false);
+            if (items.Length > 0)
+                NSPasteboard.Write(pasteboard, items);
+            foreach (var item in items)
+                NSObject.Release(item);
+        });
+    }
+
+    /// <summary>Items of what the package holds, owned by the caller; none for a package of nothing a pasteboard takes. The
+    /// first has it in every format, and its first file; each other file is one more. What the package promises is made
+    /// now, or when it is asked for.</summary>
+    internal static IntPtr[] CreateItems(IDataPackage package, bool keepsPromises)
+    {
         var data = new List<(string Type, byte[] Bytes)>();
+        var promised = new List<(string Type, string Format)>();
         var files = new List<string>();
         foreach (var format in package.GetFormats())
         {
-            var value = package.Get(format);
-            if (format == DataFormats.Files)
-                files.AddRange((value as IEnumerable<string> ?? []).Where(path => !string.IsNullOrEmpty(path)));
-            else if (Encode(format, value) is { } encoded)
+            if (keepsPromises && package.IsDeferred(format))
+                promised.Add((TypesOf(format)[0], format));
+            else if (format == DataFormats.Files)
+                files.AddRange((package.Get(format) as IEnumerable<string> ?? []).Where(path => !string.IsNullOrEmpty(path)));
+            else if (Encode(format, package.Get(format)) is { } encoded)
                 data.Add(encoded);
         }
 
-        if (data.Count > 0 || files.Count > 0)
-            InPool(() => Write(data, files));
+        if (data.Count == 0 && promised.Count == 0 && files.Count == 0)
+            return [];
+
+        var items = new IntPtr[Math.Max(1, files.Count)];
+        for (var i = 0; i < items.Length; i++)
+        {
+            items[i] = NSPasteboard.CreateItem();
+            if (i < files.Count)
+                NSPasteboard.SetData(items[i], FileBytes(files[i]), FileUrl);
+        }
+
+        foreach (var (type, bytes) in data)
+            NSPasteboard.SetData(items[0], bytes, type);
+        MacOSPasteboardPromise.Give(items[0], package, promised);
+        return items;
+    }
+
+    private static byte[] FileBytes(string path) => Encoding.UTF8.GetBytes(NSURL.FromPath(path));
+
+    /// <summary>A value of a format as a pasteboard has it of <paramref name="type"/>; null when there is none.</summary>
+    internal static byte[] EncodeAs(string type, string format, object value) => type switch
+    {
+        FileUrl => (value as IEnumerable<string>)?.FirstOrDefault() is { Length: > 0 } path ? FileBytes(path) : null,
+        Png when value is byte[] picture => DragPicture.IsPng(picture) ? picture : DragPicture.Convert(picture, ImageFileType.Png),
+        _ => Encode(format, value)?.Bytes
+    };
+
+    /// <summary>The types of a drag that may be dropped.</summary>
+    internal static string[] DroppedTypes { get; } = [FileUrl, Text, Html, Rtf, .. Pictures];
+
+    /// <summary>What is on the pasteboard, read now, in the formats applications have in common.</summary>
+    internal IDataPackage Read()
+    {
+        var package = new DataPackage();
+        foreach (var format in (string[])[DataFormats.Files, DataFormats.Text, DataFormats.Html, DataFormats.Rtf, DataFormats.Image])
+        {
+            if (GetData(format) is { } value)
+                package.Set(format, value);
+        }
+
+        return package;
     }
 
     public bool Contains(string format)
@@ -70,25 +128,6 @@ internal sealed class MacOSClipboard(IntPtr pasteboard) : IClipboard
         object value = null;
         InPool(() => value = format == DataFormats.Files ? Files() : Decode(format, Read(format)));
         return value;
-    }
-
-    // The first item holds what the package says in every format, and its first file; each other file is one more.
-    private void Write(List<(string Type, byte[] Bytes)> data, List<string> files)
-    {
-        var items = new IntPtr[Math.Max(1, files.Count)];
-        for (var i = 0; i < items.Length; i++)
-        {
-            items[i] = NSPasteboard.CreateItem();
-            if (i < files.Count)
-                NSPasteboard.SetData(items[i], Encoding.UTF8.GetBytes(NSURL.FromPath(files[i])), FileUrl);
-        }
-
-        foreach (var (type, bytes) in data)
-            NSPasteboard.SetData(items[0], bytes, type);
-
-        NSPasteboard.Write(pasteboard, items);
-        foreach (var item in items)
-            NSObject.Release(item);
     }
 
     private byte[] Read(string format) =>

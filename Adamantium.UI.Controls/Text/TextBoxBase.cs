@@ -255,6 +255,9 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
 
     bool Adamantium.UI.Core.Input.ITextEntry.TakesTyping => !IsReadOnly;
 
+    bool Adamantium.UI.Core.Input.ITextEntry.IsBeforeCaret(string text) =>
+        !HasSelection && EditedText.AsSpan(0, Clamp(CaretIndex)).EndsWith(text);
+
     /// <summary>Maximum number of characters; 0 (default) = unlimited.</summary>
     public int MaxLength
     {

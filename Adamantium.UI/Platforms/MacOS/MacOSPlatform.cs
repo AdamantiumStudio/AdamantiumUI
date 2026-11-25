@@ -353,6 +353,10 @@ public class MacOSPlatform : IApplicationPlatform
         return windows;
     }
 
+    /// <summary>What works for a window; null for one that is not open.</summary>
+    internal MacOSWindowWorker WorkerOf(IWindow window) =>
+        window == null ? null : AllWindows().Find(worker => ReferenceEquals(worker.Window, window));
+
     private static void ShowApplicationIcon()
     {
         if (ApplicationIcon.Load() is not { Pictures.Count: > 0 } icon)
@@ -370,6 +374,7 @@ public class MacOSPlatform : IApplicationPlatform
     {
         resolver.RegisterSingleton<IApplicationPlatform, MacOSPlatform>();
         resolver.RegisterSingleton<IDragGhost, MacOSDragGhost>();
+        resolver.RegisterSingleton<INativeDragDrop, MacOSDragDrop>();
         var spelling = new MacOSSpelling();
         resolver.RegisterInstance<ISpellChecker>(spelling);
         resolver.RegisterInstance<IWordPredictor>(spelling);

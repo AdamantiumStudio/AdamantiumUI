@@ -36,6 +36,7 @@ internal static unsafe class MacOSContentView
         .AddMethod("keyUp:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&KeyUp, Event)
         .AddMethod("flagsChanged:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&FlagsChanged, Event)
         .AddTextInput()
+        .AddDragging()
         .Register();
 
     [UnmanagedCallersOnly]

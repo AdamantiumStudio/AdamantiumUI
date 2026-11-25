@@ -104,10 +104,14 @@ public class MacOSGamepadMotorTests
     public async Task StoppedByTheSystem_ItRunsAgain()
     {
         var motor = new Motor();
-        var gamepadMotor = new MacOSGamepadMotor(motor);
+        var gamepadMotor = new MacOSGamepadMotor(motor) { AfterFailure = TimeSpan.FromMilliseconds(200) };
         await Ask(gamepadMotor, 0.5f);
 
         motor.WasStopped = true;
+        gamepadMotor.Tick();
+        await gamepadMotor.Applying;
+        Assert.That(motor.Runs, Has.Count.EqualTo(1), "stopped as soon as started, it waits");
+        await Task.Delay(300);
         gamepadMotor.Tick();
         await gamepadMotor.Applying;
         gamepadMotor.Tick();

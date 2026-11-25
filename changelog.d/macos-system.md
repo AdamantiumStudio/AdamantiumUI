@@ -8,6 +8,8 @@
   emoji panel (⌃⌘Space), dictation.
 - A text box shows what an input method composes, where the system does not (macOS, Wayland):
   `TextCompositionEventArgs.IsShownBySystem`.
+- macOS: drags to and from other applications: files, text, HTML, RTF, pictures, what is promised made when it is dropped.
+- `ITextEntry.IsBeforeCaret`.
 - macOS: spelling and word completion (`ISpellChecker`, `IWordPredictor`) by the system's dictionaries.
 - macOS: icons in the menu bar (`NotificationArea`), starting at sign-in (`ISystemStartup`), gamepads with
   vibration, of the triggers too where the gamepad gives it.

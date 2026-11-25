@@ -200,6 +200,7 @@ public class KeyboardDevice
                      args.RoutedEvent = Keyboard.KeyUpEvent;
                   }
                   target.RaiseEvent(args);
+                  e.IsHandled = args.Handled;
                   break;
             }
          }

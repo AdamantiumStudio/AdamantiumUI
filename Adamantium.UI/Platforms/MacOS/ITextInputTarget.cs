@@ -11,6 +11,6 @@ internal interface ITextInputTarget
     /// <summary>Text being composed, with the cursor in it.</summary>
     void Compose(RawTextCompositionEventType type, string text, int cursor);
 
-    /// <summary>The characters before the caret are taken back.</summary>
-    void Erase(int count);
+    /// <summary>Text typed before the caret is taken back.</summary>
+    void Erase(string text);
 }
