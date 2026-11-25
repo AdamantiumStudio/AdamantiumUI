@@ -38,11 +38,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     private CGRect _restoreFrame;
     private bool _topmost;
     private volatile bool _closed;
-    private readonly List<MacOSWindowWorker> _blockedWindows = [];
-    private readonly HashSet<MacOSWindowWorker> _blockers = [];
-    private readonly HashSet<MacOSWindowWorker> _exempt = [];
-    private bool _blocking;
-    private volatile bool _inputBlocked;
+    private MacOSModality _modality;
 
     public MacOSWindowWorker(IUIContext context)
     {
@@ -85,6 +81,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
             throw new Exceptions.DispatcherException("A window is made on the main thread: use IUIApplication.ExecuteOnUIThread");
 
         _window = window;
+        _modality = new MacOSModality(_platform, window, Activate);
         window.Closed += OnWindowClosed;
 
         var width = InitialExtent(window.ClientWidth, window.Width, DefaultWidth);
@@ -137,6 +134,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
         _platform.Register(this);
+        _platform.Register(_modality);
         window.OnSourceInitialized();
         window.StateChanged += WindowOnStateChanged;
         window.ResizeModeChanged += WindowOnResizeModeChanged;
@@ -150,81 +148,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         OnMainThread(() => ParentTo(handle));
     }
 
-    public void UpdateModal()
-    {
-        lock (_platform.ModalLock)
-        {
-            var modal = _window.IsModal && !_closed;
-            if (modal == _blocking)
-                return;
-
-            _blocking = modal;
-            if (modal)
-            {
-                _exempt.UnionWith(_blockers);
-                _platform.CollectOthers(this, _blockedWindows);
-                foreach (var other in _blockedWindows)
-                    other._blockers.Add(this);
-            }
-            else
-            {
-                foreach (var other in _blockedWindows)
-                    other._blockers.Remove(this);
-            }
-
-            Recount();
-            foreach (var other in _blockedWindows)
-                other.Recount();
-
-            if (!modal)
-            {
-                _blockedWindows.Clear();
-                _exempt.Clear();
-            }
-        }
-    }
-
-    private void Recount()
-    {
-        var blocked = false;
-        foreach (var blocker in _blockers)
-        {
-            if (!_blocking || !_exempt.Contains(blocker))
-            {
-                blocked = true;
-                break;
-            }
-        }
-
-        if (blocked == _inputBlocked)
-            return;
-
-        _inputBlocked = blocked;
-        if (blocked)
-            MacOSPlatform.DispatchInput(LetGo);
-    }
-
-    private void LetGo()
-    {
-        if (!_closed)
-            BlockedWindowInput.LetGo(_window);
-    }
-
-    // Of modals opened over modals, the one nothing keeps from input itself.
-    private void ActivateBlocker()
-    {
-        MacOSWindowWorker modal = null;
-        lock (_platform.ModalLock)
-        {
-            foreach (var blocker in _blockers)
-            {
-                if (blocker._blocking && (modal == null || !blocker._inputBlocked))
-                    modal = blocker;
-            }
-        }
-
-        modal?.Activate();
-    }
+    public void UpdateModal() => _modality.Update();
 
     public void SetTitle(string title) => OnMainThread(() => NSWindow.SetTitle(_nsWindow, title));
 
@@ -393,10 +317,10 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         }
 
         // A release still goes to the window: what was pressed before the modal one opened is let go of.
-        if (_inputBlocked && type != RawPointerEventType.Up && type != RawPointerEventType.LeaveWindow)
+        if (_modality.IsBlocked && type != RawPointerEventType.Up && type != RawPointerEventType.LeaveWindow)
         {
             if (type == RawPointerEventType.Down)
-                ActivateBlocker();
+                _modality.ActivateBlocker();
             return;
         }
 
@@ -429,7 +353,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnScroll(IntPtr nsEvent)
     {
         var window = _window;
-        if (window == null || _closed || _inputBlocked)
+        if (window == null || _closed || _modality.IsBlocked)
             return;
 
         var precise = NSEvent.HasPreciseScrollingDeltas(nsEvent);
@@ -455,7 +379,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnKey(IntPtr nsEvent, bool down)
     {
         var window = _window;
-        if (window == null || _closed || _inputBlocked)
+        if (window == null || _closed || _modality.IsBlocked)
             return;
 
         var flags = NSEvent.ModifierFlagsOf(nsEvent);
@@ -501,7 +425,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
         var held = HeldBy(MacOSKeys.ToKey(NSEvent.KeyCodeOf(nsEvent)));
         var down = (NSEvent.ModifierFlagsOf(nsEvent) & held) != 0;
-        if (held != 0 && !(down && _inputBlocked))
+        if (held != 0 && !(down && _modality.IsBlocked))
             ReportKey(window, nsEvent, down, false);
     }
 
@@ -541,7 +465,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
 
     internal void OnCloseRequested()
     {
-        if (!_inputBlocked)
+        if (!_modality.IsBlocked)
             MacOSPlatform.DispatchInput(() => _window?.Close());
     }
 
@@ -612,9 +536,9 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     internal void OnKeyWindowChanged(bool isKey)
     {
         // A window a modal one keeps from input is not the active one: the keyboard coming to it is handed on.
-        if (isKey && _inputBlocked)
+        if (isKey && _modality.IsBlocked)
         {
-            ActivateBlocker();
+            _modality.ActivateBlocker();
             return;
         }
 
@@ -779,12 +703,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         _window.StateChanged -= WindowOnStateChanged;
         _window.ResizeModeChanged -= WindowOnResizeModeChanged;
         _platform.Unregister(this);
-        lock (_platform.ModalLock)
-        {
-            foreach (var blocker in _blockers)
-                blocker._blockedWindows.Remove(this);
-            _blockers.Clear();
-        }
+        _platform.Unregister(_modality);
+        _modality.Close();
 
         Input.DragDrop.UnregisterNativeDropTarget(_window);
         UIContext.UIApplication.RemoveWindow(_window);

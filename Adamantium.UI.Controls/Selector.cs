@@ -126,7 +126,7 @@ public abstract class Selector : ItemsControl
     internal void SelectValue(object value)
     {
         var index = IndexOfValue(value);
-        if (index < 0 && value != null && Items.Count == 0)
+        if (index < 0 && value != null && ItemsAreArriving)
         {
             _pendingValue = value;
             _hasPendingValue = true;
@@ -173,7 +173,7 @@ public abstract class Selector : ItemsControl
     /// was made against a collection that had not arrived yet.</para></summary>
     protected virtual void OnSelectedIndexSet(int index)
     {
-        if (index >= 0 && Items.Count == 0)
+        if (index >= 0 && (Items.Count == 0 || index >= Items.Count && Items.IsCatchingUp))
         {
             _pendingIndex = index;
             return;
@@ -206,13 +206,18 @@ public abstract class Selector : ItemsControl
     /// first wins instead.</summary>
     private object _pendingSelection;
 
+    /// <summary>Whether the items a choice names may still be on their way: none have come yet, or the source changed on
+    /// another thread - a view-model filling it on the dispatcher while the list lives on the loop - and those changes
+    /// wait to come. A choice made then waits for its item instead of being discarded.</summary>
+    private bool ItemsAreArriving => Items.Count == 0 || Items.IsCatchingUp;
+
     /// <summary>SelectedItem was set from OUTSIDE (binding / code). Default = single-select that item.</summary>
     protected virtual void OnSelectedItemSet(object item)
     {
         var index = IndexOfItem(item);
 
         // Named, but not here yet - remember it and write nothing: nothing has been decided.
-        if (index < 0 && item != null && Items.Count == 0)
+        if (index < 0 && item != null && ItemsAreArriving)
         {
             _pendingSelection = item;
             return;

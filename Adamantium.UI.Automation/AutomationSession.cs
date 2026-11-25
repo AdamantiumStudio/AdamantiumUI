@@ -389,6 +389,11 @@ public sealed class AutomationSession : IAsyncDisposable
             return hidden.Start(path, options.Arguments, options.WorkingDirectory ?? Path.GetDirectoryName(path), variables);
         }
 
+        if (options.VirtualDisplay && OperatingSystem.IsMacOS())
+        {
+            variables[Platforms.MacOS.MacOSPlatform.HiddenVariable] = "1";
+        }
+
         var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
         {
             WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path)

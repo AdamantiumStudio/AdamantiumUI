@@ -19,6 +19,12 @@ public interface IPrintPlatform
     /// both sides - put right as the system puts them. The dialog shows what comes back.</summary>
     PrintSettings Reconcile(PrinterCapabilities capabilities, PrintSettings settings);
 
+    /// <summary>The printer driver's own settings window, over the window in front, starting from
+    /// <paramref name="settings"/> - asked only where <see cref="PrinterCapabilities.HasDriverSettings"/>. Returns the
+    /// settings as it was left - its own in <see cref="PrintSettings.DriverSettings"/>, the dialog's as it changed them
+    /// - or null when it was canceled.</summary>
+    PrintSettings EditDriverSettings(PrinterCapabilities capabilities, PrintSettings settings);
+
     /// <summary>Prints <paramref name="sheets"/> - laid out already - on <see cref="PrintSettings.Printer"/>.</summary>
     Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
         CancellationToken cancellation);
