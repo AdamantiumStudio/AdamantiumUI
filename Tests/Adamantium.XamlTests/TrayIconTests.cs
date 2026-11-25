@@ -6,6 +6,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Themes.FluentTheme;
@@ -199,25 +200,153 @@ public class TrayIconTests
         icon.TakeAway();
     }
 
+    // A desktop that shows the menu itself - a Linux panel - reads it from the icon: the rows as they stand when read, a
+    // row picked as a click on it would pick it.
+    [Test]
+    public void ItsMenu_IsReadAsItStands_AndARowPickedAsAClickWould()
+    {
+        var show = new Recording();
+        var docked = new MenuItem { Header = "Along the bottom", IsCheckable = true };
+        var icon = new TrayIcon
+        {
+            ContextMenu = new ContextMenu
+            {
+                Items =
+                {
+                    new MenuItem { Header = "Show", Command = show },
+                    docked,
+                    new MenuItem { Header = "Hidden", Visibility = Visibility.Collapsed },
+                    new MenuItem { Header = "Off", IsEnabled = false },
+                    new Separator(),
+                    new MenuItem { Header = "More", Items = { new MenuItem { Header = "Inner" } } },
+                },
+            },
+        };
+        icon.Place();
+
+        var rows = _area.Shown.Single().Menu.ReadRows();
+        var before = docked.IsChecked;
+        rows[0].Picked();
+        rows[1].Picked();
+        var afterPick = _area.Shown.Single().Menu.ReadRows();
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rows.Select(row => row.IsSeparator ? "-" : row.Text),
+                Is.EqualTo(new[] { "Show", "Along the bottom", "Off", "-", "More" }), "the collapsed row is left out");
+            Assert.That(rows[1].IsCheckable, Is.True);
+            Assert.That(rows[2].IsEnabled, Is.False);
+            Assert.That(rows[4].Items.Select(row => row.Text), Is.EqualTo(new[] { "Inner" }));
+            Assert.That(show.Ran, Has.Count.EqualTo(1), "Show ran its command");
+            Assert.That(docked.IsChecked, Is.Not.EqualTo(before), "the checkable row turned");
+            Assert.That(afterPick[1].IsChecked, Is.EqualTo(docked.IsChecked), "read again, as it stands now");
+        });
+    }
+
+    // No ContextMenu, no menu offered - a panel shows no empty one on a right click; one given later is offered, by the
+    // same icon - not put there anew, which would flash it and what it says of being displayed.
+    [Test]
+    public void WithoutAContextMenu_NoMenuIsOffered_UntilOneIsGiven_OnTheSameIcon()
+    {
+        var icon = new TrayIcon();
+        icon.Place();
+        var shown = _area.Shown.Single();
+        var offeredWithout = shown.Menu.IsOffered;
+
+        icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Show" } } };
+        var offeredWith = shown.Menu.IsOffered;
+        icon.ContextMenu = new ContextMenu { Items = { new MenuItem { Header = "Exit" } } };
+        var rows = shown.Menu.ReadRows();
+        icon.ContextMenu = null;
+        var offeredAfter = shown.Menu.IsOffered;
+        var stillShown = _area.Shown.Single();
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(offeredWithout, Is.False);
+            Assert.That(offeredWith, Is.True);
+            Assert.That(rows.Select(row => row.Text), Is.EqualTo(new[] { "Exit" }), "read as it stands");
+            Assert.That(offeredAfter, Is.False);
+            Assert.That(stillShown, Is.SameAs(shown), "the same icon all along");
+        });
+    }
+
+    // A change told by the desktop is told once, though the icon told it again with nothing changed.
+    [Test]
+    public void IsDisplayed_ToldAgainUnchanged_IsNotToldTwice()
+    {
+        var icon = new TrayIcon();
+        var told = 0;
+        icon.IsDisplayedChanged += (_, _) => told++;
+
+        icon.Place();
+        _area.Shown.Single().Display(true);
+        icon.TakeAway();
+
+        Assert.That(told, Is.EqualTo(2), "displayed as placed, then taken away - not the repeat between");
+    }
+
+    // Displayed as the desktop says: not before it is placed, not until a panel shows it, and told each time it changes.
+    [Test]
+    public void IsDisplayed_IsTheDesktops_AndItsChangesAreTold()
+    {
+        _area.Displays = false;
+        var icon = new TrayIcon();
+        var told = new List<bool>();
+        icon.IsDisplayedChanged += (_, _) => told.Add(icon.IsDisplayed);
+        var beforePlaced = icon.IsDisplayed;
+
+        icon.Place();
+        var noPanel = icon.IsDisplayed;
+        _area.Shown.Single().Display(true);
+        icon.TakeAway();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(beforePlaced, Is.False);
+            Assert.That(noPanel, Is.False, "placed, but no panel shows it yet");
+            Assert.That(told, Is.EqualTo(new[] { true, false }), "the panel came; then it was taken away");
+        });
+    }
+
     private sealed class Area : INotificationAreaPlatform
     {
         public List<Icon> Shown { get; } = [];
 
-        public INotificationAreaIcon AddIcon(string toolTip)
+        /// <summary>Whether the icons it takes are shown from the first - a panel runs.</summary>
+        public bool Displays { get; set; } = true;
+
+        public bool IsAvailable => Displays;
+
+        public INotificationAreaIcon AddIcon(string toolTip, INotificationAreaMenu menu)
         {
-            var icon = new Icon(this) { ToolTip = toolTip };
+            var icon = new Icon(this, menu) { ToolTip = toolTip };
             Shown.Add(icon);
             return icon;
         }
     }
 
-    private sealed class Icon(Area area) : INotificationAreaIcon
+    private sealed class Icon(Area area, INotificationAreaMenu menu) : INotificationAreaIcon
     {
         public string ToolTip { get; set; }
+
+        public INotificationAreaMenu Menu { get; } = menu;
 
         public event EventHandler Clicked;
 
         public event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
+
+        public bool IsDisplayed { get; private set; } = area.Displays;
+
+        public event EventHandler IsDisplayedChanged;
+
+        public void Display(bool displayed)
+        {
+            IsDisplayed = displayed;
+            IsDisplayedChanged?.Invoke(this, EventArgs.Empty);
+        }
 
         public void Click() => Clicked?.Invoke(this, EventArgs.Empty);
 

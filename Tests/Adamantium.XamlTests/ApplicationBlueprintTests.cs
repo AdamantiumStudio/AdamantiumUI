@@ -84,6 +84,19 @@ public class ApplicationBlueprintTests
         });
     }
 
+    // Read before the blueprint is made, for the splash window.
+    [TestCase(" StartupTheme=\"Graphite\"", typeof(Adamantium.UI.Themes.GraphiteTheme.Graphite))]
+    [TestCase("", null)]
+    public void TheStartupTheme_IsNamedToTheAssemblyWithTheBlueprint(string attribute, Type theme)
+    {
+        var project = AumlCodegenHarness.Project(Files(
+            ("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} StartupWindow=\"MainWindow\"{attribute}/>")),
+            sources: [Application]);
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        Assert.That(project.Load().GetCustomAttribute<ApplicationBlueprintAttribute>()?.StartupTheme, Is.EqualTo(theme));
+    }
+
     [Test]
     public void ABlueprintWithNoSplashWindow_NamesNone() =>
         Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()

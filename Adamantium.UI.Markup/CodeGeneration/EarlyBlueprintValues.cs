@@ -11,6 +11,10 @@ public sealed class EarlyBlueprintValues
     /// </summary>
     public string StartupWindow { get; set; }
 
+    /// <summary>The startup theme, as generated code writes it; null for none. The splash window's close button looks as
+    /// that theme's.</summary>
+    public string StartupTheme { get; set; }
+
     /// <summary>The limit on copies running at once; 0 for none. A copy past it ends before anything is made.</summary>
     public int MaxInstances { get; set; }
 

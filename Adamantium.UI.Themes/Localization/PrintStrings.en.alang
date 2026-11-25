@@ -1,0 +1,48 @@
+<Language>
+    <Phrase Key="Print" Text="Print"/>
+    <Phrase Key="Save" Text="Save"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="Printer" Text="Printer"/>
+    <Phrase Key="SaveAsPdf" Text="Save as PDF"/>
+    <Phrase Key="LookingForPrinters" Text="Asking the printer…"/>
+    <Phrase Key="Pages" Text="Pages"/>
+    <Phrase Key="All" Text="All"/>
+    <Phrase Key="CurrentPage" Text="Current"/>
+    <Phrase Key="Chosen" Text="Chosen"/>
+    <Phrase Key="ChosenPages" Text="Pages to print"/>
+    <Phrase Key="ChosenPagesHint" Text="1–3, 5"/>
+    <Phrase Key="NoSuchPages" Text="Write page numbers, as 1–3, 5"/>
+    <Phrase Key="Orientation" Text="Orientation"/>
+    <Phrase Key="Portrait" Text="Portrait"/>
+    <Phrase Key="Landscape" Text="Landscape"/>
+    <Phrase Key="Paper" Text="Paper"/>
+    <Phrase Key="Scale" Text="Scale"/>
+    <Phrase Key="FitToSheet" Text="Fit to sheet"/>
+    <Phrase Key="ActualSize" Text="Actual size"/>
+    <Phrase Key="Custom" Text="Custom"/>
+    <Phrase Key="ScalePercent" Text="Scale, percent"/>
+    <Phrase Key="PagesPerSheet" Text="Pages per sheet"/>
+    <Phrase Key="Copies" Text="Copies"/>
+    <Phrase Key="Collate" Text="Collate copies"/>
+    <Phrase Key="TwoSided" Text="Two-sided"/>
+    <Phrase Key="OneSided" Text="One side"/>
+    <Phrase Key="LongEdge" Text="Flip on long edge"/>
+    <Phrase Key="ShortEdge" Text="Flip on short edge"/>
+    <Phrase Key="ColorMode" Text="Color"/>
+    <Phrase Key="Color" Text="Color"/>
+    <Phrase Key="Grayscale" Text="Grayscale"/>
+    <Phrase Key="Quality" Text="Quality"/>
+    <Phrase Key="Tray" Text="Paper source"/>
+    <Phrase Key="MediaType" Text="Paper type"/>
+    <Phrase Key="SheetOfCount" Text="Sheet {sheet} of {count}"/>
+    <Phrase Key="PreviousSheet" Text="Previous sheet"/>
+    <Phrase Key="NextSheet" Text="Next sheet"/>
+    <Phrase Key="Preview" Text="Preview"/>
+    <Phrase Key="Ready" Text="Ready"/>
+    <Phrase Key="Printing" Text="Printing other jobs"/>
+    <Phrase Key="Offline" Text="Offline"/>
+    <Phrase Key="OutOfPaper" Text="Out of paper · the job will wait in the queue"/>
+    <Phrase Key="PaperJam" Text="Paper jam"/>
+    <Phrase Key="Paused" Text="Paused"/>
+    <Phrase Key="Error" Text="Not working"/>
+</Language>

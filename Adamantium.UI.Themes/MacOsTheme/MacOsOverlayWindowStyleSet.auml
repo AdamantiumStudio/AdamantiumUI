@@ -21,14 +21,14 @@
         <Setter Property="MinimizeTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <Image Source="{ResourceReference TrafficLightMinimizeGlyph}" Width="7" Height="7"/>
+                    <Image Source="{ResourceReference TrafficLightMinimizeGlyph}" Width="8" Height="8"/>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
         <Setter Property="MaximizeTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <Image Source="{ResourceReference TrafficLightMinimizeGlyph}" Width="7" Height="7"/>
+                    <Image Source="{ResourceReference TrafficLightMinimizeGlyph}" Width="8" Height="8"/>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
@@ -58,7 +58,7 @@
                                                 AutomationProperties.AutomationId="Close"
                                                 AutomationProperties.Name="{Localize WindowStrings.Close}"/>
                                         <Image x:Name="CloseGlyph" Source="{ResourceReference TrafficLightCloseGlyph}"
-                                                Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
+                                                Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                     <!-- Collapsing to the caption is the yellow light's job, as minimizing is a window's. -->
@@ -76,7 +76,7 @@
                                                 AutomationProperties.AutomationId="Pin"
                                                 AutomationProperties.Name="{Localize WindowStrings.Pin}"/>
                                         <Image x:Name="PinGlyphImage" Source="{ResourceReference PinGlyph}"
-                                                Opacity="0" IsHitTestVisible="False" Width="7" Height="7"
+                                                Opacity="0" IsHitTestVisible="False" Width="8" Height="8"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </StackPanel>

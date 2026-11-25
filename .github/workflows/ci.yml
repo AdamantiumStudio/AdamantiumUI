@@ -1,8 +1,8 @@
 # Builds the UI against the engine's master and runs the tests that need no GPU: for every pull request, and for main
 # once it is merged into. The engine is cloned beside the UI, as on a developer's machine, so the projects reference its
 # source. Nothing is packed here: packages are made against the published engine packages, and that is a release's
-# build (publish-nuget.yml, a dry run unless told). On Windows and on Linux: a path, a font or a culture only Windows
-# has fails on Linux before it is merged.
+# build (publish-nuget.yml, a dry run unless told). On Windows, on Linux and on macOS (ARM64): a path, a font or a culture
+# only Windows has fails on the others before it is merged.
 name: CI
 
 on:
@@ -19,7 +19,8 @@ jobs:
   # Fit to be a required check: the job always runs and always reports. What it skips is the work, when nothing but
   # documents, icons, settings or the editor plugins (not built here) changed.
   #
-  # Windows keeps the job's name, build - the one main requires; Linux runs beside it as build (linux).
+  # Windows keeps the job's name, build - the one main requires; Linux and macOS run beside it as build (linux)
+  # and build (macos).
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -33,6 +34,8 @@ jobs:
             name: build
           - os: ubuntu-latest
             name: build (linux)
+          - os: macos-latest
+            name: build (macos)
 
     steps:
       - uses: actions/checkout@v7

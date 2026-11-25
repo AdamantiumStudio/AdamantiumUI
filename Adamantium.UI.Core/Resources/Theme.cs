@@ -8,6 +8,8 @@ namespace Adamantium.UI.Core.Resources;
 public class Theme : AdamantiumComponent, ITheme
 {
     private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
+    // "System Font" is the family San Francisco's own file (SFNS.ttf) names.
+    private static readonly string[] MacFamilies = ["System Font", "Helvetica Neue", "Helvetica"];
     private static readonly string[] WindowsMonospaceFamilies = ["Cascadia Mono", "Consolas", "Courier New"];
     private static readonly string[] MacMonospaceFamilies = ["SF Mono", "Menlo", "Monaco"];
     private static readonly string[] LinuxMonospaceFamilies =
@@ -167,14 +169,14 @@ public class Theme : AdamantiumComponent, ITheme
     public const string UIFontVariable = "ADAM_UI_FONT";
 
     /// <summary>The per-platform system UI font - the single place the platform font choice lives, used as the default
-    /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed;
+    /// for any theme that doesn't pick its own. On macOS, San Francisco; on Linux, the first of the usual distributions' fonts installed;
     /// <see cref="UIFontVariable"/> names another. Picked and loaded once, from whichever thread asks first; the rest
     /// wait for it.</summary>
     public static FontFamily SystemDefaultFontFamily => SystemDefault.Value;
 
     private static FontFamily PickSystemDefaultFontFamily() => Named(UIFontVariable) ??
         (OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
-        : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
+        : OperatingSystem.IsMacOS() ? FirstInstalled(MacFamilies) ?? new FontFamily(MacFamilies[^1])
         : FirstInstalled([SystemAppearance.FontFamily, .. LinuxFamilies]) ?? new FontFamily(LinuxFamilies[0]));
 
     /// <summary>The variable naming the code font every theme starts from instead of the system's monospace one - a

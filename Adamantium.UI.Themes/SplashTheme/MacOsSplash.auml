@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Theme xmlns="http://adamantium/ui"
+       xmlns:x="http://adamantium/ui/xaml/extensions"
+       xmlns:splash="clr-namespace:Adamantium.UI.Themes.SplashTheme"
+       Name="macOS splash">
+
+  <!-- The splash theme, with the close light of the MacOs theme, for an application that opens on that one. -->
+
+  <Theme.StyleIncludes>
+    <StyleInclude Source="{x:Type splash:SplashWindowStyleSet}"/>
+    <StyleInclude Source="{x:Type splash:MacOsSplashWindowStyleSet}"/>
+  </Theme.StyleIncludes>
+
+</Theme>

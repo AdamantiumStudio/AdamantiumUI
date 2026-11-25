@@ -105,7 +105,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             producer = MakeProducer(device);
             popupProducer = MakePopupProducer(device);
         }
-        renderHandler = new WebViewRenderHandler(this);
+        accessibilityHandler = new WebViewAccessibilityHandler(this);
+        renderHandler = new WebViewRenderHandler(this, accessibilityHandler);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
@@ -124,15 +125,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         permissionHandler = new WebViewPermissionHandler(this);
         downloadHandler = new WebViewDownloadHandler(this);
         findHandler = new WebViewFindHandler(this);
-        accessibilityHandler = new WebViewAccessibilityHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
             contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler, downloadHandler, findHandler);
     }
 
     /// <summary>The download Chromium numbers <paramref name="id"/>, the engine's one for the profile.</summary>
     internal WebDownload Download(uint id) => engine.Download(id);
-
-    internal WebViewAccessibilityHandler AccessibilityHandler => accessibilityHandler;
 
     /// <summary>The page's accessibility tree as Chromium last told it - empty until <see cref="EnableAccessibility"/>.
     /// </summary>

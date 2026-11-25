@@ -196,7 +196,8 @@ public class PropertyRow : Control
 
         Owner = owner;
         Definition = definition;
-        Design.StandsFor(this, definition);
+        // The markup's line, not an item's copy of it: the designer finds what was written.
+        Design.StandsFor(this, definition.AsWritten);
         Targets = targets ?? Array.Empty<object>();
         Indent = indent;
 
@@ -930,6 +931,8 @@ public class PropertyRow : Control
         var parameter = Definition.ActionCommandParameter ?? (Targets.Count == 1 ? Targets[0] : Targets);
         if (!command.CanExecute(parameter)) return false;
 
+        // The row acted on: a file the application picks its own way, told to the line as written, goes to this item.
+        Owner?.NoteActing(this);
         command.Execute(parameter);
         return true;
     }

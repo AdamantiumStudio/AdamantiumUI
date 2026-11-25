@@ -63,7 +63,8 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
         set => SetValue(SplashWindowProperty, value);
     }
 
-    /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the project's own.</summary>
+    /// <summary>The theme the application opens on: Fluent, Graphite, MacOs or one of the project's own; unset, MacOs on
+    /// macOS and Fluent elsewhere.</summary>
     [TypeOf(typeof(Theme))]
     public Type StartupTheme
     {

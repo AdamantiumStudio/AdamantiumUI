@@ -66,9 +66,8 @@ internal sealed class OffscreenTestRenderer : IDisposable
         UpdateViewportScissor(width, height);
     }
 
-    private static bool HeadlessSurfaceAvailable() =>
-        Instance.EnumerateInstanceExtensionProperties()
-            .Any(e => e.ExtensionName == Constants.VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+    private bool HeadlessSurfaceAvailable() =>
+        _device.MainDevice.VulkanInstance.IsExtensionEnabled(Constants.VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
 
     private void UpdateViewportScissor(uint width, uint height)
     {

@@ -1,38 +1,52 @@
-using Adamantium.MacOS;
+using System;
+using Adamantium.MacOS.AppKit;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
-// AppKit cursors: missing shapes (Wait, AppStarting, Help, UpArrow, diagonal resize) fall back to the nearest NSCursor.
-internal sealed class MacOSCursors : INativeCursors
+/// <summary>AppKit's cursors: the shapes AppKit lacks (wait, help, diagonal resizing) are its nearest.</summary>
+internal sealed class MacOSCursors(MacOSPlatform platform) : INativeCursors
 {
+    private bool _hidden;
+
     public void Apply(Cursor cursor)
     {
-        if (cursor == null) return;
-        if (cursor.Type == CursorType.None)
-        {
-            MacOSInterop.Cursor.Hide();
+        if (cursor == null)
             return;
-        }
-        MacOSInterop.Cursor.SetCursorType((uint)Native(cursor.Type));
+
+        var type = cursor.Type;
+        platform.RunOnMainThread(() => Show(type));
     }
 
-    private static MacOSCursorType Native(CursorType type) => type switch
+    private void Show(CursorType type)
     {
-        CursorType.Crosshair => MacOSCursorType.CrosshairCursor,
-        CursorType.Hand => MacOSCursorType.PointingHandCursor,
-        CursorType.IBeam => MacOSCursorType.IBeamCursor,
-        CursorType.No => MacOSCursorType.OperationNotAllowedCursor,
-        CursorType.SizeAll => MacOSCursorType.ClosedHandCursor,          // AppKit's "grabbing and moving" shape
-        CursorType.SizeNS => MacOSCursorType.ResizeUpDownCursor,
-        CursorType.SizeWE => MacOSCursorType.ResizeLeftRightCursor,
-        CursorType.SizeNESW => MacOSCursorType.ResizeLeftRightCursor,    // no diagonal shape in AppKit
-        CursorType.SizeNWSE => MacOSCursorType.ResizeLeftRightCursor,
-        CursorType.UpArrow => MacOSCursorType.ResizeUpCursor,
-        CursorType.DragCopy => MacOSCursorType.DragCopyCursor,
-        CursorType.DragLink => MacOSCursorType.DragLinkCursor,
-        // Arrow, AppStarting, Help, Wait and a custom file (NSCursor needs an NSImage, not a .cur) all land here.
-        _ => MacOSCursorType.ArrowCursor,
+        if (type == CursorType.None)
+        {
+            if (!_hidden)
+                NSCursor.Hide();
+            _hidden = true;
+            return;
+        }
+
+        if (_hidden)
+            NSCursor.Unhide();
+        _hidden = false;
+        NSCursor.Set(Native(type));
+    }
+
+    private static IntPtr Native(CursorType type) => type switch
+    {
+        CursorType.Crosshair => NSCursor.Crosshair,
+        CursorType.Hand => NSCursor.PointingHand,
+        CursorType.IBeam => NSCursor.IBeam,
+        CursorType.No => NSCursor.OperationNotAllowed,
+        CursorType.SizeAll => NSCursor.ClosedHand,
+        CursorType.SizeNS => NSCursor.ResizeUpDown,
+        CursorType.SizeWE or CursorType.SizeNESW or CursorType.SizeNWSE => NSCursor.ResizeLeftRight,
+        CursorType.UpArrow => NSCursor.ResizeUp,
+        CursorType.DragCopy => NSCursor.DragCopy,
+        CursorType.DragLink => NSCursor.DragLink,
+        _ => NSCursor.Arrow
     };
 }

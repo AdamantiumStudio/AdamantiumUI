@@ -51,9 +51,9 @@
 
                             <!-- Title bar: PART_TitleThumb (transparent, hit-testable) drags the whole strip; pin + close sit
                                  in their own columns so they stay clickable. -->
-                            <Grid x:Name="PART_TitleBar" Grid.Row="0" ColumnDefinitions="*,Auto,Auto,Auto"
+                            <Grid x:Name="PART_TitleBar" Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto"
                                     Background="{TemplateBinding TitleBarBackground}" Height="40">
-                                <Grid x:Name="PART_TitleThumb" Grid.Column="0" Background="Transparent">
+                                <Grid x:Name="PART_TitleThumb" Grid.Column="3" Background="Transparent">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                                         <ContentPresenter x:Name="PART_Icon" Content="{TemplateBinding Icon}"
                                                 Foreground="{TemplateBinding TitleForeground}"
@@ -66,13 +66,13 @@
                                 </Grid>
 
                                 <!-- Collapse: the window's MinimizeTemplate, its MaximizeTemplate while collapsed. -->
-                                <Button x:Name="PART_CollapseButton" Grid.Column="1" Visibility="Collapsed"
+                                <Button x:Name="PART_CollapseButton" Grid.Column="4" Visibility="Collapsed"
                                         AutomationProperties.AutomationId="Collapse"
                                         AutomationProperties.Name="{Localize WindowStrings.Collapse}"
                                         ContentTemplate="{TemplateBinding MinimizeTemplate}"
                                         Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch"/>
 
-                                <Button x:Name="PART_PinButton" Grid.Column="2" Visibility="Collapsed"
+                                <Button x:Name="PART_PinButton" Grid.Column="5" Visibility="Collapsed"
                                         AutomationProperties.AutomationId="Pin"
                                         AutomationProperties.Name="{Localize WindowStrings.Pin}"
                                         Classes="CaptionButton" Height="40" MinWidth="46" VerticalAlignment="Stretch">
@@ -84,7 +84,7 @@
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
 
-                                <Button x:Name="PART_CloseButton" Grid.Column="3"
+                                <Button x:Name="PART_CloseButton" Grid.Column="6"
                                         AutomationProperties.AutomationId="Close"
                                         AutomationProperties.Name="{Localize WindowStrings.Close}"
                                         Classes="CaptionButton CloseButton" Height="40" MinWidth="46"
@@ -116,6 +116,12 @@
     </Style>
 
     <Style Selector="OverlayWindow">
+        <!-- Buttons on the left: the order reverses, so closing stays outermost. -->
+        <PropertyTrigger Property="CaptionButtonPlacement" Value="Left">
+            <Setter TargetName="PART_CloseButton" Property="Grid.Column" Value="0"/>
+            <Setter TargetName="PART_PinButton" Property="Grid.Column" Value="1"/>
+            <Setter TargetName="PART_CollapseButton" Property="Grid.Column" Value="2"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="CanClose" Value="false">
             <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>

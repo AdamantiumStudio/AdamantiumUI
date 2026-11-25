@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using Adamantium.Imaging;
 
-namespace Adamantium.UI.Platforms.Linux;
+namespace Adamantium.UI.Platforms;
 
 /// <summary>The application's icon as its assembly carries it - the build embeds AdamantiumIcon, or else
 /// ApplicationIcon - as square RGBA pictures, the largest first.</summary>

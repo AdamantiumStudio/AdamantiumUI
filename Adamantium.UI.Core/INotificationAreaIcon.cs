@@ -10,8 +10,17 @@ public interface INotificationAreaIcon : IDisposable
     /// <summary>Clicked with the left button, or picked from the keyboard.</summary>
     event EventHandler Clicked;
 
-    /// <summary>Its menu asked for - a right click, or the menu key - at a point of the desktop.</summary>
+    /// <summary>Its menu asked for - a right click, or the menu key - at a point of the desktop - where the application
+    /// opens the menu itself.</summary>
     event EventHandler<NotificationAreaMenuEventArgs> MenuAsked;
+
+    /// <summary>Whether the desktop shows the icon now - not while the Windows task bar has not taken it, nor on a Linux
+    /// session whose panel has not started yet, or that has none.</summary>
+    bool IsDisplayed { get; }
+
+    /// <summary>Raised on the application's loop thread when <see cref="IsDisplayed"/> changes - the panel started.
+    /// </summary>
+    event EventHandler IsDisplayedChanged;
 }
 
 /// <summary>Where on the desktop the menu of a <see cref="INotificationAreaIcon"/> was asked for, in physical pixels.

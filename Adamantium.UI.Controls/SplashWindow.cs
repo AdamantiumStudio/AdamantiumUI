@@ -11,7 +11,8 @@ namespace Adamantium.UI.Controls;
 /// of its own, before the themes, the services and the main window are made, and closed when the main window has drawn.
 /// Closing it before then cancels the start. It wears a theme of its own, never the application's, which is not made
 /// yet when it appears. It is in the task bar while it is up and, where the platform does that, stays above the main
-/// window.</summary>
+/// window. On macOS its thread is the application's own: it is drawn throughout the start, but answers the mouse only
+/// between the start's steps.</summary>
 public class SplashWindow : Window
 {
     public static readonly AdamantiumProperty ShowCloseButtonProperty = AdamantiumProperty.Register(nameof(ShowCloseButton),
