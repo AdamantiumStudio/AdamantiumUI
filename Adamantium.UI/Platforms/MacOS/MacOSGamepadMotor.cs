@@ -135,7 +135,13 @@ internal sealed class MacOSGamepadMotor
         try
         {
             if (step == Step.Run)
-                return _motor.Run(strength);
+            {
+                if (_motor.Run(strength))
+                    return true;
+
+                Serilog.Log.Logger.Warning("A motor of the gamepad could not be run");
+                return false;
+            }
 
             _motor.LetGo();
             return true;
