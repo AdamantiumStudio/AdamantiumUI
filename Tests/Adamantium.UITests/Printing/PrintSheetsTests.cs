@@ -235,4 +235,144 @@ public class PrintSheetsTests
         sheets.DrawPage(0, session);
         Assert.That(session.Geometries, Is.Empty);
     }
+
+    /// <summary>Pages of their own sizes - a PDF's - each drawing one rectangle of its whole size.</summary>
+    private sealed class OwnSizes(params Size<double>[] sizes) : IPrintDocument
+    {
+        public string Title => "Own sizes";
+
+        public int Paginate(PrintPage page) => sizes.Length;
+
+        public void DrawPage(int index, IDrawingSession session) =>
+            session.DrawGeometry(new SolidColorBrush(new Color((byte)index, (byte)0, (byte)0, (byte)255)),
+                new RectangleGeometry(new Rect(0, 0, sizes[index].Width, sizes[index].Height)), null);
+
+        public Size<double>? PageSize(int index) => sizes[index];
+    }
+
+    // Where the four corners of a page rectangle land, turned or not: their box, and where its top left corner went.
+    private static (Rect Box, Vector2<double> TopLeft) Corners((Brush Brush, Geometry Geometry, Pen Pen, Matrix4x4F Transform) drawn)
+    {
+        var box = ((RectangleGeometry)drawn.Geometry).Rect;
+        var m = drawn.Transform;
+        Vector2<double> At(double x, double y) => new(x * m.M11 + y * m.M21 + m.M41, x * m.M12 + y * m.M22 + m.M42);
+        var corners = new[] { At(box.X, box.Y), At(box.Right, box.Y), At(box.X, box.Bottom), At(box.Right, box.Bottom) };
+        var left = corners.Min(corner => corner.X);
+        var top = corners.Min(corner => corner.Y);
+        return (new Rect(left, top, corners.Max(corner => corner.X) - left, corners.Max(corner => corner.Y) - top),
+            corners[0]);
+    }
+
+    // The centre of what the printer reaches of the sheet.
+    private static Vector2<double> MiddleOf(PrintSheets sheets)
+    {
+        var size = sheets.Sheet.Size;
+        var margins = sheets.Sheet.PrintableMargins;
+        return new Vector2<double>((margins.Left + size.Width - margins.Right) / 2,
+            (margins.Top + size.Height - margins.Bottom) / 2);
+    }
+
+    private static Rect Printed(PrintSheets sheets, int sheet = 0, int page = 0)
+    {
+        sheets.Paginate(sheets.Sheet);
+        var session = new RecordingDrawingSession();
+        sheets.DrawPage(sheet, session);
+        return Corners(session.Geometries[page]).Box;
+    }
+
+    [Test]
+    public void APageOfItsOwnSize_IsPrintedAtThatSize_Centred()
+    {
+        var sheets = new PrintSheets(new OwnSizes(new Size<double>(300, 400)),
+            new PrintSettings { Scaling = PrintScaling.ActualSize }, PrinterCapabilities.Pdf);
+        var box = Printed(sheets);
+        var middle = MiddleOf(sheets);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Width, Is.EqualTo(300).Within(1e-2));
+            Assert.That(box.Height, Is.EqualTo(400).Within(1e-2));
+            Assert.That(box.X + box.Width / 2, Is.EqualTo(middle.X).Within(1e-2), "not centred across");
+            Assert.That(box.Y + box.Height / 2, Is.EqualTo(middle.Y).Within(1e-2), "not centred down");
+        });
+    }
+
+    // At its own size a page lying across stays as it is where it fits so; it is turned only where it fits turned alone.
+    [TestCase(600, 400, false)]
+    [TestCase(1000, 700, true)]
+    public void APageLyingAcross_AtItsOwnSize_IsTurnedOnlyToFit(double width, double height, bool turned)
+    {
+        var sheets = new PrintSheets(new OwnSizes(new Size<double>(width, height)),
+            new PrintSettings { Paper = PaperSize.A4, Scaling = PrintScaling.ActualSize }, PrinterCapabilities.Pdf);
+        var box = Printed(sheets);
+
+        Assert.That(box.Width, Is.EqualTo(turned ? height : width).Within(1e-2), turned ? "not turned" : "turned");
+    }
+
+    // A page the paper's size lying across, at its own size, on a printer with margins: it fits neither way up, and is
+    // turned, which loses only the margins - upright it would lose a third of each side.
+    [Test]
+    public void APageLyingAcross_FittingNeitherWay_IsTurnedToShowMore()
+    {
+        var capabilities = new PrinterCapabilities
+        {
+            Margins = new Dictionary<string, Thickness> { [PaperSize.A4.Name] = new Thickness(15) },
+        };
+        var sheets = new PrintSheets(new OwnSizes(new Size<double>(PaperSize.A4.Height, PaperSize.A4.Width)),
+            new PrintSettings { Paper = PaperSize.A4, Scaling = PrintScaling.ActualSize }, capabilities);
+        var box = Printed(sheets);
+
+        Assert.That(box.Width, Is.EqualTo(PaperSize.A4.Width).Within(1e-2), "not turned");
+    }
+
+    // Laid out on the sheet - a text document - pages are never turned, even several to a sheet in cells lying across.
+    [Test]
+    public void PagesLaidOutOnTheSheet_AreNotTurned_TwoToASheet()
+    {
+        var sheets = new PrintSheets(new Pages(2), new PrintSettings { Paper = PaperSize.A4, PagesPerSheet = 2 },
+            PrinterCapabilities.Pdf);
+        sheets.Paginate(sheets.Sheet);
+        var session = new RecordingDrawingSession();
+        sheets.DrawPage(0, session);
+
+        Assert.That(session.Geometries.Select(drawn => drawn.Transform.M12), Is.All.EqualTo(0f), "turned");
+    }
+
+    // A page lying across, on a sheet standing up: turned a quarter, its top to the left, to fill the sheet's height.
+    [Test]
+    public void APageLyingAcross_IsTurned_OnASheetStandingUp()
+    {
+        var page = new Size<double>(800, 400);
+        var sheets = new PrintSheets(new OwnSizes(page), new PrintSettings { Paper = PaperSize.A4 }, PrinterCapabilities.Pdf);
+        sheets.Paginate(sheets.Sheet);
+        var session = new RecordingDrawingSession();
+        sheets.DrawPage(0, session);
+
+        var (box, topLeft) = Corners(session.Geometries.Single());
+        var scale = Math.Min(PaperSize.A4.Width / page.Height, PaperSize.A4.Height / page.Width);
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Width, Is.EqualTo(page.Height * scale).Within(1e-2), "not turned: as wide as it is high");
+            Assert.That(box.Height, Is.EqualTo(page.Width * scale).Within(1e-2), "not turned: as high as it is wide");
+            Assert.That(box.X + box.Width / 2, Is.EqualTo(PaperSize.A4.Width / 2).Within(1e-2), "not centred across");
+            Assert.That(topLeft.X, Is.EqualTo(box.X).Within(1e-2), "its top does not run up the left");
+            Assert.That(topLeft.Y, Is.EqualTo(box.Bottom).Within(1e-2), "its top does not run up the left");
+        });
+    }
+
+    // Two to a sheet, each in its own size: each fitted into its cell by its own, not by the first page's.
+    [Test]
+    public void PagesOfTwoSizes_OnOneSheet_AreEachFittedByTheirOwn()
+    {
+        var sheets = new PrintSheets(new OwnSizes(new Size<double>(400, 600), new Size<double>(200, 300)),
+            new PrintSettings { PagesPerSheet = 2 }, PrinterCapabilities.Pdf);
+        sheets.Paginate(sheets.Sheet);
+        var session = new RecordingDrawingSession();
+        sheets.DrawPage(0, session);
+
+        var first = Corners(session.Geometries[0]).Box;
+        var second = Corners(session.Geometries[1]).Box;
+        Assert.That(second.Width, Is.EqualTo(first.Width).Within(1e-2), "the half-size page is printed half the size");
+        Assert.That(second.Height, Is.EqualTo(first.Height).Within(1e-2));
+    }
 }
