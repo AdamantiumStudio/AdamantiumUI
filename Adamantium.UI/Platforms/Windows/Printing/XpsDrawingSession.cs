@@ -31,6 +31,7 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
 
     private readonly IXpsOMObjectFactory _factory;
     private readonly XpsPictures _pictures;
+    private readonly XpsFonts _fonts;
     private readonly Stack<Level> _levels = new();
 
     /// <summary>Multiplied into every color written - a tinted drawing tile's tint; white leaves colors as they are.
@@ -41,13 +42,16 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
     private bool _alphaApart;
 
     /// <param name="visuals">The visuals of the page written into.</param>
-    public XpsDrawingSession(IXpsOMObjectFactory factory, XpsPictures pictures, IXpsOMVisualCollection visuals)
+    public XpsDrawingSession(IXpsOMObjectFactory factory, XpsPictures pictures, XpsFonts fonts,
+        IXpsOMVisualCollection visuals)
     {
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(pictures);
+        ArgumentNullException.ThrowIfNull(fonts);
         ArgumentNullException.ThrowIfNull(visuals);
         _factory = factory;
         _pictures = pictures;
+        _fonts = fonts;
         _levels.Push(new Level(visuals, null, Matrix4x4F.Identity, owned: false));
     }
 
@@ -174,17 +178,11 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
-        if (textLayout == null)
+        if (textLayout != null)
         {
-            return this;
+            Text(renderingParameters, textLayout, foreground, transform);
         }
 
-        var glyphs = TextGlyph.Of(renderingParameters, textLayout, said: false);
-
-        // One gradient or tile across the whole text, however many fonts and sizes it is set in.
-        var whole = foreground is GradientBrush or TileBrush ? TextOutlines.InkOf(glyphs) : null;
-        TextOutlines.Draw(this, TextOutlines.Of(glyphs), foreground, Paints,
-            (fill, thickener, outline) => Figures(fill, thickener, outline, transform, whole));
         return this;
     }
 

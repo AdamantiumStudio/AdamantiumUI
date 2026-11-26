@@ -236,20 +236,6 @@ public class PrintSheetsTests
         Assert.That(session.Geometries, Is.Empty);
     }
 
-    /// <summary>Pages of their own sizes - a PDF's - each drawing one rectangle of its whole size.</summary>
-    private sealed class OwnSizes(params Size<double>[] sizes) : IPrintDocument
-    {
-        public string Title => "Own sizes";
-
-        public int Paginate(PrintPage page) => sizes.Length;
-
-        public void DrawPage(int index, IDrawingSession session) =>
-            session.DrawGeometry(new SolidColorBrush(new Color((byte)index, (byte)0, (byte)0, (byte)255)),
-                new RectangleGeometry(new Rect(0, 0, sizes[index].Width, sizes[index].Height)), null);
-
-        public Size<double>? PageSize(int index) => sizes[index];
-    }
-
     // Where the four corners of a page rectangle land, turned or not: their box, and where its top left corner went.
     private static (Rect Box, Vector2<double> TopLeft) Corners((Brush Brush, Geometry Geometry, Pen Pen, Matrix4x4F Transform) drawn)
     {
@@ -283,7 +269,7 @@ public class PrintSheetsTests
     [Test]
     public void APageOfItsOwnSize_IsPrintedAtThatSize_Centred()
     {
-        var sheets = new PrintSheets(new OwnSizes(new Size<double>(300, 400)),
+        var sheets = new PrintSheets(new OwnSizePrintDocument(new Size<double>(300, 400)),
             new PrintSettings { Scaling = PrintScaling.ActualSize }, PrinterCapabilities.Pdf);
         var box = Printed(sheets);
         var middle = MiddleOf(sheets);
@@ -302,7 +288,7 @@ public class PrintSheetsTests
     [TestCase(1000, 700, true)]
     public void APageLyingAcross_AtItsOwnSize_IsTurnedOnlyToFit(double width, double height, bool turned)
     {
-        var sheets = new PrintSheets(new OwnSizes(new Size<double>(width, height)),
+        var sheets = new PrintSheets(new OwnSizePrintDocument(new Size<double>(width, height)),
             new PrintSettings { Paper = PaperSize.A4, Scaling = PrintScaling.ActualSize }, PrinterCapabilities.Pdf);
         var box = Printed(sheets);
 
@@ -318,7 +304,7 @@ public class PrintSheetsTests
         {
             Margins = new Dictionary<string, Thickness> { [PaperSize.A4.Name] = new Thickness(15) },
         };
-        var sheets = new PrintSheets(new OwnSizes(new Size<double>(PaperSize.A4.Height, PaperSize.A4.Width)),
+        var sheets = new PrintSheets(new OwnSizePrintDocument(new Size<double>(PaperSize.A4.Height, PaperSize.A4.Width)),
             new PrintSettings { Paper = PaperSize.A4, Scaling = PrintScaling.ActualSize }, capabilities);
         var box = Printed(sheets);
 
@@ -343,7 +329,7 @@ public class PrintSheetsTests
     public void APageLyingAcross_IsTurned_OnASheetStandingUp()
     {
         var page = new Size<double>(800, 400);
-        var sheets = new PrintSheets(new OwnSizes(page), new PrintSettings { Paper = PaperSize.A4 }, PrinterCapabilities.Pdf);
+        var sheets = new PrintSheets(new OwnSizePrintDocument(page), new PrintSettings { Paper = PaperSize.A4 }, PrinterCapabilities.Pdf);
         sheets.Paginate(sheets.Sheet);
         var session = new RecordingDrawingSession();
         sheets.DrawPage(0, session);
@@ -364,7 +350,7 @@ public class PrintSheetsTests
     [Test]
     public void PagesOfTwoSizes_OnOneSheet_AreEachFittedByTheirOwn()
     {
-        var sheets = new PrintSheets(new OwnSizes(new Size<double>(400, 600), new Size<double>(200, 300)),
+        var sheets = new PrintSheets(new OwnSizePrintDocument(new Size<double>(400, 600), new Size<double>(200, 300)),
             new PrintSettings { PagesPerSheet = 2 }, PrinterCapabilities.Pdf);
         sheets.Paginate(sheets.Sheet);
         var session = new RecordingDrawingSession();
