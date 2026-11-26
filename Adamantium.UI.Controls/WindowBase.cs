@@ -1165,16 +1165,10 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        foreach (var node in GetVisualDescendants())
+        // Taken first: a control writing itself again may rebuild its parts.
+        foreach (var node in GetVisualDescendants().ToList())
         {
-            if (node is TextBoxBase box)
-            {
-                box.RelayOutText();
-            }
-            else if (node is TextBlock block)
-            {
-                block.InvalidateMeasure();
-            }
+            (node as UIComponent)?.TellLanguageChanged();
         }
     }
 

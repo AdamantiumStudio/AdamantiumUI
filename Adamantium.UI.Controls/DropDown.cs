@@ -356,8 +356,7 @@ public class DropDown : Selector
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
-        Languages.Changed -= OnLanguagesChanged;
-        Languages.Changed += OnLanguagesChanged;
+        // The language may have changed while the list was out of the window, which told it nothing.
         ShowText();
     }
 
@@ -365,11 +364,10 @@ public class DropDown : Selector
     {
         base.OnDetachedFromVisualTree(e);
         _commandListener?.Detached();
-        Languages.Changed -= OnLanguagesChanged;
     }
 
     // The choice is written in the editable box the new language's way; one half typed is left.
-    private void OnLanguagesChanged(object sender, EventArgs e) => ShowText();
+    protected override void OnLanguageChanged() => ShowText();
 
     // Whether the command can run; a list with none can be used.
     private bool _canExecute = true;

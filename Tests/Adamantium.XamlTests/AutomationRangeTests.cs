@@ -57,6 +57,15 @@ public class AutomationRangeTests
         return (session, window);
     }
 
+    // In a window the application has given its context, as it gives every window it shows: one told of a new language.
+    private async Task<(AutomationSession Session, HostWindow Window)> DrivingInTheApplication(UIComponent content)
+    {
+        var window = HostWindow.Around(content, 800, 600, _app.UIContext);
+        var session = AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
+        return (session, window);
+    }
+
     [Test]
     public async Task ASlider_IsSetAsANumber_InsideItsLimits()
     {
@@ -186,13 +195,14 @@ public class AutomationRangeTests
     public async Task ANumberAndAChoice_AreSaidInTheNewLanguage_AndAnEntryHalfTypedIsLeft()
     {
         Adamantium.Localization.Languages.Current = "en";
+        HostWindow window = null;
         try
         {
             var numeric = new NumericUpDown { Value = 9.81 };
             var typed = new NumericUpDown { Value = 1.5 };
             var opaque = new Word("Opaque", "Непрозрачный");
             var choice = new DropDown { ItemsSource = new[] { opaque }, SelectedItem = opaque };
-            var (session, window) = await Driving(new StackPanel { Children = { numeric, typed, choice } });
+            (var session, window) = await DrivingInTheApplication(new StackPanel { Children = { numeric, typed, choice } });
             await using var _ = session;
             var number = (TextBox)numeric.GetTemplateChild("PART_TextBox");
             var entry = (TextBox)typed.GetTemplateChild("PART_TextBox");
@@ -213,6 +223,7 @@ public class AutomationRangeTests
         }
         finally
         {
+            window?.Close();
             Adamantium.Localization.Languages.Current = null;
         }
     }

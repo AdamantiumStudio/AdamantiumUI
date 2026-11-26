@@ -66,12 +66,24 @@ public class DateTimeGridEditorTests
     }
 
     [TearDown]
-    public void LetGo() => FocusManager.ResetFocus();
+    public void LetGo()
+    {
+        (_window as HostWindow)?.Close();
+        FocusManager.ResetFocus();
+    }
 
     private T Shown<T>(T content) where T : UIComponent
     {
         _window = new Window { Width = 900, Height = 600, ClientWidth = 900, ClientHeight = 600, Content = content };
         _window.ApplyCurrentTheme();
+        Settle();
+        return content;
+    }
+
+    // In a window the application has given its context, as it gives every window it shows: one told of a new language.
+    private T ShownInTheApplication<T>(T content) where T : UIComponent
+    {
+        _window = HostWindow.Around(content, 900, 600, _app.UIContext);
         Settle();
         return content;
     }
@@ -99,7 +111,12 @@ public class DateTimeGridEditorTests
     private static string TextIn(IUIComponent cell) => string.Concat(
         Within<TextBlock>(cell).Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
 
-    private TreeDataGrid Table(Record record, params DataGridColumn[] columns)
+    private TreeDataGrid Table(Record record, params DataGridColumn[] columns) => Shown(Listing(record, columns));
+
+    private TreeDataGrid TableInTheApplication(Record record, params DataGridColumn[] columns) =>
+        ShownInTheApplication(Listing(record, columns));
+
+    private static TreeDataGrid Listing(Record record, DataGridColumn[] columns)
     {
         var grid = new TreeDataGrid();
         foreach (var column in columns)
@@ -109,7 +126,7 @@ public class DateTimeGridEditorTests
         }
 
         grid.ItemsSource = new List<Record> { record };
-        return Shown(grid);
+        return grid;
     }
 
     private T Editing<T>(TreeDataGrid grid, int column)
@@ -575,7 +592,7 @@ public class DateTimeGridEditorTests
         {
             var record = new Record();
             var dates = new DataGridDateTimeColumn { Binding = new Binding(nameof(Record.Day)) };
-            var grid = Table(record, dates);
+            var grid = TableInTheApplication(record, dates);
             var filter = grid.FilterFor(dates);
             filter.Included = [dates.TextOf(record.Day)];
             grid.ApplyFilters();
@@ -837,7 +854,7 @@ public class DateTimeGridEditorTests
         {
             var record = new Record();
             var dates = new DataGridDateTimeColumn { Binding = new Binding(nameof(Record.Due)) };
-            var grid = Table(record, dates);
+            var grid = TableInTheApplication(record, dates);
             var filter = grid.FilterFor(dates);
             filter.First.Operator = DataGridFilterOperator.Contains;
             filter.First.Value = "14:05";
@@ -875,7 +892,7 @@ public class DateTimeGridEditorTests
         {
             var record = new Record();
             var dates = new DataGridDateTimeColumn { Binding = new Binding(nameof(Record.Day)) };
-            var grid = Table(record, dates);
+            var grid = TableInTheApplication(record, dates);
             var filter = grid.FilterFor(dates);
             filter.First.Operator = DataGridFilterOperator.IsEqualTo;
             filter.First.Value = dates.TextOf(record.Day);

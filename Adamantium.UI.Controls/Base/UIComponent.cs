@@ -928,6 +928,24 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LanguageProperty, value);
     }
 
+    /// <summary>The language this element's text is in has changed: its own <see cref="Language"/>, an owner's, or the
+    /// application's - its window tells it, on the window's thread. A control that writes words, numbers or dates of its
+    /// own writes them again here.</summary>
+    protected virtual void OnLanguageChanged()
+    {
+    }
+
+    internal void TellLanguageChanged() => OnLanguageChanged();
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property == LanguageProperty)
+        {
+            OnLanguageChanged();
+        }
+    }
+
     /// <summary>The face of <paramref name="family"/> this element's text is set in: the one nearest to its
     /// <see cref="FontWeight"/>, <see cref="FontStyle"/> and <see cref="FontStretch"/>. A control that lays out text of
     /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does. A family the system

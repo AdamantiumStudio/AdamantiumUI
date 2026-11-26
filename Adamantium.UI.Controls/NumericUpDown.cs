@@ -555,16 +555,15 @@ public class NumericUpDown : RangeLimitsBase
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
-        Languages.Changed -= OnLanguagesChanged;
-        Languages.Changed += OnLanguagesChanged;
-        if (!ReferenceEquals(_written, Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
+        // The language may have changed while the field was out of the window, which told it nothing.
+        if (!ReferenceEquals(_written, Languages.Culture)) OnLanguageChanged();
     }
 
     // The culture the number was last written in, as far as the language decides it.
     private CultureInfo _written = Languages.Culture;
 
     // The number is written the new language's way; one half typed is not touched.
-    private void OnLanguagesChanged(object sender, EventArgs e)
+    protected override void OnLanguageChanged()
     {
         var before = Culture ?? _written;
         _written = Languages.Culture;
@@ -575,7 +574,6 @@ public class NumericUpDown : RangeLimitsBase
     {
         base.OnDetachedFromVisualTree(e);
         _commandListener?.Detached();
-        Languages.Changed -= OnLanguagesChanged;
     }
 
     // Whether the command can run; a field with none can be used.

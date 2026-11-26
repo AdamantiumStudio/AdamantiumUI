@@ -183,12 +183,14 @@ public abstract class DateTimePickerBase : DateTimeField
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if ((e.Property == ValueProperty && !_picking) || e.Property == LanguageProperty ||
-            e.Property == CalendarSystemProperty || e.Property == FormatProperty)
+        if ((e.Property == ValueProperty && !_picking) || e.Property == CalendarSystemProperty ||
+            e.Property == FormatProperty)
         {
             RefreshDropDown();
         }
     }
+
+    protected override void OnLanguageChanged() => RefreshDropDown();
 
     /// <summary>Shows again what the button opens, while it is open - for a property it shows that has changed.</summary>
     protected void RefreshDropDown()

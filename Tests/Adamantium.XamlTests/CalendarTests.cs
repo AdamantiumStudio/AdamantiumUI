@@ -56,6 +56,7 @@ public class CalendarTests
     [TearDown]
     public void LetGo()
     {
+        (_window as HostWindow)?.Close();
         FocusManager.ResetFocus();
         AnimationManager.Reset();
     }
@@ -68,6 +69,16 @@ public class CalendarTests
         calendar.VerticalAlignment = VerticalAlignment.Top;
         _window = new Window { Width = 1400, Height = 900, Content = calendar };
         _window.ApplyCurrentTheme();
+        Settle();
+        return calendar;
+    }
+
+    // In a window the application has given its context, as it gives every window it shows: one told of a new language.
+    private Calendar ShownInTheApplication(Calendar calendar)
+    {
+        calendar.HorizontalAlignment = HorizontalAlignment.Left;
+        calendar.VerticalAlignment = VerticalAlignment.Top;
+        _window = HostWindow.Around(calendar, 1400, 900, _app.UIContext);
         Settle();
         return calendar;
     }
@@ -1286,7 +1297,7 @@ public class CalendarTests
         try
         {
             Languages.Current = "en-US";
-            var calendar = Shown(new Calendar { DisplayDate = October });
+            var calendar = ShownInTheApplication(new Calendar { DisplayDate = October });
             Assert.That(calendar.HeaderText, Is.EqualTo("October 2026"));
 
             Languages.Current = "ru-RU";

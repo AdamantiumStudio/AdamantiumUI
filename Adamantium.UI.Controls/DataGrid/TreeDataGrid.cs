@@ -877,16 +877,9 @@ public partial class TreeDataGrid : Selector
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        Adamantium.Localization.Languages.Changed -= OnLanguagesChanged;
-        Adamantium.Localization.Languages.Changed += OnLanguagesChanged;
-        if (_readIn != null && !Equals(_readIn, Adamantium.Localization.Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
+        // The language may have changed while the grid was out of the window, which told it nothing.
+        if (_readIn != null && !Equals(_readIn, Adamantium.Localization.Languages.Culture)) OnLanguageChanged();
         _readIn = Adamantium.Localization.Languages.Culture;
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnDetachedFromVisualTree(e);
-        Adamantium.Localization.Languages.Changed -= OnLanguagesChanged;
     }
 
     internal void RenameDayWord(DataGridColumn column, string was, string now)
@@ -993,7 +986,7 @@ public partial class TreeDataGrid : Selector
         filter.Second.Forget();
     }
 
-    private void OnLanguagesChanged(object sender, EventArgs e)
+    protected override void OnLanguageChanged()
     {
         var was = _readIn ?? Adamantium.Localization.Languages.Culture;
         var now = Adamantium.Localization.Languages.Culture;
