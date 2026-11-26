@@ -65,16 +65,14 @@ public sealed class GlyphRun
 
     private Geometry BuildOutline()
     {
-        var geometry = new StreamGeometry { FillRule = FillRule.NonZero };
-        var context = geometry.Open();
+        var builder = new Curves.PathCurveBuilder();
         var scale = FontSize / Font.UnitsPerEm;
         foreach (var placed in Glyphs)
         {
-            TextOutlines.Trace(context, Font.GetGlyphByIndex(placed.Index),
+            TextOutlines.Trace(builder, Font.GetGlyphByIndex(placed.Index),
                 new Matrix3x2<double>(scale, 0, 0, -scale, placed.X, placed.Y));
         }
 
-        geometry.RecalculateBounds();
-        return geometry;
+        return new CurveGeometry(builder.Build(0, null, FillRule.NonZero));
     }
 }
