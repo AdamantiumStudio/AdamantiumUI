@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -25,6 +26,39 @@ public class XpsDrawingSessionTests
     /// <summary>The probe document written as an XPS package; its first page's markup and the package's parts.</summary>
     private static (XElement Page, string[] Parts) Written(IPrintDocument document = null)
     {
+        using var zip = new ZipArchive(new MemoryStream(Package(document)), ZipArchiveMode.Read);
+        var page = zip.Entries.Single(entry => entry.FullName.EndsWith(".fpage"));
+        using var reader = page.Open();
+        return (XDocument.Load(reader).Root, zip.Entries.Select(entry => entry.FullName).ToArray());
+    }
+
+    /// <summary>The fonts of the package, each read back from its obfuscated part (XPS 1.0, 9.1.7.3): the first 32 bytes
+    /// XORed with the GUID of its part's name, its bytes taken from the end.</summary>
+    private static List<byte[]> EmbeddedFonts(IPrintDocument document)
+    {
+        using var zip = new ZipArchive(new MemoryStream(Package(document)), ZipArchiveMode.Read);
+        var fonts = new List<byte[]>();
+        foreach (var entry in zip.Entries.Where(entry => entry.FullName.EndsWith(".odttf")))
+        {
+            using var stream = entry.Open();
+            using var copy = new MemoryStream();
+            stream.CopyTo(copy);
+            var data = copy.ToArray();
+            var guid = Path.GetFileNameWithoutExtension(entry.FullName).Replace("-", "");
+            var key = Enumerable.Range(0, 16).Select(at => Convert.ToByte(guid.Substring(at * 2, 2), 16)).ToArray();
+            for (var at = 0; at < 32; at++)
+            {
+                data[at] ^= key[15 - at % 16];
+            }
+
+            fonts.Add(data);
+        }
+
+        return fonts;
+    }
+
+    private static byte[] Package(IPrintDocument document)
+    {
         var factoryClass = PrintDocumentPackage.XpsObjectFactoryClass;
         var factoryInterface = typeof(IXpsOMObjectFactory).GUID;
         Marshal.ThrowExceptionForHR(Win32Interop.CoCreateInstance(ref factoryClass, IntPtr.Zero,
@@ -46,11 +80,7 @@ public class XpsDrawingSessionTests
             Marshal.ReleaseComObject(factory);
         }
 
-        package.Position = 0;
-        using var zip = new ZipArchive(package, ZipArchiveMode.Read);
-        var page = zip.Entries.Single(entry => entry.FullName.EndsWith(".fpage"));
-        using var reader = page.Open();
-        return (XDocument.Load(reader).Root, zip.Entries.Select(entry => entry.FullName).ToArray());
+        return package.ToArray();
     }
 
     private static XElement[] Paths(XElement page) => page.Descendants(Xps + "Path").ToArray();
@@ -159,17 +189,44 @@ public class XpsDrawingSessionTests
     [Test]
     public void AFragmentsColorAndSynthesizedBold_AreItsOwnPath()
     {
-        var paths = Paths(Written(new Fragments()).Page);
+        var page = Written(new Fragments()).Page;
+        var paths = Paths(page);
+        var glyphs = page.Descendants(Xps + "Glyphs").ToArray();
 
         Assert.Multiple(() =>
         {
-            Assert.That(paths.Any(path => path.Attribute("Fill")?.Value is { } fill &&
-                fill.EndsWith("000000", StringComparison.OrdinalIgnoreCase) && path.Attribute("Stroke") == null),
-                Is.True, "the black words are not filled black, unstroked");
+            Assert.That(glyphs.Any(run => run.Attribute("Fill")?.Value is { } fill &&
+                fill.EndsWith("000000", StringComparison.OrdinalIgnoreCase)),
+                Is.True, "the black words are not glyphs filled black");
             Assert.That(paths.Any(path => path.Attribute("Fill")?.Value is { } fill &&
                 fill.EndsWith("ff0000", StringComparison.OrdinalIgnoreCase) &&
                 path.Attribute("Stroke")?.Value is { } stroke && stroke.EndsWith("ff0000", StringComparison.OrdinalIgnoreCase)),
                 Is.True, "the red bold word is not filled and thickened in red");
+        });
+    }
+
+    // The black words set as glyphs embed their font: a subset of the glyphs the page drew, read back as OpenType.
+    [Test]
+    public void GlyphsSetOnAPage_EmbedTheirFont_AsASubsetOfWhatThePageDrew()
+    {
+        var page = Written(new Fragments()).Page;
+        var run = page.Descendants(Xps + "Glyphs").Single();
+        var fonts = EmbeddedFonts(new Fragments());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(run.Attribute("FontUri")?.Value, Does.EndWith(".odttf"));
+            Assert.That(run.Attribute("Indices")?.Value, Is.Not.Empty);
+            Assert.That(fonts, Has.Count.EqualTo(1), "one font for the page");
+            var read = Adamantium.Fonts.Typeface.LoadFont(fonts[0], 3);
+            Assert.That(read.GlyphCount, Is.EqualTo(6), "glyph 0 and the five letters of 'black'");
+            Assert.That(read.GetFont(0).UnitsPerEm, Is.EqualTo(1000));
+
+            // The run's indices are the subset's: each stands for its letter in the font embedded.
+            var said = string.Concat(run.Attribute("Indices")!.Value.Split(';').Select(entry =>
+                read.GetFont(0).GetGlyphText(uint.Parse(entry.Split(',')[0], System.Globalization.CultureInfo.InvariantCulture))
+                    .FirstOrDefault() ?? "?"));
+            Assert.That(said, Is.EqualTo("black"), "the indices are not the subset's");
         });
     }
 }

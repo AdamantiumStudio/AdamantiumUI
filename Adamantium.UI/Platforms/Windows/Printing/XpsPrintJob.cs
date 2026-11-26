@@ -92,6 +92,7 @@ internal static class XpsPrintJob
         var size = new XpsSize((float)sheet.Size.Width, (float)sheet.Size.Height);
         var language = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : "en-US";
         using var pictures = new XpsPictures(objects);
+        using var fonts = new XpsFonts(objects);
         for (var index = 0; index < count; index++)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -103,7 +104,7 @@ internal static class XpsPrintJob
                 Check(page.GetVisuals(out var visuals));
                 try
                 {
-                    var session = new XpsDrawingSession(objects, pictures, visuals);
+                    var session = new XpsDrawingSession(objects, pictures, fonts, visuals);
                     sheets.DrawPage(index, session);
                     session.CloseGroups();
                 }
@@ -112,10 +113,13 @@ internal static class XpsPrintJob
                     Marshal.ReleaseComObject(visuals);
                 }
 
+                // The page's fonts are written with the glyphs it used, then the page with them.
+                fonts.WritePage();
                 Check(writer.AddPage(page, size, IntPtr.Zero, IntPtr.Zero, null, IntPtr.Zero));
             }
             finally
             {
+                fonts.EndPage();
                 Marshal.ReleaseComObject(page);
             }
 
