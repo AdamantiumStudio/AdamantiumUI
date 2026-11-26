@@ -7,12 +7,56 @@ using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Graphics.Vector;
 
-/// <summary>A glyph of laid-out text as a vector writer sets it: its pen position on the baseline, y down.</summary>
+/// <summary>A glyph of laid-out text as a vector writer sets it.</summary>
+/// <param name="Place">From its font's units, y up, to where it is drawn, y down: pen, baseline, size, stretch, turn
+/// and slant.</param>
 /// <param name="Text">What it stands for; empty for nothing, null for what its font says.</param>
-/// <param name="IsUpright">Whether it stands as its font has it, neither turned nor stretched.</param>
-internal readonly record struct TextGlyph(IFont Font, double Size, uint Index, double X, double Y, string Text,
-    bool IsUpright)
+/// <param name="Color">The color of its own stretch of text; null for the text's brush.</param>
+/// <param name="Thickening">How far a synthesized bold thickens each side of its outline, where it is drawn; 0 for
+/// none.</param>
+internal readonly record struct TextGlyph(IFont Font, uint Index, Matrix3x2<double> Place, string Text, Color? Color,
+    double Thickening)
 {
+    /// <summary>A glyph placed upright by its pen on the baseline, at its size.</summary>
+    public static TextGlyph At(IFont font, double size, uint index, double x, double y, string text,
+        Color? color = null, double thickening = 0)
+    {
+        var scale = size / font.UnitsPerEm;
+        return new TextGlyph(font, index, new Matrix3x2<double>(scale, 0, 0, -scale, x, y), text, color, thickening);
+    }
+
+    /// <summary>Where its outline lies drawn, as the box of its outline's box carried there, before any thickening; null
+    /// for a glyph with none.</summary>
+    public Rect? Ink
+    {
+        get
+        {
+            var box = Font.GetGlyphByIndex(Index).BoundingRectangle;
+            if (!(box.Width > 0) || !(box.Height > 0))
+            {
+                return null;
+            }
+
+            var corners = (ReadOnlySpan<Vector2<double>>)
+            [
+                Vector2.Transform(new Vector2<double>(box.X, box.Y), Place),
+                Vector2.Transform(new Vector2<double>(box.X + box.Width, box.Y), Place),
+                Vector2.Transform(new Vector2<double>(box.X, box.Y + box.Height), Place),
+                Vector2.Transform(new Vector2<double>(box.X + box.Width, box.Y + box.Height), Place),
+            ];
+            double left = double.MaxValue, top = double.MaxValue, right = double.MinValue, bottom = double.MinValue;
+            foreach (var corner in corners)
+            {
+                left = Math.Min(left, corner.X);
+                top = Math.Min(top, corner.Y);
+                right = Math.Max(right, corner.X);
+                bottom = Math.Max(bottom, corner.Y);
+            }
+
+            return new Rect(left, top, right - left, bottom - top);
+        }
+    }
+
     private const int SoftHyphen = 0x00AD;
     private const int Kashida = 0x0640;
     private const int ZeroWidthSpace = 0x200B;
@@ -66,12 +110,22 @@ internal readonly record struct TextGlyph(IFont Font, double Size, uint Index, d
                     };
             }
 
-            // A blank's box stands on the baseline at the pen.
-            var box = isBlank ? default : glyph.BoundingRectangle;
-            var scale = word.FontSize / word.Font.UnitsPerEm;
-            glyphs.Add(new TextGlyph(word.Font, word.FontSize, glyph.Index, word.Rect.X + area.X - box.X * scale,
-                word.Rect.Y + area.Y + (box.Y + box.Height) * scale, text,
-                !word.Sideways && !word.Upright && word.HorizontalScale == 1));
+            var color = word.Attributes?.Foreground;
+            var thickening = word.Attributes?.Synthesis is { } synthesis && (synthesis & FontSynthesis.Weight) != 0
+                ? FontSynthesisRules.EmboldenPerSide(word.FontSize) * word.FontSize
+                : 0;
+            if (isBlank)
+            {
+                // A blank's box stands on the baseline at the pen; it keeps its stretch's look, so the stretch stays one.
+                glyphs.Add(At(word.Font, word.FontSize, glyph.Index, word.Rect.X + area.X, word.Rect.Y + area.Y, text,
+                    color, thickening));
+                continue;
+            }
+
+            var place = word.OutlineTransform;
+            place.M31 += area.X;
+            place.M32 += area.Y;
+            glyphs.Add(new TextGlyph(word.Font, glyph.Index, place, text, color, thickening));
         }
 
         return glyphs;

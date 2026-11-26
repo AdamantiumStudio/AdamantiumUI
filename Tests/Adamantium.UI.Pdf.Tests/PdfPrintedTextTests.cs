@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Adamantium.Fonts;
@@ -140,6 +141,128 @@ public class PdfPrintedTextTests
         Assert.That(Text(saved), Is.Empty);
         Assert.That(saved.Pages[0].Resources.ContainsKey("Shading"), Is.True);
         Assert.That(saved.Pages[0].Resources.ContainsKey("Font"), Is.False);
+    }
+
+    // The saved page read back and drawn: the glyph runs it draws, each with its fill, its stroke and its matrix.
+    private static List<DrawnGlyphs> Drawn(TextLayout layout)
+    {
+        var document = Save(layout, Black);
+        var page = PdfPageDrawing.Build(document, document.Pages[0]);
+        var session = new RecordingSession();
+        page.Render(session, Matrix4x4<float>.Identity, null);
+        return session.Calls.OfType<DrawnGlyphs>().ToList();
+    }
+
+    private static TextLayout Lay(AttributedText text, WritingMode mode = WritingMode.Horizontal)
+    {
+        var font = Font();
+        var layout = new TextLayout(font, font.GetFont(0)) { WritingMode = mode };
+        layout.ProcessText(text, 20, new Size<double>(double.NaN, double.NaN), TextWrapping.NoWrap, TextTrimming.None,
+            HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
+        return layout;
+    }
+
+    // Whether a matrix turns or slants what it draws: its first two columns are not upright and square to each other.
+    private static bool Slants(Matrix4x4<float> m) => Math.Abs(m.M11 * m.M21 + m.M12 * m.M22) > 1e-3 * Math.Abs(m.M11 * m.M22);
+
+    private static bool Turns(Matrix4x4<float> m) => Math.Abs(m.M12) > Math.Abs(m.M11);
+
+    [Test]
+    public void AFragmentsOwnColor_IsTheColorOfItsGlyphs()
+    {
+        var red = new Color(255, 0, 0, 255);
+        var drawn = Drawn(Lay(new AttributedText("black red").Apply(6, 3, new TextAttributes { Foreground = red })));
+
+        var fills = drawn.Select(run => ((SolidColorBrush)run.Fill).Color).ToList();
+        Assert.That(fills, Does.Contain(red), "the red fragment is printed black");
+        Assert.That(fills, Does.Contain(Black.Color), "the rest is not black");
+    }
+
+    [Test]
+    public void TheSpacesOfAColoredFragment_StayInItsText_UnderAGradient()
+    {
+        var gradient = new LinearGradientBrush([new GradientStop(new Color(255, 0, 0, 255), 0),
+            new GradientStop(new Color(0, 0, 255, 255), 1)]);
+        var layout = Lay(new AttributedText("plain red words here").Apply(6, 14,
+            new TextAttributes { Foreground = new Color(255, 0, 0, 255) }));
+
+        Assert.That(Text(Save(layout, gradient)), Is.EqualTo("red words here"));
+    }
+
+    [Test]
+    public void AHalfSeeThroughSynthesizedBold_IsOneInk_FadedAsAGroup()
+    {
+        var drawn = Drawn(Lay(new AttributedText("faded").Apply(0, 5, new TextAttributes
+        {
+            Foreground = new Color(255, 0, 0, 128),
+            Synthesis = FontSynthesis.Weight,
+        })));
+
+        Assert.That(drawn, Is.Not.Empty, "the faded bold text is not text");
+        Assert.Multiple(() =>
+        {
+            Assert.That(drawn.All(run => ((SolidColorBrush)run.Fill).Color.A == 255 && run.Depth > 0), Is.True,
+                "the fill and the thickening are laid one over the other at half each");
+        });
+    }
+
+    [Test]
+    public void AHalfSeeThroughGradientsSynthesizedBold_IsOneInk_FadedAsAGroup()
+    {
+        var gradient = new LinearGradientBrush([new GradientStop(new Color(255, 0, 0, 255), 0),
+            new GradientStop(new Color(0, 0, 255, 255), 1)]) { Opacity = 0.5 };
+        var saved = Save(Lay(new AttributedText("faded").Apply(0, 5,
+            new TextAttributes { Synthesis = FontSynthesis.Weight })), gradient);
+        var page = PdfPageDrawing.Build(saved, saved.Pages[0]);
+        var session = new RecordingSession();
+        page.Render(session, Matrix4x4<float>.Identity, null);
+        var drawn = session.Calls.OfType<DrawnGeometry>().Where(call => call.Brush is GradientBrush || call.Pen != null)
+            .ToList();
+
+        Assert.That(drawn, Is.Not.Empty, "the bold is not drawn by its outlines in the gradient");
+        Assert.That(drawn.All(call => call.Depth > 0 && (call.Brush ?? call.Pen.Brush).Opacity >= 1), Is.True,
+            "the fill and the thickening are laid one over the other at half each");
+    }
+
+    [Test]
+    public void ASeeThroughSynthesizedBold_IsNotWritten_AsASeeThroughPlainFaceIsNot()
+    {
+        var layout = Lay(new AttributedText("shown unseen").Apply(6, 6, new TextAttributes
+        {
+            Foreground = new Color(255, 0, 0, 0),
+            Synthesis = FontSynthesis.Weight,
+        }));
+
+        Assert.That(Text(Save(layout, Black)), Is.EqualTo("shown"));
+    }
+
+    [Test]
+    public void ASynthesizedBold_IsDrawnThicker()
+    {
+        var drawn = Drawn(Lay(new AttributedText("bold").Apply(0, 4,
+            new TextAttributes { Synthesis = FontSynthesis.Weight })));
+
+        Assert.That(drawn, Is.Not.Empty, "the bold text is not text");
+        Assert.That(drawn.All(run => run.Stroke is { Thickness: > 0 }), Is.True, "the synthesized bold is not thickened");
+    }
+
+    [Test]
+    public void ASynthesizedItalic_IsSlanted()
+    {
+        var drawn = Drawn(Lay(new AttributedText("slant").Apply(0, 5,
+            new TextAttributes { Synthesis = FontSynthesis.Style })));
+
+        Assert.That(drawn, Is.Not.Empty, "the italic text is not text");
+        Assert.That(drawn.All(run => Slants(run.Transform)), Is.True, "the synthesized italic stands upright");
+    }
+
+    [Test]
+    public void LatinInAVerticalLine_IsTurnedOnItsSide()
+    {
+        var drawn = Drawn(Lay(new AttributedText("Side"), WritingMode.VerticalRightToLeft));
+
+        Assert.That(drawn, Is.Not.Empty, "the turned text is not text");
+        Assert.That(drawn.All(run => Turns(run.Transform)), Is.True, "the letters of a vertical line are not turned");
     }
 
     [Test]

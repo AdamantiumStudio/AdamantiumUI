@@ -174,22 +174,17 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
-        if (textLayout == null || !Paints(foreground))
+        if (textLayout == null)
         {
             return this;
         }
 
-        var runs = TextOutlines.RunsOf(renderingParameters, textLayout, out var whole);
-        if (foreground is not (GradientBrush or TileBrush))
-        {
-            whole = null;
-        }
+        var glyphs = TextGlyph.Of(renderingParameters, textLayout, said: false);
 
-        foreach (var run in runs)
-        {
-            Figures(foreground, null, run.Outline, transform, whole);
-        }
-
+        // One gradient or tile across the whole text, however many fonts and sizes it is set in.
+        var whole = foreground is GradientBrush or TileBrush ? TextOutlines.InkOf(glyphs) : null;
+        TextOutlines.Draw(this, TextOutlines.Of(glyphs), foreground, Paints,
+            (fill, thickener, outline) => Figures(fill, thickener, outline, transform, whole));
         return this;
     }
 
