@@ -60,6 +60,7 @@ public class AutomationAuditTests
         [typeof(SplitButton)] = (T.SplitButton, null),
         [typeof(ToggleSplitButton)] = (T.SplitButton, null),
         [typeof(Expander)] = (T.Group, null),
+        [typeof(InfoBar)] = (T.Group, null),
         [typeof(FlipTile)] = (T.Button, null),
         [typeof(GroupHeader)] = (T.Group, null),
         [typeof(Image)] = (T.Image, null),

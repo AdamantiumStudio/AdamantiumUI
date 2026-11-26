@@ -39,6 +39,7 @@ public partial class GalleryViewModel
         new MultiTouchViewModel(),
         new ShapesViewModel(),
         new LoadersViewModel(),
+        new InfoBarViewModel(),
         new AnimationsViewModel(),
         new SlidePanelViewModel(),
         new ImageViewModel(),

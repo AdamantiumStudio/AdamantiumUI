@@ -1,0 +1,45 @@
+<View xmlns="http://adamantium/ui">
+    <!-- A message of each severity. Each bar is two-way bound to its toggle: its x button closes it and turns the toggle
+         off, the toggle brings it back. -->
+    <ScrollViewer Margin="24" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical" Spacing="12" MaxWidth="720" HorizontalAlignment="Left">
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <ToggleSwitch Content="{Localize InfoBarStrings.Error}" IsChecked="{Binding ErrorOpen, Mode=TwoWay}"/>
+                <ToggleSwitch Content="{Localize InfoBarStrings.Warning}" IsChecked="{Binding WarningOpen, Mode=TwoWay}"/>
+                <ToggleSwitch Content="{Localize InfoBarStrings.Informational}"
+                              IsChecked="{Binding InformationalOpen, Mode=TwoWay}"/>
+                <ToggleSwitch Content="{Localize InfoBarStrings.Success}" IsChecked="{Binding SuccessOpen, Mode=TwoWay}"/>
+            </StackPanel>
+
+            <InfoBar Severity="Error"
+                     AutomationProperties.AutomationId="ErrorBar"
+                     Title="{Localize InfoBarStrings.ErrorTitle}"
+                     Message="{Localize InfoBarStrings.ErrorMessage}"
+                     IsOpen="{Binding ErrorOpen, Mode=TwoWay}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="Accent" Content="{Localize InfoBarStrings.OpenFile}"/>
+                    <Button Content="{Localize InfoBarStrings.MakeAgain}"/>
+                </StackPanel>
+            </InfoBar>
+
+            <InfoBar Severity="Warning"
+                     AutomationProperties.AutomationId="WarningBar"
+                     Title="{Localize InfoBarStrings.WarningTitle}"
+                     Message="{Localize InfoBarStrings.WarningMessage}"
+                     IsOpen="{Binding WarningOpen, Mode=TwoWay}"/>
+
+            <InfoBar Severity="Informational"
+                     AutomationProperties.AutomationId="InformationalBar"
+                     Title="{Localize InfoBarStrings.InformationalTitle}"
+                     Message="{Localize InfoBarStrings.InformationalMessage}"
+                     IsOpen="{Binding InformationalOpen, Mode=TwoWay}"/>
+
+            <InfoBar Severity="Success"
+                     AutomationProperties.AutomationId="SuccessBar"
+                     Title="{Localize InfoBarStrings.SuccessTitle}"
+                     Message="{Localize InfoBarStrings.SuccessMessage}"
+                     IsOpen="{Binding SuccessOpen, Mode=TwoWay}"/>
+        </StackPanel>
+    </ScrollViewer>
+</View>

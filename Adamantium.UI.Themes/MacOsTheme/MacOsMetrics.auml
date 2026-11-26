@@ -80,4 +80,7 @@
     <!-- How far a row's selection plate stands in. Spent out of the row's CONTENT, so a grid of small tiles feels it. -->
     <Thickness x:Key="ListRowPlateInset">4 1</Thickness>
 
+    <!-- An InfoBar: the rest as Fluent's, a little less room round the message. -->
+    <Thickness x:Key="InfoBarPadding">12 10</Thickness>
+
 </ResourceDictionary>

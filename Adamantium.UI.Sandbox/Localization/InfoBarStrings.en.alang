@@ -1,0 +1,17 @@
+<Language>
+    <Phrase Key="Error" Text="Error"/>
+    <Phrase Key="Warning" Text="Warning"/>
+    <Phrase Key="Informational" Text="Information"/>
+    <Phrase Key="Success" Text="Success"/>
+
+    <Phrase Key="ErrorTitle" Text="The settings cannot be read"/>
+    <Phrase Key="ErrorMessage" Text="Settings.xml holds no settings: the file is damaged or was changed by hand."/>
+    <Phrase Key="OpenFile" Text="Open the file"/>
+    <Phrase Key="MakeAgain" Text="Make it again"/>
+    <Phrase Key="WarningTitle" Text="A game is running"/>
+    <Phrase Key="WarningMessage" Text="The changes take effect from the next run."/>
+    <Phrase Key="InformationalTitle" Text="There is no settings file yet"/>
+    <Phrase Key="InformationalMessage" Text="It appears with the first change."/>
+    <Phrase Key="SuccessTitle" Text="Layer renamed"/>
+    <Phrase Key="SuccessMessage" Text="Debris is Rubble now, in 3 scenes."/>
+</Language>

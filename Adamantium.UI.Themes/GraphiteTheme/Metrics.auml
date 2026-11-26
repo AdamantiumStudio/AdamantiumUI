@@ -78,6 +78,14 @@
     <sys:Double x:Key="BadgeDotSize">7</sys:Double>
     <Thickness x:Key="BadgePadding">4 0</Thickness>
     <Thickness x:Key="BadgeRing">1</Thickness>
+    <!-- An InfoBar, a notch denser to match the rows round it. -->
+    <Thickness x:Key="InfoBarPadding">12 9</Thickness>
+    <sys:Double x:Key="InfoBarIconSize">14</sys:Double>
+    <Thickness x:Key="InfoBarIconMargin">0 2 10 0</Thickness>
+    <sys:Double x:Key="InfoBarCloseSize">24</sys:Double>
+    <Thickness x:Key="InfoBarCloseMargin">8 -5 -6 0</Thickness>
+    <sys:Double x:Key="InfoBarCloseGlyphSize">9</sys:Double>
+    <Thickness x:Key="InfoBarActionsMargin">0 6 0 0</Thickness>
     <CornerRadius x:Key="BadgeRadius">0</CornerRadius>
     <CornerRadius x:Key="BadgeDotRadius">0</CornerRadius>
     <Thickness x:Key="RibbonContextualLabelPadding">4 0</Thickness>

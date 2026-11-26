@@ -69,6 +69,14 @@
     <PaletteColor Key="SystemFillColorSuccess" Color="#5FD07A"/>
     <PaletteColor Key="SystemFillColorCaution" Color="#E8C15C"/>
     <PaletteColor Key="SystemFillColorCritical" Color="#FF8A93"/>
+    <!-- A message's own colour and the ground it is written on - an InfoBar of each severity. -->
+    <PaletteColor Key="SystemFillColorAttention" Color="#4AA8FF"/>
+    <PaletteColor Key="SystemFillColorAttentionBackground" Color="#1B2C40"/>
+    <PaletteColor Key="SystemFillColorSuccessBackground" Color="#1C3224"/>
+    <PaletteColor Key="SystemFillColorCautionBackground" Color="#382C19"/>
+    <PaletteColor Key="SystemFillColorCriticalBackground" Color="#3A2322"/>
+    <!-- The mark cut in a severity icon: dark on these light fills. -->
+    <PaletteColor Key="SystemFillColorSeverityMark" Color="#14161A"/>
 
     <!-- The close button's own fills. Its hover has to be a SATURATED ground - the one place in the chrome that shouts,
          because the cost of the click is losing the session. The signal color above is text on a dark ground and is

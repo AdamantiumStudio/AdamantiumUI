@@ -39,6 +39,7 @@
     <Phrase Key="MultiTouch" Text="Мультитач"/>
     <Phrase Key="Shapes" Text="Фигуры"/>
     <Phrase Key="Loaders" Text="Индикаторы загрузки"/>
+    <Phrase Key="InfoBar" Text="Полоса сообщения"/>
     <Phrase Key="Animations" Text="Анимации"/>
     <Phrase Key="Text" Text="Текст"/>
     <Phrase Key="SlidePanel" Text="Выдвижная панель"/>

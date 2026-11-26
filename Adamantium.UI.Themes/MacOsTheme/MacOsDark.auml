@@ -109,6 +109,14 @@
     <PaletteColor Key="SystemFillColorSuccess" Color="#32D74B"/>
     <PaletteColor Key="SystemFillColorCaution" Color="#FFD60A"/>
     <PaletteColor Key="SystemFillColorCritical" Color="#FF453A"/>
+    <!-- A message's own colour and the ground it is written on - an InfoBar of each severity. -->
+    <PaletteColor Key="SystemFillColorAttention" Color="#0A84FF"/>
+    <PaletteColor Key="SystemFillColorAttentionBackground" Color="#1A2A3D"/>
+    <PaletteColor Key="SystemFillColorSuccessBackground" Color="#1B3322"/>
+    <PaletteColor Key="SystemFillColorCautionBackground" Color="#3A3115"/>
+    <PaletteColor Key="SystemFillColorCriticalBackground" Color="#3D2120"/>
+    <!-- The mark cut in a severity icon: dark on these bright fills. -->
+    <PaletteColor Key="SystemFillColorSeverityMark" Color="#1C1C1E"/>
 
     <PaletteColor Key="SkeletonPulseFill" Color="#FFFFFF"/>
     <PaletteColor Key="ShimmerTrackFill" Color="#14FFFFFF"/>

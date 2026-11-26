@@ -85,6 +85,7 @@
         <StyleInclude Source="{x:Type fluent:FlipTileStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DropDownStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ExpanderStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:InfoBarStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:PropertyGridStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DataPagerStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DropDownItemStyleSet}"/>
