@@ -707,7 +707,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService, ITex
     internal MacOSAccessibility Accessibility => _view == IntPtr.Zero
         ? null
         : _accessibility ??= new MacOSAccessibility(
-            () => (_window as UIComponent)?.GetAutomationPeer(), _view, ToAppKitPoints, ToDesktopPixels);
+            () => (_window as UIComponent)?.GetAutomationPeer(), _view, ToAppKitPoints, ToDesktopPixels,
+            onMainThread: _platform.RunOnMainThread);
 
     // A rectangle on the desktop in pixels from the top, as AppKit takes it: in points, from the bottom.
     private CGRect ToAppKitPoints(Rect pixels)

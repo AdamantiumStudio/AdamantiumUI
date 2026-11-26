@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.CoreGraphics;
 using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.ObjectiveC;
@@ -30,9 +33,14 @@ internal sealed class MacOSAccessibility : IDisposable
     private readonly Func<CGPoint, PixelPoint> _toPixels;
     private readonly Action<Action> _read;
     private readonly Action<Action> _act;
+    private readonly Action<IntPtr, string> _notify;
     private readonly object _lock = new();
     private readonly Dictionary<int, IntPtr> _elements = new();
     private int _madeSincePruned;
+    private const int LayoutEvery = 250;
+    private long _layoutToldAt = long.MinValue / 2;
+    private int _layoutPending;
+    private bool _relaying;
     private bool _disposed;
 
     /// <param name="root">The window's own peer, whose children are the window's elements.</param>
@@ -41,8 +49,12 @@ internal sealed class MacOSAccessibility : IDisposable
     /// from the bottom.</param>
     /// <param name="toPixels">The reverse, for a point.</param>
     /// <param name="post">Where the peers are read and acted on - the application's loop when null.</param>
+    /// <param name="notify">Tells the system a notification of an element, which it is handed held and lets go of
+    /// - on AppKit's thread, which <paramref name="onMainThread"/> runs work on, when null.</param>
+    /// <param name="onMainThread">Runs work on AppKit's thread, for the notifications; it must run all it is given.</param>
     public MacOSAccessibility(Func<AutomationPeer> root, IntPtr container, Func<Rect, CGRect> toPoints,
-        Func<CGPoint, PixelPoint> toPixels, Action<Action> post = null)
+        Func<CGPoint, PixelPoint> toPixels, Action<Action> post = null, Action<IntPtr, string> notify = null,
+        Action<Action> onMainThread = null)
     {
         _root = root;
         _container = container;
@@ -50,6 +62,29 @@ internal sealed class MacOSAccessibility : IDisposable
         _toPixels = toPixels;
         _read = post ?? LoopSignal.PostBetweenFrames;
         _act = post ?? LoopSignal.Post;
+        _notify = notify ?? ((element, name) => Notify(element, name, onMainThread));
+    }
+
+    // The element comes held, and is let go of once told: it may be let go of here before AppKit's thread gets to it.
+    private static void Notify(IntPtr element, string notification, Action<Action> onMainThread)
+    {
+        if (onMainThread == null)
+        {
+            NSObject.Release(element);
+            return;
+        }
+
+        onMainThread(() =>
+        {
+            try
+            {
+                NSAccessibility.PostNotification(element, notification);
+            }
+            finally
+            {
+                NSObject.Release(element);
+            }
+        });
     }
 
     /// <summary>The view the window's elements stand in.</summary>
@@ -113,6 +148,13 @@ internal sealed class MacOSAccessibility : IDisposable
             _madeSincePruned++;
             var element = MacOSAccessibilityElement.Create(new MacOSAccessibilityNode(this, peer));
             _elements[peer.RuntimeId] = element;
+            // The first element asked for means an assistive technology looks: from then on it is told what changes.
+            if (!_relaying)
+            {
+                _relaying = true;
+                AutomationEvents.Raised += OnRaised;
+            }
+
             return element;
         }
     }
@@ -156,6 +198,11 @@ internal sealed class MacOSAccessibility : IDisposable
             }
 
             _disposed = true;
+            if (_relaying)
+            {
+                AutomationEvents.Raised -= OnRaised;
+            }
+
             foreach (var element in _elements.Values)
             {
                 MacOSAccessibilityElement.Release(element);
@@ -164,6 +211,146 @@ internal sealed class MacOSAccessibility : IDisposable
             _elements.Clear();
         }
     }
+
+    // On the loop, where automation tells it: what changed in this window, told as AppKit's notification - of an element
+    // already made only, but the one that took the keyboard, which is made for it.
+    private void OnRaised(object sender, AutomationEventArgs e)
+    {
+        // This window's: in it, or - a menu shut, already out of it - an element made for it.
+        if (e.Peer == null || (_root() as UIComponentAutomationPeer)?.Owner is not { } window ||
+            !ReferenceEquals((e.Element as UIComponent)?.RootVisual, window) && Existing(e.Peer) == IntPtr.Zero)
+        {
+            return;
+        }
+
+        switch (e.Event)
+        {
+            // The window itself taking the keyboard is its view's: the window's own peer has no element.
+            case AutomationEvent.FocusChanged:
+                if (Stopping(e.Peer) is { } focused && !ReferenceEquals(focused, _root()))
+                    Tell(focused, NSAccessibility.FocusedElementChanged, make: true);
+                else
+                    TellView(NSAccessibility.FocusedElementChanged);
+                break;
+            case AutomationEvent.PropertyChanged:
+                Tell(e.Peer, NotificationOf(e), make: false);
+                break;
+            // ElementSelected says it once; the item's own IsSelected would say it again.
+            case AutomationEvent.ElementSelected when ContainerOf(e.Peer) is { } container && !ReferenceEquals(container, _root()):
+                Tell(container, NSAccessibility.SelectedChildrenChanged, make: false);
+                break;
+            case AutomationEvent.ElementSelected:
+                TellView(NSAccessibility.SelectedChildrenChanged);
+                break;
+            case AutomationEvent.MenuOpened:
+                Tell(e.Peer, NSAccessibility.MenuOpened, make: true);
+                break;
+            case AutomationEvent.MenuClosed:
+                Tell(e.Peer, NSAccessibility.MenuClosed, make: false);
+                break;
+            // A text box tells its Value as well: that one is told.
+            case AutomationEvent.TextChanged when e.Peer.GetPattern(PatternId.Value) == null:
+                Tell(e.Peer, NSAccessibility.ValueChanged, make: false);
+                break;
+            case AutomationEvent.TextSelectionChanged:
+                Tell(e.Peer, NSAccessibility.SelectedTextChanged, make: false);
+                break;
+            case AutomationEvent.StructureChanged:
+                TellLayout();
+                break;
+        }
+    }
+
+    // Held under the lock, so the window closing meanwhile cannot let it go first; the teller lets go of it.
+    private void Tell(AutomationPeer peer, string notification, bool make)
+    {
+        if (peer == null || notification == null)
+        {
+            return;
+        }
+
+        IntPtr element;
+        lock (_lock)
+        {
+            element = make ? ElementOf(peer) : Existing(peer);
+            if (element == IntPtr.Zero)
+            {
+                return;
+            }
+
+            NSObject.Retain(element);
+        }
+
+        _notify(element, notification);
+    }
+
+    private void TellView(string notification)
+    {
+        lock (_lock)
+        {
+            if (_disposed || _container == IntPtr.Zero)
+            {
+                return;
+            }
+
+            NSObject.Retain(_container);
+        }
+
+        _notify(_container, notification);
+    }
+
+    // At most every quarter second - a list filling would tell it for every item - and once more after the last of a
+    // burst, which would otherwise go untold.
+    private void TellLayout()
+    {
+        var now = Environment.TickCount64;
+        if (now - _layoutToldAt >= LayoutEvery)
+        {
+            _layoutToldAt = now;
+            TellView(NSAccessibility.LayoutChanged);
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _layoutPending, 1) == 0)
+        {
+            Task.Delay(TimeSpan.FromMilliseconds(LayoutEvery)).ContinueWith(_ =>
+            {
+                Volatile.Write(ref _layoutPending, 0);
+                _layoutToldAt = Environment.TickCount64;
+                TellView(NSAccessibility.LayoutChanged);
+            }, TaskScheduler.Default);
+        }
+    }
+
+    // The element of a peer already asked about; zero for one never asked about, which nothing listens to yet.
+    private IntPtr Existing(AutomationPeer peer)
+    {
+        if (peer == null)
+        {
+            return IntPtr.Zero;
+        }
+
+        lock (_lock)
+        {
+            return !_disposed && _elements.TryGetValue(peer.RuntimeId, out var element) &&
+                   MacOSAccessibilityElement.NodeOf(element)?.Peer == peer
+                ? element
+                : IntPtr.Zero;
+        }
+    }
+
+    private static string NotificationOf(AutomationEventArgs e) => e.Property switch
+    {
+        AutomationProperty.Name => NSAccessibility.TitleChanged,
+        AutomationProperty.ToggleState or AutomationProperty.Value or AutomationProperty.RangeValue => NSAccessibility.ValueChanged,
+        AutomationProperty.ExpandCollapseState when e.Peer.ControlType == AutomationControlType.TreeItem =>
+            Equals(e.NewValue, ExpandCollapseState.Expanded) ? NSAccessibility.RowExpanded : NSAccessibility.RowCollapsed,
+        _ => null
+    };
+
+    // What an item is selected among: the container its selection says, else its parent.
+    private static AutomationPeer ContainerOf(AutomationPeer peer) =>
+        (peer.GetPattern(PatternId.SelectionItem) as ISelectionItemProvider)?.SelectionContainer ?? peer.GetParent();
 
     // An autoreleased array of the elements of the peers, none let go of while it is made.
     private IntPtr ArrayOf(IReadOnlyList<AutomationPeer> peers)

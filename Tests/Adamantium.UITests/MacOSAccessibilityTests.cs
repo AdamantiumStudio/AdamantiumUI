@@ -33,6 +33,7 @@ public unsafe class MacOSAccessibilityTests
         _root = new StackPanel();
         _window = new Window { Width = 400, Height = 300, Content = _root };
         _posted = 0;
+        _told.Clear();
         _accessibility = new MacOSAccessibility(() => _window.GetAutomationPeer(), IntPtr.Zero,
             pixels => new CGRect(pixels.X / 2, 1000 - pixels.Bottom / 2, pixels.Width / 2, pixels.Height / 2),
             point => new PixelPoint((int)(point.X * 2), (int)((1000 - point.Y) * 2)),
@@ -40,8 +41,16 @@ public unsafe class MacOSAccessibilityTests
             {
                 _posted++;
                 work();
+            },
+            (element, notification) =>
+            {
+                // Handed held, as AppKit's thread would get it; let go of once told.
+                _told.Add((element, notification));
+                NSObject.Release(element);
             });
     }
+
+    private readonly System.Collections.Generic.List<(IntPtr Element, string Notification)> _told = [];
 
     [TearDown]
     public void TearDown()
@@ -236,6 +245,77 @@ public unsafe class MacOSAccessibilityTests
         finally
         {
             NSObject.Release(element);
+        }
+    }
+
+    [Test]
+    public void AChangedValue_IsTold_OfAnElementAskedAbout()
+    {
+        var asked = new CheckBox { Content = "Bold" };
+        var never = new CheckBox { Content = "Italic" };
+        _root.Children.Add(asked);
+        _root.Children.Add(never);
+        Settle();
+        var element = ElementOf(asked);
+
+        asked.IsChecked = true;
+        never.IsChecked = true;
+
+        Assert.That(_told, Has.Member((element, "AXValueChanged")));
+        Assert.That(_told.FindAll(told => told.Notification == "AXValueChanged"), Has.Count.EqualTo(1),
+            "an element nobody asked about is not made to be told of");
+    }
+
+    [Test]
+    public void TheKeyboardMoving_IsTold_OfTheElementThatTookIt()
+    {
+        var first = new Button { Content = "One" };
+        var second = new Button { Content = "Two" };
+        _root.Children.Add(first);
+        _root.Children.Add(second);
+        Settle();
+        ElementOf(first);
+
+        Adamantium.UI.Core.Automation.AutomationEvents.Raise(second, Adamantium.UI.Core.Automation.AutomationEvent.FocusChanged);
+
+        Assert.That(_told, Has.Member((ElementOf(second), "AXFocusedUIElementChanged")));
+    }
+
+    [Test]
+    public void AnotherWindowsChange_IsNotTold()
+    {
+        var elsewhere = new CheckBox { Content = "Elsewhere" };
+        var other = new Window { Width = 100, Height = 100, Content = elsewhere };
+        for (var i = 0; i < 3; i++)
+        {
+            WindowExtension.UpdateTree(other);
+        }
+
+        ElementOf(new Button { Content = "Here" });
+        Adamantium.UI.Core.Automation.AutomationEvents.Raise(elsewhere, Adamantium.UI.Core.Automation.AutomationEvent.FocusChanged);
+
+        Assert.That(_told, Is.Empty);
+    }
+
+    [Test]
+    public void LetGo_NothingMoreIsTold()
+    {
+        var check = new CheckBox { Content = "Bold" };
+        _root.Children.Add(check);
+        Settle();
+        ElementOf(check);
+        _accessibility.Dispose();
+
+        check.IsChecked = true;
+
+        Assert.That(_told, Is.Empty);
+    }
+
+    private void Settle()
+    {
+        for (var i = 0; i < 3; i++)
+        {
+            WindowExtension.UpdateTree(_window);
         }
     }
 
