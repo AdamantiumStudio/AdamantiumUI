@@ -14,7 +14,6 @@ public sealed class PrintSheets : IPrintDocument
     private readonly PrinterCapabilities _capabilities;
     private readonly int _current;
     private IReadOnlyList<int> _pages = [];
-    private Size<double> _pageSize;
     private int _columns = 1;
     private int _rows = 1;
 
@@ -50,9 +49,11 @@ public sealed class PrintSheets : IPrintDocument
     {
         DocumentPages = Math.Max(0, _document.Paginate(Sheet));
         _pages = _settings.Range.Pages(DocumentPages, _current);
-        _pageSize = Sheet.Size;
+
+        // Several to a sheet are laid out by the first page's size; each is then fitted into its cell by its own.
+        var first = _pages.Count > 0 ? OwnSize(_pages[0]) : null;
         var perSheet = Math.Max(1, _settings.PagesPerSheet);
-        (_columns, _rows) = Grid(perSheet, PrintableArea, _pageSize);
+        (_columns, _rows) = Grid(perSheet, PrintableArea, first ?? Sheet.Size, first != null);
         return Math.Max(1, (_pages.Count + perSheet - 1) / perSheet);
     }
 
@@ -76,7 +77,7 @@ public sealed class PrintSheets : IPrintDocument
                 ? area
                 : new Rect(area.X + slot % _columns * cellWidth, area.Y + slot / _columns * cellHeight, cellWidth,
                     cellHeight);
-            var place = Place(cell, perSheet == 1);
+            var place = Place(cell, perSheet == 1, OwnSize(_pages[at]));
             session.PushGroup(new DrawingGroupOptions { Clip = new RectangleGeometry(cell) });
             _document.DrawPage(_pages[at], new TransformedDrawingSession(session, place));
             session.PopGroup();
@@ -95,36 +96,57 @@ public sealed class PrintSheets : IPrintDocument
         }
     }
 
-    /// <summary>The matrix that puts a page into <paramref name="cell"/>: fitted, at its own size, or by the scale
-    /// asked for; one page alone at its own size or a scale of its own keeps its own place on the sheet.</summary>
-    private Matrix4x4F Place(Rect cell, bool alone)
+    // The page's own size, for a document whose pages keep theirs; null for one laid out on the sheet.
+    private Size<double>? OwnSize(int index) =>
+        _document.PageSize(index) is { Width: > 0, Height: > 0 } own ? own : null;
+
+    /// <summary>The matrix that puts a page into <paramref name="cell"/>: fitted, at its own size, or by the scale asked
+    /// for. A page laid out on the sheet, alone at its own size or a scale of its own, keeps its place on the sheet; a page
+    /// of its <paramref name="own"/> size is centred, and turned a quarter - its top to the left - where it fits larger
+    /// so, or at a scale asked for fits only so or shows more so.</summary>
+    private Matrix4x4F Place(Rect cell, bool alone, Size<double>? own)
     {
-        var fit = Math.Min(cell.Width / _pageSize.Width, cell.Height / _pageSize.Height);
+        var size = own ?? Sheet.Size;
+        var straight = Math.Min(cell.Width / size.Width, cell.Height / size.Height);
+        var across = Math.Min(cell.Width / size.Height, cell.Height / size.Width);
+        var asked = alone && _settings.Scaling != PrintScaling.FitToSheet;
+        var requested = _settings.Scaling == PrintScaling.Custom ? Math.Clamp(_settings.ScalePercent, 10, 400) / 100 : 1;
+        // At a scale asked for: turned where only so it fits, or - fitting neither way - where so more of it shows.
+        var turned = own != null && (asked
+            ? straight < requested && (across >= requested || across > straight)
+            : across > straight * (1 + 1e-9));
+        var drawn = turned ? new Size<double>(size.Height, size.Width) : size;
+        var fit = turned ? across : straight;
         var scale = _settings.Scaling switch
         {
             PrintScaling.ActualSize => alone ? 1 : fit,
-            PrintScaling.Custom => (alone ? 1 : fit) * Math.Clamp(_settings.ScalePercent, 10, 400) / 100,
+            PrintScaling.Custom => (alone ? 1 : fit) * requested,
             _ => fit,
         };
         double x;
         double y;
-        if (alone && _settings.Scaling != PrintScaling.FitToSheet)
+        if (asked && own == null)
         {
             x = 0;
             y = 0;
         }
         else
         {
-            x = cell.X + (cell.Width - _pageSize.Width * scale) / 2;
-            y = cell.Y + (cell.Height - _pageSize.Height * scale) / 2;
+            x = cell.X + (cell.Width - drawn.Width * scale) / 2;
+            y = cell.Y + (cell.Height - drawn.Height * scale) / 2;
         }
 
-        return Matrix4x4.CreateScale((float)scale, (float)scale, 1f) *
+        // Turned, the page's top edge runs up its left: (x, y) goes to (y, width - x).
+        Matrix4x4F turn = turned
+            ? new Matrix4x4F(0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, (float)size.Width, 0, 1)
+            : Matrix4x4F.Identity;
+        return turn * Matrix4x4.CreateScale((float)scale, (float)scale, 1f) *
                Matrix4x4.CreateTranslation((float)x, (float)y, 0f);
     }
 
-    /// <summary>The columns and rows <paramref name="count"/> pages are laid in, whichever shows them largest.</summary>
-    private static (int Columns, int Rows) Grid(int count, Rect area, Size<double> page)
+    /// <summary>The columns and rows <paramref name="count"/> pages are laid in, whichever shows them largest - turned
+    /// where they <paramref name="turn"/>, as pages of their own size do.</summary>
+    private static (int Columns, int Rows) Grid(int count, Rect area, Size<double> page, bool turn)
     {
         var best = (Columns: count, Rows: 1);
         var largest = 0.0;
@@ -137,6 +159,11 @@ public sealed class PrintSheets : IPrintDocument
 
             var rows = count / columns;
             var scale = Math.Min(area.Width / columns / page.Width, area.Height / rows / page.Height);
+            if (turn)
+            {
+                scale = Math.Max(scale, Math.Min(area.Width / columns / page.Height, area.Height / rows / page.Width));
+            }
+
             if (scale > largest + 1e-12)
             {
                 largest = scale;

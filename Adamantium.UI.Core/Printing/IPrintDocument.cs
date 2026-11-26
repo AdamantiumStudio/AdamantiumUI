@@ -1,3 +1,4 @@
+using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Core.Printing;
@@ -16,4 +17,9 @@ public interface IPrintDocument
     /// <summary>Draws page <paramref name="index"/> into <paramref name="session"/>, in DIPs from the top left corner of
     /// the sheet. What it draws inside <see cref="PrintPage.PrintableMargins"/> may not be printed.</summary>
     void DrawPage(int index, IDrawingSession session);
+
+    /// <summary>The size page <paramref name="index"/> is drawn at, in DIPs, for a document whose pages keep their own
+    /// sizes - a PDF's; null for one laid out on the sheet, drawn at its size. The sheet's scale, its place and a turn
+    /// to fit it are worked out from this.</summary>
+    Size<double>? PageSize(int index) => null;
 }
