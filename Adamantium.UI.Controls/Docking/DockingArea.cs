@@ -2924,11 +2924,16 @@ public class DockingArea : Panel
         control.SelectionChanged += OnGroupSelectionChanged;
     }
 
+    // Set while a panel's tabs are put to the model's order: the selection that moves meanwhile is not a pick.
+    private bool _fillingPanes;
+
     private void OnGroupSelectionChanged(object sender, EventArgs e)
     {
-        if (sender is PaneGroup control && control.SelectedIndex >= 0 && NodeOfControl(control) is { } node)
+        if (!_fillingPanes && sender is PaneGroup control && control.SelectedIndex >= 0 && NodeOfControl(control) is { } node)
         {
             node.ActiveIndex = control.SelectedIndex;
+            // Another tab picked in the panel being worked in is the pane worked in now.
+            if (IsActiveGroup(node)) MakeActive(ActivePaneOf(node));
         }
 
         Owner.RaiseActivePaneChanged();
@@ -2946,6 +2951,23 @@ public class DockingArea : Panel
     }
 
     private void FillPanes(PaneGroup control, PaneGroupNode node)
+    {
+        // A fill inside a fill - a handler of the selection building again - leaves the outer one guarded.
+        var filling = _fillingPanes;
+        _fillingPanes = true;
+        try
+        {
+            PutPanesInOrder(control, node);
+        }
+        finally
+        {
+            _fillingPanes = filling;
+        }
+
+        control.InvalidateMeasure();
+    }
+
+    private void PutPanesInOrder(PaneGroup control, PaneGroupNode node)
     {
         // To the model's order, moving only what is out of place: the panel keeps its children and its identity.
         for (var i = 0; i < node.PaneIds.Count; i++)
@@ -2972,9 +2994,9 @@ public class DockingArea : Panel
             control.SelectedIndex = node.State == PaneGroupState.Collapsed
                 ? -1
                 : System.Math.Clamp(node.ActiveIndex, 0, control.Items.Count - 1);
+            // The model says the tab put in front, as the panel shows it.
+            if (control.SelectedIndex >= 0) node.ActiveIndex = control.SelectedIndex;
         }
-
-        control.InvalidateMeasure();
     }
 
     /// <summary>Space left between two neighbors for the divider that will sit there.</summary>
