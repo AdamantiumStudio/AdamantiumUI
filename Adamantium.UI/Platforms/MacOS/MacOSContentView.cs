@@ -4,6 +4,7 @@ using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
+using Adamantium.UI.Platforms.MacOS.Accessibility;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -37,6 +38,7 @@ internal static unsafe class MacOSContentView
         .AddMethod("flagsChanged:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, void>)&FlagsChanged, Event)
         .AddTextInput()
         .AddDragging()
+        .AddAccessibility()
         .Register();
 
     [UnmanagedCallersOnly]
