@@ -324,6 +324,14 @@ public class ResourceManager : IResourceManager
 
     public bool SetResourceInScope(string name, object value, ResourceScope scope = ResourceScope.Local)
     {
+        // The current theme's palette first, as FindResource reads it first: a palette entry is in no dictionary.
+        if (scope == ResourceScope.Theme && UIAppContext.Current?.ThemeManager?.CurrentTheme is Theme current
+            && current.SetPaletteValue(name, value))
+        {
+            _resourcesDirty = true;
+            return true;
+        }
+
         ResourceProvider provider;
         switch (scope)
         {

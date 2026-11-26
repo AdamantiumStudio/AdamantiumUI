@@ -98,6 +98,30 @@ public class ThemeContextScopeTests
         });
     }
 
+    // A palette entry put in the theme's scope - the sandbox's "Cycle critical color": a new brush in its place, so what
+    // follows the entry takes it and what read it once keeps the old one, unchanged.
+    [Test]
+    public void APaletteEntry_SetInTheThemesScope_IsANewBrush_TheOldOneUntouched()
+    {
+        var theme = TwoVariantTheme();
+        var manager = new ThemeManager(new AdamantiumDependencyContainer());
+        _app.ThemeManager = manager;
+        manager.AddTheme(theme.Name, theme);
+        manager.SetTheme(theme);
+        var before = (SolidColorBrush)_app.ResourceManager.FindResource("Background");
+        var replacement = new SolidColorBrush(Color.FromRgba(248, 113, 113, 255));
+
+        var set = _app.ResourceManager.SetResourceInScope("Background", replacement, ResourceScope.Theme);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(set, Is.True);
+            Assert.That(_app.ResourceManager.FindResource("Background"), Is.SameAs(replacement));
+            Assert.That(before.Color, Is.EqualTo(LightBg), "what read the entry once keeps its brush as it was");
+            Assert.That(_app.ResourceManager.SetResourceInScope("NoSuchKey", replacement, ResourceScope.Theme), Is.False);
+        });
+    }
+
     [Test]
     public void AThemeSetOnAnElement_ReachesEverythingUnderIt()
     {
