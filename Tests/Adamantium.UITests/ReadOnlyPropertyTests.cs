@@ -136,4 +136,48 @@ public class ReadOnlyPropertyTests
 
         Assert.That(model.Count, Is.EqualTo(2));
     }
+
+    private sealed class Reporter : FundamentalUIComponent
+    {
+        public static readonly AdamantiumProperty ErrorProperty = AdamantiumProperty.RegisterReadOnly(nameof(Error),
+            typeof(string), typeof(Reporter), new PropertyMetadata(null));
+
+        public string Error => GetValue<string>(ErrorProperty);
+
+        public void Fail(string error) => SetReadOnlyValue(ErrorProperty, error);
+    }
+
+    private sealed class ErrorModel
+    {
+        public string Error { get; set; }
+    }
+
+    // Words to the model only - a read-only text the component reports through a binding to the source - are not said
+    // again in a new language: the binding never writes its target, and writing a read-only one threw.
+    [Test]
+    public void ATextReportedToTheModel_IsNotWrittenBackInANewLanguage()
+    {
+        var language = Adamantium.Localization.Languages.Current;
+        try
+        {
+            Adamantium.Localization.Languages.Current = "en";
+            var model = new ErrorModel();
+            var reporter = new Reporter { DataContext = model };
+            reporter.SetBinding(Reporter.ErrorProperty,
+                new Binding(nameof(ErrorModel.Error)) { Mode = BindingMode.OneWayToSource });
+            reporter.Fail("not an archive");
+
+            Adamantium.Localization.Languages.Current = "ru";
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(() => BindingUpdateQueue.Flush(), Throws.Nothing);
+                Assert.That(model.Error, Is.EqualTo("not an archive"));
+            });
+        }
+        finally
+        {
+            Adamantium.Localization.Languages.Current = language;
+        }
+    }
 }
