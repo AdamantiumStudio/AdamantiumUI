@@ -159,7 +159,8 @@ internal static class TextOutlines
             return;
         }
 
-        geometry.RecalculateBounds();
+        // No bounds of its own: a writer takes its curves' (CurvesForDrawing), where a StreamGeometry's flattens every
+        // curve into points - most of what printing text by its outlines cost.
         outlines.Add(new TextOutline(geometry, color, thickening));
     }
 
