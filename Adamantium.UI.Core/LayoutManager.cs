@@ -25,6 +25,7 @@ public sealed class LayoutManager
     private readonly IUIComponent _root;
 
     // Built on demand: For() creates a manager per parentless template element, and most of those are never used.
+    private DirtyQueue _toReadLanguage;
     private DirtyQueue _toStyle;
     private DirtyQueue _toMeasure;
     private DirtyQueue _toArrange;
@@ -35,6 +36,7 @@ public sealed class LayoutManager
     private List<IUIComponent> _promoteBuffer;   // reused scratch for promoting next-pass deferrals
     private System.Diagnostics.Stopwatch _passStopwatch;   // reused per pass (RuntimeStats)
 
+    private DirtyQueue ToReadLanguage => _toReadLanguage ??= new DirtyQueue();
     private DirtyQueue ToStyle => _toStyle ??= new DirtyQueue();
     private DirtyQueue ToMeasure => _toMeasure ??= new DirtyQueue();
     private DirtyQueue ToArrange => _toArrange ??= new DirtyQueue();
@@ -63,6 +65,7 @@ public sealed class LayoutManager
             }
 
             Managers.Remove(root);
+            manager._toReadLanguage?.Clear();
             manager._toStyle?.Clear();
             manager._toMeasure?.Clear();
             manager._toArrange?.Clear();
@@ -74,9 +77,10 @@ public sealed class LayoutManager
     public static LayoutManager GetOrCreate(IUIComponent root) => Managers.GetValue(root, static r => new LayoutManager(r));
 
     /// <summary>What this manager's queues are holding - what is still to do before its root has settled.</summary>
-    public (int Style, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
-        => (_toStyle?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
-            _toMeasureNextPass?.Count ?? 0, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
+    public (int Style, int Language, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
+        => (_toStyle?.Count ?? 0, _toReadLanguage?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
+            _toMeasureNextPass?.Count ?? 0,
+            DeferredLanguage.Count + DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
 
     /// <summary>Hands what waits in the manager of <paramref name="formerRoot"/> - a subtree built off the tree, now given
     /// a parent - to the managers its nodes belong to from now on, and forgets that manager. No pass ever runs on a root
@@ -89,6 +93,7 @@ public sealed class LayoutManager
         }
 
         Managers.Remove(formerRoot);
+        Move(manager._toReadLanguage, static node => For(node).InvalidateLanguage(node));
         Move(manager._toStyle, static node => For(node).InvalidateStyle(node));
         Move(manager._toMeasure, static node => For(node).InvalidateMeasure(node));
         Move(manager._toArrange, static node => For(node).InvalidateArrange(node));
@@ -159,6 +164,14 @@ public sealed class LayoutManager
         ToStyle.Enqueue(node);
     }
 
+    /// <summary>Has <paramref name="node"/> read the application language again on the next pass.</summary>
+    public void InvalidateLanguage(IUIComponent node)
+    {
+        LoopSignal.Request();
+        if (_deferInvalidations || OffPassThread) { DeferredLanguage.Enqueue(node); return; }
+        ToReadLanguage.Enqueue(node);
+    }
+
     public void InvalidateMeasure(IUIComponent node)
     {
         LoopSignal.Request();
@@ -188,6 +201,7 @@ public sealed class LayoutManager
     // DirtyQueue enqueue above; route those into these lock-free queues instead and replay on the coordinating thread once
     // the parallel pass joins. Static: the flag toggles around a Parallel.ForEach (fork/join barrier), so one switch suffices.
     private static volatile bool _deferInvalidations;
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredLanguage = new();
     private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredStyle = new();
     private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredMeasure = new();
     private static readonly System.Collections.Concurrent.ConcurrentQueue<IUIComponent> DeferredArrange = new();
@@ -197,6 +211,7 @@ public sealed class LayoutManager
     public static void EndDeferredInvalidation()
     {
         _deferInvalidations = false;
+        while (DeferredLanguage.TryDequeue(out var n)) For(n).InvalidateLanguage(n);
         while (DeferredStyle.TryDequeue(out var n)) For(n).InvalidateStyle(n);
         while (DeferredMeasure.TryDequeue(out var n)) For(n).InvalidateMeasure(n);
         while (DeferredArrange.TryDequeue(out var n)) For(n).InvalidateArrange(n);
@@ -230,7 +245,7 @@ public sealed class LayoutManager
     public static event Action<LayoutManager> Quiescent;
 
     /// <summary>True when this root owes no layout work at all (nothing queued, nothing deferred to the next pass).</summary>
-    public bool IsSettled => ToStyle.IsEmpty && ToMeasure.IsEmpty && ToArrange.IsEmpty && ToMeasureNextPass.Count == 0;
+    public bool IsSettled => ToStyle.IsEmpty && ToReadLanguage.IsEmpty && ToMeasure.IsEmpty && ToArrange.IsEmpty && ToMeasureNextPass.Count == 0;
 
     /// <summary>
     /// Runs one layout pass: drain style (themes can change templates, so it precedes measure), then measure, then arrange,
@@ -244,6 +259,7 @@ public sealed class LayoutManager
 
         // ...and take in whatever arrived from another thread since the last pass. Same replay as the parallel-rebind
         // window uses; the only difference is what put the nodes there.
+        while (DeferredLanguage.TryDequeue(out var deferred)) For(deferred).InvalidateLanguage(deferred);
         while (DeferredStyle.TryDequeue(out var deferred)) For(deferred).InvalidateStyle(deferred);
         while (DeferredMeasure.TryDequeue(out var deferred)) For(deferred).InvalidateMeasure(deferred);
         while (DeferredArrange.TryDequeue(out var deferred)) For(deferred).InvalidateArrange(deferred);
@@ -276,7 +292,7 @@ public sealed class LayoutManager
 
         var didWork = false;
         var iterations = 0;
-        while (!ToStyle.IsEmpty || !ToMeasure.IsEmpty || !ToArrange.IsEmpty)
+        while (!ToStyle.IsEmpty || !ToReadLanguage.IsEmpty || !ToMeasure.IsEmpty || !ToArrange.IsEmpty)
         {
             if (++iterations > MaxPassIterations)
             {
@@ -285,13 +301,15 @@ public sealed class LayoutManager
             }
             didWork = true;
 
-            // Drain snapshots in style, measure, arrange order; work re-dirtied meanwhile waits for the next iteration.
+            // Drain snapshots in style, language, measure, arrange order; work re-dirtied meanwhile waits for the next
+            // iteration. The language is read on the parts the theme gave, and what it writes is measured.
             DrainPhase(ToStyle, ApplyTheme);
+            DrainPhase(ToReadLanguage, ReadLanguage);
             DrainPhase(ToMeasure, MeasureDirty);
             DrainPhase(ToArrange, ArrangeDirty);
         }
 
-        var settled = ToStyle.IsEmpty && ToMeasure.IsEmpty && ToArrange.IsEmpty;
+        var settled = ToStyle.IsEmpty && ToReadLanguage.IsEmpty && ToMeasure.IsEmpty && ToArrange.IsEmpty;
 
         // A pass that found NOTHING to do is the "swap has settled" signal for RenderDirty.ForceStructuralUntilSettled
         // (theme/DPI): every settle write flows through this pass, so a workless pass means the cascade is done.
@@ -354,6 +372,14 @@ public sealed class LayoutManager
         for (var i = 0; i < PassBuffer.Count; i++)
             process(PassBuffer[i]);
         PassBuffer.Clear();
+    }
+
+    private static void ReadLanguage(IUIComponent node)
+    {
+        if (node is FundamentalUIComponent { IsDiscarded: false } element)
+        {
+            element.ReadLanguage();
+        }
     }
 
     private static void ApplyTheme(IUIComponent node)

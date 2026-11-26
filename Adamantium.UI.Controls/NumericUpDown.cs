@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Adamantium.Localization;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
@@ -554,6 +555,13 @@ public class NumericUpDown : RangeLimitsBase
         _commandListener?.Attached();
     }
 
+    // The number is written the new language's way; one half typed is not touched.
+    protected override void OnLanguageChanged(string previous)
+    {
+        var before = Culture ?? Languages.CultureOf(previous);
+        if (_text != null && Value is { } number && _text.Text == FormatValue(number, before)) UpdateText();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
@@ -606,13 +614,15 @@ public class NumericUpDown : RangeLimitsBase
 
     /// <summary>The value as it is shown. A format holding a placeholder is a composite one ("{0:N2} kg"); anything
     /// else is a plain numeric format ("N2") - the same two shapes MahApps accepts.</summary>
-    private string FormatValue(double value)
+    private string FormatValue(double value) => FormatValue(value, EffectiveCulture);
+
+    private string FormatValue(double value, CultureInfo culture)
     {
         var format = StringFormat;
-        if (string.IsNullOrEmpty(format)) return value.ToString(EffectiveCulture);
+        if (string.IsNullOrEmpty(format)) return value.ToString(culture);
         return format.Contains('{')
-            ? string.Format(EffectiveCulture, format, value)
-            : value.ToString(format, EffectiveCulture);
+            ? string.Format(culture, format, value)
+            : value.ToString(format, culture);
     }
 
     private bool TryParse(string text, out double value)

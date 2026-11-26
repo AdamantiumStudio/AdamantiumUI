@@ -1,5 +1,7 @@
 using System;
 using Adamantium.Localization;
+using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
@@ -105,6 +107,30 @@ public class LanguageFormatBindingTests
         }
 
         Assert.That(seen, Is.EqualTo(text.Text).And.Not.EqualTo("1,234.5"));
+    }
+
+    private sealed class Words
+    {
+        public string Play => Languages.Current == "ru" ? "Играть" : "Play";
+    }
+
+    // A button's content and a header hold anything; text bound there is said again as a text block's is.
+    [Test]
+    public void TextBoundToAnyContent_IsSaidAgainInTheNewLanguage()
+    {
+        Languages.Current = "en";
+        var button = new ContentControl();
+        button.SetBinding("Content", new Binding { Path = new PropertyPath("Play"), Source = new Words() });
+        var english = button.Content;
+
+        Languages.Current = "ru";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(english, Is.EqualTo("Play"));
+            Assert.That(button.Content, Is.EqualTo("Играть"));
+        });
     }
 
     private static TextBlock Bound(Binding binding)

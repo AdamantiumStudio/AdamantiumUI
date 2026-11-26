@@ -928,6 +928,18 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LanguageProperty, value);
     }
 
+    protected override string TextLanguage => Language ?? Adamantium.Localization.Languages.Current;
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        // Its own language, or an owner's, is read on the next pass, as the application's is; out of the tree, on attach.
+        if (e.Property == LanguageProperty && IsAttachedToVisualTree && MissedALanguage)
+        {
+            LayoutManager.For(this).InvalidateLanguage(this);
+        }
+    }
+
     /// <summary>The face of <paramref name="family"/> this element's text is set in: the one nearest to its
     /// <see cref="FontWeight"/>, <see cref="FontStyle"/> and <see cref="FontStretch"/>. A control that lays out text of
     /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does. A family the system
@@ -1895,6 +1907,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         Core.Media.Animation.AnimationManager.StartDeferred(this);
 
         OnAttachedToVisualTree(e);
+
+        // Out of every window when the language changed, it missed the walk: it reads the language on the next pass.
+        if (MissedALanguage) LayoutManager.For(this).InvalidateLanguage(this);
 
         AttachedToVisualTreeEvent?.Invoke(this, e);
 

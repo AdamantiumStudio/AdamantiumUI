@@ -26,8 +26,8 @@ internal sealed class FakeApp(IDependencyResolver resolver) : AdamantiumComponen
     public IThemeManager ThemeManager { get; set; }
     public IGraphicsContext GraphicsContext => null;
     public IDispatcher Dispatcher { get; set; }
-    public void AddWindow(IWindow window) { }
-    public void RemoveWindow(IWindow window) { }
+    public void AddWindow(IWindow window) => Windows = [.. Windows, window];
+    public void RemoveWindow(IWindow window) => Windows = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(Windows, listed => !ReferenceEquals(listed, window)));
     public void SetActiveWindow(IWindow window) { }
     public void InactivateWindow(IWindow window) { }
     public void ExecuteOnUIThread(Action action) => action();

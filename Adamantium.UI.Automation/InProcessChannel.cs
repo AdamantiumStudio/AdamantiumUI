@@ -5,13 +5,19 @@ namespace Adamantium.UI.Automation;
 internal sealed class InProcessChannel : IAutomationChannel
 {
     private readonly AutomationExecutor _executor;
+    private readonly HeadlessHost _host;
 
-    public InProcessChannel(AutomationExecutor executor)
+    public InProcessChannel(HeadlessHost host)
     {
-        _executor = executor;
+        _host = host;
+        _executor = new AutomationExecutor(host);
     }
 
     public Task<AutomationReply> SendAsync(AutomationRequest request) => _executor.ExecuteAsync(request);
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        _host.Release();
+        return ValueTask.CompletedTask;
+    }
 }

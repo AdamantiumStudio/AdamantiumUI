@@ -44,7 +44,7 @@ public sealed class AutomationSession : IAsyncDisposable
     public static AutomationSession InProcess(params IWindow[] windows)
     {
         ErrorJournal.Install();
-        return new AutomationSession(new InProcessChannel(new AutomationExecutor(new HeadlessHost(windows))));
+        return new AutomationSession(new InProcessChannel(new HeadlessHost(windows)));
     }
 
     /// <summary>An application whose agent listens on <paramref name="pipeName"/>, waiting for it to start if need be.</summary>

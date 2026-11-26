@@ -125,6 +125,9 @@ public class BindingExpression : BindingExpressionBase
    // The source told a change on its own thread: what it means for the path is worked out in the flush, on the UI's.
    private volatile bool _changedElsewhere;
 
+   // Whether this follows the language for the text a target of any content was given.
+   private bool _saysText;
+
    public Binding Binding { get; set; }
    public BindingMode Mode { get; set; }
 
@@ -238,6 +241,7 @@ public class BindingExpression : BindingExpressionBase
       WriteWhatWaits();
       StopDelay();
       LanguageFollowers.Unfollow(this);
+      _saysText = false;
       UnwatchErrors();
       UnwatchPassed();
       _passed?.Clear();
@@ -1092,6 +1096,13 @@ public class BindingExpression : BindingExpressionBase
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
       if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced, FormatCulture)) return;
+
+      // Text a target of any content holds - a header, a button's content - is words as a text target's are.
+      if (!_saysText && coerced is string && Mode != BindingMode.TwoWay && TargetProperty.PropertyType == typeof(object))
+      {
+         _saysText = true;
+         LanguageFollowers.Follow(this);
+      }
 
       var outerWriting = _writingTarget;
       var outerMoved = _targetMoved;

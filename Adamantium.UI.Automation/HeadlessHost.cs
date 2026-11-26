@@ -17,9 +17,14 @@ public sealed class HeadlessHost : IAutomationHost
 
     private readonly List<IWindow> _windows;
 
+    // The application the windows are listed in, until the host is done with them.
+    private readonly IUIApplication _application = UIAppContext.Current;
+
     /// <summary>Hosts <paramref name="windows"/> with a pointer of its own: a capture an earlier test left on the shared
     /// mouse device is let go. Under a platform - a <see cref="HeadlessApplication"/> - a window not yet initialized is
-    /// initialized as the application would: its markup built, its view-model made, its theme applied.</summary>
+    /// initialized as the application would: its markup built, its view-model made, its theme applied. Every window is
+    /// listed among the current application's windows, as a platform window lists itself, so a theme swap and a new
+    /// language reach it - until <see cref="Release"/>.</summary>
     public HeadlessHost(IEnumerable<IWindow> windows)
     {
         _windows = [.. windows];
@@ -33,6 +38,26 @@ public sealed class HeadlessHost : IAutomationHost
                     root.AttachContextAndInitialize(context);
                 }
             }
+        }
+
+        foreach (var window in _windows)
+        {
+            _application?.AddWindow(window);
+        }
+    }
+
+    /// <summary>Closes the windows still open and takes them off the application's list, as a platform window leaves it
+    /// when closed.</summary>
+    public void Release()
+    {
+        foreach (var window in _windows)
+        {
+            if (!window.IsClosed)
+            {
+                window.Close();
+            }
+
+            _application?.RemoveWindow(window);
         }
     }
 

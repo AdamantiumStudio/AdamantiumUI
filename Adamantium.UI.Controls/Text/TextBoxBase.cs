@@ -426,14 +426,12 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
         InvalidateSurface(measure: true);
     }
 
+    protected override void OnLanguageChanged(string previous) => RelayOutText();
+
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty)
-        {
-            RelayOutText();
-        }
-        else if (e.Property == PlaceholderProperty && FloatingPlaceholder)
+        if (e.Property == PlaceholderProperty && FloatingPlaceholder)
         {
             InvalidateSurface(measure: true);
         }

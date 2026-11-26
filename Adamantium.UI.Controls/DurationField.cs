@@ -189,14 +189,7 @@ public class DurationField : Control, ISegmentHost
         Update();
     }
 
-    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
-    {
-        base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty)
-        {
-            Build();
-        }
-    }
+    protected override void OnLanguageChanged(string previous) => Build();
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {

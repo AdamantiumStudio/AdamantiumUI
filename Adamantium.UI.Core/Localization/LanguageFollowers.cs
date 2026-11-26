@@ -34,5 +34,28 @@ internal static class LanguageFollowers
                 binding.OnLanguageChanged();
             }
         }
+
+        // ...then every window, as a theme swap does, on the loop thread that owns the trees.
+        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread)
+        {
+            LoopSignal.Post(UpdateTheWindows);
+            return;
+        }
+
+        UpdateTheWindows();
+    }
+
+    // What is in each window reads the language on the next layout pass.
+    private static void UpdateTheWindows()
+    {
+        if (UIAppContext.Current?.Windows is not { } windows)
+        {
+            return;
+        }
+
+        foreach (var window in windows.ToList())
+        {
+            window.UpdateLanguage();
+        }
     }
 }

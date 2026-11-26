@@ -59,7 +59,7 @@ public class SplashWindowTests
         var splash = Splash();
         splash.AttachContextAndInitialize(_app.UIContext);
         _app.Windows = [splash];
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
         var close = splash.GetTemplateChild("PART_CloseButton");
         var changing = false;
@@ -88,7 +88,7 @@ public class SplashWindowTests
         _themes.SetTheme(fluent);
         var splash = Splash();
         _app.Windows = [splash];
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
         var close = splash.GetTemplateChild("PART_CloseButton");
 
@@ -106,7 +106,7 @@ public class SplashWindowTests
         var splash = Splash();
         var closed = false;
         splash.Closed += (_, _) => closed = true;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
         // The session keeps looking at the window it was made for, which is closed and released by then.
         session.AllowErrors = true;
@@ -131,7 +131,7 @@ public class SplashWindowTests
     {
         var splash = Splash();
         splash.CaptionButtonPlacement = placement;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
 
         Assert.That(((MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton")).HorizontalAlignment, Is.EqualTo(side));
@@ -145,7 +145,7 @@ public class SplashWindowTests
         var splash = Splash();
         ThemeContext.SetTheme(splash, new MacOsSplash());
         splash.CaptionButtonPlacement = placement;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
 
         var close = (MeasurableUIComponent)splash.GetTemplateChild("PART_CloseButton");
@@ -163,12 +163,13 @@ public class SplashWindowTests
         var hidden = Splash();
         ThemeContext.SetTheme(hidden, new MacOsSplash());
         hidden.ShowCloseButton = false;
-        await AutomationSession.InProcess(hidden).WaitForIdleAsync();
+        await using var hiddenSession = AutomationSession.InProcess(hidden);
+        await hiddenSession.WaitForIdleAsync();
         var splash = Splash();
         ThemeContext.SetTheme(splash, new MacOsSplash());
         var closed = false;
         splash.Closed += (_, _) => closed = true;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
         session.AllowErrors = true;
 
@@ -187,7 +188,7 @@ public class SplashWindowTests
     {
         var splash = Splash();
         splash.CaptionButtonPlacement = placement;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
 
         Assert.Multiple(() =>
@@ -202,7 +203,7 @@ public class SplashWindowTests
     {
         var splash = Splash();
         splash.ShowCloseButton = false;
-        var session = AutomationSession.InProcess(splash);
+        await using var session = AutomationSession.InProcess(splash);
         await session.WaitForIdleAsync();
 
         Assert.That(((UIComponent)splash.GetTemplateChild("PART_CloseButton")).Visibility, Is.EqualTo(Visibility.Collapsed));

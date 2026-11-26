@@ -36,8 +36,9 @@ public class WindowCommand : AdamantiumViewModel
         }
     }
 
-    /// <summary>Text shown for this command in the OVERFLOW menu (falls back to <see cref="Content"/> if unset).</summary>
-    public string Label
+    /// <summary>Text shown for this command in the OVERFLOW menu (falls back to <see cref="Content"/> if unset). A
+    /// command may say it in the language of the moment instead, read each time.</summary>
+    public virtual string Label
     {
         get => _label;
         set
@@ -59,8 +60,9 @@ public class WindowCommand : AdamantiumViewModel
         set => SetProperty(ref _commandParameter, value);
     }
 
-    /// <summary>Optional hover tooltip for the bar button.</summary>
-    public string ToolTip
+    /// <summary>Optional hover tooltip for the bar button; a command may say it in the language of the moment, as
+    /// <see cref="Label"/>.</summary>
+    public virtual string ToolTip
     {
         get => _toolTip;
         set => SetProperty(ref _toolTip, value);

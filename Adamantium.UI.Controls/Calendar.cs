@@ -322,8 +322,6 @@ public class Calendar : Control
         base.OnAttachedToVisualTree(e);
         _attached = true;
         SettleAll();
-        Languages.Changed -= OnLanguagesChanged;
-        Languages.Changed += OnLanguagesChanged;
         BlackoutDates.Watch(true);
         WatchMarks(MarkedDates);
         WaitForMidnight();
@@ -350,11 +348,7 @@ public class Calendar : Control
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty)
-        {
-            Reclamp();
-        }
-        else if (e.Property == IsFocusVisibleProperty)
+        if (e.Property == IsFocusVisibleProperty)
         {
             Show();
         }
@@ -989,7 +983,6 @@ public class Calendar : Control
     {
         _attached = false;
         SettleAll();
-        Languages.Changed -= OnLanguagesChanged;
         BlackoutDates.Watch(false);
         WatchMarks(null);
         _midnight?.Stop();
@@ -997,7 +990,7 @@ public class Calendar : Control
         _midnight = null;
     }
 
-    private void OnLanguagesChanged(object sender, EventArgs e) => Reclamp();
+    protected override void OnLanguageChanged(string previous) => Reclamp();
 
     private bool DayKey(Key key, InputModifiers modifiers)
     {

@@ -44,7 +44,7 @@ public class DiscardedMenuLetsGoTests
         root.Children.Add(file);
         var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
         _app.Windows = [window];
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         if (opened)
         {

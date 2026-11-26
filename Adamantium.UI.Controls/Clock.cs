@@ -262,11 +262,13 @@ public class Clock : Control
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty || e.Property == FontSizeProperty)
+        if (e.Property == FontSizeProperty)
         {
             Build();
         }
     }
+
+    protected override void OnLanguageChanged(string previous) => Build();
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ClockAutomationPeer(this);
 

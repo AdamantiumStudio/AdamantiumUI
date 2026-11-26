@@ -212,8 +212,6 @@ public class StopwatchTimer : Control
             _tick.Tick += OnTick;
         }
 
-        Languages.Changed -= OnLanguagesChanged;
-        Languages.Changed += OnLanguagesChanged;
         Retext();
         Show();
     }
@@ -223,21 +221,11 @@ public class StopwatchTimer : Control
         base.OnDetachedFromVisualTree(e);
         _attached = false;
         _tick?.Stop();
-        Languages.Changed -= OnLanguagesChanged;
     }
 
-    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
-    {
-        base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty)
-        {
-            Retext();
-        }
-    }
+    protected override void OnLanguageChanged(string previous) => Retext();
 
     protected override AutomationPeer OnCreateAutomationPeer() => new StopwatchTimerAutomationPeer(this);
-
-    private void OnLanguagesChanged(object sender, EventArgs e) => Retext();
 
     private void Retext()
     {

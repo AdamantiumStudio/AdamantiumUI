@@ -360,6 +360,9 @@ public class DropDown : Selector
         _commandListener?.Detached();
     }
 
+    // The choice is written in the editable box the new language's way; one half typed is left.
+    protected override void OnLanguageChanged(string previous) => ShowText();
+
     // Whether the command can run; a list with none can be used.
     private bool _canExecute = true;
 
