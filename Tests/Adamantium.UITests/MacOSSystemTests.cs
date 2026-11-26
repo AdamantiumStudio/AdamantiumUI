@@ -70,6 +70,10 @@ public class MacOSSystemTests
     {
         var spelling = new MacOSSpelling();
         Assume.That(spelling.Supports("en"));
+        // The system completes words from linguistic data a fresh machine may not have yet - CI's has none: it spells, but
+        // completes nothing at all, not even the commonest start.
+        var any = await spelling.CompleteAsync("en", "th", [], 1, CancellationToken.None);
+        Assume.That(any, Is.Not.Empty, "the system completes no words here");
 
         var words = await spelling.CompleteAsync("en", "hel", [], 3, CancellationToken.None);
 
