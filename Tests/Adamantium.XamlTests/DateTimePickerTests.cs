@@ -98,6 +98,20 @@ public class DateTimePickerTests
         Assert.That(picker.Value, Is.EqualTo(new DateTime(2026, 10, 19)));
     }
 
+    // A picker is a field: another language writes its parts again, in that language's order.
+    [Test]
+    public void AnotherLanguage_WritesThePickersPartsAgain()
+    {
+        var picker = Shown(new DatePicker { Language = "en-US", Value = new DateTime(2026, 10, 19) }, focused: false);
+        var before = picker.Segments[0].Kind;
+
+        picker.Language = "ru-RU";
+        Settle();
+
+        Assert.That(before, Is.EqualTo(DateTimeSegmentKind.Month));
+        Assert.That(picker.Segments[0].Kind, Is.EqualTo(DateTimeSegmentKind.Day));
+    }
+
     [Test]
     public void TooNarrowForItsParts_ThePickerSlidesToThePartBeingTyped_AndBackOnceLeft()
     {

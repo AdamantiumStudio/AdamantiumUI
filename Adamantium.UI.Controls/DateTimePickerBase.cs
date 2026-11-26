@@ -190,7 +190,11 @@ public abstract class DateTimePickerBase : DateTimeField
         }
     }
 
-    protected override void OnLanguageChanged() => RefreshDropDown();
+    protected override void OnLanguageChanged()
+    {
+        base.OnLanguageChanged();
+        RefreshDropDown();
+    }
 
     /// <summary>Shows again what the button opens, while it is open - for a property it shows that has changed.</summary>
     protected void RefreshDropDown()
