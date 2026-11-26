@@ -12,7 +12,15 @@
 
 ### Added
 
-- `UIComponent.OnLanguageChanged`: told when the language an element's text is in changes - its own `Language`, an
-  owner's, or the application's, by its window on the window's thread. The controls that write words, numbers or dates
-  of their own are told this way instead of each listening to the application's language.
+- A new application language reaches the windows as a theme swap does: every window's `UpdateLanguage()` has what is in
+  it read the language on the next layout pass, through `OnLanguageChanged` - a virtual of every element, also told
+  when its own `Language` or an owner's changes. An element out of every window at the time reads it on the next pass
+  once back in one. The controls that write words, numbers or dates of their own are told this way instead of each
+  listening to the application's language.
 - `WindowCommand.Label` and `ToolTip` are virtual: a command can say them in the language of the moment.
+
+### Changed
+
+- `HeadlessApplication` lists its windows, and a window an in-process `AutomationSession` hosts is listed in the current
+  application until the session is disposed: a theme swap and a new language reach headless windows as they reach
+  shown ones.

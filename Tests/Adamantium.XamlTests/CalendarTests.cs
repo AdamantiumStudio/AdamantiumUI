@@ -1301,6 +1301,7 @@ public class CalendarTests
             Assert.That(calendar.HeaderText, Is.EqualTo("October 2026"));
 
             Languages.Current = "ru-RU";
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(_window);
 
             Assert.That(calendar.HeaderText, Does.StartWith("октябрь"));
         }

@@ -352,8 +352,6 @@ public class DropDown : Selector
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
-        // The language may have changed while the list was out of the window, which told it nothing.
-        ShowText();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

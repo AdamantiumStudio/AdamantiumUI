@@ -58,7 +58,10 @@ public sealed class HeadlessApplication : IUIApplication, IUIContext, IWindowPla
 
     public IWindow ActiveWindow => null;
 
-    public IReadOnlyList<IWindow> Windows => [];
+    // Listed by whoever brings a window up, as a platform window lists itself: a theme swap and a new language reach them.
+    private readonly List<IWindow> _windows = [];
+
+    public IReadOnlyList<IWindow> Windows => _windows;
 
     public INavigationService Navigation => null;
 
@@ -89,11 +92,13 @@ public sealed class HeadlessApplication : IUIApplication, IUIContext, IWindowPla
 
     public void AddWindow(IWindow window)
     {
+        if (!_windows.Contains(window))
+        {
+            _windows.Add(window);
+        }
     }
 
-    public void RemoveWindow(IWindow window)
-    {
-    }
+    public void RemoveWindow(IWindow window) => _windows.Remove(window);
 
     public void SetActiveWindow(IWindow window)
     {

@@ -553,8 +553,6 @@ public class NumericUpDown : RangeLimitsBase
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
-        // The language may have changed while the field was out of the window, which told it nothing.
-        if (!ReferenceEquals(_written, Languages.Culture)) OnLanguageChanged();
     }
 
     // The culture the number was last written in, as far as the language decides it.

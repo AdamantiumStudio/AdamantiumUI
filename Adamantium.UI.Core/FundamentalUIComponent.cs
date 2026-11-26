@@ -24,6 +24,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private Dictionary<Style, int> _scopedBands;
     private bool _underScope;
     private int _styledInThemeVersion = ThemeManager.Version;
+    private string _readInLanguage = Adamantium.Localization.Languages.Current;
 
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
@@ -1163,6 +1164,48 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
 
         InvalidateChildrenStyles(visited);
+    }
+
+    public void UpdateLanguage() => UpdateLanguageCore([]);
+
+    private void UpdateLanguageCore(HashSet<IFundamentalUIComponent> visited)
+    {
+        if (!visited.Add(this)) return;
+
+        if (MissedALanguage && this is IUIComponent component)
+        {
+            LayoutManager.For(component).InvalidateLanguage(component);
+        }
+
+        foreach (var child in LogicalChildrenCollection)
+        {
+            (child as FundamentalUIComponent)?.UpdateLanguageCore(visited);
+        }
+
+        if (this is IUIComponent visual)
+        {
+            foreach (var child in visual.VisualChildren)
+            {
+                (child as FundamentalUIComponent)?.UpdateLanguageCore(visited);
+            }
+        }
+    }
+
+    /// <summary>Whether the application language changed since this element last read it - out of every window then, it
+    /// missed the walk.</summary>
+    internal bool MissedALanguage => _readInLanguage != Adamantium.Localization.Languages.Current;
+
+    internal void ReadLanguage()
+    {
+        if (!MissedALanguage) return;
+        _readInLanguage = Adamantium.Localization.Languages.Current;
+        OnLanguageChanged();
+    }
+
+    /// <summary>The language this element's text is in has changed: the application's, read on the next layout pass, or
+    /// its own. A control that writes words, numbers or dates of its own writes them again here.</summary>
+    protected virtual void OnLanguageChanged()
+    {
     }
 
     private void InvalidateChildrenStyles(HashSet<IFundamentalUIComponent> visited)

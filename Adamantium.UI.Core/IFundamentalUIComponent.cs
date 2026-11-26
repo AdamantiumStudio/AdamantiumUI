@@ -44,6 +44,9 @@ public interface IFundamentalUIComponent : IAdamantiumComponent, IDispatcherComp
     public void RemoveBinding(string property);
 
     public void InvalidateStyles();
+
+    /// <summary>This element and everything in it read the application language again on the next layout pass.</summary>
+    public void UpdateLanguage();
     
     /// <summary>
     /// Raised when the control is attached to a rooted logical tree.

@@ -1153,23 +1153,6 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             themes.ThemeChanged += OnThemeChanged;
             IsThemeChanging = themes.IsThemeChanging && ThemeContext.GetTheme(this) == null;   // a window opened mid-swap already shows the busy state
         }
-
-        Languages.Changed += OnLanguageChanged;
-    }
-
-    private void OnLanguageChanged(object sender, EventArgs e)
-    {
-        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread)
-        {
-            LoopSignal.Post(() => OnLanguageChanged(sender, e));
-            return;
-        }
-
-        // Taken first: a control writing itself again may rebuild its parts.
-        foreach (var node in GetVisualDescendants().ToList())
-        {
-            (node as UIComponent)?.TellLanguageChanged();
-        }
     }
 
     private void PlaceOnScreen(IUIContext context)
@@ -1632,7 +1615,6 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
                 themes.ThemeChanging -= OnThemeChanging;
                 themes.ThemeChanged -= OnThemeChanged;
             }
-            Languages.Changed -= OnLanguageChanged;
             lock (_dialogLock)
             {
                 IsClosed = true;

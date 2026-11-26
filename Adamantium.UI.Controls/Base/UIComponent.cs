@@ -928,15 +928,6 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LanguageProperty, value);
     }
 
-    /// <summary>The language this element's text is in has changed: its own <see cref="Language"/>, an owner's, or the
-    /// application's - its window tells it, on the window's thread. A control that writes words, numbers or dates of its
-    /// own writes them again here.</summary>
-    protected virtual void OnLanguageChanged()
-    {
-    }
-
-    internal void TellLanguageChanged() => OnLanguageChanged();
-
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
@@ -1913,6 +1904,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         Core.Media.Animation.AnimationManager.StartDeferred(this);
 
         OnAttachedToVisualTree(e);
+
+        // Out of every window when the language changed, it missed the walk: it reads the language on the next pass.
+        if (MissedALanguage) LayoutManager.For(this).InvalidateLanguage(this);
 
         AttachedToVisualTreeEvent?.Invoke(this, e);
 

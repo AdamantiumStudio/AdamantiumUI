@@ -34,5 +34,14 @@ internal static class LanguageFollowers
                 binding.OnLanguageChanged();
             }
         }
+
+        // ...then every window, as a theme swap does: what is in it reads the language on the next layout pass.
+        if (UIAppContext.Current?.Windows is { } windows)
+        {
+            foreach (var window in windows.ToList())
+            {
+                window.UpdateLanguage();
+            }
+        }
     }
 }

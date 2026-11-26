@@ -53,6 +53,7 @@ public class TextTransformLanguageTests
             UseCustomChrome = false, ClientWidth = 400, ClientHeight = 300,
         };
         window.AttachContextAndInitialize(_app.UIContext);
+        _app.Windows = [window];
         Update(window);
         return (block, box, window);
     }

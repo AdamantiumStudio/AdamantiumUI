@@ -872,15 +872,7 @@ public partial class TreeDataGrid : Selector
         column.Binding != null ? column.Read(column.Binding, node) : column.ReadPath(node);
 
     private Dictionary<DataGridColumn, DataGridColumnFilter> _columnFilters;
-    private System.Globalization.CultureInfo _readIn;
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-        // The language may have changed while the grid was out of the window, which told it nothing.
-        if (_readIn != null && !Equals(_readIn, Adamantium.Localization.Languages.Culture)) OnLanguageChanged();
-        _readIn = Adamantium.Localization.Languages.Culture;
-    }
+    private System.Globalization.CultureInfo _readIn = Adamantium.Localization.Languages.Culture;
 
     internal void RenameDayWord(DataGridColumn column, string was, string now)
     {

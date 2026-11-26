@@ -3,8 +3,9 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>A window as the application shows one, with no screen behind it: given its context, it is themed by it and
-/// hears what the application tells its windows - a new language - until it is closed.</summary>
+/// <summary>A window as the application shows one, with no screen behind it: given its context, it is themed by it and,
+/// listed among the application's windows as a platform window lists itself, hears what the application tells its windows -
+/// a new language - until it is closed.</summary>
 internal sealed class HostWindow : Window
 {
     protected override IWindowWorkerService CreateWindowWorker(IUIContext context) => null;
@@ -16,6 +17,13 @@ internal sealed class HostWindow : Window
             Width = width, Height = height, ClientWidth = width, ClientHeight = height, Content = content
         };
         window.AttachContextAndInitialize(context);
+        var application = UIAppContext.Current;
+        if (application != null)
+        {
+            application.AddWindow(window);
+            window.Closed += (_, _) => application.RemoveWindow(window);
+        }
+
         return window;
     }
 }
