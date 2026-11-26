@@ -42,11 +42,79 @@ namespace Adamantium.UI.Universes
             }
         }
 
+        // Asked from the universe's thread: through where the surface stood when its own thread last placed it, never
+        // by walking the tree there - a tab switched detaches it midway. Off the tree, where it stood last; the origin
+        // before it ever stood anywhere.
         public override Vector2F PointToSurface(Vector2F absolute)
         {
-            var point = UIExtensions.PointToClient(InputComponent, new PixelPoint((int)absolute.X, (int)absolute.Y));
-            return new Vector2F((float)point.X, (float)point.Y) * PixelsPerPoint;
+            if (placement is not { } placed)
+            {
+                return Vector2F.Zero;
+            }
+
+            // As TranslatePoint goes: the window's client point into the world, then into the surface.
+            var client = placed.Root.PointToClient(new PixelPoint((int)absolute.X, (int)absolute.Y));
+            var world = Vector3F.TransformCoordinate(new Vector3F((float)client.X, (float)client.Y, 0), placed.RootWorld);
+            var point = Vector3F.TransformCoordinate(world, placed.WorldToSurface);
+            return new Vector2F(point.X, point.Y) * PixelsPerPoint;
         }
+
+        // Where the surface stands in its window: the window, and its client points into the surface's own, read on
+        // the surface's thread.
+        private sealed record SurfacePlacement(IRootVisualComponent Root, Matrix4x4F RootWorld, Matrix4x4F SurfaceWorld,
+            Matrix4x4F WorldToSurface);
+
+        private volatile SurfacePlacement placement;
+        private LayoutManager placedBy;
+
+        // On the surface's own thread: after a layout pass or an overlay arranged, a pointer move, a render transform
+        // given to it or above it, and as it comes into the tree.
+        private void Place()
+        {
+            IUIComponent root = InputComponent;
+            while (root is not IRootVisualComponent && root != null)
+            {
+                root = root.VisualParent;
+            }
+
+            if (root is not IRootVisualComponent window || !InputComponent.IsAttachedToVisualTree)
+            {
+                return;
+            }
+
+            // Made anew only when it moved: a pointer move asks every time.
+            var rootWorld = root.WorldTransform;
+            var surfaceWorld = InputComponent.WorldTransform;
+            if (placement is { } placed && ReferenceEquals(placed.Root, window) && placed.RootWorld == rootWorld
+                && placed.SurfaceWorld == surfaceWorld)
+            {
+                return;
+            }
+
+            placement = new SurfacePlacement(window, rootWorld, surfaceWorld, Matrix4x4F.Invert(surfaceWorld));
+        }
+
+        private void FollowLayout(bool attached)
+        {
+            var wanted = attached ? LayoutManager.For(InputComponent) : null;
+            if (ReferenceEquals(wanted, placedBy))
+            {
+                return;
+            }
+
+            if (placedBy != null)
+            {
+                placedBy.PlacesSettled -= OnPlacesSettled;
+            }
+
+            placedBy = wanted;
+            if (placedBy != null)
+            {
+                placedBy.PlacesSettled += OnPlacesSettled;
+            }
+        }
+
+        private void OnPlacesSettled(object sender, EventArgs e) => Place();
 
         /// <summary>The host window's scale, pixels per point; 1 while the surface has no window.</summary>
         protected float HostScale => HostWindow is { } window ? (float)window.DpiScale.X : 1;
@@ -109,6 +177,8 @@ namespace Adamantium.UI.Universes
             }
 
             WatchAncestors();
+            FollowLayout(listenedInput.IsAttachedToVisualTree);
+            Place();
         }
 
         protected override void Dispose(bool disposeManagedResources)
@@ -144,6 +214,8 @@ namespace Adamantium.UI.Universes
                 UnwatchAncestors();
             }
 
+            FollowLayout(false);
+            placement = null;
             listenedInput = null;
         }
 
@@ -245,7 +317,11 @@ namespace Adamantium.UI.Universes
             OnHostScaleChanged();
         }
 
-        private void OnPointerMovedOrLeft(object sender, PointerEventArgs e) => Invalidate();
+        private void OnPointerMovedOrLeft(object sender, PointerEventArgs e)
+        {
+            Place();
+            Invalidate();
+        }
 
         private void WatchHostWindow()
         {
@@ -275,6 +351,8 @@ namespace Adamantium.UI.Universes
         {
             WatchHostWindow();
             WatchAncestors();
+            FollowLayout(true);
+            Place();
             Invalidate();
         }
 
@@ -284,6 +362,9 @@ namespace Adamantium.UI.Universes
             {
                 UnwatchAncestors();
             }
+
+            // Where it stood stays, to answer by while it is away.
+            FollowLayout(false);
         }
 
         private void OnInputPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -291,6 +372,11 @@ namespace Adamantium.UI.Universes
             if (e.Property == UIComponent.VisibilityProperty)
             {
                 Invalidate();
+            }
+            else if (e.Property == UIComponent.RenderTransformProperty
+                     || e.Property == UIComponent.RenderTransformOriginProperty)
+            {
+                Place();
             }
         }
 
