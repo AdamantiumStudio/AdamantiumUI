@@ -110,7 +110,7 @@ public static partial class DragDrop
         public DragDropEffects DragOver(IWindow window, PixelPoint screenPoint, InputModifiers modifiers,
             DragDropEffects allowed) => ExternalDragOver(window, _externalData, screenPoint, modifiers, allowed);
 
-        public void DragLeave(IWindow window) => ExternalDragLeave();
+        public void DragLeave(IWindow window) => ExternalDragLeave(window);
 
         public DragDropEffects Drop(IWindow window, IDataPackage data, PixelPoint screenPoint, InputModifiers modifiers,
             DragDropEffects allowed) => ExternalDrop(window, data, screenPoint, modifiers, allowed);
@@ -136,11 +136,22 @@ public static partial class DragDrop
         return _externalEffect;
     }
 
-    private static void ExternalDragLeave()
+    private static void ExternalDragLeave(IWindow window)
     {
+        // Already over another window of ours.
+        if (_externalWindow != null && !ReferenceEquals(window, _externalWindow))
+            return;
+
         _externalActive = false;
         _externalEffect = DragDropEffects.None;
-        Post(ClearExternalFeedback);
+        Post(ClearAfterLeave);
+    }
+
+    // Unless it has come over another window since.
+    private static void ClearAfterLeave()
+    {
+        if (!_externalActive)
+            ClearExternalFeedback();
     }
 
     // Platform thread. The drop is delivered on the loop thread a frame later; what we answer here is what the SOURCE

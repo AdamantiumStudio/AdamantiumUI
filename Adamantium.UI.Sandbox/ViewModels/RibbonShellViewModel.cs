@@ -721,7 +721,7 @@ public partial class RibbonShellViewModel : IWindowAware
         var path = FileDialog.Open(new OpenFileRequest
         {
             Title = RibbonShellStrings.InstallFromFile,
-            FileTypes = [new FileType(RibbonShellStrings.ModuleFiles, "*.dll")],
+            FileTypes = [new FileType(RibbonShellStrings.ModuleFiles, "dll")],
             Key = "sandbox.modules.install"
         });
         if (path == null)

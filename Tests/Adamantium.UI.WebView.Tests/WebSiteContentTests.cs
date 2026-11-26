@@ -54,7 +54,11 @@ public class WebSiteContentTests
     public void AFolderAtTheRootOfADrive_ServesItsFiles()
     {
         var root = Path.GetPathRoot(folder);
-        var relative = Path.GetRelativePath(root, Path.Combine(folder, "index.html")).Replace('\\', '/');
+        // On macOS the temporary folder is reached through a link (/var), and a path through one names nothing.
+        var real = OperatingSystem.IsMacOS() && folder.StartsWith("/var/", StringComparison.Ordinal)
+            ? "/private" + folder
+            : folder;
+        var relative = Path.GetRelativePath(root, Path.Combine(real, "index.html")).Replace('\\', '/');
         using var file = new WebSiteFolder(root).Open(relative);
         Assert.That(file, Is.Not.Null);
     }

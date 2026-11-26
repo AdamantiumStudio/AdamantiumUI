@@ -43,11 +43,14 @@ float CurveCrossing(float start, float control, float end, float value)
     return saturate(along);
 }
 
-// One coordinate of a piece - given by its start, control and end - at along, from 0 at the start to 1 at the end.
+// One coordinate of a piece - given by its start, control and end - at along, from 0 at the start to 1 at the end. Held
+// between its ends, as a piece running one way is: rounded past them, an upright edge would cross a pixel its own ends
+// leave out.
 float CurveAt(float start, float control, float end, float along)
 {
     float rest = 1.0 - along;
-    return start * rest * rest + control * 2.0 * rest * along + end * along * along;
+    float at = start * rest * rest + control * 2.0 * rest * along + end * along * along;
+    return clamp(at, min(start, end), max(start, end));
 }
 
 // The winding along one ray from position - relative to the pieces' box corner - each crossing counted by how much of

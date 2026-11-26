@@ -497,6 +497,25 @@ public class TextBoxTests
         Assert.That(tb.Text, Is.EqualTo("abc"));
     }
 
+    // What an input method takes back is what the box took: a full one refused the letter.
+    [Test]
+    public void TextBeforeTheCaret_IsTold()
+    {
+        var tb = new TextBox { Text = "125", CaretIndex = 3 };
+        ITextEntry entry = tb;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry.IsBeforeCaret("5"), Is.True);
+            Assert.That(entry.IsBeforeCaret("e"), Is.False);
+            Assert.That(entry.IsBeforeCaret("0125"), Is.False);
+        });
+
+        tb.SelectionStart = 2;
+        tb.SelectionLength = 1;
+        Assert.That(entry.IsBeforeCaret("5"), Is.False, "Backspace would take the selection");
+    }
+
     [Test]
     public void Clear_LeavesAReadOnlyBoxAlone()
     {

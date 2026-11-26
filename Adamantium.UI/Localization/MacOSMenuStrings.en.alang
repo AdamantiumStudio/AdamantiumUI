@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="About" Text="About {application}"/>
+    <Phrase Key="Services" Text="Services"/>
+    <Phrase Key="Hide" Text="Hide {application}"/>
+    <Phrase Key="HideOthers" Text="Hide Others"/>
+    <Phrase Key="ShowAll" Text="Show All"/>
+    <Phrase Key="Quit" Text="Quit {application}"/>
+    <Phrase Key="Window" Text="Window"/>
+    <Phrase Key="Minimize" Text="Minimize"/>
+    <Phrase Key="Zoom" Text="Zoom"/>
+    <Phrase Key="BringAllToFront" Text="Bring All to Front"/>
+</Language>
