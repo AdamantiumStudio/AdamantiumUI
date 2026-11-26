@@ -505,7 +505,7 @@ public class CanvasPane : ContentControl
             return;
         }
 
-        var room = Layer.RenderSize;
+        var room = Layer.PaneArea;
         Measure(PreviousMeasureConstraint ?? room);
 
         SetCurrentValue(AnchorProperty, AnchorFor(at, room, DesiredSize));
@@ -579,7 +579,7 @@ public class CanvasPane : ContentControl
     {
         if (_sizing && Layer != null)
         {
-            var across = Layer.RenderSize;
+            var across = Layer.PaneArea;
 
             SizeTo(Widened(_wide, (e.GetPosition(Layer) - _from).X, across.Width, _sizingSide), across);
 
@@ -591,7 +591,7 @@ public class CanvasPane : ContentControl
 
         var now = e.GetPosition(Layer);
         var wanted = _at + (now - _from);
-        var room = Layer.RenderSize;
+        var room = Layer.PaneArea;
         var size = RenderSize;
 
         // A press that has actually MOVED is a drag and no longer a click, so the grip does not also toggle when it is
@@ -620,7 +620,7 @@ public class CanvasPane : ContentControl
     {
         if (Layer == null) return;
 
-        MoveTo(new Vector2<double>(Bounds.X, Bounds.Y) + offset, Layer.RenderSize, RenderSize);
+        MoveTo(new Vector2<double>(Bounds.X, Bounds.Y) + offset, Layer.PaneArea, RenderSize);
         StickToEdge();
         Settled();
     }
@@ -633,7 +633,7 @@ public class CanvasPane : ContentControl
             return;
         }
 
-        var room = Layer.RenderSize;
+        var room = Layer.PaneArea;
         HoldingEdge(Dock.Right, Bounds.X, Bounds.X + ActualWidth);
         SizeTo(Widened(ActualWidth, width - ActualWidth, room.Width), room);
         Settled();
@@ -710,7 +710,7 @@ public class CanvasPane : ContentControl
     {
         if (!SnapsToEdges || Layer == null) return;
 
-        var room = Layer.RenderSize;
+        var room = Layer.PaneArea;
         var size = RenderSize;
         if (room.Width <= 0 || room.Height <= 0) return;
 
