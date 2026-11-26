@@ -17,24 +17,9 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
 {
     private const XpsFontEmbedding Embedding = XpsFontEmbedding.Restricted;
 
-    private readonly Dictionary<IFont, PageFont> _page = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IFont, XpsPageFont> _page = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IFont, Dictionary<uint, bool>> _settable = new(ReferenceEqualityComparer.Instance);
     private int _subsets;
-
-    // A font of the page: its resource in the package, the glyphs used, and the runs set in it.
-    private sealed class PageFont(IXpsOMFontResource resource, object part)
-    {
-        public IXpsOMFontResource Resource { get; } = resource;
-
-        public object Part { get; } = part;
-
-        public HashSet<uint> Used { get; } = [];
-
-        public List<Run> Runs { get; } = [];
-    }
-
-    // A run of glyphs written, and its indices - each its font's own glyph until the page is written.
-    private sealed record Run(IXpsOMGlyphs Glyphs, XpsGlyphIndex[] Indices);
 
     /// <summary>Whether <paramref name="glyph"/> of <paramref name="font"/> can be set in an embedded subset: the font
     /// allows it to be embedded and cut down, and the glyph's outline fits a CFF program - worked out once a glyph.
@@ -76,7 +61,7 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
             // Its program is written once the page knows which glyphs it uses.
             XpsGeometryPath.Check(factory.CreateFontResource(new ComStream(new MemoryStream()), Embedding, part, 0,
                 out var created));
-            used = new PageFont(created, part);
+            used = new XpsPageFont(created, part);
         }
         catch
         {
@@ -99,7 +84,7 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
             used.Used.Add((uint)index.Index);
         }
 
-        used.Runs.Add(new Run(glyphs, indices));
+        used.Runs.Add(new XpsGlyphRun(glyphs, indices));
     }
 
     /// <summary>Writes each font of the page as the subset of the glyphs it used, and gives its runs the subset's
