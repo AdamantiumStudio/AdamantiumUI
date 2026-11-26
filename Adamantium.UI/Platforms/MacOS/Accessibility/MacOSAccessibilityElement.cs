@@ -47,6 +47,11 @@ internal static unsafe class MacOSAccessibilityElement
             gated[ObjCRuntime.RegisterSelector(name)] = name;
         }
 
+        foreach (var name in MacOSAccessibilityCollections.Selectors)
+        {
+            gated[ObjCRuntime.RegisterSelector(name)] = name;
+        }
+
         return gated;
     }
 
@@ -80,6 +85,7 @@ internal static unsafe class MacOSAccessibilityElement
         .AddMethod("accessibilityPerformShowMenu", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&ShowMenu, Boolean)
         .AddMethod("isAccessibilitySelectorAllowed:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte>)&IsAllowed, "B@::")
         .AddText()
+        .AddCollections()
         .Register();
 
     /// <summary>A new element for <paramref name="node"/>, owned by the caller (<see cref="Release"/>).</summary>
@@ -117,7 +123,9 @@ internal static unsafe class MacOSAccessibilityElement
     private static IntPtr Identifier(IntPtr self, IntPtr selector) => Text(NodeOf(self)?.Identifier);
 
     [UnmanagedCallersOnly]
-    private static IntPtr Value(IntPtr self, IntPtr selector) => NodeOf(self)?.Value switch
+    private static IntPtr Value(IntPtr self, IntPtr selector) => NodeOf(self) is { ValueIsElement: true } tabs
+        ? tabs.Owner.Lent(tabs.OpenTab)
+        : NodeOf(self)?.Value switch
     {
         int number => Integer(number),
         double number => Number(number),

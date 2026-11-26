@@ -47,15 +47,22 @@ internal sealed class MacOSAccessibilityNode(MacOSAccessibility owner, Automatio
 
     public CGRect Frame => Peer is { } peer ? owner.FrameOf(peer) : default;
 
-    /// <summary>What the element holds: a toggle's state (0 off, 1 on, 2 mixed), a range's number, a value's text;
-    /// null for none.</summary>
+    /// <summary>What the element holds: a toggle's state (0 off, 1 on, 2 mixed), a range's number, a value's text, an
+    /// item's being selected (1 or 0) where it has nothing else - a tab, a radio button; null for none.</summary>
     public object Value => Read<object>(peer => peer.GetPattern(PatternId.Toggle) is IToggleProvider toggle
         ? toggle.ToggleState switch { ToggleState.On => 1, ToggleState.Indeterminate => 2, _ => 0 }
         : peer.GetPattern(PatternId.RangeValue) is IRangeValueProvider range
             ? range.Value
             : peer.IsPassword
                 ? null
-                : (peer.GetPattern(PatternId.Value) as IValueProvider)?.Value ?? TextOf(peer)?.Text, null);
+                : (object)((peer.GetPattern(PatternId.Value) as IValueProvider)?.Value ?? TextOf(peer)?.Text) ??
+                  (IsChoice(peer) && peer.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider item
+                      ? item.IsSelected ? 1 : 0
+                      : null), null);
+
+    // A tab or a radio button: one of several, its value its being the one chosen.
+    private static bool IsChoice(AutomationPeer peer) =>
+        peer.ControlType is AutomationControlType.TabItem or AutomationControlType.RadioButton;
 
     public double? Minimum => Read<double?>(peer => (peer.GetPattern(PatternId.RangeValue) as IRangeValueProvider)?.Minimum, null);
 
@@ -86,7 +93,16 @@ internal sealed class MacOSAccessibilityNode(MacOSAccessibility owner, Automatio
         "isAccessibilityExpanded" => Has(Kinds.Expands),
         "isAccessibilitySelected" => Has(Kinds.Selectable),
         "accessibilityMinValue" or "accessibilityMaxValue" => Has(Kinds.Range),
-        "accessibilityValue" => Has(Kinds.Value),
+        "accessibilityValue" => Has(Kinds.Value | Kinds.Choice | Kinds.Tabs),
+        "accessibilitySelectedChildren" or "setAccessibilitySelectedChildren:" => Has(Kinds.Selection),
+        "accessibilityIndex" => Has(Kinds.Selectable | Kinds.Cell | Kinds.TreeRow | Kinds.Row),
+        "accessibilityTabs" => Has(Kinds.Tabs),
+        "accessibilityRowCount" or "accessibilityColumnCount" or "accessibilityCellForColumn:row:" => Has(Kinds.Grid),
+        "accessibilityRows" => Has(Kinds.Grid | Kinds.Tree),
+        "accessibilityColumnHeaderUIElements" => Has(Kinds.Table),
+        "accessibilityRowIndexRange" or "accessibilityColumnIndexRange" => Has(Kinds.Cell),
+        "accessibilityDisclosureLevel" or "isAccessibilityDisclosed" or "setAccessibilityDisclosed:"
+            or "accessibilityDisclosedRows" or "accessibilityDisclosedByRow" => Has(Kinds.TreeRow),
         _ => Allows(selector)
     };
 
@@ -99,7 +115,16 @@ internal sealed class MacOSAccessibilityNode(MacOSAccessibility owner, Automatio
         Selectable = 4,
         Range = 8,
         Value = 16,
-        Known = 32
+        Selection = 32,
+        Grid = 64,
+        Table = 128,
+        Cell = 256,
+        TreeRow = 512,
+        Tree = 1024,
+        Tabs = 2048,
+        Row = 4096,
+        Choice = 8192,
+        Known = 16384
     }
 
     private Kinds _kinds;
@@ -109,18 +134,255 @@ internal sealed class MacOSAccessibilityNode(MacOSAccessibility owner, Automatio
     {
         if ((_kinds & Kinds.Known) == 0)
         {
-            _kinds = Kinds.Known | Read(peer =>
-                (TextOf(peer) != null ? Kinds.Text : Kinds.None) |
-                (peer.GetPattern(PatternId.ExpandCollapse) != null ? Kinds.Expands : Kinds.None) |
-                (peer.GetPattern(PatternId.SelectionItem) != null ? Kinds.Selectable : Kinds.None) |
-                (peer.GetPattern(PatternId.RangeValue) != null ? Kinds.Range : Kinds.None) |
-                (peer.GetPattern(PatternId.Toggle) != null || peer.GetPattern(PatternId.RangeValue) != null ||
-                 peer.GetPattern(PatternId.Value) != null || TextOf(peer) != null
-                    ? Kinds.Value
-                    : Kinds.None), Kinds.None);
+            _kinds = Kinds.Known | Read(KindsOf, Kinds.None);
         }
 
         return (_kinds & kind) != 0;
+    }
+
+    private static Kinds KindsOf(AutomationPeer peer) =>
+        (TextOf(peer) != null ? Kinds.Text : Kinds.None) |
+        (peer.GetPattern(PatternId.ExpandCollapse) != null ? Kinds.Expands : Kinds.None) |
+        (peer.GetPattern(PatternId.SelectionItem) != null ? Kinds.Selectable : Kinds.None) |
+        (peer.GetPattern(PatternId.RangeValue) != null ? Kinds.Range : Kinds.None) |
+        (peer.GetPattern(PatternId.Toggle) != null || peer.GetPattern(PatternId.RangeValue) != null ||
+         peer.GetPattern(PatternId.Value) != null || TextOf(peer) != null
+            ? Kinds.Value
+            : Kinds.None) |
+        (peer.GetPattern(PatternId.Selection) != null ? Kinds.Selection : Kinds.None) |
+        (peer.GetPattern(PatternId.Grid) != null ? Kinds.Grid : Kinds.None) |
+        (peer.GetPattern(PatternId.Table) != null ? Kinds.Table : Kinds.None) |
+        (IsCell(peer) ? Kinds.Cell : Kinds.None) |
+        (peer.ControlType == AutomationControlType.TreeItem ? Kinds.TreeRow : Kinds.None) |
+        (peer.ControlType == AutomationControlType.Tree ? Kinds.Tree : Kinds.None) |
+        (peer.ControlType == AutomationControlType.Tab ? Kinds.Tabs : Kinds.None) |
+        (peer.ControlType == AutomationControlType.DataItem && !IsCell(peer) ? Kinds.Row : Kinds.None) |
+        (IsChoice(peer) && peer.GetPattern(PatternId.SelectionItem) != null ? Kinds.Choice : Kinds.None);
+
+    /// <summary>Whether <paramref name="peer"/> is a row of a table: an item right in a grid - a cell, editable one
+    /// too, is an item of a row.</summary>
+    public static bool IsTableRow(AutomationPeer peer) =>
+        peer.ControlType == AutomationControlType.DataItem && peer.GetParent()?.GetPattern(PatternId.Grid) != null;
+
+    /// <summary>Whether <paramref name="peer"/> is a cell of a table: a grid's item that is not a row.</summary>
+    public static bool IsCell(AutomationPeer peer) => peer.GetPattern(PatternId.GridItem) != null && !IsTableRow(peer);
+
+    /// <summary>Whether its value is an element: a tab group's is the tab open in it.</summary>
+    public bool ValueIsElement => Has(Kinds.Tabs);
+
+    /// <summary>The tab open in a tab group; null for none.</summary>
+    public AutomationPeer OpenTab => Read(peer => FirstSelected(peer.GetChildren()), null);
+
+    /// <summary>What is selected in a container.</summary>
+    public IReadOnlyList<AutomationPeer> Selected =>
+        Read(peer => (peer.GetPattern(PatternId.Selection) as ISelectionProvider)?.GetSelection(), null);
+
+    /// <summary>The items selected now: the first that can be selected alone, the rest added - where the container takes
+    /// more than one.</summary>
+    public void Select(IReadOnlyList<AutomationPeer> items) => Act("setAccessibilitySelectedChildren:", container =>
+    {
+        var several = container.GetPattern(PatternId.Selection) is ISelectionProvider { CanSelectMultiple: true };
+        var first = true;
+        foreach (var peer in items)
+        {
+            if (peer.GetPattern(PatternId.SelectionItem) is not ISelectionItemProvider item)
+                continue;
+
+            if (first)
+                item.Select();
+            else
+                item.AddToSelection();
+
+            first = false;
+            if (!several)
+                break;
+        }
+    });
+
+    /// <summary>Where the element stands among its own kind: a table row's row, a cell's column, an outline row's place
+    /// among the rows shown, otherwise its place among its parent's children of its type.</summary>
+    public nint Index => Read(peer =>
+    {
+        if (peer.GetPattern(PatternId.GridItem) is IGridItemProvider item)
+        {
+            if (IsTableRow(peer))
+                return (nint)item.Row;
+
+            if (peer.GetParent() is { } row && IsTableRow(row))
+                return (nint)item.Column;
+        }
+
+        // A row under a shut one is not shown: its place is among its own then.
+        if (peer.ControlType == AutomationControlType.TreeItem && TreeOf(peer) is { } tree &&
+            ShownTreeRows(tree, peer) is { Count: > 0 } shown && ReferenceEquals(shown[^1], peer))
+            return (nint)(shown.Count - 1);
+
+        var index = 0;
+        foreach (var sibling in peer.GetParent()?.GetChildren() ?? [])
+        {
+            if (ReferenceEquals(sibling, peer))
+                return (nint)index;
+
+            if (sibling.ControlType == peer.ControlType)
+                index++;
+        }
+
+        return (nint)0;
+    }, 0);
+
+    /// <summary>A tab group's tabs.</summary>
+    public IReadOnlyList<AutomationPeer> Tabs => Read(peer => OfType(peer.GetChildren(), AutomationControlType.TabItem), null);
+
+    public nint RowCount => Read(peer => (nint)((peer.GetPattern(PatternId.Grid) as IGridProvider)?.RowCount ?? 0), 0);
+
+    public nint ColumnCount => Read(peer => (nint)((peer.GetPattern(PatternId.Grid) as IGridProvider)?.ColumnCount ?? 0), 0);
+
+    public AutomationPeer CellAt(nint column, nint row) => Read(peer =>
+        peer.GetPattern(PatternId.Grid) is IGridProvider grid && row >= 0 && column >= 0 && row < grid.RowCount &&
+        column < grid.ColumnCount
+            ? grid.GetItem((int)row, (int)column)
+            : null, null);
+
+    /// <summary>A table's rows; an outline's rows shown - each row, and the rows of every open one under it, in order.
+    /// </summary>
+    public IReadOnlyList<AutomationPeer> Rows => Read(peer => peer.ControlType == AutomationControlType.Tree
+        ? ShownTreeRows(peer)
+        : OfType(peer.GetChildren(), AutomationControlType.DataItem), null);
+
+    public IReadOnlyList<AutomationPeer> ColumnHeaders =>
+        Read(peer => (peer.GetPattern(PatternId.Table) as ITableProvider)?.GetColumnHeaders(), null);
+
+    public NSRange RowRange => Read(peer => peer.GetPattern(PatternId.GridItem) is IGridItemProvider cell
+        ? new NSRange(cell.Row, Math.Max(1, cell.RowSpan))
+        : NSRange.None, NSRange.None);
+
+    public NSRange ColumnRange => Read(peer => peer.GetPattern(PatternId.GridItem) is IGridItemProvider cell
+        ? new NSRange(cell.Column, Math.Max(1, cell.ColumnSpan))
+        : NSRange.None, NSRange.None);
+
+    /// <summary>How deep a row of an outline is: 0 for one at the top.</summary>
+    public nint DisclosureLevel => Read(peer =>
+    {
+        nint level = 0;
+        for (var at = peer.GetParent(); at != null && at.ControlType != AutomationControlType.Tree; at = at.GetParent())
+        {
+            if (at.ControlType == AutomationControlType.TreeItem)
+                level++;
+        }
+
+        return level;
+    }, 0);
+
+    public bool IsDisclosed => IsExpanded;
+
+    public void SetDisclosed(bool disclosed) => Act("setAccessibilityDisclosed:", peer =>
+    {
+        if (peer.GetPattern(PatternId.ExpandCollapse) is IExpandCollapseProvider expander)
+            Expand(expander, disclosed);
+    });
+
+    /// <summary>The rows of an outline right under this one.</summary>
+    public IReadOnlyList<AutomationPeer> DisclosedRows => Read(peer => ChildRows(peer), null);
+
+    /// <summary>The row of an outline this one is under; null for one at the top.</summary>
+    public AutomationPeer DisclosedBy => Read(peer =>
+    {
+        for (var at = peer.GetParent(); at != null && at.ControlType != AutomationControlType.Tree; at = at.GetParent())
+        {
+            if (at.ControlType == AutomationControlType.TreeItem)
+                return at;
+        }
+
+        return null;
+    }, null);
+
+    private static AutomationPeer TreeOf(AutomationPeer row)
+    {
+        var at = row.GetParent();
+        while (at != null && at.ControlType != AutomationControlType.Tree)
+            at = at.GetParent();
+
+        return at;
+    }
+
+    private static AutomationPeer FirstSelected(IReadOnlyList<AutomationPeer> peers)
+    {
+        foreach (var peer in peers)
+        {
+            if (peer.GetPattern(PatternId.SelectionItem) is ISelectionItemProvider { IsSelected: true })
+                return peer;
+        }
+
+        return null;
+    }
+
+    private static List<AutomationPeer> OfType(IReadOnlyList<AutomationPeer> peers, AutomationControlType type)
+    {
+        var found = new List<AutomationPeer>();
+        foreach (var peer in peers)
+        {
+            if (peer.ControlType == type)
+                found.Add(peer);
+        }
+
+        return found;
+    }
+
+    // The rows of an outline under a row - a row may stand inside a group of its own, so the walk goes through what is
+    // not a row to the rows beyond, never into a row's own rows.
+    private static List<AutomationPeer> ChildRows(AutomationPeer parent)
+    {
+        var rows = new List<AutomationPeer>();
+        var pending = new Stack<AutomationPeer>();
+        var children = parent.GetChildren();
+        for (var i = children.Count - 1; i >= 0; i--)
+            pending.Push(children[i]);
+
+        while (pending.Count > 0)
+        {
+            var next = pending.Pop();
+            if (next.ControlType == AutomationControlType.TreeItem)
+            {
+                rows.Add(next);
+                continue;
+            }
+
+            var inner = next.GetChildren();
+            for (var i = inner.Count - 1; i >= 0; i--)
+                pending.Push(inner[i]);
+        }
+
+        return rows;
+    }
+
+    // Every row shown, in order: each row, then the rows of an open one under it - walked with a stack of its own.
+    private static List<AutomationPeer> ShownTreeRows(AutomationPeer tree) => ShownTreeRows(tree, null);
+
+    // The walk stops at the row looked for, once reached: the last row then is it.
+    private static List<AutomationPeer> ShownTreeRows(AutomationPeer tree, AutomationPeer upTo)
+    {
+        var shown = new List<AutomationPeer>();
+        var pending = new Stack<AutomationPeer>();
+        var top = ChildRows(tree);
+        for (var i = top.Count - 1; i >= 0; i--)
+            pending.Push(top[i]);
+
+        while (pending.Count > 0)
+        {
+            var row = pending.Pop();
+            shown.Add(row);
+            if (ReferenceEquals(row, upTo))
+                break;
+
+            if (row.GetPattern(PatternId.ExpandCollapse) is IExpandCollapseProvider { ExpandCollapseState: ExpandCollapseState.Expanded })
+            {
+                var under = ChildRows(row);
+                for (var i = under.Count - 1; i >= 0; i--)
+                    pending.Push(under[i]);
+            }
+        }
+
+        return shown;
     }
 
     /// <summary>A press: invoked, toggled, selected or opened and shut, by what the peer does; whether it can be.</summary>

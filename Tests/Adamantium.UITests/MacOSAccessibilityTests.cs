@@ -34,7 +34,11 @@ public unsafe class MacOSAccessibilityTests
         _window = new Window { Width = 400, Height = 300, Content = _root };
         _posted = 0;
         _told.Clear();
-        _accessibility = new MacOSAccessibility(() => _window.GetAutomationPeer(), IntPtr.Zero,
+        _accessibility = Bridge(() => false, TimeProvider.System);
+    }
+
+    private MacOSAccessibility Bridge(Func<bool> assistiveTechnologyOn, TimeProvider clock) =>
+        new(() => _window.GetAutomationPeer(), IntPtr.Zero,
             pixels => new CGRect(pixels.X / 2, 1000 - pixels.Bottom / 2, pixels.Width / 2, pixels.Height / 2),
             point => new PixelPoint((int)(point.X * 2), (int)((1000 - point.Y) * 2)),
             work =>
@@ -47,7 +51,19 @@ public unsafe class MacOSAccessibilityTests
                 // Handed held, as AppKit's thread would get it; let go of once told.
                 _told.Add((element, notification));
                 NSObject.Release(element);
-            });
+            },
+            assistiveTechnologyOn: assistiveTechnologyOn, clock: clock);
+
+    // A steady clock the test moves: its ticks are TimeSpan's.
+    private sealed class ManualClock : TimeProvider
+    {
+        private long _ticks;
+
+        public void Advance(TimeSpan by) => _ticks += by.Ticks;
+
+        public override long GetTimestamp() => _ticks;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
     }
 
     private readonly System.Collections.Generic.List<(IntPtr Element, string Notification)> _told = [];
@@ -95,7 +111,7 @@ public unsafe class MacOSAccessibilityTests
             Assert.That(answers[2], Is.EqualTo(1));
             Assert.That(answers[3], Is.True);
             Assert.That(answers[4], Is.True);
-            Assert.That(_posted - before, Is.EqualTo(5), "every question is answered on the loop");
+            Assert.That(_posted - before, Is.EqualTo(6), "every question is answered on the loop, what the element can be once");
         });
     }
 
@@ -432,6 +448,380 @@ public unsafe class MacOSAccessibilityTests
         });
     }
 
+    [Test]
+    public void AListsSelection_IsToldAndSet_EachItemByItsPlace()
+    {
+        var list = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.List,
+            Adamantium.UI.Core.Automation.AutomationControlType.ListItem, "One", "Two", "Three");
+        list.Children[1].Selected = true;
+        var element = _accessibility.ElementOf(list);
+
+        var selected = NSObject.Send(element, Selector("accessibilitySelectedChildren"));
+        Assert.That(NSArray.CountOf(selected), Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(NSArray.ObjectAt(selected, 0), Is.EqualTo(_accessibility.ElementOf(list.Children[1])));
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(
+                _accessibility.ElementOf(list.Children[2]), Selector("accessibilityIndex")), Is.EqualTo(2));
+            Assert.That(Allowed(element, "accessibilitySelectedChildren"), Is.True);
+            Assert.That(Allowed(ElementOf(new Button()), "accessibilitySelectedChildren"), Is.False);
+        });
+
+        var choice = NSArray.Create([_accessibility.ElementOf(list.Children[2])]);
+        NSObject.Send(element, Selector("setAccessibilitySelectedChildren:"), choice);
+        Assert.That(list.Children[2].Selected && !list.Children[1].Selected, Is.True);
+    }
+
+    [Test]
+    public void ATabGroup_HasItsTabs_AndTheOpenOneIsItsValue()
+    {
+        var tabs = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tab,
+            Adamantium.UI.Core.Automation.AutomationControlType.TabItem, "First", "Second");
+        tabs.Children[1].Selected = true;
+        var element = _accessibility.ElementOf(tabs);
+        var tabElements = NSObject.Send(element, Selector("accessibilityTabs"));
+        Assert.That(NSArray.CountOf(tabElements), Is.EqualTo(2));
+        var second = NSArray.ObjectAt(tabElements, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Text(element, "accessibilityRole"), Is.EqualTo("AXTabGroup"));
+            Assert.That(NSObject.Send(element, Selector("accessibilityValue")), Is.EqualTo(second), "the open tab");
+            Assert.That(Number(second, "accessibilityValue"), Is.EqualTo(1));
+            Assert.That(Number(NSArray.ObjectAt(tabElements, 0), "accessibilityValue"), Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void AnOutlinesRows_HaveTheirDepth_AndOpenAndShut()
+    {
+        var tree = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tree,
+            Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "Parent");
+        var parent = tree.Children[0];
+        parent.Expandable = true;
+        parent.Expanded = true;
+        parent.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "Child") { Selectable = true });
+        var element = _accessibility.ElementOf(tree);
+
+        var rows = NSObject.Send(element, Selector("accessibilityRows"));
+        Assert.That(NSArray.CountOf(rows), Is.EqualTo(2), "the parent and, open, its child");
+        var parentRow = NSArray.ObjectAt(rows, 0);
+        var childRow = NSArray.ObjectAt(rows, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(childRow,
+                Selector("accessibilityDisclosureLevel")), Is.EqualTo(1));
+            Assert.That(Flag(parentRow, "isAccessibilityDisclosed"), Is.True);
+            Assert.That(NSObject.Send(childRow, Selector("accessibilityDisclosedByRow")), Is.EqualTo(parentRow));
+            Assert.That(NSArray.CountOf(NSObject.Send(parentRow, Selector("accessibilityDisclosedRows"))), Is.EqualTo(1));
+        });
+
+        NSObject.Send(parentRow, Selector("setAccessibilityDisclosed:"), false);
+        Assert.That(parent.Expanded, Is.False);
+    }
+
+    [Test]
+    public void AnOutlinesRow_StandsAtItsPlaceAmongTheRowsShown()
+    {
+        var tree = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tree,
+            Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "A", "B");
+        var a = tree.Children[0];
+        a.Expandable = true;
+        a.Expanded = true;
+        a.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "A1") { Selectable = true });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(IndexOf(_accessibility.ElementOf(a)), Is.EqualTo(0));
+            Assert.That(IndexOf(_accessibility.ElementOf(a.Children[0])), Is.EqualTo(1));
+            Assert.That(IndexOf(_accessibility.ElementOf(tree.Children[1])), Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void ATablesCell_IsACell_EditableOneToo_AndItsRowARow()
+    {
+        var grid = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.DataGrid, "Grid") { IsGrid = true };
+        var row = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.DataItem, "Row")
+            { InGrid = true, RowIndex = 4 };
+        grid.Add(row);
+        row.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.Text, "Read only")
+            { InGrid = true, RowIndex = 4, ColumnIndex = 0 });
+        var editable = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.DataItem, "Editable")
+            { InGrid = true, RowIndex = 4, ColumnIndex = 1 };
+        row.Add(editable);
+        var rowElement = _accessibility.ElementOf(row);
+        var cellElement = _accessibility.ElementOf(editable);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Text(rowElement, "accessibilityRole"), Is.EqualTo("AXRow"));
+            Assert.That(Text(rowElement, "accessibilitySubrole"), Is.EqualTo("AXTableRow"));
+            Assert.That(IndexOf(rowElement), Is.EqualTo(4));
+            Assert.That(Allowed(rowElement, "accessibilityRowIndexRange"), Is.False, "a row is no cell");
+            Assert.That(Text(cellElement, "accessibilityRole"), Is.EqualTo("AXCell"));
+            Assert.That(Text(cellElement, "accessibilitySubrole"), Is.Null);
+            Assert.That(IndexOf(cellElement), Is.EqualTo(1));
+            Assert.That(Allowed(cellElement, "accessibilityRowIndexRange"), Is.True);
+            Assert.That(NSArray.CountOf(NSObject.Send(_accessibility.ElementOf(grid), Selector("accessibilityRows"))),
+                Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void AListItem_HasNoValue_OfItsBeingSelected()
+    {
+        var list = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.List,
+            Adamantium.UI.Core.Automation.AutomationControlType.ListItem, "One");
+        list.Children[0].Selected = true;
+        var item = _accessibility.ElementOf(list.Children[0]);
+
+        Assert.That(Allowed(item, "accessibilityValue"), Is.False);
+        Assert.That(NSObject.Send(item, Selector("accessibilityValue")), Is.EqualTo(IntPtr.Zero));
+    }
+
+    [Test]
+    public void SelectingSeveral_WhereOneIsTaken_SelectsTheFirstThatCanBe()
+    {
+        var list = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.List,
+            Adamantium.UI.Core.Automation.AutomationControlType.ListItem, "One", "Two", "Three");
+        var header = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.Header, "Header");
+        list.Add(header);
+        list.Children[0].Selected = true;
+        var element = _accessibility.ElementOf(list);
+
+        var choice = NSArray.Create([_accessibility.ElementOf(header), _accessibility.ElementOf(list.Children[2]),
+            _accessibility.ElementOf(list.Children[1])]);
+        NSObject.Send(element, Selector("setAccessibilitySelectedChildren:"), choice);
+
+        Assert.That(list.Children.FindAll(child => child.Selected), Is.EqualTo(new[] { list.Children[2] }));
+
+        list.SelectsSeveral = true;
+        NSObject.Send(element, Selector("setAccessibilitySelectedChildren:"), NSArray.Create(
+            [_accessibility.ElementOf(list.Children[0]), _accessibility.ElementOf(list.Children[1])]));
+        Assert.That(list.Children.FindAll(child => child.Selected), Is.EqualTo(new[] { list.Children[0], list.Children[1] }),
+            "the first alone, the rest added");
+    }
+
+    [Test]
+    public void ARowOutOfATable_StandsAtItsPlace()
+    {
+        var pane = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.Pane, "Properties");
+        pane.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.DataItem, "Name"));
+        pane.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.DataItem, "Size"));
+        var size = _accessibility.ElementOf(pane.Children[1]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Text(size, "accessibilityRole"), Is.EqualTo("AXRow"));
+            Assert.That(Allowed(size, "accessibilityIndex"), Is.True);
+            Assert.That(IndexOf(size), Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void AnOutlinesRowUnderAShutOne_StandsAtItsPlaceAmongItsOwn()
+    {
+        var tree = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tree,
+            Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "A");
+        var a = tree.Children[0];
+        a.Expandable = true;
+        a.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "A1"));
+        a.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "A2"));
+
+        Assert.That(IndexOf(_accessibility.ElementOf(a.Children[1])), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AnOutlinesRowsPlace_IsFoundWithoutWalkingPastIt()
+    {
+        var tree = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tree,
+            Adamantium.UI.Core.Automation.AutomationControlType.TreeItem);
+        for (var i = 0; i < 100; i++)
+        {
+            var branch = new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, $"Branch {i}")
+                { Expandable = true, Expanded = true };
+            tree.Add(branch);
+            for (var j = 0; j < 100; j++)
+                branch.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, $"Leaf {i}.{j}"));
+        }
+
+        var first = _accessibility.ElementOf(tree.Children[0].Children[0]);
+        var last = _accessibility.ElementOf(tree.Children[99].Children[99]);
+        IndexOf(first);
+        IndexOf(last);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var firstPlace = IndexOf(first);
+        var firstTook = timer.Elapsed;
+        timer.Restart();
+        var lastPlace = IndexOf(last);
+        var lastTook = timer.Elapsed;
+        TestContext.Out.WriteLine($"10 100 rows: the first's place in {firstTook.TotalMilliseconds:F3} ms, the last's in " +
+                                  $"{lastTook.TotalMilliseconds:F3} ms");
+
+        Assert.That(firstPlace, Is.EqualTo(1));
+        Assert.That(lastPlace, Is.EqualTo(10_099));
+    }
+
+    [Test]
+    public void QuietForAMinute_NothingIsTold_TillAskedAgain()
+    {
+        var clock = new ManualClock();
+        var check = new CheckBox { Content = "Bold" };
+        _root.Children.Add(check);
+        Settle();
+        using var quiet = Bridge(() => false, clock);
+        var element = ElementOf(quiet, check);
+
+        clock.Advance(TimeSpan.FromSeconds(61));
+        check.IsChecked = true;
+        check.IsChecked = false;
+        Assert.That(_told, Is.Empty, "nobody asked for a minute and no assistive technology is on");
+
+        quiet.Children();
+        check.IsChecked = true;
+        Assert.That(_told, Is.EqualTo(new[] { (element, "AXValueChanged") }), "asked again, it is told again");
+    }
+
+    [Test]
+    public void QuietForAMinute_AnAssistiveTechnologyTurnedOn_IsToldWithinHalfAMinute()
+    {
+        var clock = new ManualClock();
+        var on = false;
+        var check = new CheckBox { Content = "Bold" };
+        _root.Children.Add(check);
+        Settle();
+        using var bridge = Bridge(() => on, clock);
+        var element = ElementOf(bridge, check);
+
+        clock.Advance(TimeSpan.FromSeconds(61));
+        check.IsChecked = true;
+        Assert.That(_told, Is.Empty);
+
+        on = true;
+        clock.Advance(TimeSpan.FromSeconds(31));
+        check.IsChecked = false;
+        Assert.That(_told, Is.EqualTo(new[] { (element, "AXValueChanged") }), "Zoom turned on, nothing asked");
+    }
+
+    [Test]
+    public void QuietForAMinute_ItIsStillTold_WhileAnAssistiveTechnologyIsOn()
+    {
+        var clock = new ManualClock();
+        var check = new CheckBox { Content = "Bold" };
+        _root.Children.Add(check);
+        Settle();
+        using var zoom = Bridge(() => true, clock);
+        var element = ElementOf(zoom, check);
+
+        clock.Advance(TimeSpan.FromSeconds(61));
+        check.IsChecked = true;
+
+        Assert.That(_told, Is.EqualTo(new[] { (element, "AXValueChanged") }));
+    }
+
+    [Test]
+    public void WhetherAnAssistiveTechnologyIsOn_IsAnswered()
+    {
+        Assert.That(() => Adamantium.MacOS.AppKit.NSAccessibility.IsAssistiveTechnologyOn, Throws.Nothing,
+            "VoiceOver and Switch Control asked of the workspace, Zoom of Universal Access");
+    }
+
+    private static int IndexOf(IntPtr element) =>
+        (int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(element, Selector("accessibilityIndex"));
+
+    // A peer the test builds - a container, its items, a row of an outline - with selection and openness of its own: the
+    // bridge's answers without a control's template, which a test without a theme has not.
+    private sealed class FakePeer(Adamantium.UI.Core.Automation.AutomationControlType type, string name)
+        : Adamantium.UI.Core.Automation.AutomationPeer, Adamantium.UI.Core.Automation.ISelectionProvider,
+            Adamantium.UI.Core.Automation.ISelectionItemProvider, Adamantium.UI.Core.Automation.IExpandCollapseProvider,
+            Adamantium.UI.Core.Automation.IGridProvider, Adamantium.UI.Core.Automation.IGridItemProvider
+    {
+        public bool IsGrid { get; init; }
+        public bool InGrid { get; init; }
+        public int RowIndex { get; init; }
+        public int ColumnIndex { get; init; }
+        public System.Collections.Generic.List<FakePeer> Children { get; } = [];
+        public FakePeer Parent { get; private set; }
+        public bool IsContainer { get; init; }
+        public bool Selectable { get; set; }
+        public bool Selected { get; set; }
+        public bool Expandable { get; set; }
+        public bool Expanded { get; set; }
+
+        public static FakePeer Container(Adamantium.UI.Core.Automation.AutomationControlType type,
+            Adamantium.UI.Core.Automation.AutomationControlType itemType, params string[] items)
+        {
+            var container = new FakePeer(type, type.ToString()) { IsContainer = true };
+            foreach (var item in items)
+                container.Add(new FakePeer(itemType, item) { Selectable = true });
+            return container;
+        }
+
+        public void Add(FakePeer child)
+        {
+            child.Parent = this;
+            Children.Add(child);
+        }
+
+        public override Adamantium.UI.Core.Automation.AutomationControlType ControlType => type;
+        public override string Name => name;
+        public override string AutomationId => name;
+        public override string HelpText => string.Empty;
+        public override string ClassName => nameof(FakePeer);
+        public override Rect BoundingRectangle => Rect.Empty;
+        public override bool IsEnabled => true;
+        public override bool IsOffscreen => false;
+        public override bool HasKeyboardFocus => false;
+        public override bool IsKeyboardFocusable => false;
+        public override System.Collections.Generic.IReadOnlyList<Adamantium.UI.Core.Automation.AutomationPeer> GetChildren() => Children;
+        public override Adamantium.UI.Core.Automation.AutomationPeer GetParent() => Parent;
+        public override void SetFocus() { }
+
+        public override object GetPattern(Adamantium.UI.Core.Automation.PatternId pattern) => pattern switch
+        {
+            Adamantium.UI.Core.Automation.PatternId.Selection when IsContainer => this,
+            Adamantium.UI.Core.Automation.PatternId.SelectionItem when Selectable => this,
+            Adamantium.UI.Core.Automation.PatternId.ExpandCollapse when Expandable => this,
+            Adamantium.UI.Core.Automation.PatternId.Grid when IsGrid => this,
+            Adamantium.UI.Core.Automation.PatternId.GridItem when InGrid => this,
+            _ => null
+        };
+
+        public int RowCount => Children.Count;
+        public int ColumnCount => Children.Count == 0 ? 0 : Children[0].Children.Count;
+        public Adamantium.UI.Core.Automation.AutomationPeer GetItem(int row, int column) => Children[row].Children[column];
+
+        public int Row => RowIndex;
+        public int Column => ColumnIndex;
+        public Adamantium.UI.Core.Automation.AutomationPeer ContainingGrid => Parent;
+
+        public bool SelectsSeveral { get; set; }
+        public bool CanSelectMultiple => SelectsSeveral;
+        public void AddToSelection() => Selected = true;
+        public bool IsSelectionRequired => false;
+        public System.Collections.Generic.IReadOnlyList<Adamantium.UI.Core.Automation.AutomationPeer> GetSelection() =>
+            Children.FindAll(child => child.Selected);
+
+        public bool IsSelected => Selected;
+        public Adamantium.UI.Core.Automation.AutomationPeer SelectionContainer => Parent;
+
+        public void Select()
+        {
+            foreach (var sibling in Parent?.Children ?? [])
+                sibling.Selected = false;
+            Selected = true;
+        }
+
+        public Adamantium.UI.Core.Automation.ExpandCollapseState ExpandCollapseState => Expanded
+            ? Adamantium.UI.Core.Automation.ExpandCollapseState.Expanded
+            : Adamantium.UI.Core.Automation.ExpandCollapseState.Collapsed;
+
+        public void Expand() => Expanded = true;
+        public void Collapse() => Expanded = false;
+    }
+
     private void Settle()
     {
         for (var i = 0; i < 3; i++)
@@ -440,7 +830,15 @@ public unsafe class MacOSAccessibilityTests
         }
     }
 
-    private IntPtr ElementOf(UIComponent component) => _accessibility.ElementOf(component.GetAutomationPeer());
+    // As AppKit has an element: in answer to a question, which starts the listening.
+    private IntPtr ElementOf(UIComponent component) => ElementOf(_accessibility, component);
+
+    private static IntPtr ElementOf(MacOSAccessibility accessibility, UIComponent component)
+    {
+        var element = accessibility.ElementOf(component.GetAutomationPeer());
+        Text(element, "accessibilityRole");
+        return element;
+    }
 
     private static IntPtr Selector(string name) => ObjCRuntime.RegisterSelector(name);
 

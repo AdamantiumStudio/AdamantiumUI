@@ -15,6 +15,7 @@ internal static class MacOSAccessibilityRoles
         AutomationControlType.CheckBox => "AXCheckBox",
         AutomationControlType.ComboBox => peer.GetPattern(PatternId.Value) != null ? "AXComboBox" : "AXPopUpButton",
         AutomationControlType.DataGrid or AutomationControlType.Table => "AXTable",
+        AutomationControlType.DataItem when MacOSAccessibilityNode.IsCell(peer) => "AXCell",
         AutomationControlType.DataItem => "AXRow",
         AutomationControlType.Document => "AXTextArea",
         AutomationControlType.Edit when peer.IsPassword => "AXTextField",
@@ -56,7 +57,7 @@ internal static class MacOSAccessibilityRoles
         AutomationControlType.Button when peer.GetPattern(PatternId.Toggle) != null => "AXToggle",
         AutomationControlType.TabItem => "AXTabButton",
         AutomationControlType.TreeItem => "AXOutlineRow",
-        AutomationControlType.DataItem => "AXTableRow",
+        AutomationControlType.DataItem when !MacOSAccessibilityNode.IsCell(peer) => "AXTableRow",
         AutomationControlType.ToolTip => null,
         _ => null
     };
