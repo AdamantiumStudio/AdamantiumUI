@@ -143,6 +143,15 @@
     <sys:Double x:Key="BadgeDotSize">8</sys:Double>
     <Thickness x:Key="BadgePadding">6 0</Thickness>
     <Thickness x:Key="BadgeRing">1.5</Thickness>
+    <!-- An InfoBar: room round the message, its icon level with the title's first line, the close button in the corner
+         reaching into the padding so its glyph lines up with the title. -->
+    <Thickness x:Key="InfoBarPadding">14 12</Thickness>
+    <sys:Double x:Key="InfoBarIconSize">16</sys:Double>
+    <Thickness x:Key="InfoBarIconMargin">0 2 12 0</Thickness>
+    <sys:Double x:Key="InfoBarCloseSize">28</sys:Double>
+    <Thickness x:Key="InfoBarCloseMargin">8 -6 -8 0</Thickness>
+    <sys:Double x:Key="InfoBarCloseGlyphSize">10</sys:Double>
+    <Thickness x:Key="InfoBarActionsMargin">0 8 0 0</Thickness>
     <CornerRadius x:Key="BadgeRadius">9</CornerRadius>
     <CornerRadius x:Key="BadgeDotRadius">4</CornerRadius>
 

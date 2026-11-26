@@ -116,7 +116,7 @@ public class MergedFluentThemeTests
         var theme = new Fluent();
 
         // No palette brush may be lost (a missing key paints nothing); raise this count deliberately when adding keys.
-        Assert.That(theme.Palette.Count, Is.EqualTo(43));
+        Assert.That(theme.Palette.Count, Is.EqualTo(49));
     }
 
     [Test]
@@ -172,7 +172,7 @@ public class MergedFluentThemeTests
 
         // No style set may go missing (a control would lose its style unnoticed); raise this count deliberately when a
         // set is added.
-        Assert.That(merged.StyleIncludes.Count, Is.EqualTo(69));
+        Assert.That(merged.StyleIncludes.Count, Is.EqualTo(70));
     }
 
     [Test]
@@ -194,7 +194,7 @@ public class MergedFluentThemeTests
         var theme = new Fluent();
 
         // The total of brushes and raw colors is guarded, so no key of either kind goes missing.
-        Assert.That(theme.Palette.Count + theme.RawColors.Count, Is.EqualTo(48));
+        Assert.That(theme.Palette.Count + theme.RawColors.Count, Is.EqualTo(54));
     }
 
     [Test]

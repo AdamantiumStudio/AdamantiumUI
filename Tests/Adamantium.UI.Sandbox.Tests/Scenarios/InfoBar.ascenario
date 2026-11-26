@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The InfoBar page: a message of each severity shown by its title, the error's actions under it; its close button takes it away and turns its switch off, the switch brings it back.">
+  <Select Target="id=GalleryTabs/id=InfoBar" />
+  <Wait Target="id=InfoBarView/name=Error" />
+  <Expect Target="id=ErrorBar" Type="Group" Name="The settings cannot be read" Offscreen="False" />
+  <Expect Target="id=ErrorBar/name=Open the file" Type="Button" Offscreen="False" />
+  <Expect Target="id=ErrorBar/name=Make it again" Type="Button" Offscreen="False" />
+  <Expect Target="id=WarningBar" Name="A game is running" Offscreen="False" />
+  <Expect Target="id=InformationalBar" Name="There is no settings file yet" Offscreen="False" />
+  <Expect Target="id=SuccessBar" Name="Layer renamed" Offscreen="False" />
+  <Invoke Target="id=ErrorBar/id=Close" />
+  <Expect Target="id=ErrorBar" Offscreen="True" />
+  <Expect Target="id=InfoBarView/name=Error" Toggle="Off" />
+  <Toggle Target="id=InfoBarView/name=Error" />
+  <Expect Target="id=ErrorBar" Name="The settings cannot be read" Offscreen="False" />
+</Scenario>

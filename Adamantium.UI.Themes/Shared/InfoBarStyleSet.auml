@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- InfoBar: an icon, the title over the message, the actions under them, the close button at the end. Each severity
+         has its own ground and icon. What it has nothing for - a title, a message, actions, a close button - takes no
+         room. One set for every theme; the theme's palette gives the colours and its metrics the sizes. Closed, the
+         control collapses itself. -->
+
+    <Style Selector="InfoBar">
+        <Setter Property="Background" Value="{ObservableResource SystemFillColorAttentionBackground}"/>
+        <Setter Property="BorderBrush" Value="{ObservableResource ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeControl}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
+        <Setter Property="Padding" Value="{ResourceReference InfoBarPadding}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="InfoBar">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <Image x:Name="PART_Icon" Grid.Column="0"
+                                   Source="{ResourceReference InfoBarInformationalIcon}"
+                                   Width="{ResourceReference InfoBarIconSize}"
+                                   Height="{ResourceReference InfoBarIconSize}"
+                                   Margin="{ResourceReference InfoBarIconMargin}"
+                                   VerticalAlignment="Top"/>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock x:Name="PART_Title"
+                                           Text="{TemplateBinding Title}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="WrapByWords"/>
+                                <TextBlock x:Name="PART_Message"
+                                           Text="{TemplateBinding Message}"
+                                           Foreground="{ObservableResource TextFillColorSecondary}"
+                                           TextWrapping="WrapByWords"/>
+                                <ContentPresenter x:Name="PART_Actions"
+                                                  Margin="{ResourceReference InfoBarActionsMargin}"
+                                                  HorizontalAlignment="Left"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"/>
+                            </StackPanel>
+                            <Button x:Name="PART_CloseButton" Grid.Column="2"
+                                    AutomationProperties.AutomationId="Close"
+                                    AutomationProperties.Name="{Localize WindowStrings.Close}"
+                                    Width="{ResourceReference InfoBarCloseSize}"
+                                    Height="{ResourceReference InfoBarCloseSize}"
+                                    Margin="{ResourceReference InfoBarCloseMargin}"
+                                    Background="Transparent" BorderThickness="0" Padding="0"
+                                    VerticalAlignment="Top">
+                                <Image Source="{ResourceReference CloseIcon}"
+                                       Width="{ResourceReference InfoBarCloseGlyphSize}"
+                                       Height="{ResourceReference InfoBarCloseGlyphSize}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <PropertyTrigger Property="Severity" Value="Error">
+            <Setter Property="Background" Value="{ObservableResource SystemFillColorCriticalBackground}"/>
+            <Setter TargetName="PART_Icon" Property="Source" Value="{ResourceReference InfoBarErrorIcon}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Severity" Value="Warning">
+            <Setter Property="Background" Value="{ObservableResource SystemFillColorCautionBackground}"/>
+            <Setter TargetName="PART_Icon" Property="Source" Value="{ResourceReference InfoBarWarningIcon}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Severity" Value="Success">
+            <Setter Property="Background" Value="{ObservableResource SystemFillColorSuccessBackground}"/>
+            <Setter TargetName="PART_Icon" Property="Source" Value="{ResourceReference InfoBarSuccessIcon}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Title" Value="{x:Null}">
+            <Setter TargetName="PART_Title" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Message" Value="{x:Null}">
+            <Setter TargetName="PART_Message" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Content" Value="{x:Null}">
+            <Setter TargetName="PART_Actions" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsClosable" Value="False">
+            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>

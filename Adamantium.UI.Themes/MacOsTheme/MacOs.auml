@@ -58,6 +58,7 @@
         <StyleInclude Source="{x:Type mac:MacOsScrollViewerStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsDropDownStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsExpanderStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:InfoBarStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsPropertyGridStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsSliderStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsRangeSliderStyleSet}"/>

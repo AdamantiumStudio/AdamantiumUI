@@ -75,6 +75,14 @@
     <PaletteColor Key="SystemFillColorSuccess" Color="#1A7F37"/>
     <PaletteColor Key="SystemFillColorCaution" Color="#9A6700"/>
     <PaletteColor Key="SystemFillColorCritical" Color="#C4351C"/>
+    <!-- A message's own colour and the ground it is written on - an InfoBar of each severity. -->
+    <PaletteColor Key="SystemFillColorAttention" Color="#0969DA"/>
+    <PaletteColor Key="SystemFillColorAttentionBackground" Color="#DDF4FF"/>
+    <PaletteColor Key="SystemFillColorSuccessBackground" Color="#DAFBE1"/>
+    <PaletteColor Key="SystemFillColorCautionBackground" Color="#FFF8C5"/>
+    <PaletteColor Key="SystemFillColorCriticalBackground" Color="#FFEBE9"/>
+    <!-- The mark cut in a severity icon: white on these deep fills. -->
+    <PaletteColor Key="SystemFillColorSeverityMark" Color="#FFFFFF"/>
 
     <!-- Same red both ways, unlike the signal colors above: this one is a GROUND with white on it, so it is not being
          read against the page and does not need the light variant's extra darkening. -->

@@ -1,0 +1,17 @@
+<Language>
+    <Phrase Key="Error" Text="Ошибка"/>
+    <Phrase Key="Warning" Text="Предупреждение"/>
+    <Phrase Key="Informational" Text="Справка"/>
+    <Phrase Key="Success" Text="Готово"/>
+
+    <Phrase Key="ErrorTitle" Text="Настройки не читаются"/>
+    <Phrase Key="ErrorMessage" Text="В Settings.xml нет настроек: файл повреждён или изменён вручную."/>
+    <Phrase Key="OpenFile" Text="Открыть файл"/>
+    <Phrase Key="MakeAgain" Text="Создать заново"/>
+    <Phrase Key="WarningTitle" Text="Игра идёт"/>
+    <Phrase Key="WarningMessage" Text="Изменения начнут действовать со следующего запуска."/>
+    <Phrase Key="InformationalTitle" Text="Файла настроек ещё нет"/>
+    <Phrase Key="InformationalMessage" Text="Он появится с первым изменением."/>
+    <Phrase Key="SuccessTitle" Text="Слой переименован"/>
+    <Phrase Key="SuccessMessage" Text="Debris теперь Обломки, в 3 сценах."/>
+</Language>

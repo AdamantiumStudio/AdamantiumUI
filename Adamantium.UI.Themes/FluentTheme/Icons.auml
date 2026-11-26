@@ -156,4 +156,51 @@
                          Brush="{ResourceReference TextFillColorSecondary}"/>
     </DrawingImage>
 
+    <!-- An InfoBar's severities: each its own shape as well as colour - a disc with a cross, a triangle with a mark, a
+         disc with an i, a disc with a tick - so they are told apart without the colour. The mark is in the palette's
+         colour for it, which reads on every fill; a dot is a filled disc, not a stroke too short to show. -->
+    <DrawingImage x:Key="InfoBarErrorIcon">
+        <DrawingGroup>
+            <GeometryDrawing Geometry="M0,8 A8,8 0 1,1 16,8 A8,8 0 1,1 0,8 Z"
+                             Brush="{ResourceReference SystemFillColorCritical}"/>
+            <GeometryDrawing Geometry="M5.25,5.25 L10.75,10.75 M10.75,5.25 L5.25,10.75"
+                             Stroke="{ResourceReference SystemFillColorSeverityMark}"
+                             StrokeThickness="1.6"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="InfoBarWarningIcon">
+        <DrawingGroup>
+            <GeometryDrawing Geometry="M8,0.5 L16,15.5 L0,15.5 Z"
+                             Brush="{ResourceReference SystemFillColorCaution}"/>
+            <GeometryDrawing Geometry="M8,5.75 L8,10"
+                             Stroke="{ResourceReference SystemFillColorSeverityMark}"
+                             StrokeThickness="1.6"/>
+            <GeometryDrawing Geometry="M7.1,12.6 A0.9,0.9 0 1,1 8.9,12.6 A0.9,0.9 0 1,1 7.1,12.6 Z"
+                             Brush="{ResourceReference SystemFillColorSeverityMark}"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="InfoBarInformationalIcon">
+        <DrawingGroup>
+            <GeometryDrawing Geometry="M0,8 A8,8 0 1,1 16,8 A8,8 0 1,1 0,8 Z"
+                             Brush="{ResourceReference SystemFillColorAttention}"/>
+            <GeometryDrawing Geometry="M8,7 L8,12"
+                             Stroke="{ResourceReference SystemFillColorSeverityMark}"
+                             StrokeThickness="1.6"/>
+            <GeometryDrawing Geometry="M7.1,4.6 A0.9,0.9 0 1,1 8.9,4.6 A0.9,0.9 0 1,1 7.1,4.6 Z"
+                             Brush="{ResourceReference SystemFillColorSeverityMark}"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="InfoBarSuccessIcon">
+        <DrawingGroup>
+            <GeometryDrawing Geometry="M0,8 A8,8 0 1,1 16,8 A8,8 0 1,1 0,8 Z"
+                             Brush="{ResourceReference SystemFillColorSuccess}"/>
+            <GeometryDrawing Geometry="M4.5,8.25 L7,10.75 L11.5,5.75"
+                             Stroke="{ResourceReference SystemFillColorSeverityMark}"
+                             StrokeThickness="1.6"/>
+        </DrawingGroup>
+    </DrawingImage>
+
 </ResourceDictionary>
