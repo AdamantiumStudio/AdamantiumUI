@@ -68,6 +68,13 @@ internal sealed unsafe class MacOSDisplays : IDisplayPlatform
             display.Pixels.Y + (fromTop - display.Points.Y) * display.Scale);
     }
 
+    /// <summary>Pixels per point of the monitor at a point of AppKit's desktop.</summary>
+    internal double ScaleAtPoint(double x, double y)
+    {
+        var displays = _displays;
+        return displays.Length == 0 ? 1 : Nearest(displays, x, displays[0].Points.Height - y, false).Scale;
+    }
+
     /// <summary>The point of AppKit's desktop at a physical pixel.</summary>
     internal CGPoint ToPoints(double left, double top)
     {
@@ -75,10 +82,20 @@ internal sealed unsafe class MacOSDisplays : IDisplayPlatform
         if (displays.Length == 0)
             return new CGPoint(left, top);
 
+        var point = ToPointsFromTop(left, top);
+        return new CGPoint(point.X, displays[0].Points.Height - point.Y);
+    }
+
+    /// <summary>The same from the top of the main screen, as Core Graphics takes it.</summary>
+    internal CGPoint ToPointsFromTop(double left, double top)
+    {
+        var displays = _displays;
+        if (displays.Length == 0)
+            return new CGPoint(left, top);
+
         var display = Nearest(displays, left, top, true);
-        var x = display.Points.X + (left - display.Pixels.X) / display.Scale;
-        var fromTop = display.Points.Y + (top - display.Pixels.Y) / display.Scale;
-        return new CGPoint(x, displays[0].Points.Height - fromTop);
+        return new CGPoint(display.Points.X + (left - display.Pixels.X) / display.Scale,
+            display.Points.Y + (top - display.Pixels.Y) / display.Scale);
     }
 
     private static Display Nearest(Display[] displays, double x, double y, bool inPixels)

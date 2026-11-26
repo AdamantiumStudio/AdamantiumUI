@@ -119,6 +119,9 @@ public class BindingExpression : BindingExpressionBase
    private volatile bool _sourceWriteHanded;
    private volatile bool _writingOnSourceThread;
 
+   // The source read on the UI's thread while a write of ours waited for its thread: what was read is from before it.
+   private volatile bool _readBeforeWrite;
+
    // The source told a change on its own thread: what it means for the path is worked out in the flush, on the UI's.
    private volatile bool _changedElsewhere;
 
@@ -1013,6 +1016,8 @@ public class BindingExpression : BindingExpressionBase
 
    private object ReadValue(Type targetType)
    {
+      NoteReadBeforeWrite();
+
       // Empty-path binding: the value is the resolved source object itself (optionally run through the converter).
       if (_bindToSource)
       {
@@ -1220,7 +1225,8 @@ public class BindingExpression : BindingExpressionBase
 
    // On the source's thread: the value goes in, through the binding as it stood when the value was written. A source that
    // took something else - clamped it, refused it, or failed to - is shown again by the flush, on the UI's thread, while
-   // the binding still points at it; one it no longer points at, or let go of, is left alone.
+   // the binding still points at it; one it no longer points at, or let go of, is left alone. So is one read meanwhile on
+   // the UI's thread - an inspector re-reading the line it wrote - which showed it as it was before the write.
    private void Write(PendingSourceWrite write)
    {
       if (write.Root == null)
@@ -1242,8 +1248,11 @@ public class BindingExpression : BindingExpressionBase
          _writingOnSourceThread = false;
       }
 
+      var readBefore = _readBeforeWrite;
+      _readBeforeWrite = false;
+
       // Still listening to the object written: a binding closed, or pointed elsewhere, has let go of it.
-      if (!took && ReferenceEquals(_observed, write.Root))
+      if ((!took || readBefore) && ReferenceEquals(_observed, write.Root))
          TellChangedElsewhere();
    }
 
@@ -1266,6 +1275,8 @@ public class BindingExpression : BindingExpressionBase
 
    private object ReadSource()
    {
+      NoteReadBeforeWrite();
+
       if (_leaf == null)
       {
          return Read(_source, ResolvedSource);
@@ -1276,6 +1287,13 @@ public class BindingExpression : BindingExpressionBase
    }
 
    private static object Read(PropertyAccessor accessor, object from) => accessor.CanRead ? accessor.GetValue(from) : null;
+
+   // A read on the UI's thread while a write of ours waits for the source's thread sees the source from before it.
+   private void NoteReadBeforeWrite()
+   {
+      if ((_sourceWriteHanded || _writingOnSourceThread) && OnUiThread)
+         _readBeforeWrite = true;
+   }
 
    private void WriteSource(object written)
    {

@@ -177,6 +177,29 @@ public class SourceThreadBindingTests
         });
     }
 
+    // An inspector re-reads the line it wrote before the source's thread has taken the write: it shows the source as it
+    // was, and once the write is in, it shows it again - its own write raises nothing it hears.
+    [Test]
+    public void AReadWhileTheWriteWaits_IsReadAgainOnceTheWriteIsIn()
+    {
+        var model = new Model();
+        var thread = new QueuedSourceThread();
+        var target = Bound(model, "Name", thread);
+
+        target.SetCurrentValue(TextBlock.TextProperty, "B");
+        BindingEngine.GetBindingExpression(target, TextBlock.TextProperty).UpdateTarget();
+        var meanwhile = target.Text;
+        thread.RunAll();
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(meanwhile, Is.EqualTo("A"), "read before the write was in");
+            Assert.That(model.Name, Is.EqualTo("B"));
+            Assert.That(target.Text, Is.EqualTo("B"));
+        });
+    }
+
     // A number dragged: the source moved on its own before the dragged value reached it, and the field is not thrown back
     // to the source's value meanwhile.
     [Test]

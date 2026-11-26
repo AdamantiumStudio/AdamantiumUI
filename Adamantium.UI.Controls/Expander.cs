@@ -61,6 +61,9 @@ public class Expander : ContentControl
     private static readonly IEasingFunction ExpandEasing = new CubicEasing { Mode = EasingMode.Out };
 
     private IInputComponent _header;
+
+    /// <summary>The template's header, what is clicked to fold it; null without a template.</summary>
+    internal IInputComponent HeaderPart => _header;
     private RevealDecorator _reveal;
     private Transform _glyphTurn;
     private bool _arranged;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Adamantium.MacOS.AppKit;
 using Adamantium.MacOS.Carbon;
 using Adamantium.UI.Core.Input;
@@ -26,6 +27,7 @@ internal sealed class MacOSKeyboard
         {
             KeyboardLayout.Release(_layout);
             _layout = current;
+            // Never changed once made: read from other threads.
             _keys = MacOSKeys.InLayout(code => KeyboardLayout.CharacterOf(_layout, code));
             _keysWithCommand = MacOSKeys.InLayout(code => KeyboardLayout.CharacterOf(_layout, code, true));
         }
@@ -34,6 +36,9 @@ internal sealed class MacOSKeyboard
         var keys = (NSEvent.ModifierFlagsOf(nsEvent) & NSEventModifierFlags.Command) != 0 ? _keysWithCommand : _keys;
         return keys.TryGetValue(keyCode, out var key) ? key : MacOSKeys.ToKey(keyCode);
     }
+
+    /// <summary>The hardware codes of a key in the layout last typed with; asked from any thread.</summary>
+    public IEnumerable<ushort> CodesOf(Key key) => MacOSKeys.CodesOf(key, Volatile.Read(ref _keys));
 
     /// <summary>The key pressed, or let go of: the one it was pressed as, though the layout has changed since.</summary>
     public Key KeyOf(IntPtr nsEvent, bool down)

@@ -137,9 +137,9 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
     protected TextBoxBase()
     {
         AddHandler(Keyboard.TextInputEvent, new TextInputEventHandler(OnTextInputHandler));
-        // An input method draws what it composes in a window of its own at the caret: the prompt is not left under it.
-        AddHandler(Keyboard.TextCompositionStartedEvent, new TextCompositionEventHandler((_, _) => Composing(true)));
-        AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler((_, _) => Composing(false)));
+        AddHandler(Keyboard.TextCompositionStartedEvent, new TextCompositionEventHandler(OnCompositionStarted));
+        AddHandler(Keyboard.TextCompositionChangedEvent, new TextCompositionEventHandler(OnCompositionChanged));
+        AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler((_, _) => EndComposition()));
         _styleBrushes = new HeldBrushes(this);
         _effectBrushes = new HeldBrushes(this);
         _engineStyles = new EngineTextStyles(this, _styleBrushes);
@@ -254,6 +254,9 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
     }
 
     bool Adamantium.UI.Core.Input.ITextEntry.TakesTyping => !IsReadOnly;
+
+    bool Adamantium.UI.Core.Input.ITextEntry.IsBeforeCaret(string text) =>
+        !HasSelection && EditedText.AsSpan(0, Clamp(CaretIndex)).EndsWith(text);
 
     /// <summary>Maximum number of characters; 0 (default) = unlimited.</summary>
     public int MaxLength
@@ -437,14 +440,6 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
             // Drawn by the text surface, which its own render mark does not reach.
             InvalidateSurface();
         }
-    }
-
-    private bool _composing;
-
-    private void Composing(bool composing)
-    {
-        _composing = composing;
-        InvalidateSurface();
     }
 
     private static void Bind(RoutedCommand command, Action<TextBoxBase> run, Func<TextBoxBase, bool> can) =>
@@ -1386,7 +1381,7 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
         // lines plus the reserved strip for a floating label (zero when that effect is off).
         var along = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(length)
             ? length
-            : _textWidth + CaretWidth;
+            : Math.Max(_textWidth, CompositionEnd()) + CaretWidth;
         return Vertical
             ? new Size<double>(_columnsWidth + FloatStripHeight(), along)
             : new Size<double>(along, ContentHeight + FloatStripHeight());
@@ -1593,9 +1588,15 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
         }
 
         // Caret.
+        var caret = SurfaceCaret(CaretIndex);
+        if (_composition != null)
+        {
+            caret = DrawComposition(session, size, caret);
+        }
+
         if (IsFocused && _caretVisible && !_caretSuppressed)
         {
-            session.DrawRectangle(CaretBrush, SurfaceCaret(CaretIndex));
+            session.DrawRectangle(CaretBrush, caret);
         }
     }
 
@@ -1854,9 +1855,8 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
     {
         base.OnLostFocus(e);
         _caretVisible = false;
-        _composing = false;   // a composition the focus left unended composes nothing here any more
+        EndComposition();
         UpdateFloatState();
-        InvalidateSurface();
     }
 
     // --- Floating placeholder (Material / MahApps label) ---------------------------------------------------------

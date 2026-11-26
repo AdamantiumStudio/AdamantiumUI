@@ -15,4 +15,7 @@ public class RawTextCompositionEventArgs : RawInputEventArgs
     public string Text { get; }
 
     public int CursorPosition { get; }
+
+    /// <summary>Whether the system shows <see cref="Text"/> at the caret in a window of its own.</summary>
+    public bool IsShownBySystem { get; init; }
 }

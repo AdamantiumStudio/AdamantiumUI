@@ -12,6 +12,9 @@ public class RawKeyboardEventArgs : RawInputEventArgs
    /// <summary>Whether the system's keyboard or the application pressed the key.</summary>
    public KeyPressOrigin Origin { get; }
 
+   /// <summary>Whether something took the key, once it is delivered.</summary>
+   internal bool IsHandled { get; set; }
+
    public RawKeyboardEventArgs(Key changedKey, RawKeyboardEventType eventType, KeyPressInfo press,
       InputModifiers modifiers, uint timeStep, KeyPressOrigin origin = KeyPressOrigin.System) : base(modifiers, timeStep)
    {

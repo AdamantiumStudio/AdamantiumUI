@@ -615,7 +615,7 @@ public static class CommandManager
             >= Key.OemSemicolon and <= Key.OemTilde or >= Key.OemOpenBrackets and <= Key.Oem8 or Key.OemBackSlash;
 
     // The nearest text entry around the element that takes typing now; null for none, or a read-only one.
-    private static ITextEntry EntryAround(IUIComponent element)
+    internal static ITextEntry EntryAround(IUIComponent element)
     {
         for (var node = element; node != null; node = node.VisualParent)
         {

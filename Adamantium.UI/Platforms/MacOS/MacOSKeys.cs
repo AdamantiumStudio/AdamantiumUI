@@ -100,6 +100,17 @@ internal static class MacOSKeys
         or Key.OemComma or Key.OemMinus or Key.OemPeriod or Key.OemQuestion or Key.OemTilde or Key.OemOpenBrackets
         or Key.OemPipe or Key.OemCloseBrackets or Key.OemQuotes;
 
+    /// <summary>The hardware codes of <paramref name="key"/>: where <paramref name="inLayout"/> has it, else by position.
+    /// </summary>
+    internal static IEnumerable<ushort> CodesOf(Key key, Dictionary<ushort, Key> inLayout)
+    {
+        foreach (var (code, entry) in Keys)
+        {
+            if ((inLayout.TryGetValue(code, out var named) ? named : entry.Key) == key)
+                yield return code;
+        }
+    }
+
     /// <summary>The HID usage of the physical key at <paramref name="keyCode"/>; 0 for one with none.</summary>
     internal static uint ToHidUsage(ushort keyCode) => Keys.TryGetValue(keyCode, out var key) ? key.Usage : 0;
 }

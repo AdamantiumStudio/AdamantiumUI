@@ -3,6 +3,7 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Markup;
 using Adamantium.UI.Core.Resources;
@@ -189,6 +190,46 @@ public class CanvasViewportTests
             Assert.That(folded.X, Is.EqualTo(open.X).Within(0.5), "folded, the grip moved");
             Assert.That(bar.Bounds.X, Is.EqualTo(open.X).Within(0.5), "opened again, the bar moved");
         });
+    }
+
+    // The scroll bars run along the viewport's own edges, not along the room the docked panes leave: a docked bar at the
+    // bottom stands above the horizontal one, and nothing of the plane shows past either.
+    [Test]
+    public void ScrollBars_RunAlongTheViewportsEdges_AndDockedPanesStandAboveThem()
+    {
+        UseFluent();
+        var result = AumlLoader.Load(
+            $"<InfiniteCanvas {Namespaces} PlaneBounds=\"0,0,4000,4000\"><InfiniteCanvas.Template>" +
+            "<ControlTemplate TargetType=\"InfiniteCanvas\">" +
+            "<Grid x:Name=\"PART_Viewport\"><Grid x:Name=\"PART_Layers\"/><CanvasFrontLayer x:Name=\"PART_Front\"/>" +
+            "<ScrollBar x:Name=\"PART_HorizontalScrollBar\" Orientation=\"Horizontal\" VerticalAlignment=\"Bottom\" Visibility=\"Collapsed\"/>" +
+            "<ScrollBar x:Name=\"PART_VerticalScrollBar\" Orientation=\"Vertical\" HorizontalAlignment=\"Right\" Visibility=\"Collapsed\"/>" +
+            "<CanvasChromeLayer x:Name=\"PART_Chrome\" PaneInset=\"8\">" +
+            "<CanvasPane x:Name=\"Docked\" Placement=\"BottomCenter\" Kind=\"Bar\" IsDocked=\"True\">" +
+            "<Border Width=\"200\" Height=\"30\"/></CanvasPane></CanvasChromeLayer></Grid>" +
+            "</ControlTemplate></InfiniteCanvas.Template></InfiniteCanvas>");
+        Assert.That(result.Root, Is.InstanceOf<InfiniteCanvas>(), string.Join(" | ", result.Diagnostics));
+        var canvas = (InfiniteCanvas)result.Root;
+        canvas.Scene = new CanvasScene();
+        canvas.Scale = 1;
+        Lay(canvas);
+
+        var across = (ScrollBar)canvas.GetTemplateChild("PART_HorizontalScrollBar");
+        var down = (ScrollBar)canvas.GetTemplateChild("PART_VerticalScrollBar");
+        var docked = (CanvasPane)canvas.GetTemplateChild("Docked");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(across.Visibility, Is.EqualTo(Visibility.Visible), "the plane overflows across");
+            Assert.That(down.Visibility, Is.EqualTo(Visibility.Visible), "the plane overflows down");
+            Assert.That(across.Bounds.Bottom, Is.EqualTo(WindowHeight).Within(0.5), "the horizontal bar hangs off the bottom");
+            Assert.That(across.Bounds.X, Is.EqualTo(0).Within(0.5), "the horizontal bar does not start at the left edge");
+            Assert.That(across.Bounds.Right, Is.EqualTo(down.Bounds.X).Within(0.5), "the horizontal bar runs under the vertical one");
+            Assert.That(down.Bounds.Right, Is.EqualTo(WindowWidth).Within(0.5), "the vertical bar hangs off the right edge");
+            Assert.That(down.Bounds.Y, Is.EqualTo(0).Within(0.5), "the vertical bar does not start at the top");
+            Assert.That(down.Bounds.Bottom, Is.EqualTo(across.Bounds.Y).Within(0.5), "the vertical bar runs into the horizontal one");
+            Assert.That(docked.Bounds.Bottom, Is.EqualTo(across.Bounds.Y - 8).Within(0.5),
+                "the docked pane does not stand its inset above the horizontal bar");        });
     }
 
     private static Window Lay(InfiniteCanvas canvas)

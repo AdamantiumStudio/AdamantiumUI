@@ -10,6 +10,7 @@ using Adamantium.MacOS.ObjectiveC;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Core.Text;
 using Adamantium.UI.Platforms.Cups;
 
 namespace Adamantium.UI.Platforms.MacOS;
@@ -44,13 +45,27 @@ public class MacOSPlatform : IApplicationPlatform
         var applicationDelegate = NSObject.New(MacOSApplicationDelegate.Class);
         ObjCManagedObject.Attach(applicationDelegate, this);
         NSApplication.SetDelegate(applicationDelegate);
+        // A menu open takes the events the loop is woken by.
+        NSNotificationCenter.AddObserver(applicationDelegate, "menuClosed:", "NSMenuDidEndTrackingNotification");
         if (!IsHidden)
             ShowApplicationIcon();
         Desktop = new MacOSDisplays();
         Displays.Platform = Desktop;
-        ObjCRuntime.PopAutoreleasePool(pool);
+        // Hidden, it keeps from what is whose who sits at the computer: their cursor and keys, clipboard, and screen.
         if (!IsHidden)
+        {
+            var input = new MacOSInput(this);
+            Mouse.Platform = input;
+            Core.Input.Keyboard.Platform = input;
+            PlatformSettings.Platform = input;
             Cursor.Platform = new MacOSCursors(this);
+            Clipboard.Current = new MacOSClipboard(NSPasteboard.General);
+            FileDialog.Platform = new MacOSFileDialog(this);
+            NotificationArea.Platform = new MacOSMenuBar(this);
+            MacOSAppearance.Follow();
+        }
+
+        ObjCRuntime.PopAutoreleasePool(pool);
     }
 
     /// <summary>The splash window's side of <paramref name="host"/>: the same thread and event loop, with signals and
@@ -63,6 +78,15 @@ public class MacOSPlatform : IApplicationPlatform
         lock (host._guests)
             host._guests.Add(this);
     }
+
+    /// <summary>Whether a window has the mouse apart from the cursor.</summary>
+    internal bool IsMouseRelative
+    {
+        get => Volatile.Read(ref _isMouseRelative);
+        set => Volatile.Write(ref _isMouseRelative, value);
+    }
+
+    private bool _isMouseRelative;
 
     /// <summary>The keys of the keyboard layout in use.</summary>
     internal MacOSKeyboard Keyboard { get; } = new();
@@ -98,7 +122,11 @@ public class MacOSPlatform : IApplicationPlatform
     {
         using var wake = token.Register(Signal);
         if (!IsHidden)
+        {
+            MacOSMenu.Show(this);
             NSApplication.Activate();
+        }
+
         Signal();   // what was asked for while a wait took the wake
         while (!token.IsCancellationRequested)
             AnswerNext(NSDate.DistantFuture, true);
@@ -175,9 +203,23 @@ public class MacOSPlatform : IApplicationPlatform
         ObjCRuntime.PopAutoreleasePool(pool);
     }
 
-    // TODO(macOS): NSWindow.windowNumberAtPoint:belowWindowWithWindowNumber: -> the window number, mapped back to our
-    // handle. Zero until then, which makes the drag fall back to client-bounds containment.
-    public IntPtr WindowFromScreenPoint(PixelPoint point) => IntPtr.Zero;
+    // Another application's window is given by its number, which is no window's handle here.
+    public IntPtr WindowFromScreenPoint(PixelPoint point)
+    {
+        if (IsHidden)
+            return IntPtr.Zero;
+
+        var pool = ObjCRuntime.PushAutoreleasePool();
+        var number = NSWindow.NumberAt(Desktop.ToPoints(point.X, point.Y));
+        ObjCRuntime.PopAutoreleasePool(pool);
+        foreach (var window in AllWindows())
+        {
+            if (window.IsNumbered(number, out var handle))
+                return handle;
+        }
+
+        return number;
+    }
 
     internal void Register(MacOSWindowWorker worker)
     {
@@ -253,6 +295,24 @@ public class MacOSPlatform : IApplicationPlatform
         }
     }
 
+    /// <summary>The same, and waits for it. A modal panel in it takes the events the loop is woken by, so it is woken
+    /// after.</summary>
+    internal void RunOnMainThreadAndWait(Action action)
+    {
+        try
+        {
+            if (IsOnUIThread)
+                RunOnMainThread(action);
+            else
+                (Dispatcher ?? Threading.Dispatcher.CurrentDispatcher).InvokeAsync(() => RunOnMainThread(action)).GetAwaiter()
+                    .GetResult();
+        }
+        finally
+        {
+            Signal();
+        }
+    }
+
     /// <summary>The windows a shown <paramref name="owner"/> has, the splash window's side included, join it.</summary>
     internal void JoinOwned(IntPtr owner)
     {
@@ -293,6 +353,10 @@ public class MacOSPlatform : IApplicationPlatform
         return windows;
     }
 
+    /// <summary>What works for a window; null for one that is not open.</summary>
+    internal MacOSWindowWorker WorkerOf(IWindow window) =>
+        window == null ? null : AllWindows().Find(worker => ReferenceEquals(worker.Window, window));
+
     private static void ShowApplicationIcon()
     {
         if (ApplicationIcon.Load() is not { Pictures.Count: > 0 } icon)
@@ -310,6 +374,13 @@ public class MacOSPlatform : IApplicationPlatform
     {
         resolver.RegisterSingleton<IApplicationPlatform, MacOSPlatform>();
         resolver.RegisterSingleton<IDragGhost, MacOSDragGhost>();
+        resolver.RegisterSingleton<INativeDragDrop, MacOSDragDrop>();
+        var spelling = new MacOSSpelling();
+        resolver.RegisterInstance<ISpellChecker>(spelling);
+        resolver.RegisterInstance<IWordPredictor>(spelling);
+        resolver.RegisterSingleton<ISystemStartup, LaunchAgentStartup>();
+        if (!IsHidden)
+            resolver.RegisterSingleton<Multiverse.Input.IGamepadBackend, MacOSGamepadBackend>();
         FileManager.Platform = new FinderFileManager();
         Trash.Platform = new FinderTrash();
         SystemPrinting.Platform = new CupsPrintPlatform();
