@@ -648,6 +648,31 @@ public class Theme : AdamantiumComponent, ITheme
         return _rawColors.TryGetValue(key, out var color) ? color : null;
     }
 
+    /// <summary>Puts <paramref name="value"/> in the palette entry of <paramref name="key"/>'s place - a brush for a brush
+    /// entry, a color for a color one - as a new object, so what read the entry once keeps the old one and what follows
+    /// it takes the new; false for a key the palette has not, or a value of the other kind.</summary>
+    internal bool SetPaletteValue(string key, object value)
+    {
+        if (key == null)
+        {
+            return false;
+        }
+
+        if (value is SolidColorBrush brush && _palette.ContainsKey(key))
+        {
+            _palette[key] = Shared(brush);
+            return true;
+        }
+
+        if (value is Color color && _rawColors.ContainsKey(key))
+        {
+            _rawColors[key] = color;
+            return true;
+        }
+
+        return false;
+    }
+
     public object GetResource(string key)
     {
         return PaletteValue(key) ?? ResourceManager.FindResource(key);
