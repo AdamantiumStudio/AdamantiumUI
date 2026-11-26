@@ -45,7 +45,8 @@ public interface IFundamentalUIComponent : IAdamantiumComponent, IDispatcherComp
 
     public void InvalidateStyles();
 
-    /// <summary>This element and everything in it read the application language again on the next layout pass.</summary>
+    /// <summary>This element and everything in it read the application language on the next layout pass, if it changed
+    /// since they last read it - after a switch, or for a window listed after one.</summary>
     public void UpdateLanguage();
     
     /// <summary>

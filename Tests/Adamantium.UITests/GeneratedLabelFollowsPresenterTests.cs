@@ -48,6 +48,34 @@ public class GeneratedLabelFollowsPresenterTests
             "the label has to track the presenter, not the value it was built with");
     }
 
+    // A number shown as content is written in the application's language, as a drop-down's box writes it.
+    [Test]
+    public void ANumberAsContent_IsWrittenInTheApplicationsLanguage()
+    {
+        var language = Languages.Current;
+        try
+        {
+            Languages.Current = "en";
+            var (presenter, window) = Hosted(Brushes.Red);
+            presenter.Content = 9.81;
+            WindowExtension.UpdateTree(window);
+            var english = LabelOf(presenter).Text;
+
+            Languages.Current = "ru";
+            BindingUpdateQueue.Flush();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(english, Is.EqualTo("9.81"));
+                Assert.That(LabelOf(presenter).Text, Is.EqualTo("9,81"));
+            });
+        }
+        finally
+        {
+            Languages.Current = language;
+        }
+    }
+
     private sealed class Word(string english, string russian)
     {
         public override string ToString() => Languages.Current == "ru" ? russian : english;

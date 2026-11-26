@@ -1166,7 +1166,14 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         InvalidateChildrenStyles(visited);
     }
 
-    public void UpdateLanguage() => UpdateLanguageCore([]);
+    public void UpdateLanguage()
+    {
+        // Made after the language came in, nothing in it is behind: what was made before and put in since read it on attach.
+        if (MissedALanguage)
+        {
+            UpdateLanguageCore([]);
+        }
+    }
 
     private void UpdateLanguageCore(HashSet<IFundamentalUIComponent> visited)
     {

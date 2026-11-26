@@ -883,6 +883,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         CreateWindowService(window);
 
         windowsCollection.Add(window);
+        window.UpdateLanguage();
 
         if (!firstWindowAdded && window != _splash?.Window)
         {
@@ -1944,8 +1945,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             if (!layout.IsSettled)
             {
                 var queued = layout.QueuedCounts();
-                return $"layout still to do (style {queued.Style}, measure {queued.Measure}, arrange {queued.Arrange}, " +
-                       $"next pass {queued.NextPass})";
+                return $"layout still to do (style {queued.Style}, language {queued.Language}, measure {queued.Measure}, " +
+                       $"arrange {queued.Arrange}, next pass {queued.NextPass})";
             }
         }
 

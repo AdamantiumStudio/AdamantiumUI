@@ -58,7 +58,7 @@ public class SlidePanelThemeSwapTests
         var root = new Grid();
         root.Children.Add(new Popup { Child = content, IsOpen = true });
         var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
 
         window.DataContext = model;
@@ -81,7 +81,7 @@ public class SlidePanelThemeSwapTests
         {
             Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, DataContext = model, Content = root
         };
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         panel.IsOpen = true;
         await session.WaitForIdleAsync();
@@ -111,7 +111,7 @@ public class SlidePanelThemeSwapTests
             Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, DataContext = model, Content = root
         };
         _app.Windows = [window];
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         var lostTheContext = false;
         panel.DataContextChanged += (_, e) => lostTheContext |= e.NewValue == null;
@@ -151,7 +151,7 @@ public class SlidePanelThemeSwapTests
         root.Children.Add(tabs);
         var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
         _app.Windows = [window];
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         if (shownBefore)
         {
             tabs.SelectedIndex = 1;
@@ -194,7 +194,7 @@ public class SlidePanelThemeSwapTests
         root.Children.Add(panel);
         var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
         _app.Windows = [window];
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         panel.IsOpen = true;
         await session.WaitForIdleAsync();

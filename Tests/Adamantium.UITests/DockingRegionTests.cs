@@ -229,6 +229,30 @@ public class DockingRegionTests
         });
     }
 
+    // A pane outliving the panel it was shown in does not hold on to it: out of the tree, the panel stops following it,
+    // and picks it up again once back.
+    [Test]
+    public void APanelOutOfTheTree_StopsFollowingItsPane_AndFollowsItAgainOnceBack()
+    {
+        var output = new Pane { Header = "Output" };
+        var group = new PaneGroup { Items = { output } };
+        var root = new Adamantium.UI.Controls.Panels.Grid { Children = { group } };
+        var window = new Window { Width = 400, Height = 300, Content = root };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        root.Children.Remove(group);
+        output.Header = "Вывод";
+        var whileOut = group.Title;
+        root.Children.Add(group);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(whileOut, Is.EqualTo("Output"), "a panel out of the tree still follows its pane");
+            Assert.That(group.Title, Is.EqualTo("Вывод"), "back in the tree, the panel does not name its pane again");
+        });
+    }
+
     [Test]
     public void TheRegionManager_HandsOutTheSameDockingBeforeAndAfterAControlShowsIt()
     {

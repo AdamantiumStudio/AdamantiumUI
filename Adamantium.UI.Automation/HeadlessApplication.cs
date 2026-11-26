@@ -92,10 +92,13 @@ public sealed class HeadlessApplication : IUIApplication, IUIContext, IWindowPla
 
     public void AddWindow(IWindow window)
     {
-        if (!_windows.Contains(window))
+        if (_windows.Contains(window))
         {
-            _windows.Add(window);
+            return;
         }
+
+        _windows.Add(window);
+        window.UpdateLanguage();
     }
 
     public void RemoveWindow(IWindow window) => _windows.Remove(window);

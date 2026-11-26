@@ -116,7 +116,7 @@ public class LayoutDetachedNodeSettleTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(partManager.QueuedCounts(), Is.EqualTo((0, 0, 0, 0, 0)), "nothing waits in a manager nobody runs");
+            Assert.That(partManager.QueuedCounts(), Is.EqualTo((0, 0, 0, 0, 0, 0)), "nothing waits in a manager nobody runs");
             Assert.That(((IMeasurableComponent)child).IsMeasureValid, Is.True, "the tree it joined did the work");
             Assert.That(manager.IsSettled, Is.True);
         });

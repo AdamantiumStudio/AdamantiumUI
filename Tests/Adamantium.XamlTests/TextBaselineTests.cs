@@ -42,7 +42,8 @@ public class TextBaselineTests
         panel.Children.Add(button);
         panel.Children.Add(plain);
         var window = new Window { Width = 400, Height = 300, ClientWidth = 400, ClientHeight = 300, Content = panel };
-        await AutomationSession.InProcess(window).WaitForIdleAsync();
+        await using var session = AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
 
         var baseline = TextBaseline.Of(button);
 

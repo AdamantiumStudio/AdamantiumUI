@@ -334,7 +334,8 @@ public class ContentPresenter : InputUIComponent
     // nothing to its label.
     private sealed class Words(object content)
     {
-        public override string ToString() => content.ToString();
+        // A number or a date is written in the application's language, as a drop-down's box writes it.
+        public override string ToString() => Convert.ToString(content, Adamantium.Localization.Languages.Culture);
     }
 
     private void ShowParked(object content, IUIComponent root, TemplateResult built, DataTemplate template,

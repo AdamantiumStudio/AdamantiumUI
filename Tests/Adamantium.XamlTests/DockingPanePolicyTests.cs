@@ -50,6 +50,7 @@ public class DockingPanePolicyTests
     public async Task Unset_TheThemesLookStands_AToolsBarUnderItsTabs()
     {
         var (session, area) = await Docked();
+        await using var _ = session;
         var (document, tool) = Groups(area);
 
         Assert.Multiple(() =>
@@ -64,6 +65,7 @@ public class DockingPanePolicyTests
     public async Task TheAreaSays_EveryPanelTakesThePadding_AndOnlyToolsTheirBar()
     {
         var (session, area) = await Docked();
+        await using var _ = session;
         var (document, tool) = Groups(area);
         var documentPlacement = document.SelectionIndicatorPlacement;
 
@@ -85,7 +87,8 @@ public class DockingPanePolicyTests
     [Test]
     public async Task AToolsTabsRoundTheirOuterCorners_NotThoseAgainstTheBody()
     {
-        var (_, area) = await Docked();
+        var (session, area) = await Docked();
+        await using var _ = session;
         var (document, tool) = Groups(area);
 
         Assert.Multiple(() =>
@@ -100,6 +103,7 @@ public class DockingPanePolicyTests
     public async Task ThePaddingUnsetAgain_IsTheThemesAgain()
     {
         var (session, area) = await Docked();
+        await using var closing = session;
         var (document, _) = Groups(area);
 
         area.PanePadding = new Thickness(0);
@@ -117,7 +121,7 @@ public class DockingPanePolicyTests
         var tabs = new TabControl { StretchSingleTab = true, TabStripPlacement = TabStripPlacement.Bottom };
         tabs.Items.Add(new TabItem { Header = "One", Content = new Border() });
         var window = new Window { Width = 600, Height = 400, ClientWidth = 600, ClientHeight = 400, Content = tabs };
-        var session = AutomationSession.InProcess(window);
+        await using var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
         var stretched = TabOf(tabs).CornerRadius;
 

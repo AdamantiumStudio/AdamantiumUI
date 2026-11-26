@@ -46,11 +46,17 @@ public sealed class HeadlessHost : IAutomationHost
         }
     }
 
-    /// <summary>Takes the windows off the application's list, as a platform window leaves it when closed.</summary>
+    /// <summary>Closes the windows still open and takes them off the application's list, as a platform window leaves it
+    /// when closed.</summary>
     public void Release()
     {
         foreach (var window in _windows)
         {
+            if (!window.IsClosed)
+            {
+                window.Close();
+            }
+
             _application?.RemoveWindow(window);
         }
     }

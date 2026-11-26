@@ -504,6 +504,19 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         if (e.Property == TabItem.HeaderProperty) SyncChrome();
     }
 
+    // A pane outliving its group - kept by id, moved to another - must not keep the group it left alive.
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        FollowTitleOf(null);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        SyncChrome();
+    }
+
     private ButtonBase _autoHideButton;
     private ButtonBase _closeButton;
     private ButtonBase _flyoutAutoHideButton;

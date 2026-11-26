@@ -77,9 +77,10 @@ public sealed class LayoutManager
     public static LayoutManager GetOrCreate(IUIComponent root) => Managers.GetValue(root, static r => new LayoutManager(r));
 
     /// <summary>What this manager's queues are holding - what is still to do before its root has settled.</summary>
-    public (int Style, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
-        => (_toStyle?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
-            _toMeasureNextPass?.Count ?? 0, DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
+    public (int Style, int Language, int Measure, int Arrange, int NextPass, int Deferred) QueuedCounts()
+        => (_toStyle?.Count ?? 0, _toReadLanguage?.Count ?? 0, _toMeasure?.Count ?? 0, _toArrange?.Count ?? 0,
+            _toMeasureNextPass?.Count ?? 0,
+            DeferredLanguage.Count + DeferredStyle.Count + DeferredMeasure.Count + DeferredArrange.Count);
 
     /// <summary>Hands what waits in the manager of <paramref name="formerRoot"/> - a subtree built off the tree, now given
     /// a parent - to the managers its nodes belong to from now on, and forgets that manager. No pass ever runs on a root
