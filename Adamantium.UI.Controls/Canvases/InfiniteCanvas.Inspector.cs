@@ -34,15 +34,11 @@ public partial class InfiniteCanvas
         nameof(InspectorPanelTemplate), typeof(DataTemplate), typeof(InfiniteCanvas),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
-    private static readonly AdamantiumPropertyKey IsInspectorUnfoldedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsInspectorUnfoldedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsInspectorUnfolded), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
 
-    public static readonly AdamantiumProperty IsInspectorUnfoldedProperty = IsInspectorUnfoldedPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey InspectorPanelDataPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty InspectorPanelDataProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(InspectorPanelData), typeof(Object), typeof(InfiniteCanvas), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty InspectorPanelDataProperty = InspectorPanelDataPropertyKey.Property;
 
     // What the plane is always left, however wide the panel is asked to be.
     private const double LeastPlaneWidth = 120;
@@ -104,7 +100,7 @@ public partial class InfiniteCanvas
     public Object InspectorPanelData => GetValue(InspectorPanelDataProperty);
 
     private void OnPanelDataChanged(object sender, AdamantiumPropertyChangedEventArgs e) =>
-        SetValue(InspectorPanelDataPropertyKey, DataContext is IUIComponent ? null : DataContext);
+        SetReadOnlyValue(InspectorPanelDataProperty, DataContext is IUIComponent ? null : DataContext);
 
     /// <summary>Whether the panel stands open beside the plane now: shown, and not folded.</summary>
     public Boolean IsInspectorUnfolded => GetValue<Boolean>(IsInspectorUnfoldedProperty);
@@ -279,7 +275,7 @@ public partial class InfiniteCanvas
     private void PlaceInspector()
     {
         var unfolded = ShowsInspector && IsInspectorOpen;
-        SetValue(IsInspectorUnfoldedPropertyKey, unfolded);
+        SetReadOnlyValue(IsInspectorUnfoldedProperty, unfolded);
         if (_inspectorColumn == null)
         {
             return;
