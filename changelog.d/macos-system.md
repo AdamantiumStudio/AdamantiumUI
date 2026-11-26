@@ -16,6 +16,9 @@
 - macOS: the system's light or dark appearance (`ThemeVariant.System`), the user's languages, the times of a double click
   and a repeated key, how far a press drags, the live state of the mouse and keyboard.
 - macOS: `IApplicationPlatform.WindowFromScreenPoint`.
+- macOS: a gamepad's motors buzz as fine as they are told (`Gamepad.SetSharpness`), changed while they buzz.
+- `PropertySection`: a button of its own in the header, before the "⋯" - what the whole section is for, tried at once -
+  as a line's: `ShowActionButton`, `ActionCommand`, `ActionCommandParameter`, `ActionIcon`, `ActionTip`.
 
 A hidden run (`ADAM_HIDDEN_WINDOWS=1`) keeps from what is the user's: their clipboard, cursor, keys, gamepads and screen.
 

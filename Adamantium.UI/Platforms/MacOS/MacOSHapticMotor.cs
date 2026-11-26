@@ -6,8 +6,9 @@ using Adamantium.MacOS.ObjectiveC;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
-/// <summary>A motor of a gamepad through Core Haptics: a pattern without end, its strength changed as it plays.</summary>
-internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality, float sharpness) : IHapticMotor
+/// <summary>A motor of a gamepad through Core Haptics: a pattern without end, its strength and sharpness changed as it
+/// plays.</summary>
+internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality) : IHapticMotor
 {
     private IntPtr _engine;
     private IntPtr _player;
@@ -15,16 +16,16 @@ internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality, float
 
     public bool WasStopped => _player != IntPtr.Zero && _stops != CHHapticEngine.Stops;
 
-    public bool Run(float strength)
+    public bool Run(float strength, float sharpness)
     {
         var pool = ObjCRuntime.PushAutoreleasePool();
         try
         {
-            if (_player != IntPtr.Zero && !WasStopped && CHHapticEngine.SetIntensity(_player, strength))
+            if (_player != IntPtr.Zero && !WasStopped && CHHapticEngine.SetLevels(_player, strength, sharpness))
                 return true;
 
             Release();
-            return strength == 0 || Start(strength);
+            return strength == 0 || Start(strength, sharpness);
         }
         finally
         {
@@ -39,20 +40,20 @@ internal sealed class MacOSHapticMotor(IntPtr controller, IntPtr locality, float
         ObjCRuntime.PopAutoreleasePool(pool);
     }
 
-    private bool Start(float strength)
+    private bool Start(float strength, float sharpness)
     {
         _stops = CHHapticEngine.Stops;
         _engine = GCController.CreateEngine(controller, locality);
-        if (_engine != IntPtr.Zero && CHHapticEngine.Start(_engine) && Play(strength))
+        if (_engine != IntPtr.Zero && CHHapticEngine.Start(_engine) && Play(strength, sharpness))
             return true;
 
         Release();
         return false;
     }
 
-    private bool Play(float strength)
+    private bool Play(float strength, float sharpness)
     {
-        var pattern = CHHapticEngine.CreatePattern(sharpness, strength, GCController.InfiniteDuration);
+        var pattern = CHHapticEngine.CreatePattern(strength, sharpness, GCController.InfiniteDuration);
         if (pattern == IntPtr.Zero)
             return false;
 

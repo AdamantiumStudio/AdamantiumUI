@@ -30,6 +30,37 @@ public class MacOSGamepadMotorTests
     }
 
     [Test]
+    public async Task ItRunsAsFineAsItWasMade_UntilToldOtherwise()
+    {
+        var motor = new Motor();
+        var gamepadMotor = new MacOSGamepadMotor(motor, sharpness: 1);
+
+        await Ask(gamepadMotor, 0.5f);
+        gamepadMotor.SetSharpness(0.3f);
+        await gamepadMotor.Applying;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(motor.Runs, Is.EqualTo(new[] { 0.5f, 0.5f }), "a run in hand takes the new sharpness at once");
+            Assert.That(motor.Sharpnesses, Is.EqualTo(new[] { 1f, 0.3f }));
+        });
+    }
+
+    [Test]
+    public async Task SharpnessChangedStandingStill_WaitsForTheNextRun()
+    {
+        var motor = new Motor();
+        var gamepadMotor = new MacOSGamepadMotor(motor);
+
+        gamepadMotor.SetSharpness(0.6f);
+        await gamepadMotor.Applying;
+        Assert.That(motor.Runs, Is.Empty, "nothing runs for a sharpness alone");
+
+        await Ask(gamepadMotor, 0.4f);
+        Assert.That(motor.Sharpnesses, Is.EqualTo(new[] { 0.6f }));
+    }
+
+    [Test]
     public async Task TheSameAskedAgain_IsNotSentAgain()
     {
         var motor = new Motor();
@@ -234,9 +265,12 @@ public class MacOSGamepadMotorTests
 
         public ManualResetEventSlim Entered { get; } = new();
 
-        public bool Run(float strength)
+        public List<float> Sharpnesses { get; } = [];
+
+        public bool Run(float strength, float sharpness)
         {
             Runs.Add(strength);
+            Sharpnesses.Add(sharpness);
             Entered.Set();
             Gate?.Wait();
             Times.Add(TimeSpan.FromMilliseconds(Environment.TickCount64));

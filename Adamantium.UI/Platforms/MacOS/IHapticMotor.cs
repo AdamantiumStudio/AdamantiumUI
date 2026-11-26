@@ -7,8 +7,8 @@ internal interface IHapticMotor
     bool WasStopped { get; }
 
     /// <summary>Runs it, 0 to 1 - at 0 it stands still, ready to run again at once - starting it first where it does not
-    /// run; false when it cannot be.</summary>
-    bool Run(float strength);
+    /// run, as fine as <paramref name="sharpness"/>, 0 a deep rumble to 1 a fine buzz; false when it cannot be.</summary>
+    bool Run(float strength, float sharpness);
 
     /// <summary>Lets go of it, stopping it; it can be run again.</summary>
     void LetGo();

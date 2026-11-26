@@ -41,8 +41,8 @@ internal sealed class MacOSGamepad : Gamepad
     private static readonly IntPtr LeftTriggerProperty = Property("leftTrigger");
     private static readonly IntPtr RightTriggerProperty = Property("rightTrigger");
 
-    private const float Deep = 0;
-    private const float Fine = 1;
+    private const float Deep = DeepSharpness;
+    private const float Fine = FineSharpness;
 
     private readonly Lock _lock = new();
     private readonly (GamepadButton Button, IntPtr Selector)[] _buttons;
@@ -78,12 +78,18 @@ internal sealed class MacOSGamepad : Gamepad
     }
 
     private MacOSGamepadMotor MotorAt(IntPtr locality, float sharpness) =>
-        new(GCController.HasMotorAt(_controller, locality) ? new MacOSHapticMotor(_controller, locality, sharpness) : null);
+        new(GCController.HasMotorAt(_controller, locality) ? new MacOSHapticMotor(_controller, locality) : null, sharpness);
 
     public override void SetVibration(float lowFrequency, float highFrequency)
     {
         _low.Run(_hasMotorsApart ? lowFrequency : Math.Max(lowFrequency, highFrequency));
         _high.Run(highFrequency);
+    }
+
+    public override void SetSharpness(float lowFrequency, float highFrequency)
+    {
+        _low.SetSharpness(lowFrequency);
+        _high.SetSharpness(highFrequency);
     }
 
     public override void SetTriggerVibration(float left, float right)

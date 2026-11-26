@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -30,7 +31,29 @@ public class PropertySection : Expander
     public static readonly AdamantiumProperty HasMenuProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasMenu), typeof(bool), typeof(PropertySection), new PropertyMetadata(false));
 
+    /// <summary>Whether the header offers a button of its own beside the "⋯" - what the whole section is for, tried at
+    /// once: a sound played, a vibration felt. OFF by default, as on a line (<see cref="PropertyDefinition"/>).</summary>
+    public static readonly AdamantiumProperty ShowActionButtonProperty = AdamantiumProperty.Register(
+        nameof(ShowActionButton), typeof(bool), typeof(PropertySection), new PropertyMetadata(false));
+
+    /// <summary>What the header's button runs: the application's business, as a line's.</summary>
+    public static readonly AdamantiumProperty ActionCommandProperty = AdamantiumProperty.Register(nameof(ActionCommand),
+        typeof(ICommand), typeof(PropertySection), new PropertyMetadata(null));
+
+    /// <summary>What the command is given; null means the objects the section is pointed at.</summary>
+    public static readonly AdamantiumProperty ActionCommandParameterProperty = AdamantiumProperty.Register(
+        nameof(ActionCommandParameter), typeof(object), typeof(PropertySection), new PropertyMetadata(null));
+
+    /// <summary>The key of the picture on the header's button, looked up live in the theme.</summary>
+    public static readonly AdamantiumProperty ActionIconProperty = AdamantiumProperty.Register(nameof(ActionIcon),
+        typeof(String), typeof(PropertySection), new PropertyMetadata(null, OnActionLookChanged));
+
+    /// <summary>What the header's button says it does, on hover and to a screen reader.</summary>
+    public static readonly AdamantiumProperty ActionTipProperty = AdamantiumProperty.Register(nameof(ActionTip),
+        typeof(String), typeof(PropertySection), new PropertyMetadata(null, OnActionLookChanged));
+
     private ButtonBase _menuButton;
+    private ButtonBase _actionButton;
 
     public PropertySection()
     {
@@ -93,6 +116,55 @@ public class PropertySection : Expander
         private set => SetReadOnlyValue(HasMenuProperty, value);
     }
 
+    public bool ShowActionButton
+    {
+        get => GetValue<bool>(ShowActionButtonProperty);
+        set => SetValue(ShowActionButtonProperty, value);
+    }
+
+    public ICommand ActionCommand
+    {
+        get => GetValue<ICommand>(ActionCommandProperty);
+        set => SetValue(ActionCommandProperty, value);
+    }
+
+    public object ActionCommandParameter
+    {
+        get => GetValue(ActionCommandParameterProperty);
+        set => SetValue(ActionCommandParameterProperty, value);
+    }
+
+    public String ActionIcon
+    {
+        get => GetValue<String>(ActionIconProperty);
+        set => SetValue(ActionIconProperty, value);
+    }
+
+    public String ActionTip
+    {
+        get => GetValue<String>(ActionTipProperty);
+        set => SetValue(ActionTipProperty, value);
+    }
+
+    /// <summary>Runs the header's action with the section's objects, unless it names its own parameter; false when it
+    /// has none or may not run now.</summary>
+    public bool RunAction()
+    {
+        if (ActionCommand is not { } command)
+        {
+            return false;
+        }
+
+        var parameter = ActionCommandParameter ?? (Targets is { Count: > 0 } targets ? targets : Target);
+        if (!command.CanExecute(parameter))
+        {
+            return false;
+        }
+
+        command.Execute(parameter);
+        return true;
+    }
+
     /// <summary>Opens the section's menu under its "⋯" button - under the header when the template has none - or shuts
     /// it when it is open. False when the section has no menu.</summary>
     public bool OpenMenu()
@@ -128,6 +200,18 @@ public class PropertySection : Expander
         {
             _menuButton.Click += OnMenuButtonClick;
         }
+
+        if (_actionButton != null)
+        {
+            _actionButton.Click -= OnActionButtonClick;
+        }
+
+        _actionButton = GetTemplateChild("PART_Action") as ButtonBase;
+        if (_actionButton != null)
+        {
+            _actionButton.Click += OnActionButtonClick;
+            ApplyActionLook();
+        }
     }
 
     public override void OnRemoveTemplate()
@@ -138,7 +222,60 @@ public class PropertySection : Expander
             _menuButton.Click -= OnMenuButtonClick;
         }
 
+        if (_actionButton != null)
+        {
+            _actionButton.Click -= OnActionButtonClick;
+        }
+
         _menuButton = null;
+        _actionButton = null;
+    }
+
+    private static void OnActionLookChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        ((PropertySection)component).ApplyActionLook();
+
+    // As a line's button: the picture live against the theme, the tip on hover and for a screen reader.
+    private void ApplyActionLook()
+    {
+        if (_actionButton == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(ActionTip))
+        {
+            _actionButton.ClearValue(ToolTipService.ToolTipProperty);
+            _actionButton.ClearValue(AutomationProperties.NameProperty);
+        }
+        else
+        {
+            ToolTipService.SetToolTip(_actionButton, ActionTip);
+            AutomationProperties.SetName(_actionButton, ActionTip);
+        }
+
+        if (string.IsNullOrEmpty(ActionIcon))
+        {
+            _actionButton.Content = "▶";
+            return;
+        }
+
+        var image = new Image
+        {
+            Width = 11,
+            Height = 11,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        new Core.Resources.ObservableResource(ActionIcon).Apply(image, nameof(Image.Source));
+        _actionButton.Content = image;
+    }
+
+    private void OnActionButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (RunAction())
+        {
+            e.Handled = true;
+        }
     }
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)

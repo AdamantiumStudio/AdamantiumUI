@@ -13,6 +13,8 @@ internal sealed class MacOSGamepadMotor
     private readonly IHapticMotor _motor;
     private float _asked;
     private float _applied;
+    private float _askedSharpness;
+    private float _appliedSharpness;
     private float _pulse;
     private long _appliedAt;
     private bool _isHeld;
@@ -20,8 +22,13 @@ internal sealed class MacOSGamepadMotor
     private bool _applying;
     private bool _closed;
 
-    /// <summary>The motor <paramref name="motor"/>; null for a place that has none.</summary>
-    internal MacOSGamepadMotor(IHapticMotor motor) => _motor = motor;
+    /// <summary>The motor <paramref name="motor"/>, null for a place that has none, as fine as <paramref name="sharpness"/>
+    /// until told otherwise.</summary>
+    internal MacOSGamepadMotor(IHapticMotor motor, float sharpness = 0)
+    {
+        _motor = motor;
+        _askedSharpness = Math.Clamp(sharpness, 0, 1);
+    }
 
     /// <summary>The shortest a run is felt for.</summary>
     internal TimeSpan ShortestRun { get; init; } = TimeSpan.FromMilliseconds(40);
@@ -49,6 +56,22 @@ internal sealed class MacOSGamepadMotor
             _asked = float.IsNaN(strength) ? 0 : Math.Clamp(strength, 0, 1);
             if (_asked > 0 && !IsWaitingAfterFailure)
                 _pulse = _asked;
+            ApplyInBackground();
+        }
+    }
+
+    /// <summary>How fine it buzzes, 0 a deep rumble to 1 a fine buzz; a run in hand takes it at once.</summary>
+    internal void SetSharpness(float sharpness)
+    {
+        if (_motor == null)
+            return;
+
+        lock (_lock)
+        {
+            if (_closed)
+                return;
+
+            _askedSharpness = float.IsNaN(sharpness) ? 0 : Math.Clamp(sharpness, 0, 1);
             ApplyInBackground();
         }
     }
@@ -92,6 +115,7 @@ internal sealed class MacOSGamepadMotor
         {
             Step step;
             float strength;
+            float sharpness;
             var wait = TimeSpan.Zero;
             lock (_lock)
             {
@@ -104,6 +128,7 @@ internal sealed class MacOSGamepadMotor
 
                 // A run ended before it began is run all the same.
                 strength = _asked == 0 && _applied == 0 ? _pulse : _asked;
+                sharpness = _askedSharpness;
                 if (step == Step.Run && strength == 0 && !_failed)
                     wait = ShortestRun - Stopwatch.GetElapsedTime(_appliedAt);
                 if (wait <= TimeSpan.Zero)
@@ -116,12 +141,13 @@ internal sealed class MacOSGamepadMotor
                 continue;
             }
 
-            var done = Do(step, strength);
+            var done = Do(step, strength, sharpness);
             lock (_lock)
             {
                 _failed = !done;
                 _appliedAt = Stopwatch.GetTimestamp();
                 _applied = step == Step.LetGo ? 0 : strength;
+                _appliedSharpness = sharpness;
                 _isHeld = step == Step.Run;
                 // What was asked while it was being run is felt by that run.
                 if (strength > 0)
@@ -130,13 +156,13 @@ internal sealed class MacOSGamepadMotor
         }
     }
 
-    private bool Do(Step step, float strength)
+    private bool Do(Step step, float strength, float sharpness)
     {
         try
         {
             if (step == Step.Run)
             {
-                if (_motor.Run(strength))
+                if (_motor.Run(strength, sharpness))
                     return true;
 
                 Serilog.Log.Logger.Warning("A motor of the gamepad could not be run");
@@ -161,7 +187,8 @@ internal sealed class MacOSGamepadMotor
         if (IsWaitingAfterFailure)
             return Step.None;
 
-        if (_asked != _applied || _pulse > 0 && _applied == 0 || _asked > 0 && _failed)
+        if (_asked != _applied || _pulse > 0 && _applied == 0 || _asked > 0 && _failed ||
+            _applied > 0 && _askedSharpness != _appliedSharpness)
             return Step.Run;
 
         // Not at once for one stopped again as soon as it is started.
