@@ -1856,7 +1856,7 @@ public partial class InfiniteCanvas
             if (at is CanvasPane) return true;
             if (ReferenceEquals(at, _chromeLayer)) return false;
             if (at is ScrollViewer { HasRange: true }) return true;
-            if (ReferenceEquals(at, _overlayRoot)) return true;
+            if (ReferenceEquals(at, _overlayRoot) || IsInspector(at)) return true;
             if (at is CanvasElementLayer) return false;
         }
 
@@ -1874,7 +1874,7 @@ public partial class InfiniteCanvas
         {
             // A PANE is glass; the layer holding them is not - it covers the entire canvas, so counting it as glass
             // threw away every press meant for the drawing. The pane is met first walking up, which is the whole fix.
-            if (at is CanvasPane) return true;
+            if (at is CanvasPane || IsInspector(at)) return true;
             if (ReferenceEquals(at, _chromeLayer)) return false;
 
             // The scroll bars move the camera themselves; a press on one is not a press on the plane.
@@ -1966,9 +1966,13 @@ public partial class InfiniteCanvas
 
         if (control && e.Key == Key.F)
         {
-            if (SearchAsked == null) return;
+            if (!OpenInspectorToSearch())
+            {
+                if (SearchAsked == null) return;
 
-            SearchAsked.Invoke(this, EventArgs.Empty);
+                SearchAsked.Invoke(this, EventArgs.Empty);
+            }
+
             e.Handled = true;
             return;
         }
