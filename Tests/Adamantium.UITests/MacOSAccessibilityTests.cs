@@ -131,6 +131,10 @@ public unsafe class MacOSAccessibilityTests
             Assert.That(Allowed(slider, "accessibilityPerformIncrement"), Is.True);
             Assert.That(Allowed(slider, "setAccessibilityValue:"), Is.True);
             Assert.That(Allowed(label, "accessibilityLabel"), Is.True, "what is not gated is AppKit's to decide");
+            Assert.That(Allowed(label, "isAccessibilityExpanded"), Is.False, "not one that opens: told neither open nor shut");
+            Assert.That(Allowed(label, "isAccessibilitySelected"), Is.False);
+            Assert.That(Allowed(slider, "accessibilityMinValue"), Is.True);
+            Assert.That(Allowed(label, "accessibilityMinValue"), Is.False);
         });
     }
 

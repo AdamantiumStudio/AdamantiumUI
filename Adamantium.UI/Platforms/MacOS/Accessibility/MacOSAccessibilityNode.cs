@@ -77,24 +77,50 @@ internal sealed class MacOSAccessibilityNode(MacOSAccessibility owner, Automatio
 
     /// <summary>Whether the element offers <paramref name="selector"/>: its text's getters and setter by whether it tells
     /// text - asked of the loop once, as what an element is does not change - the rest by <see cref="Allows"/>.</summary>
-    public bool Offers(string selector) =>
-        selector == "setAccessibilitySelectedTextRange:" || MacOSAccessibilityText.Selectors.Contains(selector)
-            ? HasText
-            : Allows(selector);
-
-    private int _hasText = -1;
-
-    private bool HasText
+    public bool Offers(string selector) => selector switch
     {
-        get
-        {
-            if (_hasText < 0)
-            {
-                _hasText = Read(peer => TextOf(peer) != null, false) ? 1 : 0;
-            }
+        "setAccessibilitySelectedTextRange:" => Has(Kinds.Text),
+        _ when MacOSAccessibilityText.Selectors.Contains(selector) => Has(Kinds.Text),
+        // A state the element has no way to be in is not offered: offered, VoiceOver tells "collapsed" of every element
+        // that answers it is not expanded.
+        "isAccessibilityExpanded" => Has(Kinds.Expands),
+        "isAccessibilitySelected" => Has(Kinds.Selectable),
+        "accessibilityMinValue" or "accessibilityMaxValue" => Has(Kinds.Range),
+        "accessibilityValue" => Has(Kinds.Value),
+        _ => Allows(selector)
+    };
 
-            return _hasText == 1;
+    [Flags]
+    private enum Kinds
+    {
+        None = 0,
+        Text = 1,
+        Expands = 2,
+        Selectable = 4,
+        Range = 8,
+        Value = 16,
+        Known = 32
+    }
+
+    private Kinds _kinds;
+
+    // What the element can be, asked of the loop once: a peer's patterns do not change.
+    private bool Has(Kinds kind)
+    {
+        if ((_kinds & Kinds.Known) == 0)
+        {
+            _kinds = Kinds.Known | Read(peer =>
+                (TextOf(peer) != null ? Kinds.Text : Kinds.None) |
+                (peer.GetPattern(PatternId.ExpandCollapse) != null ? Kinds.Expands : Kinds.None) |
+                (peer.GetPattern(PatternId.SelectionItem) != null ? Kinds.Selectable : Kinds.None) |
+                (peer.GetPattern(PatternId.RangeValue) != null ? Kinds.Range : Kinds.None) |
+                (peer.GetPattern(PatternId.Toggle) != null || peer.GetPattern(PatternId.RangeValue) != null ||
+                 peer.GetPattern(PatternId.Value) != null || TextOf(peer) != null
+                    ? Kinds.Value
+                    : Kinds.None), Kinds.None);
         }
+
+        return (_kinds & kind) != 0;
     }
 
     /// <summary>A press: invoked, toggled, selected or opened and shut, by what the peer does; whether it can be.</summary>

@@ -35,7 +35,9 @@ internal static unsafe class MacOSAccessibilityElement
         var gated = new Dictionary<IntPtr, string>();
         foreach (var name in (string[])["accessibilityPerformPress", "accessibilityPerformIncrement",
                      "accessibilityPerformDecrement", "setAccessibilityValue:", "setAccessibilityExpanded:",
-                     "setAccessibilityFocused:", "accessibilityPerformShowMenu", "setAccessibilitySelectedTextRange:"])
+                     "setAccessibilityFocused:", "accessibilityPerformShowMenu", "setAccessibilitySelectedTextRange:",
+                     "isAccessibilityExpanded", "isAccessibilitySelected", "accessibilityMinValue", "accessibilityMaxValue",
+                     "accessibilityValue"])
         {
             gated[ObjCRuntime.RegisterSelector(name)] = name;
         }
