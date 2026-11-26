@@ -170,20 +170,22 @@ internal sealed class WindowsPrintPlatform : IPrintPlatform
         return _reconciling;
     }
 
-    public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
+    public async Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
         CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(settings);
         var described = DescribedOf(settings.Printer) ?? Describe(settings.Printer.Id, cancellation);
-        var ticket = described.Schema.Write(BaseTicket(described, settings), settings);
-        ticket = ReconcilingProvider(settings.Printer.Id).Validate(ticket) ?? ticket;
 
         // On the thread printing was asked from: a document draws its pages there, as it does on screen. One not laid
-        // out yet is laid out as the settings say.
+        // out yet is laid out as the settings say, and made ready before the job starts.
         var laid = sheets as PrintSheets ?? new PrintSheets(sheets, settings, described.Schema.Capabilities);
+        laid.Paginate(laid.Sheet);
+        await laid.PrepareAsync(laid.Sheet, cancellation);
+
+        var ticket = described.Schema.Write(BaseTicket(described, settings), settings);
+        ticket = ReconcilingProvider(settings.Printer.Id).Validate(ticket) ?? ticket;
         XpsPrintJob.Print(settings.Printer.Id, laid, laid.Sheet, ticket, null, progress, cancellation);
-        return Task.CompletedTask;
     }
 
     private Described DescribedOf(Printer printer)

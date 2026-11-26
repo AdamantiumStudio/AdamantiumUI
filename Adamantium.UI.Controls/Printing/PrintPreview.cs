@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
@@ -7,6 +9,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Printing;
 
@@ -15,7 +18,8 @@ namespace Adamantium.UI.Controls.Printing;
 public class PrintPreview : MeasurableUIComponent
 {
     public static readonly AdamantiumProperty SheetsProperty = AdamantiumProperty.Register(nameof(Sheets),
-        typeof(PrintSheets), typeof(PrintPreview), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+        typeof(PrintSheets), typeof(PrintPreview),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSheetsChanged));
 
     public static readonly AdamantiumProperty SheetProperty = AdamantiumProperty.Register(nameof(Sheet),
         typeof(int), typeof(PrintPreview), new PropertyMetadata(0, PropertyMetadataOptions.AffectsRender));
@@ -57,7 +61,75 @@ public class PrintPreview : MeasurableUIComponent
     /// <summary>The room left round the paper, in DIPs.</summary>
     private const double Room = 12;
 
+    // The sheets being made ready, called off when others are shown or the preview goes.
+    private CancellationTokenSource _preparing;
+
     protected override AutomationPeer OnCreateAutomationPeer() => new PrintPreviewAutomationPeer(this);
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        StopPreparing();
+    }
+
+    // Back in a tree - a template applied again - the sheets it shows are made ready again; the last wait was called off.
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Prepare();
+    }
+
+    private static void OnSheetsChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) =>
+        ((PrintPreview)d).Prepare();
+
+    // New sheets are shown as soon as they are laid out and drawn again once they are ready: pictures of what is not
+    // vector come from the GPU, and until they do, those parts are drawn from their shapes. They are made as fine as the
+    // screen shows a sheet at its own size - the preview shows it smaller - not as fine as the printer prints.
+    private void Prepare()
+    {
+        StopPreparing();
+        if (Sheets is not { } sheets || !IsAttachedToVisualTree)
+        {
+            return;
+        }
+
+        var sheet = sheets.Sheet;
+        var screen = new PrintPage(sheet.Paper, sheet.Orientation, sheet.PrintableMargins)
+        {
+            RasterDotsPerInch = Math.Max(1, (int)Math.Round(96 * (RootVisual?.Window?.DpiScale.X ?? 1))),
+        };
+        _preparing = new CancellationTokenSource();
+        _ = PrepareAsync(sheets, screen, _preparing.Token);
+    }
+
+    private async Task PrepareAsync(PrintSheets sheets, PrintPage screen, CancellationToken cancellation)
+    {
+        try
+        {
+            await sheets.PrepareAsync(screen, cancellation);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            // Not ready, the sheets are still shown - drawn from their shapes - and what went wrong is told.
+            Serilog.Log.Logger.Error(exception, "Making the print preview's sheets ready failed.");
+        }
+
+        if (ReferenceEquals(Sheets, sheets))
+        {
+            InvalidateRender(false);
+        }
+    }
+
+    private void StopPreparing()
+    {
+        _preparing?.Cancel();
+        _preparing?.Dispose();
+        _preparing = null;
+    }
 
     protected override void OnRender(IDrawingContext context)
     {

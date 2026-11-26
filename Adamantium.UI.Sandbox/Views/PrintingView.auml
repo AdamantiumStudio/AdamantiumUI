@@ -15,9 +15,13 @@
         <Button x:Name="PrintSample" Classes="Accent" Content="{Localize PrintingStrings.Print}"
                 Command="{Binding PrintCommand}" HorizontalAlignment="Left" MinWidth="120" MarginBottom="12"/>
         <TextBlock x:Name="PrintOutcome" Text="{Binding Outcome}" TextWrapping="WrapByWords" MarginBottom="24"/>
-        <!-- An element printed as it shows: cut to its rounded corners, its text faded. -->
-        <Border x:Name="SampleCard" Width="360" CornerRadius="14" ClipToBounds="True" Padding="20"
-                HorizontalAlignment="Left" MarginBottom="12">
+        <!-- An element printed as it shows: its rounded corners, its text faded, its shadow - a picture at the print's
+             resolution, with the text over it still vector. Room is left for the shadow, which layout does not give. -->
+        <Border x:Name="SampleCard" Width="360" CornerRadius="14" Padding="20"
+                HorizontalAlignment="Left" MarginBottom="28">
+            <Border.Shadow>
+                <Shadow BlurRadius="16" OffsetY="6" Opacity="0.45"/>
+            </Border.Shadow>
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                     <GradientStop Color="#3B82F6" Offset="0"/>

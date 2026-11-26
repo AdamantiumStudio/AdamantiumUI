@@ -19,6 +19,11 @@ internal static class PicturePixels
         return bitmap is { PixelBytes: not null, PixelWidth: > 0, PixelHeight: > 0 } ? bitmap : null;
     }
 
+    /// <summary>Whether a vector writer can put <paramref name="source"/> down: a drawing, or a bitmap with its pixels on
+    /// the CPU - not a GPU surface, a live 3D view's or a game's.</summary>
+    public static bool IsPrintable(ImageSource source, int frame) =>
+        source is DrawingImage { Drawing: not null } || BitmapOf(source, frame) != null;
+
     /// <summary>The bitmap's pixels as RGBA; null for a layout not taken.</summary>
     public static byte[] RgbaOf(BitmapSource bitmap) =>
         Rgba(bitmap.PixelBytes, (int)bitmap.PixelWidth, (int)bitmap.PixelHeight, (Format)bitmap.SurfaceLayout);

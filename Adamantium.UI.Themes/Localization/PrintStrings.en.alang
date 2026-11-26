@@ -22,6 +22,7 @@
     <Phrase Key="Custom" Text="Custom"/>
     <Phrase Key="ScalePercent" Text="Scale, percent"/>
     <Phrase Key="PagesPerSheet" Text="Pages per sheet"/>
+    <Phrase Key="RasterResolution" Text="Raster resolution"/>
     <Phrase Key="Copies" Text="Copies"/>
     <Phrase Key="Collate" Text="Collate copies"/>
     <Phrase Key="TwoSided" Text="Two-sided"/>

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -29,13 +31,48 @@ public sealed class PrintSheets : IPrintDocument
         _settings = settings;
         _capabilities = capabilities;
         _current = current;
-        Sheet = new PrintPage(settings.Paper, settings.Orientation, Turned(capabilities.MarginsOf(settings.Paper)));
+        Sheet = new PrintPage(settings.Paper, settings.Orientation, Turned(capabilities.MarginsOf(settings.Paper)))
+        {
+            RasterDotsPerInch = RasterOf(settings, capabilities),
+        };
     }
 
     public string Title => _document.Title;
 
-    /// <summary>The sheet printed on: the chosen paper, its way up, the printer's margins.</summary>
+    /// <summary>The sheet printed on: the chosen paper, its way up, the printer's margins, the raster resolution.</summary>
     public PrintPage Sheet { get; }
+
+    /// <summary>Makes the document ready for <see cref="Sheet"/> - its options decide the sheet, as for
+    /// <see cref="Paginate"/> - at <paramref name="page"/>'s raster resolution where one is given (a preview's, as fine
+    /// as the screen shows), the sheet's otherwise. The document is told the resolution its pages are shown at: scaled
+    /// up on the sheet, they want finer pictures, scaled down or several to a sheet, coarser.</summary>
+    public Task PrepareAsync(PrintPage page, CancellationToken cancellation)
+    {
+        var dotsPerInch = page?.RasterDotsPerInch ?? Sheet.RasterDotsPerInch;
+        if (_pages.Count > 0)
+        {
+            var perSheet = _columns * _rows;
+            var place = Place(CellOf(0, perSheet), perSheet == 1, OwnSize(_pages[0]));
+            var scale = Math.Sqrt(Math.Abs(place.M11 * place.M22 - place.M12 * place.M21));
+            dotsPerInch = Math.Max(1, (int)Math.Round(dotsPerInch * scale));
+        }
+
+        return _document.PrepareAsync(
+            new PrintPage(Sheet.Paper, Sheet.Orientation, Sheet.PrintableMargins) { RasterDotsPerInch = dotsPerInch },
+            cancellation);
+    }
+
+    // A file's raster is the one chosen for it; a printer's is its resolution, no finer than is worth making, and the
+    // file's where it names none.
+    private static int RasterOf(PrintSettings settings, PrinterCapabilities capabilities)
+    {
+        if (settings.Printer.IsFile || (settings.Quality ?? capabilities.DefaultQuality) is not { } quality)
+        {
+            return settings.RasterDotsPerInch;
+        }
+
+        return Math.Clamp(Math.Max(quality.DotsPerInchX, quality.DotsPerInchY), 72, PrintSettings.FinestPrinterRaster);
+    }
 
     /// <summary>How many pages the document made, all of them - before the range picks.</summary>
     public int DocumentPages { get; private set; }
@@ -62,9 +99,6 @@ public sealed class PrintSheets : IPrintDocument
     {
         ArgumentNullException.ThrowIfNull(session);
         var perSheet = _columns * _rows;
-        var area = PrintableArea;
-        var cellWidth = area.Width / _columns;
-        var cellHeight = area.Height / _rows;
         for (var slot = 0; slot < perSheet; slot++)
         {
             var at = index * perSheet + slot;
@@ -73,15 +107,26 @@ public sealed class PrintSheets : IPrintDocument
                 break;
             }
 
-            var cell = perSheet == 1
-                ? area
-                : new Rect(area.X + slot % _columns * cellWidth, area.Y + slot / _columns * cellHeight, cellWidth,
-                    cellHeight);
+            var cell = CellOf(slot, perSheet);
             var place = Place(cell, perSheet == 1, OwnSize(_pages[at]));
             session.PushGroup(new DrawingGroupOptions { Clip = new RectangleGeometry(cell) });
             _document.DrawPage(_pages[at], new TransformedDrawingSession(session, place));
             session.PopGroup();
         }
+    }
+
+    /// <summary>Where page <paramref name="slot"/> of a sheet goes: what the printer reaches, or its cell of it.</summary>
+    private Rect CellOf(int slot, int perSheet)
+    {
+        var area = PrintableArea;
+        if (perSheet == 1)
+        {
+            return area;
+        }
+
+        var cellWidth = area.Width / _columns;
+        var cellHeight = area.Height / _rows;
+        return new Rect(area.X + slot % _columns * cellWidth, area.Y + slot / _columns * cellHeight, cellWidth, cellHeight);
     }
 
     /// <summary>What the printer reaches of the sheet.</summary>

@@ -52,7 +52,9 @@ public partial class PrintingViewModel : TabPageViewModel
     {
         if (card is IUIComponent element)
         {
-            Tell(await _printing.PrintAsync(new ElementPrintDocument(element, PrintingStrings.CardTitle)));
+            // Its pictures - the shadow - are freed once it is printed.
+            using var document = new ElementPrintDocument(element, PrintingStrings.CardTitle);
+            Tell(await _printing.PrintAsync(document));
         }
     }
 

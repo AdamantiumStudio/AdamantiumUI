@@ -46,7 +46,7 @@ public class PdfPrintedTextTests
     private static PdfDocument Save(Action<IDrawingSession> draw)
     {
         using var output = new MemoryStream();
-        PdfPrintFile.Save(new Page(draw), new PrintPage(PaperSize.A4), output);
+        PdfPrintFile.SaveAsync(new Page(draw), new PrintPage(PaperSize.A4), output).GetAwaiter().GetResult();
         if (Environment.GetEnvironmentVariable("ADAM_KEEP_PDF") is { Length: > 0 } folder)
         {
             File.WriteAllBytes(Path.Combine(folder, TestContext.CurrentContext.Test.MethodName + ".pdf"), output.ToArray());
