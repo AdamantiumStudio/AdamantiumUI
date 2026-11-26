@@ -168,6 +168,15 @@
         </DrawingGroup>
     </DrawingImage>
 
+    <!-- A note: its head and its stem with a flag. -->
+    <DrawingImage x:Key="AudioPlayerTabIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M3.5,12 A2.5,2 0 1 1 8.5,12 A2.5,2 0 1 1 3.5,12 Z" Brush="CurrentColor"/>
+            <GeometryDrawing Geometry="M8,12 L8,2 L13,4 L13,6.5 L8,4.5" Stroke="CurrentColor" StrokeThickness="1.2"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- A spinner: the turning arc, and the dots it leaves behind, shrinking. -->
     <DrawingImage x:Key="LoadersTabIcon">
         <DrawingGroup>

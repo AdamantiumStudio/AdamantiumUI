@@ -35,10 +35,15 @@
 		<ProjectReference Include="..\Adamantium.UI.Automation.Cli\Adamantium.UI.Automation.Cli.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj" />
+		<ProjectReference Include="..\Adamantium.UI.Audio\Adamantium.UI.Audio.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Content Include="window-icon.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<!-- The audio player's sounds, made of tones and noise for the sandbox: played as they are, not cooked. -->
+		<Content Include="Sounds\*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<None Remove="AumlResources\FluentDarkRepository.xml" />

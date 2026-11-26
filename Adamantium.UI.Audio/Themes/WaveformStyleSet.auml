@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.Audio">
+
+    <!-- What is played in the theme's accent, what is yet to be in its quiet text. -->
+    <Style Selector="Waveform">
+        <Setter Property="WaveBrush" Value="{ObservableResource TextFillColorTertiary}"/>
+        <Setter Property="PlayedBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+</StyleSet>

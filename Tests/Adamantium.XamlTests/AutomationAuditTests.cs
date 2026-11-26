@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Core.DependencyInjection;
+using Adamantium.UI.Audio;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Controls.Base;
@@ -182,6 +183,10 @@ public class AutomationAuditTests
         [typeof(WebViewScriptDialog)] = (null, "shows the theme's card for a page's dialog, which answers for itself, its text and its buttons"),
         [typeof(WebViewFindBar)] = (null, "shows the theme's search card, which answers for itself, its field and its buttons"),
         [typeof(WebViewSignInDialog)] = (null, "shows the theme's sign-in card, which answers for itself, its fields and its buttons"),
+        [typeof(AudioPlayer)] = (T.Group, null),
+        [typeof(AudioFormatBadges)] = (null, "marks beside the title, read as their texts; the player answers for what plays"),
+        [typeof(Spectrum)] = (null, "a picture of what is heard; the player answers for what plays"),
+        [typeof(Waveform)] = (null, "a picture of the sound under the position slider, which answers for the position"),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),
@@ -232,7 +237,7 @@ public class AutomationAuditTests
     }
 
     private static IEnumerable<Type> Elements() =>
-        new[] { typeof(Control).Assembly, typeof(VirtualWindow).Assembly, typeof(WebView).Assembly }
+        new[] { typeof(Control).Assembly, typeof(VirtualWindow).Assembly, typeof(WebView).Assembly, typeof(AudioPlayer).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !type.IsAbstract && !type.ContainsGenericParameters && typeof(UIComponent).IsAssignableFrom(type))
             .OrderBy(type => type.FullName);

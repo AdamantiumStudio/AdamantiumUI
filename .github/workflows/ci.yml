@@ -148,6 +148,7 @@ jobs:
           run ui Tests/Adamantium.UITests/Adamantium.UITests.csproj --filter "TestCategory!=Gpu"
           run sandbox Tests/Adamantium.UI.Sandbox.Tests/Adamantium.UI.Sandbox.Tests.csproj --filter "TestCategory!=Scenario"
           run pdf Tests/Adamantium.UI.Pdf.Tests/Adamantium.UI.Pdf.Tests.csproj
+          run audio Tests/Adamantium.UI.Audio.Tests/Adamantium.UI.Audio.Tests.csproj
           run remote Tests/Adamantium.UI.Remote.Tests/Adamantium.UI.Remote.Tests.csproj --filter "TestCategory!=Gpu"
           status=0
           for i in "${!pids[@]}"; do

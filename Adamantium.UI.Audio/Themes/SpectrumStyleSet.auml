@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.Audio">
+
+    <!-- The bars in the theme's accent, their peaks in its lighter one. -->
+    <Style Selector="Spectrum">
+        <Setter Property="BarBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="PeakBrush" Value="{ThemeResource AccentFillColorSecondary}"/>
+    </Style>
+
+</StyleSet>

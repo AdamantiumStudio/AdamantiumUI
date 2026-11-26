@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.Audio">
+
+    <!-- The player in four looks, by its View. Each look is a template of the player's parts, and each part one of its
+         template properties - DisplayTemplate, PositionTemplate, TransportTemplate, TrackTemplate - set here per look,
+         so an application replaces one part and keeps the rest. The parts read the player by {Ancestor}; the accent is
+         the theme's. -->
+
+    <!-- Full: the display (title, artist, format, time, spectrum), the position, the buttons and the volume, the
+         list. -->
+    <Style Selector="AudioPlayer">
+        <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusSurface}"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="AutomationProperties.Name" Value="{Localize AudioPlayerStrings.Player}"/>
+
+        <Setter Property="DisplayTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border Background="{ObservableResource SolidBackgroundFillColorBase}"
+                            BorderBrush="{ObservableResource ControlStrokeColorDefault}" BorderThickness="1"
+                            CornerRadius="6" Padding="14 12">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Spacing="6" VerticalAlignment="Center">
+                                <TextBlock x:Name="Title" Text="{Ancestor local:AudioPlayer, CurrentTrack.Title}"
+                                           FontSize="15" FontWeight="SemiBold" TextTrimming="CharEllipses"
+                                           AutomationProperties.AutomationId="AudioTitle"/>
+                                <TextBlock x:Name="Nothing" Text="{Localize AudioPlayerStrings.NothingOpen}"
+                                           FontSize="15" Visibility="Collapsed"
+                                           Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                <TextBlock Text="{Ancestor local:AudioPlayer, CurrentTrack.Artist}"
+                                           Foreground="{ObservableResource TextFillColorSecondary}"
+                                           TextTrimming="CharEllipses"/>
+                                <local:AudioFormatBadges Info="{Ancestor local:AudioPlayer, Info}"
+                                                         AutomationProperties.AutomationId="AudioFormat"/>
+                                <ToggleButton IsChecked="{Ancestor local:AudioPlayer, ShowsRemaining, Mode=TwoWay}"
+                                              HorizontalAlignment="Left" Padding="6 2"
+                                              ToolTipService.ToolTip="{Localize AudioPlayerStrings.TimeLeft}"
+                                              AutomationProperties.AutomationId="AudioTime"
+                                              AutomationProperties.Name="{Localize AudioPlayerStrings.TimeLeft}">
+                                    <Grid>
+                                        <TextBlock x:Name="Played" FontSize="28" FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource AccentFillColorDefault}"
+                                                   Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"/>
+                                        <TextBlock x:Name="Left" FontSize="28" FontWeight="SemiBold" Visibility="Collapsed"
+                                                   Foreground="{ThemeResource AccentFillColorDefault}"
+                                                   Text="{Ancestor local:AudioPlayer, Remaining, Converter={TimeSpanToClockTextConverter}, ConverterParameter=Remaining}"/>
+                                    </Grid>
+                                </ToggleButton>
+                                <TextBlock Foreground="{ObservableResource TextFillColorTertiary}"
+                                           Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
+                                           AutomationProperties.AutomationId="AudioDuration"/>
+                            </StackPanel>
+                            <local:Spectrum Grid.Column="1" Width="200" Height="84" Bands="24" VerticalAlignment="Bottom"
+                                            Playback="{Ancestor local:AudioPlayer, Playback}"/>
+                        </Grid>
+                    </Border>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, ShowsRemaining}" Value="true">
+                            <Setter TargetName="Played" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Left" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, CurrentTrack}" Value="{x:Null}">
+                            <Setter TargetName="Title" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Nothing" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <!-- The slider of the position, over the waveform where the player shows it. -->
+        <Setter Property="PositionTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid>
+                        <local:Waveform Height="48" Peaks="{Ancestor local:AudioPlayer, Peaks}"
+                                        Position="{Ancestor local:AudioPlayer, Position}"
+                                        Duration="{Ancestor local:AudioPlayer, Duration}"
+                                        Visibility="{Ancestor local:AudioPlayer, ShowsWaveform, Converter={BooleanToVisibilityConverter}}"/>
+                        <Slider VerticalAlignment="Center" Minimum="0"
+                                Maximum="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToSecondsConverter}}"
+                                Value="{Ancestor local:AudioPlayer, Position, Mode=TwoWay, Converter={TimeSpanToSecondsConverter}}"
+                                AutomationProperties.AutomationId="AudioPosition"
+                                AutomationProperties.Name="{Localize AudioPlayerStrings.Position}"/>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Setter Property="TransportTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Button Command="{Ancestor local:AudioPlayer, PreviousCommand}" Padding="8 6"
+                                    ToolTipService.ToolTip="{Localize AudioPlayerStrings.Previous}"
+                                    AutomationProperties.AutomationId="AudioPrevious"
+                                    AutomationProperties.Name="{Localize AudioPlayerStrings.Previous}">
+                                <Path Width="14" Height="14" Stretch="Uniform" Fill="{Ancestor Button, Foreground}"
+                                      Data="M3,3 L5,3 L5,13 L3,13 Z M13,3 L13,13 L6,8 Z"/>
+                            </Button>
+                            <Button x:Name="PlayButton" Classes="Accent" Command="{Ancestor local:AudioPlayer, PlayPauseCommand}" Padding="12 8"
+                                    AutomationProperties.AutomationId="AudioPlayPause"
+                                    AutomationProperties.Name="{Localize AudioPlayerStrings.Play}">
+                                <Grid>
+                                    <Path x:Name="PlayGlyph" Width="16" Height="16" Stretch="Uniform"
+                                          Fill="{Ancestor Button, Foreground}" Data="M4,2.5 L13,8 L4,13.5 Z"/>
+                                    <Path x:Name="PauseGlyph" Width="16" Height="16" Stretch="Uniform" Visibility="Collapsed"
+                                          Fill="{Ancestor Button, Foreground}"
+                                          Data="M4,2.5 L7,2.5 L7,13.5 L4,13.5 Z M9,2.5 L12,2.5 L12,13.5 L9,13.5 Z"/>
+                                </Grid>
+                            </Button>
+                            <Button Command="{Ancestor local:AudioPlayer, StopCommand}" Padding="8 6"
+                                    ToolTipService.ToolTip="{Localize AudioPlayerStrings.Stop}"
+                                    AutomationProperties.AutomationId="AudioStop"
+                                    AutomationProperties.Name="{Localize AudioPlayerStrings.Stop}">
+                                <Path Width="12" Height="12" Stretch="Uniform" Fill="{Ancestor Button, Foreground}"
+                                      Data="M3,3 L13,3 L13,13 L3,13 Z"/>
+                            </Button>
+                            <Button Command="{Ancestor local:AudioPlayer, NextCommand}" Padding="8 6"
+                                    ToolTipService.ToolTip="{Localize AudioPlayerStrings.Next}"
+                                    AutomationProperties.AutomationId="AudioNext"
+                                    AutomationProperties.Name="{Localize AudioPlayerStrings.Next}">
+                                <Path Width="14" Height="14" Stretch="Uniform" Fill="{Ancestor Button, Foreground}"
+                                      Data="M11,3 L13,3 L13,13 L11,13 Z M3,3 L3,13 L10,8 Z"/>
+                            </Button>
+                            <Button x:Name="RepeatButton" Command="{Ancestor local:AudioPlayer, RepeatCommand}" Padding="8 6"
+                                    ToolTipService.ToolTip="{Localize AudioPlayerStrings.RepeatOff}"
+                                    AutomationProperties.AutomationId="AudioRepeat"
+                                    AutomationProperties.Name="{Localize AudioPlayerStrings.Repeat}">
+                                <Grid>
+                                    <Path x:Name="RepeatGlyph" Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.6"
+                                          Stroke="{Ancestor Button, Foreground}"
+                                          Data="M3,9 L3,5 L14,5 M12,3 L14,5 L12,7 M15,9 L15,13 L4,13 M6,11 L4,13 L6,15"/>
+                                    <TextBlock x:Name="RepeatOne" Text="1" FontSize="9" FontWeight="Bold" Visibility="Collapsed"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Foreground="{ThemeResource AccentFillColorDefault}"/>
+                                </Grid>
+                            </Button>
+                            <ToggleButton IsChecked="{Ancestor local:AudioPlayer, IsShuffled, Mode=TwoWay}" Padding="8 6"
+                                          ToolTipService.ToolTip="{Localize AudioPlayerStrings.Shuffle}"
+                                          AutomationProperties.AutomationId="AudioShuffle"
+                                          AutomationProperties.Name="{Localize AudioPlayerStrings.Shuffle}">
+                                <Path Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.6"
+                                      Stroke="{Ancestor ToggleButton, Foreground}"
+                                      Data="M2,5 L5,5 L12,13 L16,13 M2,13 L5,13 L7,10.7 M11,6.3 L12,5 L16,5 M14,3 L16,5 L14,7 M14,11 L16,13 L14,15"/>
+                            </ToggleButton>
+                        </StackPanel>
+                        <Path Grid.Column="2" Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                              Fill="{ObservableResource TextFillColorSecondary}" Data="M3,7 L6,7 L10,4 L10,14 L6,11 L3,11 Z"/>
+                        <Slider Grid.Column="3" Width="110" MinWidth="0" VerticalAlignment="Center" Minimum="0" Maximum="1"
+                                Value="{Ancestor local:AudioPlayer, Volume, Mode=TwoWay}"
+                                AutomationProperties.AutomationId="AudioVolume"
+                                AutomationProperties.Name="{Localize AudioPlayerStrings.Volume}"/>
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, IsPlaying}" Value="true">
+                            <Setter TargetName="PlayGlyph" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PauseGlyph" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PlayButton" Property="AutomationProperties.Name" Value="{Localize AudioPlayerStrings.Pause}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, Repeat}" Value="List">
+                            <Setter TargetName="RepeatGlyph" Property="Stroke" Value="{ThemeResource AccentFillColorDefault}"/>
+                            <Setter TargetName="RepeatButton" Property="ToolTipService.ToolTip" Value="{Localize AudioPlayerStrings.RepeatList}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, Repeat}" Value="Track">
+                            <Setter TargetName="RepeatGlyph" Property="Stroke" Value="{ThemeResource AccentFillColorDefault}"/>
+                            <Setter TargetName="RepeatOne" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="RepeatButton" Property="ToolTipService.ToolTip" Value="{Localize AudioPlayerStrings.RepeatTrack}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <!-- A row of the list: the title, the artist, the format, the length; one that can not be played, faded. -->
+        <Setter Property="TrackTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid x:Name="Row" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharEllipses"/>
+                            <TextBlock Text="{Binding Artist}" TextTrimming="CharEllipses"
+                                       Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding Codec}" Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        <TextBlock Grid.Column="2" Width="56" HorizontalTextAlignment="Right"
+                                   Text="{Binding Duration, Converter={TimeSpanToClockTextConverter}}"
+                                   Foreground="{ObservableResource TextFillColorSecondary}"/>
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding CannotBeRead}" Value="true">
+                            <Setter TargetName="Row" Property="Opacity" Value="0.45"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioPlayer">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+                            <InfoBar Severity="Error" MarginBottom="10" Title="{Localize AudioPlayerStrings.CannotPlay}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
+                                     AutomationProperties.AutomationId="AudioFailed"/>
+                            <ContentPresenter Grid.Row="1" ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                            <ContentPresenter Grid.Row="2" MarginTop="10" ContentTemplate="{TemplateBinding PositionTemplate}"/>
+                            <ContentPresenter Grid.Row="3" MarginTop="6" ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                            <ListBox Grid.Row="4" MarginTop="10" MinHeight="84"
+                                     ItemsSource="{TemplateBinding Tracks}"
+                                     SelectedItem="{TemplateBinding CurrentTrack, Mode=TwoWay}"
+                                     ItemTemplate="{TemplateBinding TrackTemplate}"
+                                     AutomationProperties.AutomationId="AudioTracks"
+                                     AutomationProperties.Name="{Localize AudioPlayerStrings.Tracks}"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Bar: one row - a small display (time, format, a few bars of spectrum), the buttons, the position, the volume. -->
+    <Style Selector="AudioPlayer[View=Bar]">
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="DisplayTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border Background="{ObservableResource SolidBackgroundFillColorBase}"
+                            BorderBrush="{ObservableResource ControlStrokeColorDefault}" BorderThickness="1"
+                            CornerRadius="6" Padding="8 4">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <ToggleButton IsChecked="{Ancestor local:AudioPlayer, ShowsRemaining, Mode=TwoWay}"
+                                          VerticalAlignment="Center" Padding="4 0"
+                                          ToolTipService.ToolTip="{Localize AudioPlayerStrings.TimeLeft}"
+                                          AutomationProperties.AutomationId="AudioTime"
+                                          AutomationProperties.Name="{Localize AudioPlayerStrings.TimeLeft}">
+                                <Grid>
+                                    <TextBlock x:Name="Played" FontSize="20" FontWeight="SemiBold"
+                                               Foreground="{ThemeResource AccentFillColorDefault}"
+                                               Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"/>
+                                    <TextBlock x:Name="Left" FontSize="20" FontWeight="SemiBold" Visibility="Collapsed"
+                                               Foreground="{ThemeResource AccentFillColorDefault}"
+                                               Text="{Ancestor local:AudioPlayer, Remaining, Converter={TimeSpanToClockTextConverter}, ConverterParameter=Remaining}"/>
+                                </Grid>
+                            </ToggleButton>
+                            <local:AudioFormatBadges VerticalAlignment="Center" Info="{Ancestor local:AudioPlayer, Info}"
+                                                     AutomationProperties.AutomationId="AudioFormat"/>
+                            <local:Spectrum Width="60" Height="26" Bands="13" VerticalAlignment="Center"
+                                            Playback="{Ancestor local:AudioPlayer, Playback}"/>
+                        </StackPanel>
+                    </Border>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, ShowsRemaining}" Value="true">
+                            <Setter TargetName="Played" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Left" Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="TransportTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <Button Command="{Ancestor local:AudioPlayer, PreviousCommand}" Padding="6 5"
+                                ToolTipService.ToolTip="{Localize AudioPlayerStrings.Previous}"
+                                AutomationProperties.AutomationId="AudioPrevious"
+                                AutomationProperties.Name="{Localize AudioPlayerStrings.Previous}">
+                            <Path Width="12" Height="12" Stretch="Uniform" Fill="{Ancestor Button, Foreground}"
+                                  Data="M3,3 L5,3 L5,13 L3,13 Z M13,3 L13,13 L6,8 Z"/>
+                        </Button>
+                        <Button x:Name="PlayButton" Classes="Accent" Command="{Ancestor local:AudioPlayer, PlayPauseCommand}" Padding="9 6"
+                                AutomationProperties.AutomationId="AudioPlayPause"
+                                AutomationProperties.Name="{Localize AudioPlayerStrings.Play}">
+                            <Grid>
+                                <Path x:Name="PlayGlyph" Width="14" Height="14" Stretch="Uniform"
+                                      Fill="{Ancestor Button, Foreground}" Data="M4,2.5 L13,8 L4,13.5 Z"/>
+                                <Path x:Name="PauseGlyph" Width="14" Height="14" Stretch="Uniform" Visibility="Collapsed"
+                                      Fill="{Ancestor Button, Foreground}"
+                                      Data="M4,2.5 L7,2.5 L7,13.5 L4,13.5 Z M9,2.5 L12,2.5 L12,13.5 L9,13.5 Z"/>
+                            </Grid>
+                        </Button>
+                        <Button Command="{Ancestor local:AudioPlayer, NextCommand}" Padding="6 5"
+                                ToolTipService.ToolTip="{Localize AudioPlayerStrings.Next}"
+                                AutomationProperties.AutomationId="AudioNext"
+                                AutomationProperties.Name="{Localize AudioPlayerStrings.Next}">
+                            <Path Width="12" Height="12" Stretch="Uniform" Fill="{Ancestor Button, Foreground}"
+                                  Data="M11,3 L13,3 L13,13 L11,13 Z M3,3 L3,13 L10,8 Z"/>
+                        </Button>
+                    </StackPanel>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, IsPlaying}" Value="true">
+                            <Setter TargetName="PlayGlyph" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PauseGlyph" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PlayButton" Property="AutomationProperties.Name" Value="{Localize AudioPlayerStrings.Pause}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioPlayer">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid RowDefinitions="Auto,Auto">
+                            <InfoBar Severity="Error" MarginBottom="8" Title="{Localize AudioPlayerStrings.CannotPlay}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
+                                     AutomationProperties.AutomationId="AudioFailed"/>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
+                                <ContentPresenter ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                                <ContentPresenter Grid.Column="1" ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                                <ContentPresenter Grid.Column="2" VerticalAlignment="Center"
+                                                  ContentTemplate="{TemplateBinding PositionTemplate}"/>
+                                <TextBlock Grid.Column="3" VerticalAlignment="Center"
+                                           Foreground="{ObservableResource TextFillColorSecondary}"
+                                           Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
+                                           AutomationProperties.AutomationId="AudioDuration"/>
+                                <Slider Grid.Column="4" Width="72" MinWidth="0" VerticalAlignment="Center" Minimum="0" Maximum="1"
+                                        Value="{Ancestor local:AudioPlayer, Volume, Mode=TwoWay}"
+                                        AutomationProperties.AutomationId="AudioVolume"
+                                        AutomationProperties.Name="{Localize AudioPlayerStrings.Volume}"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Line: play, the title and the format, the time; the position under them - for lists of sounds, cards of
+         assets. -->
+    <Style Selector="AudioPlayer[View=Line]">
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="DisplayTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharEllipses"
+                                   Text="{Ancestor local:AudioPlayer, CurrentTrack.Title}"
+                                   AutomationProperties.AutomationId="AudioTitle"/>
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                   Foreground="{ObservableResource TextFillColorTertiary}"
+                                   Text="{Ancestor local:AudioPlayer, Info.Codec}"
+                                   AutomationProperties.AutomationId="AudioFormat"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock Foreground="{ObservableResource TextFillColorSecondary}"
+                                       Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"
+                                       AutomationProperties.AutomationId="AudioTime"/>
+                            <TextBlock Foreground="{ObservableResource TextFillColorTertiary}" Text="/"/>
+                            <TextBlock Foreground="{ObservableResource TextFillColorTertiary}"
+                                       Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
+                                       AutomationProperties.AutomationId="AudioDuration"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="TransportTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Button x:Name="PlayButton" Classes="Accent" Command="{Ancestor local:AudioPlayer, PlayPauseCommand}" Padding="8 6"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="AudioPlayPause"
+                            AutomationProperties.Name="{Localize AudioPlayerStrings.Play}">
+                        <Grid>
+                            <Path x:Name="PlayGlyph" Width="12" Height="12" Stretch="Uniform"
+                                  Fill="{Ancestor Button, Foreground}" Data="M4,2.5 L13,8 L4,13.5 Z"/>
+                            <Path x:Name="PauseGlyph" Width="12" Height="12" Stretch="Uniform" Visibility="Collapsed"
+                                  Fill="{Ancestor Button, Foreground}"
+                                  Data="M4,2.5 L7,2.5 L7,13.5 L4,13.5 Z M9,2.5 L12,2.5 L12,13.5 L9,13.5 Z"/>
+                        </Grid>
+                    </Button>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, IsPlaying}" Value="true">
+                            <Setter TargetName="PlayGlyph" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PauseGlyph" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PlayButton" Property="AutomationProperties.Name" Value="{Localize AudioPlayerStrings.Pause}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioPlayer">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid RowDefinitions="Auto,Auto,Auto">
+                            <InfoBar Severity="Error" MarginBottom="8" Title="{Localize AudioPlayerStrings.CannotPlay}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
+                                     AutomationProperties.AutomationId="AudioFailed"/>
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <ContentPresenter ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"
+                                                  ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                            </Grid>
+                            <ContentPresenter Grid.Row="2" MarginTop="4" ContentTemplate="{TemplateBinding PositionTemplate}"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Mini: play and the time, for tight places. -->
+    <Style Selector="AudioPlayer[View=Mini]">
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="DisplayTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock VerticalAlignment="Center" Foreground="{ObservableResource TextFillColorSecondary}"
+                               Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"
+                               AutomationProperties.AutomationId="AudioTime"/>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="TransportTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Button x:Name="PlayButton" Classes="Accent" Command="{Ancestor local:AudioPlayer, PlayPauseCommand}" Padding="7 5"
+                            VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="AudioPlayPause"
+                            AutomationProperties.Name="{Localize AudioPlayerStrings.Play}">
+                        <Grid>
+                            <Path x:Name="PlayGlyph" Width="12" Height="12" Stretch="Uniform"
+                                  Fill="{Ancestor Button, Foreground}" Data="M4,2.5 L13,8 L4,13.5 Z"/>
+                            <Path x:Name="PauseGlyph" Width="12" Height="12" Stretch="Uniform" Visibility="Collapsed"
+                                  Fill="{Ancestor Button, Foreground}"
+                                  Data="M4,2.5 L7,2.5 L7,13.5 L4,13.5 Z M9,2.5 L12,2.5 L12,13.5 L9,13.5 Z"/>
+                        </Grid>
+                    </Button>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Ancestor local:AudioPlayer, IsPlaying}" Value="true">
+                            <Setter TargetName="PlayGlyph" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PauseGlyph" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="PlayButton" Property="AutomationProperties.Name" Value="{Localize AudioPlayerStrings.Pause}"/>
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioPlayer">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ContentPresenter ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                            <ContentPresenter ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>
