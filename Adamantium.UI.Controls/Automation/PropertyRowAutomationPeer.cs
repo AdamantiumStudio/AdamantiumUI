@@ -8,7 +8,8 @@ namespace Adamantium.UI.Controls.Automation;
 /// <summary>The peer of a <see cref="PropertyRow"/>: a property called by its name, whose value is written the way its
 /// editor writes it - converted to the property's type, to every object the row stands for. A true-or-false property
 /// is toggled, a composite one opens to its parts; its editor is its child.</summary>
-public class PropertyRowAutomationPeer : UIComponentAutomationPeer, IValueProvider, IToggleProvider, IExpandCollapseProvider
+public class PropertyRowAutomationPeer : UIComponentAutomationPeer, IValueProvider, IToggleProvider, IExpandCollapseProvider,
+    IScrollItemProvider
 {
     private readonly PropertyRow _row;
 
@@ -56,6 +57,9 @@ public class PropertyRowAutomationPeer : UIComponentAutomationPeer, IValueProvid
     }
 
     public void Toggle() => _row.Owner?.ToggleRow(_row);
+
+    /// <summary>The grid scrolled until the line is in view, as a user scrolls to it.</summary>
+    public void ScrollIntoView() => _row.BringIntoView();
 
     public void Expand()
     {

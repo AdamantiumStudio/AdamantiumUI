@@ -28,5 +28,9 @@ A hidden run (`ADAM_HIDDEN_WINDOWS=1`) keeps from what is the user's: their clip
 
 ### Fixed
 
+- A binding writing a source on another thread (`Binding.WorkOnSourceThread`) and read on the UI's thread before the write
+  was in shows the source again once it is: an inspector's line no longer stays on the value before an edit - a
+  material picked showing the body's again - until the selection changes.
+- Automation: a property grid's sections and lines, and any expander, are scrolled into view (a section to its header).
 - Curve fills: no covered pixels outside a corner whose edge runs through pixel centres.
 - Sandbox: the multitouch page's ten columns fit the page beside the tabs on the left.
