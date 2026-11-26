@@ -42,6 +42,21 @@ public class CanvasChromeLayer : Panel
         set => SetValue(PaneGapProperty, value);
     }
 
+    private Thickness _barsTake;
+
+    // What the canvas's shown scroll bars take along the right and bottom edges; the panes stand clear of them.
+    internal Thickness BarsTake
+    {
+        get => _barsTake;
+        set
+        {
+            if (_barsTake.Right == value.Right && _barsTake.Bottom == value.Bottom) return;
+
+            _barsTake = value;
+            InvalidateMeasure();
+        }
+    }
+
     private InfiniteCanvas _owner;
 
     /// <summary>The canvas whose viewport and selection this layer places against. Setting it tells the panes, which
@@ -173,8 +188,10 @@ public class CanvasChromeLayer : Panel
 
     protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        var width = Double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width;
-        var height = Double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height;
+        var area = LessBars(new Size<double>(Double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width,
+            Double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height));
+        var width = area.Width;
+        var height = area.Height;
 
         foreach (var child in Children)
         {
@@ -210,7 +227,23 @@ public class CanvasChromeLayer : Panel
 
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
+        PlacePanes(LessBars(finalSize));
 
+        // A pane docked, undocked or resized changes the room the canvas looks through - and nothing else tells it.
+        _owner?.OnChromeArranged();
+        return finalSize;
+    }
+
+    /// <summary>Where the panes stand: the layer less the canvas's shown scroll bars. A pane moved or sized by hand is
+    /// measured against this, as the arrange places it.</summary>
+    internal Size<double> PaneArea => LessBars(RenderSize);
+
+    // The layer less the scroll bars along its right and bottom edges.
+    private Size<double> LessBars(Size<double> size) =>
+        new(Math.Max(0, size.Width - _barsTake.Right), Math.Max(0, size.Height - _barsTake.Bottom));
+
+    private void PlacePanes(Size<double> area)
+    {
         var inset = PaneInset;
         var gap = PaneGap;
 
@@ -218,14 +251,14 @@ public class CanvasChromeLayer : Panel
         // on top of each other.
         var band = GetTopBand();
         double topLeft = inset.Top + band, topRight = inset.Top + band;
-        double bottomLeft = finalSize.Height - inset.Bottom, bottomRight = finalSize.Height - inset.Bottom;
+        double bottomLeft = area.Height - inset.Bottom, bottomRight = area.Height - inset.Bottom;
         double topCenter = inset.Left, bottomCenter = inset.Left;
         double left = 0, right = 0;
 
         var leftTotal = Total(CanvasPanePlacement.Left, gap, true);
         var rightTotal = Total(CanvasPanePlacement.Right, gap, true);
-        left = Math.Max(inset.Top, (finalSize.Height - leftTotal) / 2);
-        right = Math.Max(inset.Top, (finalSize.Height - rightTotal) / 2);
+        left = Math.Max(inset.Top, (area.Height - leftTotal) / 2);
+        right = Math.Max(inset.Top, (area.Height - rightTotal) / 2);
 
         foreach (var pane in _panes)
         {
@@ -256,37 +289,37 @@ public class CanvasChromeLayer : Panel
                     break;
 
                 case CanvasPanePlacement.TopRight:
-                    x = finalSize.Width - inset.Right - pane.Footprint;
+                    x = area.Width - inset.Right - pane.Footprint;
                     y = topRight;
                     topRight += size.Height + gap;
                     break;
 
                 case CanvasPanePlacement.Right:
-                    x = finalSize.Width - inset.Right - pane.Footprint;
+                    x = area.Width - inset.Right - pane.Footprint;
                     y = right;
                     right += size.Height + gap;
                     break;
 
                 case CanvasPanePlacement.BottomRight:
-                    x = finalSize.Width - inset.Right - pane.Footprint;
+                    x = area.Width - inset.Right - pane.Footprint;
                     y = bottomRight - size.Height;
                     bottomRight -= size.Height + gap;
                     break;
 
                 case CanvasPanePlacement.TopCenter:
-                    x = Centered(CanvasPanePlacement.TopCenter, finalSize.Width, gap) + topCenter - inset.Left;
+                    x = Centered(CanvasPanePlacement.TopCenter, area.Width, gap) + topCenter - inset.Left;
                     y = inset.Top;
                     topCenter += pane.Footprint + gap;
                     break;
 
                 case CanvasPanePlacement.BottomCenter:
-                    x = Centered(CanvasPanePlacement.BottomCenter, finalSize.Width, gap) + bottomCenter - inset.Left;
-                    y = finalSize.Height - inset.Bottom - size.Height;
+                    x = Centered(CanvasPanePlacement.BottomCenter, area.Width, gap) + bottomCenter - inset.Left;
+                    y = area.Height - inset.Bottom - size.Height;
                     bottomCenter += pane.Footprint + gap;
                     break;
 
                 case CanvasPanePlacement.Selection:
-                    var over = AboveSelection(size, finalSize, inset);
+                    var over = AboveSelection(size, area, inset);
                     x = over.X;
                     y = over.Y;
                     break;
@@ -295,9 +328,9 @@ public class CanvasChromeLayer : Panel
                     // Asked to open at a POINT - here is where both the room and the pane's own size are known, so
                     // here is where that point becomes the fraction everything else is kept in.
                     if (pane.TakePending(out var asked))
-                        pane.Anchor = CanvasPane.AnchorFor(asked, finalSize, size);
+                        pane.Anchor = CanvasPane.AnchorFor(asked, area, size);
 
-                    var put = CanvasPane.PlaceOf(pane.Anchor, finalSize, size);
+                    var put = CanvasPane.PlaceOf(pane.Anchor, area, size);
                     x = put.X;
                     y = put.Y;
                     break;
@@ -305,15 +338,11 @@ public class CanvasChromeLayer : Panel
 
             // Never off the edge, whatever the arithmetic said: a pane that cannot be reached is a pane that is gone,
             // and there is no edge on the plane itself to find it by.
-            x = Math.Clamp(x, 0, Math.Max(0, finalSize.Width - size.Width));
-            y = Math.Clamp(y, 0, Math.Max(0, finalSize.Height - size.Height));
+            x = Math.Clamp(x, 0, Math.Max(0, area.Width - size.Width));
+            y = Math.Clamp(y, 0, Math.Max(0, area.Height - size.Height));
 
             pane.Arrange(new Rect(x, y, size.Width, size.Height));
         }
-
-        // A pane docked, undocked or resized changes the room the canvas looks through - and nothing else tells it.
-        _owner?.OnChromeArranged();
-        return finalSize;
     }
 
     // Above the selection frame if it fits there, below it if it does not - which is what a context bar has to do, or

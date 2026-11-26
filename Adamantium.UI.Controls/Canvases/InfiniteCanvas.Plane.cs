@@ -91,8 +91,8 @@ public partial class InfiniteCanvas
     private Size<double> Viewport => _viewport is { Width: > 0, Height: > 0 } ? _viewport : ViewportSize;
 
     // What the plane is seen through at `scale`: the viewport less what docked panes take and, along an axis the plane
-    // overflows, less the scroll bar across it - so its last strip can be scrolled out from under the bar. Empty before
-    // there is a viewport.
+    // overflows, less the scroll bar across it - so its last strip can be scrolled out from under the bar. Docked panes
+    // stand above the bars, so the two add up. Empty before there is a viewport.
     private Rect Room(Double scale, out bool across, out bool down)
     {
         across = false;
@@ -311,22 +311,22 @@ public partial class InfiniteCanvas
     {
         if (_horizontalBar == null && _verticalBar == null) return;
 
-        var size = Viewport;
         var bounds = PlaneBounds;
         var scale = Scale;
         var room = Room(scale, out var across, out var down);
+        var acrossTakes = across ? Thick(_horizontalBar) : 0;
+        var downTakes = down ? Thick(_verticalBar) : 0;
 
         _syncingBars = true;
 
         try
         {
-            // Each bar runs along the room it scrolls, the horizontal one under it, the vertical one beside it.
+            // Each bar runs along the viewport's edge, short only of the other bar; the panes stand clear of both.
             Show(_horizontalBar, across, bounds.Width * scale - room.Width, room.Width,
-                room.X - (bounds.X * scale + Offset.X),
-                new Thickness(room.X, 0, size.Width - room.Right, Math.Max(0, size.Height - room.Bottom - Thick(_horizontalBar))));
+                room.X - (bounds.X * scale + Offset.X), new Thickness(0, 0, downTakes, 0));
             Show(_verticalBar, down, bounds.Height * scale - room.Height, room.Height,
-                room.Y - (bounds.Y * scale + Offset.Y),
-                new Thickness(0, room.Y, Math.Max(0, size.Width - room.Right - Thick(_verticalBar)), size.Height - room.Bottom));
+                room.Y - (bounds.Y * scale + Offset.Y), new Thickness(0, 0, 0, acrossTakes));
+            if (_chromeLayer != null) _chromeLayer.BarsTake = new Thickness(0, 0, downTakes, acrossTakes);
         }
         finally
         {
