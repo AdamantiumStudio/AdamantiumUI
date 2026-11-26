@@ -27,10 +27,8 @@ public class PropertySection : Expander
     public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
         typeof(Brush), typeof(PropertySection), new PropertyMetadata(null));
 
-    private static readonly AdamantiumPropertyKey HasMenuPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasMenuProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasMenu), typeof(bool), typeof(PropertySection), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasMenuProperty = HasMenuPropertyKey.Property;
 
     private ButtonBase _menuButton;
 
@@ -92,7 +90,7 @@ public class PropertySection : Expander
     public bool HasMenu
     {
         get => GetValue<bool>(HasMenuProperty);
-        private set => SetValue(HasMenuPropertyKey, value);
+        private set => SetReadOnlyValue(HasMenuProperty, value);
     }
 
     /// <summary>Opens the section's menu under its "⋯" button - under the header when the template has none - or shuts

@@ -62,16 +62,14 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
     /// <summary>Whether this header stands for a contextual tab. A trigger cannot ask "is <see cref="Accent"/> set", so
     /// the fact is stated as its own flag - and it is the ONE thing the coloring hangs on, which is what tells at a
     /// glance which tabs belong together even when their label is turned off.</summary>
-    private static readonly AdamantiumPropertyKey IsContextualPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsContextualProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsContextual), typeof(bool), typeof(RibbonTabHeader),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
-
-    public static readonly AdamantiumProperty IsContextualProperty = IsContextualPropertyKey.Property;
 
     public bool IsContextual
     {
         get => GetValue<bool>(IsContextualProperty);
-        private set => SetValue(IsContextualPropertyKey, value);
+        private set => SetReadOnlyValue(IsContextualProperty, value);
     }
 
     private static void OnContextualGroupChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

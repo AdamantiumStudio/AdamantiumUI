@@ -163,29 +163,25 @@ public class TabControl : Selector
     }
 
     // Properties rather than CLR ones: {TemplateBinding} resolves only an AdamantiumProperty.
-    private static readonly AdamantiumPropertyKey PinnedItemsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty PinnedItemsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(PinnedItems), typeof(ObservableCollection<object>), typeof(TabControl), new PropertyMetadata(null));
 
-    public static readonly AdamantiumProperty PinnedItemsProperty = PinnedItemsPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey UnpinnedItemsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty UnpinnedItemsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(UnpinnedItems), typeof(ObservableCollection<object>), typeof(TabControl), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty UnpinnedItemsProperty = UnpinnedItemsPropertyKey.Property;
 
     /// <summary>The pinned tabs, in the order they were added. Only an authored TabItem can be pinned: a data item has
     /// no IsPinned to read.</summary>
     public ObservableCollection<object> PinnedItems
     {
         get => GetValue<ObservableCollection<object>>(PinnedItemsProperty);
-        private set => SetValue(PinnedItemsPropertyKey, value);
+        private set => SetReadOnlyValue(PinnedItemsProperty, value);
     }
 
     /// <summary>Everything else - the tabs that come and go.</summary>
     public ObservableCollection<object> UnpinnedItems
     {
         get => GetValue<ObservableCollection<object>>(UnpinnedItemsProperty);
-        private set => SetValue(UnpinnedItemsPropertyKey, value);
+        private set => SetReadOnlyValue(UnpinnedItemsProperty, value);
     }
 
     /// <summary>Whether tabs carry a pin button. Off by default.</summary>
@@ -327,16 +323,14 @@ public class TabControl : Selector
         tabs.EnforceTabLimit();
     }
 
-    private static readonly AdamantiumPropertyKey HasUnpinnedTabsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasUnpinnedTabsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasUnpinnedTabs), typeof(bool), typeof(TabControl), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasUnpinnedTabsProperty = HasUnpinnedTabsPropertyKey.Property;
 
     /// <summary>Whether anything is unpinned; with every tab pinned the ordinary row collapses.</summary>
     public bool HasUnpinnedTabs
     {
         get => GetValue<bool>(HasUnpinnedTabsProperty);
-        private set => SetValue(HasUnpinnedTabsPropertyKey, value);
+        private set => SetReadOnlyValue(HasUnpinnedTabsProperty, value);
     }
 
     // A fade, not a slide: the strip is reflowing underneath and a slide would fight the layout.
@@ -349,16 +343,14 @@ public class TabControl : Selector
         });
     }
 
-    private static readonly AdamantiumPropertyKey HasPinnedTabsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasPinnedTabsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasPinnedTabs), typeof(bool), typeof(TabControl), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasPinnedTabsProperty = HasPinnedTabsPropertyKey.Property;
 
     /// <summary>Whether anything is pinned - what the theme shows the pinned row on.</summary>
     public bool HasPinnedTabs
     {
         get => GetValue<bool>(HasPinnedTabsProperty);
-        private set => SetValue(HasPinnedTabsPropertyKey, value);
+        private set => SetReadOnlyValue(HasPinnedTabsProperty, value);
     }
 
     /// <summary>The selected tab's body, derived from the selection.</summary>
@@ -1863,28 +1855,24 @@ public class TabControl : Selector
     private void OnTabStripScrollStateChanged(object sender, EventArgs e) => RefreshTabStripAffordances();
 
     // Stated here, not read off the scroller: a theme trigger watches the templated control.
-    private static readonly AdamantiumPropertyKey CanScrollTabsBackPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty CanScrollTabsBackProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(CanScrollTabsBack), typeof(bool), typeof(TabControl), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty CanScrollTabsBackProperty = CanScrollTabsBackPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey CanScrollTabsForwardPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty CanScrollTabsForwardProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(CanScrollTabsForward), typeof(bool), typeof(TabControl), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty CanScrollTabsForwardProperty = CanScrollTabsForwardPropertyKey.Property;
 
     /// <summary>Whether tabs have gone past the strip's near edge.</summary>
     public bool CanScrollTabsBack
     {
         get => GetValue<bool>(CanScrollTabsBackProperty);
-        private set => SetValue(CanScrollTabsBackPropertyKey, value);
+        private set => SetReadOnlyValue(CanScrollTabsBackProperty, value);
     }
 
     /// <summary>...and past its far edge.</summary>
     public bool CanScrollTabsForward
     {
         get => GetValue<bool>(CanScrollTabsForwardProperty);
-        private set => SetValue(CanScrollTabsForwardPropertyKey, value);
+        private set => SetReadOnlyValue(CanScrollTabsForwardProperty, value);
     }
 
     private void RefreshTabStripAffordances()

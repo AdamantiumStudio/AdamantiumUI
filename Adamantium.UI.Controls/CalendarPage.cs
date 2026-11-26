@@ -11,10 +11,8 @@ namespace Adamantium.UI.Controls;
 /// style shows them.</summary>
 public class CalendarPage : Control
 {
-    private static readonly AdamantiumPropertyKey DisplayModePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty DisplayModeProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(DisplayMode), typeof(CalendarMode), typeof(CalendarPage), new PropertyMetadata(CalendarMode.Month));
-
-    public static readonly AdamantiumProperty DisplayModeProperty = DisplayModePropertyKey.Property;
 
     private readonly List<CalendarMonth> _months = [];
     private readonly List<CalendarButton> _cells = [];
@@ -32,7 +30,7 @@ public class CalendarPage : Control
     public CalendarMode DisplayMode
     {
         get => GetValue<CalendarMode>(DisplayModeProperty);
-        internal set => SetValue(DisplayModePropertyKey, value);
+        internal set => SetReadOnlyValue(DisplayModeProperty, value);
     }
 
     /// <summary>The months shown side by side; empty until the template is applied.</summary>

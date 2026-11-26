@@ -761,13 +761,10 @@ and are put here at a release.
   input to the engine's moved to one internal listener, which a universe of another process uses too.
 - `RenderTargetUniverseOutput` sends its frames through the engine's `SharedSurfaceProducer`, the ring of shared
   surfaces it kept itself before; the panel sees no difference.
-- **Breaking:** a read-only property is written by its owner alone. `AdamantiumProperty.RegisterReadOnly` and
-  `RegisterAttachedReadOnly` return an `AdamantiumPropertyKey`, which the owner keeps private and writes through
-  (`SetValue`, `SetCurrentValue`, `ClearValue` taking the key); the public field is the key's `Property`, for reading,
-  binding from it and naming it in markup. Writing it any other way - `SetValue`, `SetCurrentValue` or `ClearValue`
-  with the property, by name, from a style or a trigger, or through a key its registration did not give out - throws.
-  A control of an application's own declares its read-only properties the same way: `XxxPropertyKey` private,
-  `XxxProperty = XxxPropertyKey.Property` public.
+- **Breaking:** a read-only property is written by the component itself, its heirs included, with the protected
+  `SetReadOnlyValue`. Writing it any other way - `SetValue`, `SetCurrentValue` or `ClearValue`, by name, from a style or
+  a trigger - throws. An attached property is never read-only: `Validation.HasError`, `Errors` and `Error` can be
+  written, and what is written stands until the errors of the element's sources change.
 
 - A leaned map draws far cheaper. A geometry given its triangles - a map's tile, cut with its edge - under one color
   fills from them and its ring rather than from curves the shader walks at every pixel of every layer (a leaned map at

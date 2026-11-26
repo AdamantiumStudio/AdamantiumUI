@@ -9,20 +9,14 @@ namespace Adamantium.UI.Controls;
 /// rather than squeezing the content.</summary>
 public abstract class CalendarButtonBase : ButtonBase
 {
-    private static readonly AdamantiumPropertyKey DatePropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Date),
+    public static readonly AdamantiumProperty DateProperty = AdamantiumProperty.RegisterReadOnly(nameof(Date),
         typeof(DateTime), typeof(CalendarButtonBase), new PropertyMetadata(default(DateTime)));
 
-    public static readonly AdamantiumProperty DateProperty = DatePropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsInactivePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsInactiveProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsInactive), typeof(bool), typeof(CalendarButtonBase), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsInactiveProperty = IsInactivePropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsCursorPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsCursorProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsCursor), typeof(bool), typeof(CalendarButtonBase), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsCursorProperty = IsCursorPropertyKey.Property;
 
     private protected CalendarButtonBase()
     {
@@ -33,21 +27,21 @@ public abstract class CalendarButtonBase : ButtonBase
     public DateTime Date
     {
         get => GetValue<DateTime>(DateProperty);
-        internal set => SetValue(DatePropertyKey, value);
+        internal set => SetReadOnlyValue(DateProperty, value);
     }
 
     /// <summary>Outside the month or the decade shown, or past the first or last day there is.</summary>
     public bool IsInactive
     {
         get => GetValue<bool>(IsInactiveProperty);
-        internal set => SetValue(IsInactivePropertyKey, value);
+        internal set => SetReadOnlyValue(IsInactiveProperty, value);
     }
 
     /// <summary>The cell the keyboard is on, while the calendar's focus is shown.</summary>
     public bool IsCursor
     {
         get => GetValue<bool>(IsCursorProperty);
-        internal set => SetValue(IsCursorPropertyKey, value);
+        internal set => SetReadOnlyValue(IsCursorProperty, value);
     }
 
     internal Calendar Owner { get; set; }

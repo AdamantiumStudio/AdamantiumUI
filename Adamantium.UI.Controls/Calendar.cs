@@ -79,10 +79,8 @@ public class Calendar : Control
     public static readonly AdamantiumProperty TransitionDurationProperty = AdamantiumProperty.Register(
         nameof(TransitionDuration), typeof(double), typeof(Calendar), new PropertyMetadata(0.25));
 
-    private static readonly AdamantiumPropertyKey HeaderTextPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HeaderTextProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HeaderText), typeof(string), typeof(Calendar), new PropertyMetadata(string.Empty));
-
-    public static readonly AdamantiumProperty HeaderTextProperty = HeaderTextPropertyKey.Property;
 
     internal const int DayColumns = 7;
     internal const int CellColumns = 4;
@@ -261,7 +259,7 @@ public class Calendar : Control
     public string HeaderText
     {
         get => GetValue<string>(HeaderTextProperty);
-        private set => SetValue(HeaderTextPropertyKey, value);
+        private set => SetReadOnlyValue(HeaderTextProperty, value);
     }
 
     /// <summary>The days shown, month by month, seven a week and six weeks a month - the current page's: once the page

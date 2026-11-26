@@ -6,25 +6,24 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>A read-only property is written by its owner alone, through the key it keeps: the property everyone else
-/// holds reads it and binds from it, but every way of writing it is refused.</summary>
+/// <summary>A read-only property is written by the component itself, its heirs included: everyone else reads it and
+/// binds from it, but every way of writing it is refused.</summary>
 [TestFixture]
-public class ReadOnlyPropertyKeyTests
+public class ReadOnlyPropertyTests
 {
-    private sealed class Counter : FundamentalUIComponent
+    private class Counter : FundamentalUIComponent
     {
-        private static readonly AdamantiumPropertyKey CountPropertyKey = AdamantiumProperty.RegisterReadOnly(
-            nameof(Count), typeof(int), typeof(Counter), new PropertyMetadata(0));
-
-        public static readonly AdamantiumProperty CountProperty = CountPropertyKey.Property;
+        public static readonly AdamantiumProperty CountProperty = AdamantiumProperty.RegisterReadOnly(nameof(Count),
+            typeof(int), typeof(Counter), new PropertyMetadata(0));
 
         public int Count => GetValue<int>(CountProperty);
 
-        public void Add() => SetValue(CountPropertyKey, Count + 1);
+        public void Add() => SetReadOnlyValue(CountProperty, Count + 1);
+    }
 
-        public void Reset() => ClearValue(CountPropertyKey);
-
-        public void Show(int count) => SetCurrentValue(CountPropertyKey, count);
+    private sealed class Resettable : Counter
+    {
+        public void Reset() => SetReadOnlyValue(CountProperty, 0);
     }
 
     private sealed class Model
@@ -42,6 +41,8 @@ public class ReadOnlyPropertyKeyTests
             get => GetValue<int>(ValueProperty);
             set => SetValue(ValueProperty, value);
         }
+
+        public void WriteAsReadOnly(int value) => SetReadOnlyValue(ValueProperty, value);
     }
 
     [Test]
@@ -76,16 +77,24 @@ public class ReadOnlyPropertyKeyTests
     }
 
     [Test]
-    public void TheOwner_WritesThroughItsKey()
+    public void TheComponent_WritesItsOwn()
     {
         var counter = new Counter();
 
         counter.Add();
         counter.Add();
+
         Assert.That(counter.Count, Is.EqualTo(2));
-        counter.Show(5);
-        Assert.That(counter.Count, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void AnHeir_WritesWhatItInherited()
+    {
+        var counter = new Resettable();
+        counter.Add();
+
         counter.Reset();
+
         Assert.That(counter.Count, Is.Zero);
     }
 
@@ -100,32 +109,18 @@ public class ReadOnlyPropertyKeyTests
             Assert.That(() => counter.SetCurrentValue(Counter.CountProperty, 3), Throws.InvalidOperationException);
             Assert.That(() => counter.ClearValue(Counter.CountProperty), Throws.InvalidOperationException);
             Assert.That(() => counter.SetValue(nameof(Counter.Count), 3), Throws.InvalidOperationException);
+            Assert.That(() => counter.SetBinding(Counter.CountProperty,
+                new Binding(nameof(Model.Count)) { Source = new Model { Count = 3 } }), Throws.InvalidOperationException);
             Assert.That(counter.Count, Is.Zero);
         });
     }
 
     [Test]
-    public void AKeyMadeForTheProperty_ButNotByItsRegistration_WritesNothing()
-    {
-        var counter = new Counter();
-        var forged = new AdamantiumPropertyKey(Counter.CountProperty);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(() => counter.SetValue(forged, 3), Throws.InvalidOperationException);
-            Assert.That(() => counter.SetCurrentValue(forged, 3), Throws.InvalidOperationException);
-            Assert.That(() => counter.ClearValue(forged), Throws.InvalidOperationException);
-            Assert.That(counter.Count, Is.Zero);
-        });
-    }
-
-    [Test]
-    public void AKeyMadeForAPropertyAnyoneWrites_WritesNothing()
+    public void APropertyAnyoneWrites_IsNotWrittenAsReadOnly()
     {
         var shown = new Shown();
-        var forged = new AdamantiumPropertyKey(Shown.ValueProperty);
 
-        Assert.That(() => shown.SetValue(forged, 3), Throws.InvalidOperationException);
+        Assert.That(() => shown.WriteAsReadOnly(3), Throws.InvalidOperationException);
         Assert.That(shown.Value, Is.Zero);
     }
 
@@ -137,7 +132,8 @@ public class ReadOnlyPropertyKeyTests
         counter.SetBinding(Counter.CountProperty, new Binding(nameof(Model.Count)) { Mode = BindingMode.OneWayToSource });
 
         counter.Add();
+        counter.Add();
 
-        Assert.That(model.Count, Is.EqualTo(1));
+        Assert.That(model.Count, Is.EqualTo(2));
     }
 }

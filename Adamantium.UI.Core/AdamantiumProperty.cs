@@ -55,13 +55,9 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
 
    public Boolean IsAttached { get; private set; }
 
-   public Boolean ReadOnly => key != null;
-
-   // The one key that writes a read-only property, made with it; a key made any other way writes nothing.
-   private readonly AdamantiumPropertyKey key;
-
-   /// <summary>Whether <paramref name="writer"/> is the key made with this property.</summary>
-   internal bool IsWrittenBy(AdamantiumPropertyKey writer) => ReferenceEquals(key, writer);
+   /// <summary>Whether only the component itself writes the property, by
+   /// <see cref="AdamantiumComponent.SetReadOnlyValue"/>.</summary>
+   public Boolean ReadOnly { get; }
 
    public bool IsValidType(object value)
    {
@@ -223,7 +219,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       }
       AddDefaultMetadata(ownerType, metadata);
       PropertyId = nextPropertyId++;
-      key = readOnly ? new AdamantiumPropertyKey(this) : null;
+      ReadOnly = readOnly;
    }
 
     private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata, bool readOnly = false)
@@ -245,7 +241,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       AddDefaultMetadata(ownerType, metadata);
 
       PropertyId = nextPropertyId++;
-      key = readOnly ? new AdamantiumPropertyKey(this) : null;
+      ReadOnly = readOnly;
    }
 
     private AdamantiumProperty(String name, Type valueType, Type ownerType, PropertyMetadata metadata,
@@ -269,7 +265,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       AddDefaultMetadata(ownerType, metadata);
 
       PropertyId = nextPropertyId++;
-      key = readOnly ? new AdamantiumPropertyKey(this) : null;
+      ReadOnly = readOnly;
    }
 
    private static void CheckType(Type valueType, PropertyMetadata metadata, String name)
@@ -365,59 +361,36 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       return property;
    }
 
-   /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
-   public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
-   {
-      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
-         readOnly: true)
-      {
-         IsAttached = true
-      };
-      AdamantiumPropertyMap.Register(ownerType, property);
-
-      return property.key;
-   }
-
-   /// <summary>Registers an attached property only its owner writes - through the key returned, kept to itself.</summary>
-   public static AdamantiumPropertyKey RegisterAttachedReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
-   {
-      AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
-         validateValueCallBack, readOnly: true)
-      {
-         IsAttached = true
-      };
-      AdamantiumPropertyMap.Register(ownerType, property);
-
-      return property.key;
-   }
-
-   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
-   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType)
+   /// <summary>Registers a property only the component itself writes, by
+   /// <see cref="AdamantiumComponent.SetReadOnlyValue"/>.</summary>
+   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property.key;
+      return property;
    }
 
-   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
-   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
+   /// <summary>Registers a property only the component itself writes, by
+   /// <see cref="AdamantiumComponent.SetReadOnlyValue"/>.</summary>
+   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
          readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property.key;
+      return property;
    }
 
-   /// <summary>Registers a property only its owner writes - through the key returned, kept to itself.</summary>
-   public static AdamantiumPropertyKey RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
+   /// <summary>Registers a property only the component itself writes, by
+   /// <see cref="AdamantiumComponent.SetReadOnlyValue"/>.</summary>
+   public static AdamantiumProperty RegisterReadOnly(String name, Type propertyType, Type ownerType, PropertyMetadata propertyMetadata, ValidateValueCallBack validateValueCallBack)
    {
       AdamantiumProperty property = new AdamantiumProperty(name, propertyType, ownerType, propertyMetadata,
          validateValueCallBack, readOnly: true);
       AdamantiumPropertyMap.Register(ownerType, property);
 
-      return property.key;
+      return property;
    }
 
    public bool Equals(AdamantiumProperty other)

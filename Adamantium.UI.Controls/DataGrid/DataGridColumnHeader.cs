@@ -130,16 +130,14 @@ public class DataGridColumnHeader : ContentControl
 
     /// <summary>The number as the theme shows it, or empty when there is none - a template binds text, not an int it
     /// would have to hide at zero.</summary>
-    private static readonly AdamantiumPropertyKey SortLevelTextPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty SortLevelTextProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(SortLevelText), typeof(string), typeof(DataGridColumnHeader),
         new PropertyMetadata(string.Empty, PropertyMetadataOptions.AffectsRender));
-
-    public static readonly AdamantiumProperty SortLevelTextProperty = SortLevelTextPropertyKey.Property;
 
     public string SortLevelText
     {
         get => GetValue<string>(SortLevelTextProperty);
-        private set => SetValue(SortLevelTextPropertyKey, value);
+        private set => SetReadOnlyValue(SortLevelTextProperty, value);
     }
 
     public bool IsFiltered

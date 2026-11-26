@@ -32,10 +32,8 @@ public class WebViewSignInDialog : Control
         typeof(string), typeof(WebViewSignInDialog), new PropertyMetadata(string.Empty, OnErrorChanged));
 
     /// <summary>Whether there is an <see cref="Error"/> to say; the theme shows it only then.</summary>
-    private static readonly AdamantiumPropertyKey HasErrorPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasErrorProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasError), typeof(bool), typeof(WebViewSignInDialog), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasErrorProperty = HasErrorPropertyKey.Property;
 
     public static readonly AdamantiumProperty UserNameProperty = AdamantiumProperty.Register(nameof(UserName),
         typeof(string), typeof(WebViewSignInDialog),
@@ -151,7 +149,7 @@ public class WebViewSignInDialog : Control
     public bool HasError
     {
         get => GetValue<bool>(HasErrorProperty);
-        private set => SetValue(HasErrorPropertyKey, value);
+        private set => SetReadOnlyValue(HasErrorProperty, value);
     }
 
     private static void OnErrorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>

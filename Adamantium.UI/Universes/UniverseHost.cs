@@ -30,10 +30,8 @@ public class UniverseHost : Behavior<RenderTargetPanel>
     public static readonly AdamantiumProperty UniverseProperty = AdamantiumProperty.Register(nameof(Universe),
         typeof(Universe), typeof(UniverseHost), new PropertyMetadata(null, OnUniverseChanged));
 
-    private static readonly AdamantiumPropertyKey OutputPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty OutputProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(Output), typeof(UniverseOutput), typeof(UniverseHost), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty OutputProperty = OutputPropertyKey.Property;
 
     /// <summary>The universe to show, or null for none.</summary>
     public Universe Universe
@@ -47,7 +45,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
     public UniverseOutput Output
     {
         get => GetValue<UniverseOutput>(OutputProperty);
-        private set => SetValue(OutputPropertyKey, value);
+        private set => SetReadOnlyValue(OutputProperty, value);
     }
 
     private static void OnUniverseChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)

@@ -254,30 +254,26 @@ public class RibbonGallery : Selector
     // in columns. Small is where a gallery stops being one - three thumbnails in a strip say nothing - so there it
     // becomes the chevron alone, and the whole set is one press away.
 
-    private static readonly AdamantiumPropertyKey EffectiveColumnsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty EffectiveColumnsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(EffectiveColumns), typeof(int), typeof(RibbonGallery),
         new PropertyMetadata(5, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty EffectiveColumnsProperty = EffectiveColumnsPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsCollapsedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsCollapsedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsCollapsed), typeof(bool), typeof(RibbonGallery),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
-
-    public static readonly AdamantiumProperty IsCollapsedProperty = IsCollapsedPropertyKey.Property;
 
     /// <summary>Columns at the size the group is drawing it - what the items panel is laid out in.</summary>
     public int EffectiveColumns
     {
         get => GetValue<int>(EffectiveColumnsProperty);
-        private set => SetValue(EffectiveColumnsPropertyKey, value);
+        private set => SetReadOnlyValue(EffectiveColumnsProperty, value);
     }
 
     /// <summary>Nothing but the chevron: the band has no room for a grid of pictures.</summary>
     public bool IsCollapsed
     {
         get => GetValue<bool>(IsCollapsedProperty);
-        private set => SetValue(IsCollapsedPropertyKey, value);
+        private set => SetReadOnlyValue(IsCollapsedProperty, value);
     }
 
     public RibbonGallery()
@@ -357,15 +353,11 @@ public class RibbonGallery : Selector
     public static readonly AdamantiumProperty FirstRowProperty = AdamantiumProperty.Register(nameof(FirstRow),
         typeof(int), typeof(RibbonGallery), new PropertyMetadata(0, OnFirstRowChanged));
 
-    private static readonly AdamantiumPropertyKey CanScrollUpPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty CanScrollUpProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(CanScrollUp), typeof(bool), typeof(RibbonGallery), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty CanScrollUpProperty = CanScrollUpPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey CanScrollDownPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty CanScrollDownProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(CanScrollDown), typeof(bool), typeof(RibbonGallery), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty CanScrollDownProperty = CanScrollDownPropertyKey.Property;
 
     /// <summary>The topmost shown row.</summary>
     public int FirstRow
@@ -377,13 +369,13 @@ public class RibbonGallery : Selector
     public bool CanScrollUp
     {
         get => GetValue<bool>(CanScrollUpProperty);
-        private set => SetValue(CanScrollUpPropertyKey, value);
+        private set => SetReadOnlyValue(CanScrollUpProperty, value);
     }
 
     public bool CanScrollDown
     {
         get => GetValue<bool>(CanScrollDownProperty);
-        private set => SetValue(CanScrollDownPropertyKey, value);
+        private set => SetReadOnlyValue(CanScrollDownProperty, value);
     }
 
     /// <summary>How many rows the items make at the columns currently drawn.</summary>
