@@ -27,16 +27,26 @@ internal static unsafe class MacOSAccessibilityElement
     private static readonly IntPtr StringClass = ObjCRuntime.GetClass("NSString");
     private static readonly IntPtr WindowSelector = ObjCRuntime.RegisterSelector("window");
 
-    private static readonly Dictionary<IntPtr, string> Gated = new()
+    private static readonly Dictionary<IntPtr, string> Gated = GatedSelectors();
+
+    // The actions and setters, and the text's getters, offered only where the peer can.
+    private static Dictionary<IntPtr, string> GatedSelectors()
     {
-        [ObjCRuntime.RegisterSelector("accessibilityPerformPress")] = "accessibilityPerformPress",
-        [ObjCRuntime.RegisterSelector("accessibilityPerformIncrement")] = "accessibilityPerformIncrement",
-        [ObjCRuntime.RegisterSelector("accessibilityPerformDecrement")] = "accessibilityPerformDecrement",
-        [ObjCRuntime.RegisterSelector("setAccessibilityValue:")] = "setAccessibilityValue:",
-        [ObjCRuntime.RegisterSelector("setAccessibilityExpanded:")] = "setAccessibilityExpanded:",
-        [ObjCRuntime.RegisterSelector("setAccessibilityFocused:")] = "setAccessibilityFocused:",
-        [ObjCRuntime.RegisterSelector("accessibilityPerformShowMenu")] = "accessibilityPerformShowMenu",
-    };
+        var gated = new Dictionary<IntPtr, string>();
+        foreach (var name in (string[])["accessibilityPerformPress", "accessibilityPerformIncrement",
+                     "accessibilityPerformDecrement", "setAccessibilityValue:", "setAccessibilityExpanded:",
+                     "setAccessibilityFocused:", "accessibilityPerformShowMenu", "setAccessibilitySelectedTextRange:"])
+        {
+            gated[ObjCRuntime.RegisterSelector(name)] = name;
+        }
+
+        foreach (var name in MacOSAccessibilityText.Selectors)
+        {
+            gated[ObjCRuntime.RegisterSelector(name)] = name;
+        }
+
+        return gated;
+    }
 
     /// <summary>The class, registered with the runtime on first use.</summary>
     private static readonly IntPtr Class = new ObjCClassBuilder("AdamantiumAccessibilityElement", "NSAccessibilityElement")
@@ -67,6 +77,7 @@ internal static unsafe class MacOSAccessibilityElement
         .AddMethod("accessibilityPerformDecrement", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&Decrement, Boolean)
         .AddMethod("accessibilityPerformShowMenu", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, byte>)&ShowMenu, Boolean)
         .AddMethod("isAccessibilitySelectorAllowed:", (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte>)&IsAllowed, "B@::")
+        .AddText()
         .Register();
 
     /// <summary>A new element for <paramref name="node"/>, owned by the caller (<see cref="Release"/>).</summary>
@@ -187,7 +198,7 @@ internal static unsafe class MacOSAccessibilityElement
     // An action or setter the peer has no way to do is not offered; what is not gated, AppKit decides.
     [UnmanagedCallersOnly]
     private static byte IsAllowed(IntPtr self, IntPtr selector, IntPtr asked) =>
-        !Gated.TryGetValue(asked, out var name) ? (byte)1 : Flag(NodeOf(self)?.Allows(name));
+        !Gated.TryGetValue(asked, out var name) ? (byte)1 : Flag(NodeOf(self)?.Offers(name));
 
     private static byte Flag(bool? value) => value == true ? (byte)1 : (byte)0;
 

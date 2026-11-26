@@ -119,6 +119,12 @@ internal sealed class MacOSAccessibility : IDisposable
     /// <summary><paramref name="peer"/>'s place on AppKit's desktop.</summary>
     public CGRect FrameOf(AutomationPeer peer) => _toPoints(Read(() => peer.BoundingRectangle, Rect.Empty));
 
+    /// <summary>A rectangle on screen in pixels, on AppKit's desktop.</summary>
+    public CGRect ToPoints(Rect pixels) => _toPoints(pixels);
+
+    /// <summary>A point of AppKit's desktop, on screen in pixels.</summary>
+    public PixelPoint ToPixels(CGPoint point) => _toPixels(point);
+
     /// <summary>The element of <paramref name="peer"/>, made the first time it is asked for; owned by this, valid until
     /// the next question starts.</summary>
     public IntPtr ElementOf(AutomationPeer peer)
