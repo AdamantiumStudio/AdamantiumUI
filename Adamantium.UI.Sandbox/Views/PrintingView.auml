@@ -14,6 +14,24 @@
                   MarginBottom="16"/>
         <Button x:Name="PrintSample" Classes="Accent" Content="{Localize PrintingStrings.Print}"
                 Command="{Binding PrintCommand}" HorizontalAlignment="Left" MinWidth="120" MarginBottom="12"/>
-        <TextBlock x:Name="PrintOutcome" Text="{Binding Outcome}" TextWrapping="WrapByWords"/>
+        <TextBlock x:Name="PrintOutcome" Text="{Binding Outcome}" TextWrapping="WrapByWords" MarginBottom="24"/>
+        <!-- An element printed as it shows: cut to its rounded corners, its text faded. -->
+        <Border x:Name="SampleCard" Width="360" CornerRadius="14" ClipToBounds="True" Padding="20"
+                HorizontalAlignment="Left" MarginBottom="12">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#3B82F6" Offset="0"/>
+                    <GradientStop Color="#8B5CF6" Offset="0.5"/>
+                    <GradientStop Color="#EC4899" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Localize PrintingStrings.CardTitle}" FontSize="22" Foreground="White" MarginBottom="8"/>
+                <TextBlock Text="{Localize PrintingStrings.CardText}" TextWrapping="WrapByWords" Foreground="White"
+                           Opacity="0.8"/>
+            </StackPanel>
+        </Border>
+        <Button x:Name="PrintCard" Content="{Localize PrintingStrings.PrintCard}" Command="{Binding PrintCardCommand}"
+                CommandParameter="{Binding ElementName=SampleCard}" HorizontalAlignment="Left" MinWidth="120"/>
     </StackPanel>
 </View>

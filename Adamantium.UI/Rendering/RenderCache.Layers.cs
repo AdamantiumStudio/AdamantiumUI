@@ -476,7 +476,7 @@ public partial class RenderCache
         return true;
     }
 
-    private static bool WantsLayer(IUIComponent component) => component.IsLayer || component.OpacityMask != null ||
+    internal static bool WantsLayer(IUIComponent component) => component.IsLayer || component.OpacityMask != null ||
                                                               component.SoftEdge > 0 ||
                                                               component.Reflection is { Shows: true };
 
