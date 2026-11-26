@@ -30,7 +30,12 @@
                 </LinearGradientBrush>
             </Border.Background>
             <StackPanel Orientation="Vertical">
-                <TextBlock Text="{Localize PrintingStrings.CardTitle}" FontSize="22" Foreground="White" MarginBottom="8"/>
+                <!-- Letters with a shadow: the shadow is a picture, the letters over it stay vector. -->
+                <TextBlock Text="{Localize PrintingStrings.CardTitle}" FontSize="22" Foreground="White" MarginBottom="8">
+                    <TextBlock.TextShadow>
+                        <TextShadow Blur="3" OffsetX="0" OffsetY="2"/>
+                    </TextBlock.TextShadow>
+                </TextBlock>
                 <TextBlock Text="{Localize PrintingStrings.CardText}" TextWrapping="WrapByWords" Foreground="White"
                            Opacity="0.8"/>
             </StackPanel>

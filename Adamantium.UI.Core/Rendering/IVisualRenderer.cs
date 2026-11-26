@@ -41,11 +41,12 @@ public interface IVisualRenderer
     /// <summary>Snapshots <paramref name="region"/> of a live element without reparenting it: a rectangle in the element's
     /// own units - past its edges too, where its shadow or reflection reaches - drawn at <paramref name="scale"/> device
     /// pixels to the unit, the element upright whatever turns it on the screen and unfaded by its own opacity: the caller
-    /// fades it. <paramref name="alone"/> draws the element's own drawing only, without what it holds, and unfaded by its
-    /// self opacity too; with what it holds, that one stays inside, as in a layer on the screen.
+    /// fades it. <paramref name="content"/> says what of it: all it holds - its self opacity staying inside, as in a
+    /// layer on the screen - or its own drawing, or its shadows and glows alone, each unfaded by its self opacity too.
     /// <paramref name="onReady"/> gets the bitmap on the UI thread; null when the region is empty or the element is in no
     /// tree. Used to print what is not vector.</summary>
-    void RequestSnapshot(IUIComponent visual, Rect region, double scale, bool alone, Action<ImageSource> onReady);
+    void RequestSnapshot(IUIComponent visual, Rect region, double scale, SnapshotContent content,
+        Action<ImageSource> onReady);
 
     /// <summary>
     /// Renders a DETACHED visual off-screen through the same two-stage split: recorded on the loop thread, drawn on the

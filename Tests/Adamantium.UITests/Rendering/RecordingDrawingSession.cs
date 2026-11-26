@@ -17,9 +17,13 @@ internal sealed class RecordingDrawingSession : IDrawingSession
 
     public List<(ImageSource Image, Rect Destination)> Images { get; } = [];
 
+    /// <summary>The shapes, texts and placed pictures in the order they came: "shape", "text", "picture".</summary>
+    public List<string> Order { get; } = [];
+
     public IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Matrix4x4F transform)
     {
         Geometries.Add((brush, geometry, pen, transform));
+        Order.Add("shape");
         return this;
     }
 
@@ -48,6 +52,7 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4F transform)
     {
         PlacedImages.Add((image, destinationRect, transform));
+        Order.Add("picture");
         return this;
     }
 
@@ -102,8 +107,13 @@ internal sealed class RecordingDrawingSession : IDrawingSession
         Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
         Texts.Add((textLayout, transform, desiredSize.Width));
+        TextBackgrounds.Add(background);
+        Order.Add("text");
         return this;
     }
+
+    /// <summary>The background each text in <see cref="Texts"/> was drawn with.</summary>
+    public List<Brush> TextBackgrounds { get; } = [];
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke) => this;
@@ -168,4 +178,7 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     }
 
     public IDrawingSession PushImage(ImageSource image) => this;
+
+    /// <summary>Whether it stands for a session that draws text's glyph effects itself, as the screen does.</summary>
+    public bool DrawsGlyphEffects { get; init; }
 }

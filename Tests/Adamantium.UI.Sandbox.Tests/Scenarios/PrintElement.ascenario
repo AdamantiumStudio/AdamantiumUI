@@ -7,8 +7,9 @@
     <Wait Target="id=PART_Printer" Value="Office laser (sample)" />
     <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 1" />
 
+    <!-- The job ends once the card's pictures - its shadow, its heading's shadow - are made on the GPU. -->
     <Invoke Target="id=PART_Print" />
     <Absent Target="id=PART_Printer" />
-    <Expect Target="id=PrintOutcome" Name="Sent to Office laser (sample): 1 × 1" />
+    <Wait Target="id=PrintOutcome" Name="Sent to Office laser (sample): 1 × 1" Timeout="10s" />
     <Toggle Target="name=Sample printers" />
 </Scenario>
