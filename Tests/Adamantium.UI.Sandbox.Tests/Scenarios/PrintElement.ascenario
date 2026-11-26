@@ -1,0 +1,14 @@
+<Scenario xmlns="http://adamantium/automation/scenario"
+          Description="An element printed as it shows: the sample card fills one sheet in the print dialog and reaches the printer.">
+    <Select Target="id=GalleryTabs/name=Printing" />
+    <Toggle Target="name=Sample printers" />
+
+    <Invoke Target="id=PrintCard" />
+    <Wait Target="id=PART_Printer" Value="Office laser (sample)" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 1" />
+
+    <Invoke Target="id=PART_Print" />
+    <Absent Target="id=PART_Printer" />
+    <Expect Target="id=PrintOutcome" Name="Sent to Office laser (sample): 1 × 1" />
+    <Toggle Target="name=Sample printers" />
+</Scenario>

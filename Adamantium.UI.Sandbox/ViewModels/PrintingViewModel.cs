@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using Adamantium.MVVM;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Printing;
 using Adamantium.UI.Sandbox.Localization;
 using Adamantium.UI.Sandbox.Printing;
 
@@ -42,9 +44,20 @@ public partial class PrintingViewModel : TabPageViewModel
     private void Offer() => SystemPrinting.Platform = SamplePrinters ? _samples : SystemPrinters ? _system : null;
 
     [Command]
-    private async Task Print()
+    private async Task Print() => Tell(await _printing.PrintAsync(new SamplePrintDocument((int)System.Math.Max(1, Pages))));
+
+    /// <summary>Prints the element the button names - the sample card, as it shows.</summary>
+    [Command]
+    private async Task PrintCard(object card)
     {
-        var result = await _printing.PrintAsync(new SamplePrintDocument((int)System.Math.Max(1, Pages)));
+        if (card is IUIComponent element)
+        {
+            Tell(await _printing.PrintAsync(new ElementPrintDocument(element, PrintingStrings.CardTitle)));
+        }
+    }
+
+    private void Tell(PrintResult result)
+    {
         Outcome = result switch
         {
             PrintResult.Printed when SamplePrinters => PrintingStrings.Printed + " " + _samples.LastJob,

@@ -503,7 +503,7 @@ public partial class RenderCache
     }
 
     // Deep enough for any real tree and far short of what a cycle reaches.
-    private const int MaxTreeDepth = 4096;
+    internal const int MaxTreeDepth = 4096;
 
     // A walk above ran past what the tree could honestly hold. The plan cannot be trusted and is given up.
     private bool _rankWalkBroken;
@@ -553,9 +553,16 @@ public partial class RenderCache
     // A component's children in PAINT order (drawn first = underneath) - the same precedence the full walk's stack uses.
     internal static void ChildrenInPaintOrder(IUIComponent parent, List<IUIComponent> into)
     {
+        PaintOrderOf(parent, into);
+        Core.Diagnostics.RuntimeStats.LastRecordPlanScans += into.Count;
+    }
+
+    /// <summary>The children in paint order, as <see cref="ChildrenInPaintOrder"/>, for a walk that is no record plan -
+    /// one that prints - and so counts no scans.</summary>
+    internal static void PaintOrderOf(IUIComponent parent, List<IUIComponent> into)
+    {
         into.Clear();
         foreach (var child in parent.VisualChildren) into.Add(child);
-        Core.Diagnostics.RuntimeStats.LastRecordPlanScans += into.Count;
 
         var anyZ = false;
         foreach (var child in into)
