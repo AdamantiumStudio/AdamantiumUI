@@ -131,6 +131,10 @@ public unsafe class MacOSAccessibilityTests
             Assert.That(Allowed(slider, "accessibilityPerformIncrement"), Is.True);
             Assert.That(Allowed(slider, "setAccessibilityValue:"), Is.True);
             Assert.That(Allowed(label, "accessibilityLabel"), Is.True, "what is not gated is AppKit's to decide");
+            Assert.That(Allowed(label, "isAccessibilityExpanded"), Is.False, "not one that opens: told neither open nor shut");
+            Assert.That(Allowed(label, "isAccessibilitySelected"), Is.False);
+            Assert.That(Allowed(slider, "accessibilityMinValue"), Is.True);
+            Assert.That(Allowed(label, "accessibilityMinValue"), Is.False);
         });
     }
 
@@ -309,6 +313,123 @@ public unsafe class MacOSAccessibilityTests
         check.IsChecked = true;
 
         Assert.That(_told, Is.Empty);
+    }
+
+    [Test]
+    public void AFieldsText_IsReadByRange_AndSelected()
+    {
+        var box = new TextBox { Text = "Hello world" };
+        _root.Children.Add(box);
+        Settle();
+        ((Adamantium.UI.Core.Automation.ITextProvider)box.GetAutomationPeer()
+            .GetPattern(Adamantium.UI.Core.Automation.PatternId.Text)).Select(6, 5);
+        var element = ElementOf(box);
+
+        var count = ((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(element, Selector("accessibilityNumberOfCharacters"));
+        var part = NSString.ToManaged(((delegate* unmanaged<IntPtr, IntPtr, NSRange, IntPtr>)ObjCRuntime.MessageSend)(
+            element, Selector("accessibilityStringForRange:"), new NSRange(0, 5)));
+        var selected = ((delegate* unmanaged<IntPtr, IntPtr, NSRange>)ObjCRuntime.MessageSend)(element, Selector("accessibilitySelectedTextRange"));
+        var line = ((delegate* unmanaged<IntPtr, IntPtr, nint, nint>)ObjCRuntime.MessageSend)(element, Selector("accessibilityLineForIndex:"), 3);
+        var lineRange = ((delegate* unmanaged<IntPtr, IntPtr, nint, NSRange>)ObjCRuntime.MessageSend)(
+            element, Selector("accessibilityRangeForLine:"), 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((int)count, Is.EqualTo(11));
+            Assert.That(part, Is.EqualTo("Hello"));
+            Assert.That(Text(element, "accessibilitySelectedText"), Is.EqualTo("world"));
+            Assert.That(selected, Is.EqualTo(new NSRange(6, 5)));
+            Assert.That((int)line, Is.EqualTo(0));
+            Assert.That(lineRange, Is.EqualTo(new NSRange(0, 11)));
+            Assert.That(Allowed(element, "accessibilityStringForRange:"), Is.True);
+        });
+
+        ((delegate* unmanaged<IntPtr, IntPtr, NSRange, void>)ObjCRuntime.MessageSend)(
+            element, Selector("setAccessibilitySelectedTextRange:"), new NSRange(0, 5));
+        Assert.That((box.SelectionStart, box.SelectionLength), Is.EqualTo((0, 5)));
+    }
+
+    [Test]
+    public void AWholeCharacter_IsOne_AndNoLineComesAfterTheLast()
+    {
+        var box = new TextBox { Text = "a😀b" };
+        _root.Children.Add(box);
+        Settle();
+        var element = ElementOf(box);
+
+        var emoji = ((delegate* unmanaged<IntPtr, IntPtr, nint, NSRange>)ObjCRuntime.MessageSend)(
+            element, Selector("accessibilityRangeForIndex:"), 2);
+        var pastTheLast = ((delegate* unmanaged<IntPtr, IntPtr, nint, NSRange>)ObjCRuntime.MessageSend)(
+            element, Selector("accessibilityRangeForLine:"), 5);
+        var attributed = ((delegate* unmanaged<IntPtr, IntPtr, NSRange, IntPtr>)ObjCRuntime.MessageSend)(
+            element, Selector("accessibilityAttributedStringForRange:"), new NSRange(1, 2));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(emoji, Is.EqualTo(new NSRange(1, 2)), "both halves of the surrogate pair");
+            Assert.That(pastTheLast.IsFound, Is.False);
+            Assert.That(NSAttributedString.TextOf(attributed), Is.EqualTo("😀"));
+        });
+    }
+
+    // A peer that tells it holds a password and would give its text: the bridge gives none.
+    [Test]
+    public void APasswordsText_IsNotTold_ThoughItsPeerHasIt()
+    {
+        var element = _accessibility.ElementOf(new PasswordTextPeer());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(element,
+                Selector("accessibilityNumberOfCharacters")), Is.Zero);
+            Assert.That(Allowed(element, "accessibilityStringForRange:"), Is.False);
+            Assert.That(NSObject.Send(element, Selector("accessibilityValue")), Is.EqualTo(IntPtr.Zero));
+        });
+    }
+
+    private sealed class PasswordTextPeer : Adamantium.UI.Core.Automation.AutomationPeer, Adamantium.UI.Core.Automation.ITextProvider
+    {
+        public override Adamantium.UI.Core.Automation.AutomationControlType ControlType =>
+            Adamantium.UI.Core.Automation.AutomationControlType.Edit;
+        public override string Name => "Password";
+        public override string AutomationId => string.Empty;
+        public override string HelpText => string.Empty;
+        public override string ClassName => nameof(PasswordTextPeer);
+        public override Rect BoundingRectangle => Rect.Empty;
+        public override bool IsEnabled => true;
+        public override bool IsOffscreen => false;
+        public override bool HasKeyboardFocus => false;
+        public override bool IsKeyboardFocusable => true;
+        public override bool IsPassword => true;
+        public override System.Collections.Generic.IReadOnlyList<Adamantium.UI.Core.Automation.AutomationPeer> GetChildren() => [];
+        public override Adamantium.UI.Core.Automation.AutomationPeer GetParent() => null;
+        public override void SetFocus() { }
+        public string Text => "hunter2";
+        public int SelectionStart => 0;
+        public int SelectionLength => 0;
+        public void Select(int start, int length) { }
+        public int LineOf(int index) => 0;
+        public (int Start, int End) LineRange(int line) => (0, Text.Length);
+        public System.Collections.Generic.IReadOnlyList<Rect> Bounds(int start, int end) => [];
+        public int IndexAt(PixelPoint screen) => 0;
+        public void ScrollIntoView(int index) { }
+    }
+
+    [Test]
+    public void APasswordsText_IsNotTold()
+    {
+        var box = new PasswordBox { Password = "hunter2" };
+        _root.Children.Add(box);
+        Settle();
+        var element = ElementOf(box);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(element, Selector("accessibilityNumberOfCharacters")),
+                Is.Zero);
+            Assert.That(Allowed(element, "accessibilityStringForRange:"), Is.False);
+            Assert.That(Allowed(element, "setAccessibilitySelectedTextRange:"), Is.False);
+        });
     }
 
     private void Settle()
