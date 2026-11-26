@@ -41,6 +41,11 @@ internal sealed class MacOSAccessibility : IDisposable
     private long _layoutToldAt = long.MinValue / 2;
     private int _layoutPending;
     private bool _relaying;
+    private const long QuietFor = 60_000;
+    private const long QuietCheckEvery = 30_000;
+    private readonly Func<bool> _voiceOverOn;
+    private long _askedAt;
+    private long _checkedAt;
     private bool _disposed;
 
     /// <param name="root">The window's own peer, whose children are the window's elements.</param>
@@ -52,10 +57,13 @@ internal sealed class MacOSAccessibility : IDisposable
     /// <param name="notify">Tells the system a notification of an element, which it is handed held and lets go of
     /// - on AppKit's thread, which <paramref name="onMainThread"/> runs work on, when null.</param>
     /// <param name="onMainThread">Runs work on AppKit's thread, for the notifications; it must run all it is given.</param>
+    /// <param name="voiceOverOn">Whether VoiceOver is on: asked once nothing was asked for a minute, to stop listening.
+    /// </param>
     public MacOSAccessibility(Func<AutomationPeer> root, IntPtr container, Func<Rect, CGRect> toPoints,
         Func<CGPoint, PixelPoint> toPixels, Action<Action> post = null, Action<IntPtr, string> notify = null,
-        Action<Action> onMainThread = null)
+        Action<Action> onMainThread = null, Func<bool> voiceOverOn = null)
     {
+        _voiceOverOn = voiceOverOn ?? (() => NSAccessibility.IsVoiceOverOn);
         _root = root;
         _container = container;
         _toPoints = toPoints;
@@ -154,21 +162,60 @@ internal sealed class MacOSAccessibility : IDisposable
             _madeSincePruned++;
             var element = MacOSAccessibilityElement.Create(new MacOSAccessibilityNode(this, peer));
             _elements[peer.RuntimeId] = element;
-            // The first element asked for means an assistive technology looks: from then on it is told what changes.
-            if (!_relaying)
-            {
-                _relaying = true;
-                AutomationEvents.Raised += OnRaised;
-            }
-
+            Relay();
             return element;
         }
+    }
+
+    // A question means an assistive technology looks: from then on - until it has asked nothing for a minute and
+    // VoiceOver is off - it is told what changes.
+    private void Relay()
+    {
+        Volatile.Write(ref _askedAt, Environment.TickCount64);
+        lock (_lock)
+        {
+            if (_relaying || _disposed)
+            {
+                return;
+            }
+
+            _relaying = true;
+            AutomationEvents.Raised += OnRaised;
+        }
+    }
+
+    // On the loop, at most every half minute: nothing asked for a minute and VoiceOver off, nobody listens any more.
+    private bool StoppedListening()
+    {
+        var now = Environment.TickCount64;
+        if (now - _checkedAt < QuietCheckEvery)
+        {
+            return false;
+        }
+
+        _checkedAt = now;
+        if (now - Volatile.Read(ref _askedAt) < QuietFor || _voiceOverOn())
+        {
+            return false;
+        }
+
+        lock (_lock)
+        {
+            if (_relaying)
+            {
+                _relaying = false;
+                AutomationEvents.Raised -= OnRaised;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Reads <paramref name="read"/> on the loop; <paramref name="none"/> when it does not answer in time or fails.
     /// </summary>
     public T Read<T>(Func<T> read, T none)
     {
+        Relay();
         try
         {
             return LoopCall.Run(_read, read, CallTimeout);
@@ -223,7 +270,7 @@ internal sealed class MacOSAccessibility : IDisposable
     private void OnRaised(object sender, AutomationEventArgs e)
     {
         // This window's: in it, or - a menu shut, already out of it - an element made for it.
-        if (e.Peer == null || (_root() as UIComponentAutomationPeer)?.Owner is not { } window ||
+        if (StoppedListening() || e.Peer == null || (_root() as UIComponentAutomationPeer)?.Owner is not { } window ||
             !ReferenceEquals((e.Element as UIComponent)?.RootVisual, window) && Existing(e.Peer) == IntPtr.Zero)
         {
             return;
@@ -359,7 +406,7 @@ internal sealed class MacOSAccessibility : IDisposable
         (peer.GetPattern(PatternId.SelectionItem) as ISelectionItemProvider)?.SelectionContainer ?? peer.GetParent();
 
     // An autoreleased array of the elements of the peers, none let go of while it is made.
-    private IntPtr ArrayOf(IReadOnlyList<AutomationPeer> peers)
+    internal IntPtr ArrayOf(IReadOnlyList<AutomationPeer> peers)
     {
         PruneGone();
         if (peers == null || peers.Count == 0)
@@ -384,7 +431,7 @@ internal sealed class MacOSAccessibility : IDisposable
     }
 
     // One element handed to AppKit outlives what this lets go of until AppKit's pool drains.
-    private IntPtr Lent(AutomationPeer peer)
+    internal IntPtr Lent(AutomationPeer peer)
     {
         PruneGone();
         lock (_lock)

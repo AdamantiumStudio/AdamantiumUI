@@ -95,7 +95,7 @@ public unsafe class MacOSAccessibilityTests
             Assert.That(answers[2], Is.EqualTo(1));
             Assert.That(answers[3], Is.True);
             Assert.That(answers[4], Is.True);
-            Assert.That(_posted - before, Is.EqualTo(5), "every question is answered on the loop");
+            Assert.That(_posted - before, Is.EqualTo(6), "every question is answered on the loop, what the element can be once");
         });
     }
 
@@ -430,6 +430,153 @@ public unsafe class MacOSAccessibilityTests
             Assert.That(Allowed(element, "accessibilityStringForRange:"), Is.False);
             Assert.That(Allowed(element, "setAccessibilitySelectedTextRange:"), Is.False);
         });
+    }
+
+    [Test]
+    public void AListsSelection_IsToldAndSet_EachItemByItsPlace()
+    {
+        var list = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.List,
+            Adamantium.UI.Core.Automation.AutomationControlType.ListItem, "One", "Two", "Three");
+        list.Children[1].Selected = true;
+        var element = _accessibility.ElementOf(list);
+
+        var selected = NSObject.Send(element, Selector("accessibilitySelectedChildren"));
+        Assert.That(NSArray.CountOf(selected), Is.EqualTo(1));
+        Assert.Multiple(() =>
+        {
+            Assert.That(NSArray.ObjectAt(selected, 0), Is.EqualTo(_accessibility.ElementOf(list.Children[1])));
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(
+                _accessibility.ElementOf(list.Children[2]), Selector("accessibilityIndex")), Is.EqualTo(2));
+            Assert.That(Allowed(element, "accessibilitySelectedChildren"), Is.True);
+            Assert.That(Allowed(ElementOf(new Button()), "accessibilitySelectedChildren"), Is.False);
+        });
+
+        var choice = NSArray.Create([_accessibility.ElementOf(list.Children[2])]);
+        NSObject.Send(element, Selector("setAccessibilitySelectedChildren:"), choice);
+        Assert.That(list.Children[2].Selected && !list.Children[1].Selected, Is.True);
+    }
+
+    [Test]
+    public void ATabGroup_HasItsTabs_AndTheOpenOneIsItsValue()
+    {
+        var tabs = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tab,
+            Adamantium.UI.Core.Automation.AutomationControlType.TabItem, "First", "Second");
+        tabs.Children[1].Selected = true;
+        var element = _accessibility.ElementOf(tabs);
+        var tabElements = NSObject.Send(element, Selector("accessibilityTabs"));
+        Assert.That(NSArray.CountOf(tabElements), Is.EqualTo(2));
+        var second = NSArray.ObjectAt(tabElements, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Text(element, "accessibilityRole"), Is.EqualTo("AXTabGroup"));
+            Assert.That(NSObject.Send(element, Selector("accessibilityValue")), Is.EqualTo(second), "the open tab");
+            Assert.That(Number(second, "accessibilityValue"), Is.EqualTo(1));
+            Assert.That(Number(NSArray.ObjectAt(tabElements, 0), "accessibilityValue"), Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void AnOutlinesRows_HaveTheirDepth_AndOpenAndShut()
+    {
+        var tree = FakePeer.Container(Adamantium.UI.Core.Automation.AutomationControlType.Tree,
+            Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "Parent");
+        var parent = tree.Children[0];
+        parent.Expandable = true;
+        parent.Expanded = true;
+        parent.Add(new FakePeer(Adamantium.UI.Core.Automation.AutomationControlType.TreeItem, "Child") { Selectable = true });
+        var element = _accessibility.ElementOf(tree);
+
+        var rows = NSObject.Send(element, Selector("accessibilityRows"));
+        Assert.That(NSArray.CountOf(rows), Is.EqualTo(2), "the parent and, open, its child");
+        var parentRow = NSArray.ObjectAt(rows, 0);
+        var childRow = NSArray.ObjectAt(rows, 1);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((int)((delegate* unmanaged<IntPtr, IntPtr, nint>)ObjCRuntime.MessageSend)(childRow,
+                Selector("accessibilityDisclosureLevel")), Is.EqualTo(1));
+            Assert.That(Flag(parentRow, "isAccessibilityDisclosed"), Is.True);
+            Assert.That(NSObject.Send(childRow, Selector("accessibilityDisclosedByRow")), Is.EqualTo(parentRow));
+            Assert.That(NSArray.CountOf(NSObject.Send(parentRow, Selector("accessibilityDisclosedRows"))), Is.EqualTo(1));
+        });
+
+        NSObject.Send(parentRow, Selector("setAccessibilityDisclosed:"), false);
+        Assert.That(parent.Expanded, Is.False);
+    }
+
+    // A peer the test builds - a container, its items, a row of an outline - with selection and openness of its own: the
+    // bridge's answers without a control's template, which a test without a theme has not.
+    private sealed class FakePeer(Adamantium.UI.Core.Automation.AutomationControlType type, string name)
+        : Adamantium.UI.Core.Automation.AutomationPeer, Adamantium.UI.Core.Automation.ISelectionProvider,
+            Adamantium.UI.Core.Automation.ISelectionItemProvider, Adamantium.UI.Core.Automation.IExpandCollapseProvider
+    {
+        public System.Collections.Generic.List<FakePeer> Children { get; } = [];
+        public FakePeer Parent { get; private set; }
+        public bool IsContainer { get; init; }
+        public bool Selectable { get; set; }
+        public bool Selected { get; set; }
+        public bool Expandable { get; set; }
+        public bool Expanded { get; set; }
+
+        public static FakePeer Container(Adamantium.UI.Core.Automation.AutomationControlType type,
+            Adamantium.UI.Core.Automation.AutomationControlType itemType, params string[] items)
+        {
+            var container = new FakePeer(type, type.ToString()) { IsContainer = true };
+            foreach (var item in items)
+                container.Add(new FakePeer(itemType, item) { Selectable = true });
+            return container;
+        }
+
+        public void Add(FakePeer child)
+        {
+            child.Parent = this;
+            Children.Add(child);
+        }
+
+        public override Adamantium.UI.Core.Automation.AutomationControlType ControlType => type;
+        public override string Name => name;
+        public override string AutomationId => name;
+        public override string HelpText => string.Empty;
+        public override string ClassName => nameof(FakePeer);
+        public override Rect BoundingRectangle => Rect.Empty;
+        public override bool IsEnabled => true;
+        public override bool IsOffscreen => false;
+        public override bool HasKeyboardFocus => false;
+        public override bool IsKeyboardFocusable => false;
+        public override System.Collections.Generic.IReadOnlyList<Adamantium.UI.Core.Automation.AutomationPeer> GetChildren() => Children;
+        public override Adamantium.UI.Core.Automation.AutomationPeer GetParent() => Parent;
+        public override void SetFocus() { }
+
+        public override object GetPattern(Adamantium.UI.Core.Automation.PatternId pattern) => pattern switch
+        {
+            Adamantium.UI.Core.Automation.PatternId.Selection when IsContainer => this,
+            Adamantium.UI.Core.Automation.PatternId.SelectionItem when Selectable => this,
+            Adamantium.UI.Core.Automation.PatternId.ExpandCollapse when Expandable => this,
+            _ => null
+        };
+
+        public bool CanSelectMultiple => false;
+        public bool IsSelectionRequired => false;
+        public System.Collections.Generic.IReadOnlyList<Adamantium.UI.Core.Automation.AutomationPeer> GetSelection() =>
+            Children.FindAll(child => child.Selected);
+
+        public bool IsSelected => Selected;
+        public Adamantium.UI.Core.Automation.AutomationPeer SelectionContainer => Parent;
+
+        public void Select()
+        {
+            foreach (var sibling in Parent?.Children ?? [])
+                sibling.Selected = false;
+            Selected = true;
+        }
+
+        public Adamantium.UI.Core.Automation.ExpandCollapseState ExpandCollapseState => Expanded
+            ? Adamantium.UI.Core.Automation.ExpandCollapseState.Expanded
+            : Adamantium.UI.Core.Automation.ExpandCollapseState.Collapsed;
+
+        public void Expand() => Expanded = true;
+        public void Collapse() => Expanded = false;
     }
 
     private void Settle()
