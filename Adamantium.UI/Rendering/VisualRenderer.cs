@@ -131,7 +131,7 @@ public sealed class VisualRenderer : IVisualRenderer
     // Live snapshots mirror the window's record/apply split: RecordPendingSnapshots reads the live tree on the loop thread
     // (device-free), DrawPendingSnapshots draws and reads back on the render thread, which owns the shared VkDevice.
     // ------------------------------------------------------------------------------------------------------------------
-    private readonly ConcurrentQueue<(IUIComponent visual, Action<ImageSource> onReady)> _recordQueue = new();
+    private readonly ConcurrentQueue<SnapshotRequest> _recordQueue = new();
     private readonly ConcurrentQueue<(IUIComponent visual, Size<double> size, double scale, Color clear, Action<ImageSource> onReady)> _detachedQueue = new();
     private readonly ConcurrentQueue<(RenderCache cache, uint width, uint height, Color clear, double scale, Action<ImageSource> onReady)> _drawQueue = new();
 
@@ -143,7 +143,17 @@ public sealed class VisualRenderer : IVisualRenderer
     public void RequestSnapshot(IUIComponent visual, Action<ImageSource> onReady)
     {
         if (visual == null || onReady == null) return;
-        _recordQueue.Enqueue((visual, onReady));
+        _recordQueue.Enqueue(new SnapshotRequest(visual, null, 0, false, onReady));
+        LoopSignal.Request();
+    }
+
+    /// <summary>UI-thread API: a snapshot of <paramref name="region"/> of a LIVE element at <paramref name="scale"/>,
+    /// unfaded, split as <see cref="RequestSnapshot(IUIComponent, Action{ImageSource})"/> is. An element in no tree has
+    /// no place to be read at, and gets null.</summary>
+    public void RequestSnapshot(IUIComponent visual, Rect region, double scale, bool alone, Action<ImageSource> onReady)
+    {
+        if (visual == null || onReady == null) return;
+        _recordQueue.Enqueue(new SnapshotRequest(visual, region, scale, alone, onReady));
         LoopSignal.Request();
     }
 
@@ -188,9 +198,11 @@ public sealed class VisualRenderer : IVisualRenderer
 
             if (_recordQueue.TryDequeue(out var request))
             {
-                Record(request.onReady, () =>
+                Record(request.OnReady, () =>
                 {
-                    var built = BuildLiveCache(request.visual);
+                    var built = request.Region is { } region
+                        ? BuildRegionCache(request.Visual, region, request.Scale, request.Alone)
+                        : BuildLiveCache(request.Visual);
                     return built == null
                         ? default((RenderCache, uint, uint, Color, double)?)
                         : (built.Value.cache, built.Value.width, built.Value.height, Colors.Transparent, built.Value.scale);
@@ -286,14 +298,55 @@ public sealed class VisualRenderer : IVisualRenderer
             return (hosted.Cache, hosted.Width, hosted.Height, scale);
         }
 
+        var built = BuildSubtreeCache(element, new Rect(size), scale, false, false);
+        return (built.Cache, built.Width, built.Height, scale);
+    }
+
+    // A region of a live element at the scale asked for, unfaded; its own drawing alone, or with its subtree. Null when
+    // the region is empty or the element is in no tree: it has no place to be read at.
+    private (RenderCache cache, uint width, uint height, double scale)? BuildRegionCache(IUIComponent element, Rect region,
+        double scale, bool alone)
+    {
+        if (element is not { IsAttachedToVisualTree: true } || !(region.Width > 0) || !(region.Height > 0) ||
+            !(scale > 0))
+        {
+            return null;
+        }
+
+        var built = BuildSubtreeCache(element, region, scale, true, alone);
+        return (built.Cache, built.Width, built.Height, scale);
+    }
+
+    // Records a live subtree read-only with the region's corner at the target's origin. A region asked for is in whole
+    // pixels - it grows to the pixels it covers, so its bitmap is exactly what the region drew - and unfaded by the
+    // element's own opacity; the element's own snapshot keeps the pixels and the fade it has always had.
+    private (RenderCache Cache, uint Width, uint Height) BuildSubtreeCache(IUIComponent element, Rect region, double scale,
+        bool asked, bool alone)
+    {
         // Flatten the subtree (parent BEFORE children = paint order: parent underneath, children on top).
         var list = new List<IUIComponent>();
-        FlattenSubtree(element, list);
+        if (alone)
+        {
+            list.Add(element);
+        }
+        else
+        {
+            FlattenSubtree(element, list);
+        }
 
-        // Project the ELEMENT-LOCAL space (0,0..size) and rebase the subtree so the element sits at the origin
+        var wholePixels = asked;
+
+        var width = (uint)Math.Max(1, wholePixels ? Math.Ceiling(region.Width * scale) : region.Width * scale);
+        var height = (uint)Math.Max(1, wholePixels ? Math.Ceiling(region.Height * scale) : region.Height * scale);
+        var projected = wholePixels
+            ? new Size<double>(width / scale, height / scale)
+            : new Size<double>(region.Width, region.Height);
+
+        // Project the region's own space (0,0..size) and rebase the subtree so the region's corner sits at the origin
         // (RebaseToOrigin below). Geometry AND the per-unit clip scissors then live in this one 0-based space; offsetting
         // only the projection would leave the scissors in absolute window coords, clamping the whole subtree to the edge.
-        var projection = Matrix4x4.CreateOrthoOffCenter<float>(0, (float)size.Width, 0, (float)size.Height, -100000f, 100000f);
+        var projection = Matrix4x4.CreateOrthoOffCenter<float>(0, (float)projected.Width, 0, (float)projected.Height,
+            -100000f, 100000f);
 
         // readOnly: emit each live component's commands via RenderReadOnly (no IsGeometryValid / RenderDirty touch), so the
         // window's loop is never woken into a concurrent render. The subtree is already valid, so ordinary Render() would
@@ -301,12 +354,9 @@ public sealed class VisualRenderer : IVisualRenderer
         // device-free (units hold CPU geometry until DrawToBitmap uploads them), so this whole method is safe off-device.
         var cache = SharedCache();
         cache.BuildFromComponents(list, projection, readOnly: true);
-        cache.RebaseToOrigin(element);
+        cache.RebaseToOrigin(element, new Vector2<double>(region.X, region.Y), unfaded: asked, selfUnfaded: asked && alone);
         cache.ProcessCommands(projection, scale);
-
-        var width = (uint)Math.Max(1, size.Width * scale);
-        var height = (uint)Math.Max(1, size.Height * scale);
-        return (cache, width, height, scale);
+        return (cache, width, height);
     }
 
     // In paint order, as the window draws it: a child raised or lowered by ZIndex is so in a snapshot too.

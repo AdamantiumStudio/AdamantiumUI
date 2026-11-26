@@ -20,22 +20,27 @@ internal sealed class ElementDrawing : IDrawingContext
 {
     private readonly IDrawingSession _session;
     private readonly Matrix4x4F _fromElement;
+    private readonly ElementRasters _rasters;
 
     // A list of children for each depth the walk is at, kept for the next element at that depth.
     private readonly List<List<IUIComponent>> _children = [];
     private IDrawingSession _current;
 
-    private ElementDrawing(IDrawingSession session, Matrix4x4F fromElement)
+    private ElementDrawing(IDrawingSession session, Matrix4x4F fromElement, ElementRasters rasters)
     {
         _session = session;
         _fromElement = fromElement;
+        _rasters = rasters;
     }
 
     /// <summary>Draws <paramref name="element"/> into <paramref name="session"/>, its own top left corner where
     /// <paramref name="place"/> puts the origin - upright and at its own size, without the turn or scale it is given
     /// on the screen; nothing where that scale leaves nothing to show. Only what reaches <paramref name="visible"/>, in
-    /// the session's units, is drawn: an element whose box, or whose clip, lies wholly outside it is left out.</summary>
-    public static void Draw(IUIComponent element, IDrawingSession session, Matrix4x4F place, Rect visible)
+    /// the session's units, is drawn: an element whose box, or whose clip, lies wholly outside it is left out. An
+    /// element <paramref name="rasters"/> holds pictures of is drawn as them, all it holds with it; without them, from
+    /// its shapes.</summary>
+    public static void Draw(IUIComponent element, IDrawingSession session, Matrix4x4F place, Rect visible,
+        ElementRasters rasters)
     {
         var world = element.WorldTransform;
         // The area its plane is scaled by: none, and nothing of it shows.
@@ -44,7 +49,7 @@ internal sealed class ElementDrawing : IDrawingContext
             return;
         }
 
-        new ElementDrawing(session, Matrix4x4F.Invert(world) * place).Walk(element, 1, visible, 0);
+        new ElementDrawing(session, Matrix4x4F.Invert(world) * place, rasters).Walk(element, 1, visible, 0);
     }
 
     public IDrawingSession ForControl(IUIComponent component) => _current;
@@ -76,6 +81,13 @@ internal sealed class ElementDrawing : IDrawingContext
         }
 
         var placed = new TransformedDrawingSession(_session, matrix);
+        // A picture of it and all it holds is laid down as its layer is on the screen: faded as a whole.
+        if (_rasters?.WholeTilesOf(component) is { } whole)
+        {
+            DrawTiles(whole, placed, matrix, flat, fade * component.Opacity, visible);
+            return;
+        }
+
         var groups = 0;
         if (RenderCache.WantsLayer(component))
         {
@@ -102,7 +114,12 @@ internal sealed class ElementDrawing : IDrawingContext
             groups++;
         }
 
-        if (!flat || Reaches(InkOf(component, box).TransformToAABB(matrix), visible))
+        // Its own drawing as its pictures - its shadow with it, left out tile by tile - or from its shapes.
+        if (_rasters?.OwnTilesOf(component) is { } own)
+        {
+            DrawTiles(own, placed, matrix, flat, fade * component.SelfOpacity, visible);
+        }
+        else if (!flat || Reaches(ElementRasters.Outset(component, box).TransformToAABB(matrix), visible))
         {
             DrawOwn(component, placed, fade * component.SelfOpacity);
         }
@@ -137,6 +154,33 @@ internal sealed class ElementDrawing : IDrawingContext
         }
     }
 
+    // Pictures laid down where they were taken, faded as shapes would be: they were taken unfaded.
+    private static void DrawTiles(IReadOnlyList<RasterTile> tiles, IDrawingSession placed, Matrix4x4F matrix, bool flat,
+        double fade, Rect visible)
+    {
+        var faded = fade < 1;
+        if (faded)
+        {
+            placed.PushGroup(new DrawingGroupOptions { Opacity = fade });
+        }
+
+        foreach (var tile in tiles)
+        {
+            if (!flat || Reaches(tile.Region.TransformToAABB(matrix), visible))
+            {
+                // The region's share of the picture, which runs to the whole pixel past it.
+                var share = new Rect(0, 0, System.Math.Min(1, tile.Region.Width / tile.Image.Width),
+                    System.Math.Min(1, tile.Region.Height / tile.Image.Height));
+                placed.DrawImage(tile.Image, null, tile.Region, new CornerRadius(0), share);
+            }
+        }
+
+        if (faded)
+        {
+            placed.PopGroup();
+        }
+    }
+
     private void DrawOwn(IUIComponent component, IDrawingSession placed, double fade)
     {
         var faded = fade < 1;
@@ -152,13 +196,6 @@ internal sealed class ElementDrawing : IDrawingContext
             _session.PopGroup();
         }
     }
-
-    // Where an element's drawing reaches: its box, and past it where its ink overhangs - a glyph's ascender, an italic.
-    private static Rect InkOf(IUIComponent component, Rect box) =>
-        component is IInkOverhang { InkOverhang: var overhang }
-            ? new Rect(box.X - overhang.Left, box.Y - overhang.Top, box.Width + overhang.Left + overhang.Right,
-                box.Height + overhang.Top + overhang.Bottom)
-            : box;
 
     // Whether a box touches the visible part - edges count: a line has a box with no height.
     private static bool Reaches(Rect box, Rect visible) =>

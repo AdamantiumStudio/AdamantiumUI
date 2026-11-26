@@ -11,6 +11,16 @@ public sealed record PrintSettings
     /// <summary>How many pages a sheet may hold.</summary>
     public static IReadOnlyList<int> PagesPerSheetChoices { get; } = [1, 2, 4, 6, 9, 16];
 
+    /// <summary>How fine pictures of what is not vector are made for a PDF file, as offered.</summary>
+    public static IReadOnlyList<int> RasterChoices { get; } = [150, 300, 600];
+
+    /// <summary>The raster resolution a PDF file gets unless another is chosen, and a printer that names none.</summary>
+    public const int DefaultRasterDotsPerInch = 300;
+
+    /// <summary>The finest raster made for a printer. A shadow or a glow shows nothing more past it, and each doubling
+    /// takes four times the memory - a 1200 dpi printer gets 600 dpi pictures.</summary>
+    public const int FinestPrinterRaster = 600;
+
     public Printer Printer { get; init; } = Printer.Pdf;
 
     public PageRange Range { get; init; } = PageRange.All;
@@ -38,6 +48,10 @@ public sealed record PrintSettings
 
     public PrintQuality Quality { get; init; }
 
+    /// <summary>How fine pictures of what is not vector are made in a PDF file - a shadow, a live 3D view - in dots to the
+    /// inch, one of <see cref="RasterChoices"/>. A printer makes them at its own <see cref="Quality"/>.</summary>
+    public int RasterDotsPerInch { get; init; } = DefaultRasterDotsPerInch;
+
     public string Tray { get; init; }
 
     public string MediaType { get; init; }
@@ -59,6 +73,7 @@ public sealed record PrintSettings
                     papers.FirstOrDefault(paper => paper.Name == capabilities.DefaultPaper?.Name) ?? papers[0],
             ScalePercent = Math.Clamp(double.IsFinite(ScalePercent) ? ScalePercent : 100, 10, 400),
             PagesPerSheet = PagesPerSheetChoices.Contains(PagesPerSheet) ? PagesPerSheet : 1,
+            RasterDotsPerInch = RasterChoices.Contains(RasterDotsPerInch) ? RasterDotsPerInch : DefaultRasterDotsPerInch,
             Copies = Math.Clamp(Copies, 1, Math.Max(1, capabilities.MaxCopies)),
             Collate = capabilities.Collates && Collate,
             Duplex = capabilities.Duplex.Contains(Duplex) ? Duplex : DuplexMode.OneSided,

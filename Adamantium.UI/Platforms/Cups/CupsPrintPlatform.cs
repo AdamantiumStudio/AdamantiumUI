@@ -52,7 +52,7 @@ internal sealed class CupsPrintPlatform : IPrintPlatform
     /// <summary>Never asked: a CUPS driver has no window of its own.</summary>
     public PrintSettings EditDriverSettings(PrinterCapabilities capabilities, PrintSettings settings) => null;
 
-    public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
+    public async Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
         CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(sheets);
@@ -69,12 +69,12 @@ internal sealed class CupsPrintPlatform : IPrintPlatform
         // may be slow.
         var laid = sheets as PrintSheets ?? new PrintSheets(sheets, settings, choices.Capabilities);
         using var pdf = new MemoryStream();
-        PdfPrintFile.Save(new Watched(laid, progress), laid.Sheet, pdf, cancellation);
+        await PdfPrintFile.SaveAsync(new Watched(laid, progress), laid.Sheet, pdf, cancellation);
         var data = pdf.GetBuffer().AsMemory(0, (int)pdf.Length);
         var options = choices.Write(settings);
 
         // Called off while the server is slow to answer, it is let go of at once; the job is canceled as it answers.
-        return Task.Run(() =>
+        await Task.Run(() =>
         {
             using var printer = CupsPrinter.Open(settings.Printer.Id);
             printer.Print(string.IsNullOrWhiteSpace(laid.Title) ? "Document" : laid.Title, data.Span, options, cancellation);
@@ -121,6 +121,9 @@ internal sealed class CupsPrintPlatform : IPrintPlatform
         public string Title => sheets.Title;
 
         public int Paginate(PrintPage page) => _count = sheets.Paginate(page);
+
+        public Task PrepareAsync(PrintPage page, CancellationToken cancellation) =>
+            sheets.PrepareAsync(page, cancellation);
 
         public void DrawPage(int index, IDrawingSession session)
         {

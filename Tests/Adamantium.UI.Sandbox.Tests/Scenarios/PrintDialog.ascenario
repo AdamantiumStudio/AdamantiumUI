@@ -1,5 +1,5 @@
 <Scenario xmlns="http://adamantium/automation/scenario"
-          Description="The print dialog: the PDF file alone without printers; with the sample printers, each printer's rows come and go with what it offers, a range that is no pages stops printing, and printing reaches the printer.">
+          Description="The print dialog: the PDF file alone without printers, with its raster resolution; with the sample printers, each printer's rows come and go with what it offers, a range that is no pages stops printing, and printing reaches the printer.">
     <Select Target="id=GalleryTabs/name=Printing" />
 
     <!-- No printers: the PDF file alone, saved, and no printer's rows. -->
@@ -11,6 +11,7 @@
     <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 6" />
     <Expect Target="id=PART_Copies" Offscreen="True" />
     <Expect Target="id=PART_Duplex" Offscreen="True" />
+    <Expect Target="id=PART_Raster" Offscreen="False" Value="300 dpi" />
     <Invoke Target="name=Next sheet" />
     <Expect Target="id=PART_SheetNumber" Name="Sheet 2 of 6" />
     <Invoke Target="id=PART_Cancel" />
@@ -26,6 +27,7 @@
     <Expect Target="id=PART_Duplex" Offscreen="False" />
     <Expect Target="id=PART_Tray" Offscreen="False" />
     <Expect Target="id=PART_Color" Offscreen="True" />
+    <Expect Target="id=PART_Raster" Offscreen="True" />
 
     <!-- Four pages to a landscape sheet: six pages fill two sheets. -->
     <Select Target="id=PART_PagesPerSheet/name=4" />

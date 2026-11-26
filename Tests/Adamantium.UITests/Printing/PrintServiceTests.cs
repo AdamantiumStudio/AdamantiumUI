@@ -82,7 +82,7 @@ public class PrintServiceTests
         Assert.That(PrintService.PdfFileNameOf(title), Is.EqualTo(expected));
 
     [Test]
-    public void APlaceThatWillNotTakeTheFile_IsAFailure_AndLeavesNothingBehind()
+    public async Task APlaceThatWillNotTakeTheFile_IsAFailure_AndLeavesNothingBehind()
     {
         var folder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(folder);
@@ -95,11 +95,11 @@ public class PrintServiceTests
             var path = Path.Combine(folder, "taken.pdf");
             Directory.CreateDirectory(path);
 
-            Assert.That(PrintService.WritePdf(sheets, path, CancellationToken.None), Is.False);
+            Assert.That(await PrintService.WritePdfAsync(sheets, path, CancellationToken.None), Is.False);
             Assert.That(File.Exists(path + ".writing"), Is.False, "no half of a PDF left");
 
             var free = Path.Combine(folder, "free.pdf");
-            Assert.That(PrintService.WritePdf(sheets, free, CancellationToken.None), Is.True);
+            Assert.That(await PrintService.WritePdfAsync(sheets, free, CancellationToken.None), Is.True);
             Assert.That(new FileInfo(free).Length, Is.GreaterThan(0));
         }
         finally

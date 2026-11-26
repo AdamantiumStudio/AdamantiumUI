@@ -34,4 +34,8 @@ public sealed class PrintPage
     /// <summary>The edges of the sheet the printer leaves blank, in DIPs, the way the sheet is printed; none when saving
     /// to PDF.</summary>
     public Thickness PrintableMargins { get; }
+
+    /// <summary>How fine a picture of what is not vector is made for this sheet - a shadow, a live 3D view - in dots to
+    /// the inch: the printer's resolution, or the one chosen for a PDF file.</summary>
+    public int RasterDotsPerInch { get; init; } = PrintSettings.DefaultRasterDotsPerInch;
 }

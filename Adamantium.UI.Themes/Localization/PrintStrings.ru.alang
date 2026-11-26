@@ -22,6 +22,7 @@
     <Phrase Key="Custom" Text="Свой"/>
     <Phrase Key="ScalePercent" Text="Масштаб, процентов"/>
     <Phrase Key="PagesPerSheet" Text="Страниц на листе"/>
+    <Phrase Key="RasterResolution" Text="Разрешение растра"/>
     <Phrase Key="Copies" Text="Копии"/>
     <Phrase Key="Collate" Text="Разобрать по копиям"/>
     <Phrase Key="TwoSided" Text="Двусторонняя"/>

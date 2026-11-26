@@ -68,7 +68,15 @@ internal sealed class PrintService(IDialogService dialogs) : IPrintService
         }
 
         // On the thread the dialog was asked from: a document draws its pages there, as it does on screen.
-        return WritePdf(sheets, path, cancellation) ? PrintResult.Saved : PrintResult.Failed;
+        try
+        {
+            return await WritePdfAsync(sheets, path, cancellation) ? PrintResult.Saved : PrintResult.Failed;
+        }
+        catch (OperationCanceledException)
+        {
+            // Called off while its pictures were made or its pages written: nothing is left behind.
+            return PrintResult.Canceled;
+        }
     }
 
     /// <summary>A document's title as a PDF file's name: what a file's name cannot hold taken out, and ".pdf" put
@@ -87,14 +95,14 @@ internal sealed class PrintService(IDialogService dialogs) : IPrintService
     /// <summary>Writes <paramref name="sheets"/> as a PDF file at <paramref name="path"/> - beside it first, moved over
     /// it once whole, so a print called off or failed leaves no half of a PDF behind; false when the place would not
     /// take it.</summary>
-    internal static bool WritePdf(PrintSheets sheets, string path, CancellationToken cancellation)
+    internal static async Task<bool> WritePdfAsync(PrintSheets sheets, string path, CancellationToken cancellation)
     {
         var writing = path + ".writing";
         try
         {
-            using (var output = File.Create(writing))
+            await using (var output = File.Create(writing))
             {
-                PdfPrintFile.Save(sheets, sheets.Sheet, output, cancellation);
+                await PdfPrintFile.SaveAsync(sheets, sheets.Sheet, output, cancellation);
             }
 
             File.Move(writing, path, true);
