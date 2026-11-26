@@ -16,8 +16,9 @@
 ### Added
 
 - A new application language reaches the windows as a theme swap does: every window's `UpdateLanguage()` has what is in
-  it read the language on the next layout pass, through `OnLanguageChanged` - a virtual of every element, also told
-  when its own `Language` or an owner's changes. An element out of every window at the time reads it on the next pass
+  it read the language on the next layout pass, through `OnLanguageChanged(string previous)` - a virtual of every
+  element, given the language its text was in before. Its own `Language` or an owner's changing is read on the same
+  pass, through the same queue. An element out of every window at the time reads it on the next pass
   once back in one, and a window made before a change reads it once the application lists it. A language set on
   another thread is taken to the windows on the loop thread. The controls that write words, numbers or dates of their
   own are told this way instead of each listening to the application's language.

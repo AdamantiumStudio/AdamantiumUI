@@ -555,14 +555,10 @@ public class NumericUpDown : RangeLimitsBase
         _commandListener?.Attached();
     }
 
-    // The culture the number was last written in, as far as the language decides it.
-    private CultureInfo _written = Languages.Culture;
-
     // The number is written the new language's way; one half typed is not touched.
-    protected override void OnLanguageChanged()
+    protected override void OnLanguageChanged(string previous)
     {
-        var before = Culture ?? _written;
-        _written = Languages.Culture;
+        var before = Culture ?? Languages.CultureOf(previous);
         if (_text != null && Value is { } number && _text.Text == FormatValue(number, before)) UpdateText();
     }
 

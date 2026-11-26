@@ -990,7 +990,7 @@ public class Calendar : Control
         _midnight = null;
     }
 
-    protected override void OnLanguageChanged() => Reclamp();
+    protected override void OnLanguageChanged(string previous) => Reclamp();
 
     private bool DayKey(Key key, InputModifiers modifiers)
     {

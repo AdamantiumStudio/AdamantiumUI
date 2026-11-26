@@ -268,7 +268,7 @@ public class Clock : Control
         }
     }
 
-    protected override void OnLanguageChanged() => Build();
+    protected override void OnLanguageChanged(string previous) => Build();
 
     protected override AutomationPeer OnCreateAutomationPeer() => new ClockAutomationPeer(this);
 

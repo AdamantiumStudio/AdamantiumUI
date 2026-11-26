@@ -928,12 +928,15 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(LanguageProperty, value);
     }
 
+    protected override string TextLanguage => Language ?? Adamantium.Localization.Languages.Current;
+
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (e.Property == LanguageProperty)
+        // Its own language, or an owner's, is read on the next pass, as the application's is; out of the tree, on attach.
+        if (e.Property == LanguageProperty && IsAttachedToVisualTree && MissedALanguage)
         {
-            OnLanguageChanged();
+            LayoutManager.For(this).InvalidateLanguage(this);
         }
     }
 

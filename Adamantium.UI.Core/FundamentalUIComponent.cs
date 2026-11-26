@@ -1198,20 +1198,25 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    /// <summary>Whether the application language changed since this element last read it - out of every window then, it
-    /// missed the walk.</summary>
-    internal bool MissedALanguage => _readInLanguage != Adamantium.Localization.Languages.Current;
+    /// <summary>The language this element's text is in: the application's, unless the element says otherwise.</summary>
+    protected virtual string TextLanguage => Adamantium.Localization.Languages.Current;
+
+    /// <summary>Whether the language this element's text is in changed since it last read it.</summary>
+    internal bool MissedALanguage => _readInLanguage != TextLanguage;
 
     internal void ReadLanguage()
     {
-        if (!MissedALanguage) return;
-        _readInLanguage = Adamantium.Localization.Languages.Current;
-        OnLanguageChanged();
+        var now = TextLanguage;
+        if (_readInLanguage == now) return;
+        var previous = _readInLanguage;
+        _readInLanguage = now;
+        OnLanguageChanged(previous);
     }
 
-    /// <summary>The language this element's text is in has changed: the application's, read on the next layout pass, or
-    /// its own. A control that writes words, numbers or dates of its own writes them again here.</summary>
-    protected virtual void OnLanguageChanged()
+    /// <summary>The language this element's text is in has changed - the application's or its own - read on the next
+    /// layout pass. A control that writes words, numbers or dates of its own writes them again here;
+    /// <paramref name="previous"/> is the language it wrote them in.</summary>
+    protected virtual void OnLanguageChanged(string previous)
     {
     }
 

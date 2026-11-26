@@ -190,9 +190,9 @@ public abstract class DateTimePickerBase : DateTimeField
         }
     }
 
-    protected override void OnLanguageChanged()
+    protected override void OnLanguageChanged(string previous)
     {
-        base.OnLanguageChanged();
+        base.OnLanguageChanged(previous);
         RefreshDropDown();
     }
 

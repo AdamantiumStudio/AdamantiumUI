@@ -189,7 +189,7 @@ public class DurationField : Control, ISegmentHost
         Update();
     }
 
-    protected override void OnLanguageChanged() => Build();
+    protected override void OnLanguageChanged(string previous) => Build();
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {

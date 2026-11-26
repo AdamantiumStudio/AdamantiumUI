@@ -426,7 +426,7 @@ public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.
         InvalidateSurface(measure: true);
     }
 
-    protected override void OnLanguageChanged() => RelayOutText();
+    protected override void OnLanguageChanged(string previous) => RelayOutText();
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {

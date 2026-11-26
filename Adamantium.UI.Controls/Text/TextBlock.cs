@@ -2053,7 +2053,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     public override bool IsMeasureBoundary => base.IsMeasureBoundary && _hosted.Count == 0;
 
     // The language picks the letter forms and the line breaks.
-    protected override void OnLanguageChanged() => InvalidateMeasure();
+    protected override void OnLanguageChanged(string previous) => InvalidateMeasure();
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {

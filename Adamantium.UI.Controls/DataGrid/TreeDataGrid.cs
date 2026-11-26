@@ -872,7 +872,6 @@ public partial class TreeDataGrid : Selector
         column.Binding != null ? column.Read(column.Binding, node) : column.ReadPath(node);
 
     private Dictionary<DataGridColumn, DataGridColumnFilter> _columnFilters;
-    private System.Globalization.CultureInfo _readIn = Adamantium.Localization.Languages.Culture;
 
     internal void RenameDayWord(DataGridColumn column, string was, string now)
     {
@@ -978,11 +977,10 @@ public partial class TreeDataGrid : Selector
         filter.Second.Forget();
     }
 
-    protected override void OnLanguageChanged()
+    protected override void OnLanguageChanged(string previous)
     {
-        var was = _readIn ?? Adamantium.Localization.Languages.Culture;
+        var was = Adamantium.Localization.Languages.CultureOf(previous);
         var now = Adamantium.Localization.Languages.Culture;
-        _readIn = now;
         if (Equals(was, now)) return;
 
         if (_columnFilters != null)

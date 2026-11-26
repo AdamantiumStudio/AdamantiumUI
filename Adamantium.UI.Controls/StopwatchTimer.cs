@@ -223,7 +223,7 @@ public class StopwatchTimer : Control
         _tick?.Stop();
     }
 
-    protected override void OnLanguageChanged() => Retext();
+    protected override void OnLanguageChanged(string previous) => Retext();
 
     protected override AutomationPeer OnCreateAutomationPeer() => new StopwatchTimerAutomationPeer(this);
 

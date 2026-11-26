@@ -1118,7 +1118,11 @@ public class CalendarTests
         var calendar = Shown(new Calendar { DisplayDate = new DateTime(2100, 5, 1) });
         calendar.SelectedDate = new DateTime(2100, 5, 3);
 
-        Assert.That(() => calendar.Language = "ar-SA", Throws.Nothing);
+        Assert.That(() =>
+        {
+            calendar.Language = "ar-SA";
+            Settle();
+        }, Throws.Nothing);
 
         Assert.Multiple(() =>
         {
