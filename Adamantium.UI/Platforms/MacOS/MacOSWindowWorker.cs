@@ -7,11 +7,13 @@ using Adamantium.MacOS.Foundation;
 using Adamantium.MacOS.ObjectiveC;
 using Adamantium.MacOS.QuartzCore;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Internals;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Platforms.MacOS.Accessibility;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -698,6 +700,33 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService, ITex
     /// <summary>What the input method makes of the keys; main thread.</summary>
     internal MacOSTextInput TextInput { get; private set; }
 
+    private MacOSAccessibility _accessibility;
+
+    /// <summary>The window's elements as the Mac's accessibility sees them, made when it first asks - on the main
+    /// thread, as all it asks.</summary>
+    internal MacOSAccessibility Accessibility => _view == IntPtr.Zero
+        ? null
+        : _accessibility ??= new MacOSAccessibility(
+            () => (_window as UIComponent)?.GetAutomationPeer(), _view, ToAppKitPoints, ToDesktopPixels);
+
+    // A rectangle on the desktop in pixels from the top, as AppKit takes it: in points, from the bottom.
+    private CGRect ToAppKitPoints(Rect pixels)
+    {
+        if (pixels.IsEmpty)
+            return default;
+
+        // Both corners, each on its own monitor: one spanning two of different scales is measured on both.
+        var bottomLeft = _platform.Desktop.ToPoints(pixels.X, pixels.Bottom);
+        var topRight = _platform.Desktop.ToPoints(pixels.Right, pixels.Y);
+        return new CGRect(bottomLeft.X, bottomLeft.Y, Math.Max(0, topRight.X - bottomLeft.X), Math.Max(0, topRight.Y - bottomLeft.Y));
+    }
+
+    private PixelPoint ToDesktopPixels(CGPoint point)
+    {
+        var pixel = _platform.Desktop.ToPixels(point.X, point.Y);
+        return new PixelPoint((int)Math.Floor(pixel.X), (int)Math.Floor(pixel.Y));
+    }
+
     // A letter held down where no text is typed - in a scene - repeats, with no accents offered for it.
     // Told on the loop thread, which the focus is on.
     private volatile bool _takesText;
@@ -1145,6 +1174,8 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService, ITex
             ParentTo(IntPtr.Zero);
             _platform.LeaveOwned(_nsWindow);
             NSWindow.Close(_nsWindow);
+            _accessibility?.Dispose();
+            _accessibility = null;
             ObjCManagedObject.Release(_view);
             ObjCManagedObject.Release(_delegate);
             NSObject.Release(_delegate);

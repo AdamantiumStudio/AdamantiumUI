@@ -19,10 +19,6 @@ namespace Adamantium.UI.Platforms.Linux.Accessibility;
 /// and other assistive technologies, and tells them what changes while anyone listens.</summary>
 internal sealed partial class AtSpiBridge : IDisposable
 {
-    private const int Pending = 0;
-    private const int Started = 1;
-    private const int Abandoned = 2;
-
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(5);
 
     private readonly DBusConnection _bus;
@@ -174,60 +170,7 @@ internal sealed partial class AtSpiBridge : IDisposable
         });
     }
 
-    private T Run<T>(Func<T> work)
-    {
-        if (LoopSignal.IsLoopThread)
-        {
-            return work();
-        }
-
-        T result = default;
-        Exception failure = null;
-        var state = Pending;
-        var done = new ManualResetEventSlim();
-        _post(() =>
-        {
-            if (Interlocked.CompareExchange(ref state, Started, Pending) != Pending)
-            {
-                return;
-            }
-
-            try
-            {
-                result = work();
-            }
-            catch (Exception e)
-            {
-                failure = e;
-            }
-            finally
-            {
-                done.Set();
-            }
-        });
-
-        if (!done.Wait(CallTimeout))
-        {
-            if (Interlocked.CompareExchange(ref state, Abandoned, Pending) == Pending)
-            {
-                done.Dispose();
-                throw new TimeoutException("The application did not answer the accessibility bus in time.");
-            }
-
-            if (!done.Wait(CallTimeout))
-            {
-                throw new TimeoutException("The application is still answering the accessibility bus.");
-            }
-        }
-
-        done.Dispose();
-        if (failure != null)
-        {
-            throw failure;
-        }
-
-        return result;
-    }
+    private T Run<T>(Func<T> work) => LoopCall.Run(_post, work, CallTimeout);
 
     private bool TryTarget(string path, out AutomationPeer peer)
     {
