@@ -133,9 +133,10 @@ public class BindingExpression : BindingExpressionBase
 
    private bool IsProducer => TargetProperty == null;
 
-   private bool FollowsCulture =>
-      !string.IsNullOrEmpty(BindingBase.StringFormat) || Binding.Converter != null || BindingBase.Culture != null ||
-      TargetProperty.PropertyType == typeof(string);
+   // A binding that never writes its target - one to the source only - has no words to say again.
+   private bool FollowsCulture => Mode != BindingMode.OneWayToSource &&
+      (!string.IsNullOrEmpty(BindingBase.StringFormat) || Binding.Converter != null || BindingBase.Culture != null ||
+       TargetProperty.PropertyType == typeof(string));
 
    public BindingExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty, BindingBase bindingBase)
    {
