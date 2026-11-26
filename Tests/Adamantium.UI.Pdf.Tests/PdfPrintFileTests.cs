@@ -45,7 +45,7 @@ public class PdfPrintFileTests
     private static PdfDocument Save(IPrintDocument document, PrintPage page = null)
     {
         using var output = new MemoryStream();
-        PdfPrintFile.Save(document, page ?? new PrintPage(PaperSize.A4), output);
+        PdfPrintFile.SaveAsync(document, page ?? new PrintPage(PaperSize.A4), output).GetAwaiter().GetResult();
         return PdfDocument.Open(output.ToArray());
     }
 
@@ -439,7 +439,7 @@ public class PdfPrintFileTests
             }
         });
 
-        Assert.Throws<OperationCanceledException>(() =>
-            PdfPrintFile.Save(document, new PrintPage(PaperSize.Letter), new MemoryStream(), stop.Token));
+        Assert.ThrowsAsync<OperationCanceledException>(() =>
+            PdfPrintFile.SaveAsync(document, new PrintPage(PaperSize.Letter), new MemoryStream(), stop.Token));
     }
 }

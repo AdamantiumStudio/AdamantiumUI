@@ -1,5 +1,6 @@
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Pdf.Document;
 using Adamantium.Pdf.Writing;
 using Adamantium.UI.Core.Printing;
@@ -13,17 +14,18 @@ public static class PdfPrintFile
     /// <summary>The PDF's units to the inch; the document draws in DIPs, 96 to the inch.</summary>
     private const double PointsPerDip = 72.0 / 96.0;
 
-    /// <summary>Lays <paramref name="document"/> out on <paramref name="page"/> and writes every page of it to
-    /// <paramref name="output"/>, which is not closed; a document of no pages is one blank sheet, as a printer would
-    /// give - a PDF of none is not opened by many readers. Called off, it stops between pages; what was written is not
-    /// a whole file.</summary>
-    public static void Save(IPrintDocument document, PrintPage page, Stream output,
+    /// <summary>Lays <paramref name="document"/> out on <paramref name="page"/>, makes it ready, and writes every page of
+    /// it to <paramref name="output"/>, which is not closed; a document of no pages is one blank sheet, as a printer
+    /// would give - a PDF of none is not opened by many readers. The pages are drawn on the calling thread, as on the
+    /// screen. Called off, it stops between pages; what was written is not a whole file.</summary>
+    public static async Task SaveAsync(IPrintDocument document, PrintPage page, Stream output,
         CancellationToken cancellation = default)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(page);
         ArgumentNullException.ThrowIfNull(output);
         var count = document.Paginate(page);
+        await document.PrepareAsync(page, cancellation);
         var blank = count <= 0;
         var writer = new PdfDocumentWriter(output)
         {

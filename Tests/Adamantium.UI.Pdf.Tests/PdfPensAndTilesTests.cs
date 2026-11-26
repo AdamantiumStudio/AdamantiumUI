@@ -39,7 +39,7 @@ public class PdfPensAndTilesTests
     private static byte[] Bytes(Action<IDrawingSession> draw)
     {
         using var output = new MemoryStream();
-        PdfPrintFile.Save(new OnePage(draw), new PrintPage(PaperSize.A4), output);
+        PdfPrintFile.SaveAsync(new OnePage(draw), new PrintPage(PaperSize.A4), output).GetAwaiter().GetResult();
         return output.ToArray();
     }
 

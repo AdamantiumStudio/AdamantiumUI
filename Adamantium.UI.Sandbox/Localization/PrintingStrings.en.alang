@@ -9,7 +9,7 @@
     <Phrase Key="Saved" Text="Saved as PDF."/>
     <Phrase Key="Canceled" Text="Not printed."/>
     <Phrase Key="CardTitle" Text="A card, printed as it shows"/>
-    <Phrase Key="CardText" Text="Each element of it is drawn on the sheet as on the screen: the gradient, the rounded corners it is cut to, this faded text."/>
+    <Phrase Key="CardText" Text="Each element of it is drawn on the sheet as on the screen: the gradient, the rounded corners, this faded text - and its shadow, made a picture at the print's resolution."/>
     <Phrase Key="PrintCard" Text="Print the card…"/>
     <Phrase Key="Failed" Text="Not printed: the printer, or the place to save it, would not take it."/>
 </Language>

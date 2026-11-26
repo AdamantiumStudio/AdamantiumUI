@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
 
@@ -22,4 +24,10 @@ public interface IPrintDocument
     /// sizes - a PDF's; null for one laid out on the sheet, drawn at its size. The sheet's scale, its place and a turn
     /// to fit it are worked out from this.</summary>
     Size<double>? PageSize(int index) => null;
+
+    /// <summary>Makes ready, after <see cref="Paginate"/> and before the first <see cref="DrawPage"/>, what drawing the
+    /// pages takes and cannot be made while drawing - pictures of what is not vector, made by the GPU at
+    /// <see cref="PrintPage.RasterDotsPerInch"/>. Called on the thread that draws; nothing to make ready by default.
+    /// </summary>
+    Task PrepareAsync(PrintPage page, CancellationToken cancellation) => Task.CompletedTask;
 }

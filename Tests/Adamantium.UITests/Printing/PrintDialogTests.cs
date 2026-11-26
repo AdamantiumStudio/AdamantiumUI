@@ -249,6 +249,23 @@ public class PrintDialogTests
         Assert.That(dialog.PreviousSheetCommand.CanExecute(), Is.True);
     }
 
+    [Test]
+    public void TheFilesRasterResolution_IsChosenInTheDialog_AndReachesTheSheet()
+    {
+        var dialog = new PrintDialog { Document = new Pages(3) };
+        Assert.That(dialog.RasterResolution, Is.EqualTo(new PrintQuality(300, 300)), "300 dpi unless chosen");
+
+        dialog.RasterResolution = dialog.RasterChoices[^1];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dialog.PrintsToFile, Is.True, "the row shows for the file");
+            Assert.That(dialog.Settings.RasterDotsPerInch, Is.EqualTo(600));
+            Assert.That(new PrintSheets(dialog.Document, dialog.Settings, PrinterCapabilities.Pdf).Sheet.RasterDotsPerInch,
+                Is.EqualTo(600));
+        });
+    }
+
     // The driver's own window: offered where the printer has one; what it is left with is printed - the dialog's options
     // as it set them, its own kept - and another printer starts without them.
     [Test]

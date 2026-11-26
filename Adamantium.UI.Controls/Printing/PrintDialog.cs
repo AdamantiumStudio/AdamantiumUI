@@ -124,6 +124,10 @@ public class PrintDialog : Control
     public static readonly AdamantiumProperty PagesPerSheetProperty = AdamantiumProperty.Register(
         nameof(PagesPerSheet), typeof(int), typeof(PrintDialog), new PropertyMetadata(1, OnOptionChanged));
 
+    public static readonly AdamantiumProperty RasterResolutionProperty = AdamantiumProperty.Register(
+        nameof(RasterResolution), typeof(PrintQuality), typeof(PrintDialog),
+        new PropertyMetadata(ResolutionOf(PrintSettings.DefaultRasterDotsPerInch), OnOptionChanged));
+
     /// <summary>All pages, the current one, or those in <see cref="RangeText"/>.</summary>
     public PageRangeKind RangeKind
     {
@@ -177,6 +181,21 @@ public class PrintDialog : Control
 
     /// <summary>The choices of <see cref="PagesPerSheet"/>.</summary>
     public IReadOnlyList<int> PagesPerSheetChoices => PrintSettings.PagesPerSheetChoices;
+
+    /// <summary>How fine pictures of what is not vector are made in the PDF file - shown for the file alone
+    /// (<see cref="PrintsToFile"/>): a printer makes them at its own resolution.</summary>
+    public PrintQuality RasterResolution
+    {
+        get => GetValue<PrintQuality>(RasterResolutionProperty);
+        set => SetValue(RasterResolutionProperty, value);
+    }
+
+    /// <summary>The choices of <see cref="RasterResolution"/>, one for each of
+    /// <see cref="PrintSettings.RasterChoices"/>.</summary>
+    public IReadOnlyList<PrintQuality> RasterChoices { get; } =
+        PrintSettings.RasterChoices.Select(ResolutionOf).ToArray();
+
+    private static PrintQuality ResolutionOf(int dotsPerInch) => new(dotsPerInch, dotsPerInch);
 
     #endregion
 
@@ -487,6 +506,10 @@ public class PrintDialog : Control
         {
             _wish = _wish with { PagesPerSheet = perSheet };
         }
+        else if (property == RasterResolutionProperty && value is PrintQuality raster)
+        {
+            _wish = _wish with { RasterDotsPerInch = raster.DotsPerInchX };
+        }
     }
 
     private static void OnRangeTextChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -715,6 +738,7 @@ public class PrintDialog : Control
             SetCurrentValue(ScalingProperty, settings.Scaling);
             SetCurrentValue(ScalePercentProperty, settings.ScalePercent);
             SetCurrentValue(PagesPerSheetProperty, settings.PagesPerSheet);
+            SetCurrentValue(RasterResolutionProperty, ResolutionOf(settings.RasterDotsPerInch));
             SetCurrentValue(CopiesProperty, (double)settings.Copies);
             SetCurrentValue(CollateProperty, settings.Collate);
             SetCurrentValue(DuplexProperty, settings.Duplex);

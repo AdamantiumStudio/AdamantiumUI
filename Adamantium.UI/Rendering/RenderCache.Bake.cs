@@ -689,12 +689,24 @@ public partial class RenderCache
 
     /// <summary>Freezes <paramref name="element"/> at the origin with no parent, so an off-screen snapshot into an
     /// element-sized target shares one 0-based space. Call after BuildFromComponents, before ProcessCommands.</summary>
-    public void RebaseToOrigin(IUIComponent element)
+    public void RebaseToOrigin(IUIComponent element) => RebaseToOrigin(element, default, false, false);
+
+    /// <summary>Freezes <paramref name="element"/> with no parent and the point <paramref name="corner"/> of its own
+    /// space at the origin: a snapshot of a region of it - its shadow past its edges, a tile of a large one - into a
+    /// region-sized target. <paramref name="unfaded"/> takes its opacity as full, for a caller that fades it;
+    /// <paramref name="selfUnfaded"/> its own drawing's fade too - a layer keeps that one inside, as on the screen.
+    /// </summary>
+    public void RebaseToOrigin(IUIComponent element, Vector2<double> corner, bool unfaded, bool selfUnfaded)
     {
         if (element == null) return;
         var s = ApplySnap(element);
-        _applySnap[element] = new LayoutSnapshot(Matrix4x4F.Identity, s.RenderSize, s.ClipToBounds, false, null,
-            s.Opacity, s.SelfOpacity, s.ClipRadii, s.ClipInset);
+        // At the origin itself, the identity: a translation by -0 is a negative zero, read back as such.
+        var place = corner == default
+            ? Matrix4x4F.Identity
+            : Matrix4x4.CreateTranslation((float)-corner.X, (float)-corner.Y, 0f);
+        _applySnap[element] = new LayoutSnapshot(place, s.RenderSize, s.ClipToBounds, false, null,
+            unfaded ? 1f : s.Opacity, selfUnfaded ? 1f : s.SelfOpacity, s.ClipRadii, s.ClipInset);
+        _opacityChain.Clear();  // the chain read the element's fade before; its subtree reads it again
         _worldCache.Clear();    // drop any absolute transforms/clips memoized during the build so ProcessCommands recomputes rebased
         _relWorldCache.Clear();
         _clipCache.Clear();

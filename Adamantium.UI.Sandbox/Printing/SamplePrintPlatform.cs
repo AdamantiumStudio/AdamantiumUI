@@ -76,11 +76,11 @@ internal sealed class SamplePrintPlatform : IPrintPlatform
             ? settings with { Duplex = DuplexMode.OneSided }
             : settings;
 
-    public Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
+    public async Task PrintAsync(IPrintDocument sheets, PrintSettings settings, IProgress<PrintProgress> progress,
         CancellationToken cancellation)
     {
         var count = sheets.Paginate(null);
+        await sheets.PrepareAsync(null, cancellation);
         LastJob = $"{settings.Printer.Name}: {count} × {settings.Copies}";
-        return Task.CompletedTask;
     }
 }
