@@ -49,20 +49,29 @@ internal sealed partial class XpsDrawingSession
     }
 
     // Set as glyphs: a font the page may embed, one solid color seen, nothing thickened.
-    private static bool Sets(TextGlyph glyph, Brush foreground) =>
+    private bool Sets(TextGlyph glyph, Brush foreground) =>
         glyph.Thickening == 0 && TextOutlines.Paint(glyph.Color, foreground) is SolidColorBrush solid && Paints(solid) &&
-        XpsFonts.CanSet(glyph.Font, glyph.Index);
+        _fonts.CanSet(glyph.Font, glyph.Index);
 
-    // One run of glyphs: one font, one color, the same size, stretch, turn and slant.
+    // One run of glyphs, as one line of text: one font, one color, the same size, stretch, turn and slant, on the same
+    // baseline.
     private static bool SameRun(TextGlyph one, TextGlyph other)
     {
         const double close = 1e-9;
         var a = one.Place;
         var b = other.Place;
         var scale = Math.Max(Math.Abs(a.M11) + Math.Abs(a.M12), Math.Abs(a.M21) + Math.Abs(a.M22));
-        return ReferenceEquals(one.Font, other.Font) && one.Color == other.Color &&
-               Math.Abs(a.M11 - b.M11) <= close * scale && Math.Abs(a.M12 - b.M12) <= close * scale &&
-               Math.Abs(a.M21 - b.M21) <= close * scale && Math.Abs(a.M22 - b.M22) <= close * scale;
+        if (!ReferenceEquals(one.Font, other.Font) || one.Color != other.Color ||
+            Math.Abs(a.M11 - b.M11) > close * scale || Math.Abs(a.M12 - b.M12) > close * scale ||
+            Math.Abs(a.M21 - b.M21) > close * scale || Math.Abs(a.M22 - b.M22) > close * scale)
+        {
+            return false;
+        }
+
+        // How far the other's pen lies off the line the first's baseline runs along, against a thousandth of the em.
+        var along = Math.Sqrt(a.M11 * a.M11 + a.M12 * a.M12);
+        var off = Math.Abs((b.M31 - a.M31) * a.M12 - (b.M32 - a.M32) * a.M11) / along;
+        return off <= along * one.Font.UnitsPerEm / 1000;
     }
 
     /// <summary>Writes a run of glyphs as one XPS Glyphs element: its em at the size the first glyph is drawn, placed by

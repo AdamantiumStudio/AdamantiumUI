@@ -9,12 +9,17 @@ using Adamantium.Win32.Printing.Xps;
 
 namespace Adamantium.UI.Platforms.Windows.Printing;
 
-/// <summary>The fonts a page of an XPS package sets its text in: for each font, the glyphs the page uses, written as an
-/// OpenType subset once the page is drawn, obfuscated in a part named by a GUID (XPS 1.0, 9.1.7.3). The page's glyph
-/// runs are written with their fonts' own glyph indices and given the subset's once it is known.</summary>
+/// <summary>The fonts the pages of an XPS package set their text in: for each font of a page, the glyphs the page uses,
+/// written as an OpenType subset once the page is drawn - a restricted font, as its license allows it to be printed,
+/// obfuscated in a part named by a GUID (XPS 1.0, 9.1.7.3). The page's glyph runs are written with their fonts' own glyph
+/// indices and given the subset's once it is known.</summary>
 internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
 {
+    private const XpsFontEmbedding Embedding = XpsFontEmbedding.Restricted;
+
     private readonly Dictionary<IFont, PageFont> _page = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IFont, Dictionary<uint, bool>> _settable = new(ReferenceEqualityComparer.Instance);
+    private int _subsets;
 
     // A font of the page: its resource in the package, the glyphs used, and the runs set in it.
     private sealed class PageFont(IXpsOMFontResource resource, object part)
@@ -32,25 +37,54 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
     private sealed record Run(IXpsOMGlyphs Glyphs, XpsGlyphIndex[] Indices);
 
     /// <summary>Whether <paramref name="glyph"/> of <paramref name="font"/> can be set in an embedded subset: the font
-    /// allows it to be embedded and cut down, and the glyph's outline fits a CFF program.</summary>
-    public static bool CanSet(IFont font, uint glyph) =>
-        font.Embedding is { IsAllowed: true, MaySubset: true } && CffSubset.CanHold(font, glyph);
+    /// allows it to be embedded and cut down, and the glyph's outline fits a CFF program - worked out once a glyph.
+    /// </summary>
+    public bool CanSet(IFont font, uint glyph)
+    {
+        if (font.Embedding is not { IsAllowed: true, MaySubset: true })
+        {
+            return false;
+        }
+
+        if (!_settable.TryGetValue(font, out var known))
+        {
+            known = [];
+            _settable[font] = known;
+        }
+
+        if (!known.TryGetValue(glyph, out var settable))
+        {
+            settable = CffSubset.CanHold(font, glyph);
+            known[glyph] = settable;
+        }
+
+        return settable;
+    }
 
     /// <summary>The resource of <paramref name="font"/> on this page, added the first time.</summary>
     public IXpsOMFontResource ResourceOf(IFont font)
     {
-        if (!_page.TryGetValue(font, out var used))
+        if (_page.TryGetValue(font, out var used))
         {
-            var name = "/Resources/Fonts/" + Guid.NewGuid().ToString("D").ToUpperInvariant() + ".odttf";
-            XpsGeometryPath.Check(factory.CreatePartUri(name, out var part));
-
-            // Its program is written once the page knows which glyphs it uses.
-            XpsGeometryPath.Check(factory.CreateFontResource(new ComStream(new MemoryStream()), XpsFontEmbedding.Obfuscated,
-                part, 0, out var created));
-            used = new PageFont(created, part);
-            _page[font] = used;
+            return used.Resource;
         }
 
+        var name = "/Resources/Fonts/" + Guid.NewGuid().ToString("D").ToUpperInvariant() + ".odttf";
+        XpsGeometryPath.Check(factory.CreatePartUri(name, out var part));
+        try
+        {
+            // Its program is written once the page knows which glyphs it uses.
+            XpsGeometryPath.Check(factory.CreateFontResource(new ComStream(new MemoryStream()), Embedding, part, 0,
+                out var created));
+            used = new PageFont(created, part);
+        }
+        catch
+        {
+            Marshal.ReleaseComObject(part);
+            throw;
+        }
+
+        _page[font] = used;
         return used.Resource;
     }
 
@@ -102,9 +136,8 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
                 }
             }
 
-            var program = OpenTypeSubset.Write(font, subset, NameOf(font));
-            XpsGeometryPath.Check(used.Resource.SetContent(new ComStream(new MemoryStream(program)),
-                XpsFontEmbedding.Obfuscated, used.Part));
+            var program = OpenTypeSubset.Write(font, subset, NameOf(font, _subsets++));
+            XpsGeometryPath.Check(used.Resource.SetContent(new ComStream(new MemoryStream(program)), Embedding, used.Part));
         }
     }
 
@@ -127,10 +160,18 @@ internal sealed class XpsFonts(IXpsOMObjectFactory factory) : IDisposable
 
     public void Dispose() => EndPage();
 
-    // As a subset is named (ISO 32000-2, 9.9.2): six capitals, then the font's PostScript name, or its family's.
-    private static string NameOf(IFont font)
+    // As a subset is named (ISO 32000-2, 9.9.2): six capitals of its own - two subsets of one font are two fonts - then
+    // the font's PostScript name, or its family's.
+    private static string NameOf(IFont font, int subset)
     {
+        Span<char> tag = stackalloc char[6];
+        for (var at = 5; at >= 0; at--)
+        {
+            tag[at] = (char)('A' + subset % 26);
+            subset /= 26;
+        }
+
         var own = font.GetName(6);
-        return "XPSSUB+" + (string.IsNullOrWhiteSpace(own) ? font.GetName(1) ?? "Font" : own);
+        return new string(tag) + "+" + (string.IsNullOrWhiteSpace(own) ? font.GetName(1) ?? "Font" : own);
     }
 }
