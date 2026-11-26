@@ -1,4 +1,6 @@
 using Adamantium.Pulsar;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using NUnit.Framework;
 
 namespace Adamantium.UI.Audio.Tests;
@@ -268,6 +270,146 @@ public class AudioPlayerTests
             _player.Source = null;
             File.Delete(path);
         }
+    }
+
+    // What the player changes of itself goes to the view model, and what the view model changes still comes to it.
+    [Test]
+    public void BindingsToTheTrackAndPosition_LiveOn()
+    {
+        var tracks = Add(("one", 3), ("two", 3), ("three", 3));
+        var choice = new Choice();
+        _player.SetBinding(AudioPlayer.CurrentTrackProperty,
+            new Binding { Path = new PropertyPath(nameof(Choice.Track)), Source = choice, Mode = BindingMode.TwoWay });
+        _player.SetBinding(AudioPlayer.PositionProperty,
+            new Binding { Path = new PropertyPath(nameof(Choice.Position)), Source = choice, Mode = BindingMode.TwoWay });
+
+        _player.PlayPauseCommand.Execute();
+        _player.NextCommand.Execute();
+        Assert.That(choice.Track, Is.SameAs(tracks[1]));
+
+        choice.Track = tracks[2];
+        BindingUpdateQueue.Flush();
+        Assert.That(_player.CurrentTrack, Is.SameAs(tracks[2]));
+        choice.Position = TimeSpan.FromSeconds(2);
+        BindingUpdateQueue.Flush();
+        Assert.That(_playback.Position, Is.EqualTo(TimeSpan.FromSeconds(2)));
+    }
+
+    // The end of the one that played, told after the next was chosen, is not the next's end.
+    [Test]
+    public void AnEndToldLate_DoesNotPassTheChosenOneBy()
+    {
+        var tracks = Add(("one", 0.2), ("two", 3), ("three", 3));
+        _player.PlayPauseCommand.Execute();
+        var block = new float[2 * 480];
+        Assert.That(SpinWait.SpinUntil(() =>
+        {
+            _engine.Render(block, AudioFormat.Default);
+            return _engine.Voices == 0;
+        }, Patience), Is.True);
+
+        _player.NextCommand.Execute();
+        _context.Run();
+
+        Assert.That(_player.CurrentTrack, Is.SameAs(tracks[1]));
+    }
+
+    [Test]
+    public void RepeatingAListOfOne_PlaysItAgain()
+    {
+        Add(("one", 0.2));
+        _player.Repeat = AudioRepeat.List;
+        var ended = 0;
+        _playback.Ended += (_, _) => ended++;
+        _player.PlayPauseCommand.Execute();
+
+        RenderUntil(() => ended == 2);
+
+        Assert.That(_player.IsPlaying, Is.True);
+    }
+
+    // Another sound open in a playback given: the player's own is opened when played.
+    [Test]
+    public void APlaybackGiven_PlaysThePlayersTrack()
+    {
+        var other = new AudioPlayback(_engine);
+        other.Open(new SoundMemoryStorage(WavFiles.Tone(1, title: "other")));
+        var tracks = Add(("mine", 1));
+        _player.CurrentTrack = tracks[0];
+
+        _player.Playback = other;
+        _player.PlayPauseCommand.Execute();
+
+        Assert.That(other.Info.Tags.Title, Is.EqualTo("mine"));
+        _player.Playback = _playback;
+        other.Dispose();
+    }
+
+    // Taken away after it was listed: passed by on the way to the next.
+    [Test]
+    public void ATrackThatFailsToOpenOnTheWay_IsPassedBy()
+    {
+        var storage = new TakenAwayStorage(WavFiles.Tone(0.2, title: "two"));
+        Add(("one", 0.2));
+        var two = new AudioTrack(storage, "two");
+        var three = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "three")), "three");
+        _player.Tracks.Add(two);
+        _player.Tracks.Add(three);
+        RunUntil(() => two.Info != null);
+        storage.IsTaken = true;
+
+        _player.PlayPauseCommand.Execute();
+
+        RenderUntil(() => _player.CurrentTrack == three && _player.IsPlaying);
+        Assert.That(two.CannotBeRead, Is.True);
+    }
+
+    // Out of the tree, it is told no more of the list, nor of the playback.
+    [Test]
+    public void APlayerOutOfTheTree_ListensNoMore()
+    {
+        var player = new DetachablePlayer { Playback = _playback };
+        player.Attach();
+        player.Detach();
+
+        player.Tracks.Add(new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "one")), "one"));
+        Thread.Sleep(200);
+        _context.Run();
+
+        Assert.That(player.Tracks[0].Info, Is.Null);
+        player.Attach();
+        RunUntil(() => player.Tracks[0].Info != null);
+    }
+
+    // The engine's voices taken: a seek says it could not, and the track is not called broken.
+    [Test]
+    public void ASeekWithNoVoiceToSpare_IsSaid()
+    {
+        using var engine = new AudioEngine(new AudioEngineSettings { Voices = 1 });
+        using var playback = new AudioPlayback(engine);
+        var player = new AudioPlayer { Playback = playback };
+        var track = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(2, title: "one")), "one");
+        player.Tracks.Add(track);
+        player.PlayPauseCommand.Execute();
+
+        Assert.DoesNotThrow(() => player.Position = TimeSpan.FromSeconds(1));
+        Assert.That(player.HasFailed, Is.True);
+        Assert.That(track.CannotBeRead, Is.False);
+    }
+
+    // Next on a list of one changes nothing, and leaves nothing to play the one chosen later.
+    [Test]
+    public void ANextThatChangedNothing_DoesNotPlayALaterChoice()
+    {
+        Add(("one", 3));
+        _player.PlayPauseCommand.Execute();
+        _player.NextCommand.Execute();
+        _player.PlayPauseCommand.Execute();
+        var two = Add(("two", 3))[0];
+
+        _player.CurrentTrack = two;
+
+        Assert.That(_playback.State, Is.Not.EqualTo(AudioPlaybackState.Playing));
     }
 
     private AudioTrack[] Add(params (string Title, double Seconds)[] sounds)

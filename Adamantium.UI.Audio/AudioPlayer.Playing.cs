@@ -6,6 +6,7 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Audio;
 
+// What the player changes of itself it sets as its current value: a binding of the application's stays.
 public partial class AudioPlayer
 {
     private const int WaveformParts = 2048;
@@ -22,6 +23,10 @@ public partial class AudioPlayer
     // The tracks' info, read one after another.
     private Task _infoReading = Task.CompletedTask;
     private List<AudioTrack> _shuffled = [];
+    // The track whose end the playback may tell: the one played, while it is still the current one.
+    private AudioTrack _played;
+    // Out of the tree it is told nothing: neither of the list nor of the playback, which may outlive it.
+    private bool _isListening = true;
     private bool _playsChosen;
     private bool _isTelling;
     private bool _isTicking;
@@ -29,10 +34,20 @@ public partial class AudioPlayer
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        if (!_isListening)
+        {
+            _isListening = true;
+            Listen(Tracks);
+            Listen(Playback);
+            Shuffle();
+            TellState();
+        }
+
         Tick();
     }
 
-    /// <summary>Its own playback is let go: the device is not held for a player not shown.</summary>
+    /// <summary>It is told no more of the list and the playback; its own playback is let go: the device is not held for
+    /// a player not shown.</summary>
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
@@ -41,6 +56,8 @@ public partial class AudioPlayer
             SetCurrentValue(PlaybackProperty, null);
         }
 
+        StopListening();
+        _isListening = false;
         _waveformReading?.Cancel();
     }
 
@@ -50,13 +67,12 @@ public partial class AudioPlayer
         if (player._watchedTracks != null)
         {
             player._watchedTracks.CollectionChanged -= player.OnTracksListChanged;
+            player._watchedTracks = null;
         }
 
-        player._watchedTracks = e.NewValue as TrackingCollection<AudioTrack>;
-        if (player._watchedTracks != null)
+        if (player._isListening)
         {
-            player._watchedTracks.CollectionChanged += player.OnTracksListChanged;
-            player.ReadInfo(player._watchedTracks);
+            player.Listen(e.NewValue as TrackingCollection<AudioTrack>);
         }
 
         player.Shuffle();
@@ -81,22 +97,22 @@ public partial class AudioPlayer
         player._playsChosen = false;
         if (player.Open(e.NewValue as AudioTrack) && plays)
         {
-            player.Playback.Play();
+            player.TryPlay();
         }
 
         player.TellState();
     }
 
     private static void OnSourceChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
-        ((AudioPlayer)component).CurrentTrack = e.NewValue is string { Length: > 0 } path ? new AudioTrack(path) : null;
+        ((AudioPlayer)component).Choose(e.NewValue is string { Length: > 0 } path ? new AudioTrack(path) : null,
+            plays: false);
 
     private static void OnPositionChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var player = (AudioPlayer)component;
         if (!player._isTelling)
         {
-            player.Playback?.Seek((TimeSpan)e.NewValue);
-            player.TellPosition();
+            player.SeekTo((TimeSpan)e.NewValue);
         }
     }
 
@@ -126,6 +142,7 @@ public partial class AudioPlayer
         {
             player._watchedPlayback.StateChanged -= player.OnPlaybackStateChanged;
             player._watchedPlayback.Ended -= player.OnPlaybackEnded;
+            player._watchedPlayback = null;
         }
 
         if (player._own != null && player._own != e.NewValue)
@@ -134,17 +151,15 @@ public partial class AudioPlayer
             player._own = null;
         }
 
-        player._watchedPlayback = e.NewValue as AudioPlayback;
-        if (player._watchedPlayback != null)
+        if (player._isListening)
         {
-            player._watchedPlayback.StateChanged += player.OnPlaybackStateChanged;
-            player._watchedPlayback.Ended += player.OnPlaybackEnded;
-            player._watchedPlayback.Volume = VolumeOf(player.Volume);
+            player.Listen(e.NewValue as AudioPlayback);
         }
 
-        // What another played is not this one's: the track is opened again when played.
+        // What it has open is not this player's: the track is opened again when played.
         player._waveformReading?.Cancel();
-        player.Info = player._watchedPlayback?.Info;
+        player._played = null;
+        player.Info = null;
         player.Peaks = null;
         player.TellState();
     }
@@ -155,30 +170,43 @@ public partial class AudioPlayer
         Tick();
     }
 
-    // To the next, as Repeat says; one that can not be played is passed by.
+    // To the next, as Repeat says; one that can not be played is passed by. An end told after another track was chosen
+    // is that one's no more.
     private void OnPlaybackEnded(object sender, EventArgs e)
     {
-        if (Repeat == AudioRepeat.Track)
+        var ended = _played;
+        _played = null;
+        if (sender != Playback || ended == null || ended != CurrentTrack)
         {
-            Playback?.Play();
             return;
         }
 
-        var track = CurrentTrack;
-        for (var tried = 0; tried < (Tracks?.Count ?? 0); tried++)
+        if (Repeat == AudioRepeat.Track)
+        {
+            TryPlay();
+            return;
+        }
+
+        var track = ended;
+        for (var tried = 0; tried < Order.Count; tried++)
         {
             track = TrackAfter(track, wraps: Repeat == AudioRepeat.List);
-            if (track == null || track == CurrentTrack)
+            if (track == null || track == ended)
             {
                 break;
             }
 
-            if (!track.CannotBeRead)
+            if (!track.CannotBeRead && Choose(track, plays: true))
             {
-                _playsChosen = true;
-                CurrentTrack = track;
                 return;
             }
+        }
+
+        // The list wrapped to the one that ended, or a single track: Repeat list plays it again.
+        if (Repeat == AudioRepeat.List && !ended.CannotBeRead && (track == ended || Order.Count == 0))
+        {
+            Choose(ended, plays: true);
+            return;
         }
 
         TellPosition();
@@ -188,8 +216,7 @@ public partial class AudioPlayer
     {
         if (CurrentTrack == null)
         {
-            _playsChosen = true;
-            CurrentTrack = TrackAfter(null, wraps: false);
+            Choose(TrackAfter(null, wraps: false), plays: true);
             return;
         }
 
@@ -199,7 +226,7 @@ public partial class AudioPlayer
         }
         else if (Info != null || Open(CurrentTrack))
         {
-            Playback.Play();
+            TryPlay();
         }
 
         TellState();
@@ -216,34 +243,59 @@ public partial class AudioPlayer
         var before = TrackBefore(CurrentTrack);
         if (Position > RestartAfter || before == null)
         {
-            Position = TimeSpan.Zero;
+            SeekTo(TimeSpan.Zero);
             return;
         }
 
-        _playsChosen = PlaybackPlays;
-        CurrentTrack = before;
+        Choose(before, PlaybackPlays);
     }
 
-    private void PlayNext()
-    {
-        _playsChosen = PlaybackPlays;
-        CurrentTrack = TrackAfter(CurrentTrack, wraps: true);
-    }
+    private void PlayNext() => Choose(TrackAfter(CurrentTrack, wraps: true), PlaybackPlays);
 
     // Of the playback itself: what the player was told of it may be on its way still.
     private bool PlaybackPlays => Playback is { State: AudioPlaybackState.Playing };
 
-    private void RepeatOther() => Repeat = Repeat switch
+    private void RepeatOther() => SetCurrentValue(RepeatProperty, Repeat switch
     {
         AudioRepeat.Off => AudioRepeat.List,
         AudioRepeat.List => AudioRepeat.Track,
         _ => AudioRepeat.Off,
-    };
+    });
+
+    // Makes it the current one, played where it plays; the same one is played again from its beginning. Whether it
+    // opened.
+    private bool Choose(AudioTrack track, bool plays)
+    {
+        if (track == CurrentTrack)
+        {
+            if (track != null && plays && (Info != null || Open(track)))
+            {
+                SeekTo(TimeSpan.Zero);
+                TryPlay();
+                TellState();
+            }
+
+            return Info != null;
+        }
+
+        _playsChosen = plays;
+        try
+        {
+            SetCurrentValue(CurrentTrackProperty, track);
+        }
+        finally
+        {
+            _playsChosen = false;
+        }
+
+        return Info != null;
+    }
 
     // Whether it opened; one that could not be is said by HasFailed.
     private bool Open(AudioTrack track)
     {
         _waveformReading?.Cancel();
+        _played = null;
         Peaks = null;
         var playback = track == null ? Playback : PlaybackToUse();
         if (track == null || playback == null)
@@ -253,7 +305,8 @@ public partial class AudioPlayer
             TellState();
             if (track != null)
             {
-                Fail(track);
+                // The system has no device output: the track is not to blame.
+                Fail(track, isBroken: false);
             }
 
             return false;
@@ -267,23 +320,61 @@ public partial class AudioPlayer
         {
             Info = null;
             TellState();
-            Fail(track);
+            Fail(track, isBroken: true);
             return false;
         }
 
         track.Info ??= playback.Info;
         Info = playback.Info;
-        HasFailed = false;
+        SetCurrentValue(HasFailedProperty, false);
         TellState();
         ReadWaveform();
         return true;
     }
 
-    private void Fail(AudioTrack track)
+    private void TryPlay()
     {
-        track.CannotBeRead = true;
+        try
+        {
+            Playback.Play();
+            _played = CurrentTrack;
+        }
+        catch (InvalidOperationException)
+        {
+            Fail(CurrentTrack, isBroken: false);
+        }
+    }
+
+    private void SeekTo(TimeSpan position)
+    {
+        try
+        {
+            Playback?.Seek(position);
+        }
+        catch (InvalidOperationException)
+        {
+            // The engine had no voice to spare: it stopped there.
+            Fail(CurrentTrack, isBroken: false);
+        }
+
+        TellState();
+    }
+
+    // Said by HasFailed; one that is no sound file, or can not be read, is passed by from now on.
+    private void Fail(AudioTrack track, bool isBroken)
+    {
+        if (track == null)
+        {
+            return;
+        }
+
+        if (isBroken)
+        {
+            track.CannotBeRead = true;
+        }
+
         FailedTrack = track;
-        HasFailed = true;
+        SetCurrentValue(HasFailedProperty, true);
     }
 
     // Its own, made the first time one is needed, where the application gave none; none where the system has no device
@@ -306,6 +397,43 @@ public partial class AudioPlayer
 
         SetCurrentValue(PlaybackProperty, _own);
         return _own;
+    }
+
+    private void Listen(TrackingCollection<AudioTrack> tracks)
+    {
+        _watchedTracks = tracks;
+        if (tracks != null)
+        {
+            tracks.CollectionChanged += OnTracksListChanged;
+            ReadInfo(tracks);
+        }
+    }
+
+    private void Listen(AudioPlayback playback)
+    {
+        _watchedPlayback = playback;
+        if (playback != null)
+        {
+            playback.StateChanged += OnPlaybackStateChanged;
+            playback.Ended += OnPlaybackEnded;
+            playback.Volume = VolumeOf(Volume);
+        }
+    }
+
+    private void StopListening()
+    {
+        if (_watchedTracks != null)
+        {
+            _watchedTracks.CollectionChanged -= OnTracksListChanged;
+            _watchedTracks = null;
+        }
+
+        if (_watchedPlayback != null)
+        {
+            _watchedPlayback.StateChanged -= OnPlaybackStateChanged;
+            _watchedPlayback.Ended -= OnPlaybackEnded;
+            _watchedPlayback = null;
+        }
     }
 
     private void ReadWaveform()
@@ -441,7 +569,7 @@ public partial class AudioPlayer
         _isTelling = true;
         try
         {
-            Position = Playback?.Position ?? TimeSpan.Zero;
+            SetCurrentValue(PositionProperty, Playback?.Position ?? TimeSpan.Zero);
         }
         finally
         {

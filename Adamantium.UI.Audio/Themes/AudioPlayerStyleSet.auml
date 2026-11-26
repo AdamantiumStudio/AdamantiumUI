@@ -461,9 +461,15 @@
                     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}" HorizontalAlignment="Left">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <ContentPresenter ContentTemplate="{TemplateBinding TransportTemplate}"/>
-                            <ContentPresenter ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                        <StackPanel Spacing="4">
+                            <InfoBar Severity="Error" Title="{Localize AudioPlayerStrings.CannotPlay}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
+                                     AutomationProperties.AutomationId="AudioFailed"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ContentPresenter ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                                <ContentPresenter ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </ControlTemplate>
