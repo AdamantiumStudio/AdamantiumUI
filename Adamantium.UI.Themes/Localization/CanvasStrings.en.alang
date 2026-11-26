@@ -10,6 +10,11 @@
     <Phrase Key="ToolsLayout" Text="Lay the tools out in a row or in a column"/>
     <Phrase Key="Properties" Text="Properties of what is selected"/>
     <Phrase Key="Layers" Text="Everything on the plane, topmost first"/>
+    <Phrase Key="PropertiesFace" Text="Properties"/>
+    <Phrase Key="LayersFace" Text="Layers"/>
+    <Phrase Key="Inspector" Text="Inspector"/>
+    <Phrase Key="FoldInspector" Text="Fold the inspector away"/>
+    <Phrase Key="UnfoldInspector" Text="Open the inspector"/>
     <Phrase Key="CommentFrame" Text="Draw a comment frame round what is selected"/>
     <Phrase Key="AlignLeft" Text="Line the left edges up"/>
     <Phrase Key="AlignCenter" Text="Line the middles up"/>

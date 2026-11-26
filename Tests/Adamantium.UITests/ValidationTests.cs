@@ -89,6 +89,23 @@ public class ValidationTests
     }
 
     [Test]
+    public void AnErrorTheApplicationMarks_StandsUntilTheSourcesErrorsChange()
+    {
+        var (form, box) = Bound();
+
+        box.SetValue(Validation.HasErrorProperty, true);
+        Assert.That(Validation.GetHasError(box), Is.True);
+
+        form.Say(nameof(Form.Name), "Enter a name.");
+        BindingUpdateQueue.Flush();
+        Assert.That(Validation.GetHasError(box), Is.True);
+
+        form.Say(nameof(Form.Name));
+        BindingUpdateQueue.Flush();
+        Assert.That(Validation.GetHasError(box), Is.False);
+    }
+
+    [Test]
     public void AnErrorOfAnotherProperty_DoesNotReachIt()
     {
         var (form, box) = Bound();

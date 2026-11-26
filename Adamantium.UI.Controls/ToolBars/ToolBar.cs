@@ -34,26 +34,20 @@ public class ToolBar : ItemsControl
         typeof(int), typeof(ToolBar),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsParentMeasure | PropertyMetadataOptions.BindsTwoWayByDefault));
 
-    private static readonly AdamantiumPropertyKey OrientationPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(Orientation), typeof(Orientation), typeof(ToolBar),
         new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsMeasure,
             static (a, _) => ((ToolBar)a).OnOrientationChanged()));
-
-    public static readonly AdamantiumProperty OrientationProperty = OrientationPropertyKey.Property;
 
     public static readonly AdamantiumProperty IsOverflowOpenProperty = AdamantiumProperty.Register(nameof(IsOverflowOpen),
         typeof(bool), typeof(ToolBar),
         new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault, OnIsOverflowOpenChanged));
 
-    private static readonly AdamantiumPropertyKey HasOverflowItemsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasOverflowItemsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasOverflowItems), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty HasOverflowItemsProperty = HasOverflowItemsPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsMovingPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsMovingProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsMoving), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsMovingProperty = IsMovingPropertyKey.Property;
 
     /// <summary>Whether the bar is shown by what the user is on - a table, a picture - rather than by the user, as a
     /// ribbon's contextual tab is: its tray's menu lists it apart, and does not switch it.</summary>
@@ -77,26 +71,18 @@ public class ToolBar : ItemsControl
         nameof(ShowsContextualHeader), typeof(bool), typeof(ToolBar),
         new PropertyMetadata(true, OnContextualHeaderChanged));
 
-    private static readonly AdamantiumPropertyKey HasContextualHeaderPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasContextualHeaderProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasContextualHeader), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty HasContextualHeaderProperty = HasContextualHeaderPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsContextualHeaderShortPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsContextualHeaderShortProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsContextualHeaderShort), typeof(bool), typeof(ToolBar),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty IsContextualHeaderShortProperty = IsContextualHeaderShortPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey HasContextInOverflowPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasContextInOverflowProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasContextInOverflow), typeof(bool), typeof(ToolBar), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty HasContextInOverflowProperty = HasContextInOverflowPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey OverflowContextAccentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty OverflowContextAccentProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(OverflowContextAccent), typeof(Brush), typeof(ToolBar), new PropertyMetadata(default(Brush)));
-
-    public static readonly AdamantiumProperty OverflowContextAccentProperty = OverflowContextAccentPropertyKey.Property;
 
     /// <summary>The color of a contextual bar's context, washed behind the bar - the same as the ribbon's contextual
     /// group of that context (<see cref="RibbonContextualGroup.Accent"/>), so the two read as one. The theme's accent
@@ -242,7 +228,7 @@ public class ToolBar : ItemsControl
     public Orientation Orientation
     {
         get => GetValue<Orientation>(OrientationProperty);
-        internal set => SetValue(OrientationPropertyKey, value);
+        internal set => SetReadOnlyValue(OrientationProperty, value);
     }
 
     /// <summary>Whether the overflow menu is open.</summary>
@@ -256,7 +242,7 @@ public class ToolBar : ItemsControl
     public bool HasOverflowItems
     {
         get => GetValue<bool>(HasOverflowItemsProperty);
-        private set => SetValue(HasOverflowItemsPropertyKey, value);
+        private set => SetReadOnlyValue(HasOverflowItemsProperty, value);
     }
 
     /// <summary>Whether the bar is being carried by its grip - it stays put while its ghost moves; set through
@@ -264,7 +250,7 @@ public class ToolBar : ItemsControl
     public bool IsMoving
     {
         get => GetValue<bool>(IsMovingProperty);
-        internal set => SetValue(IsMovingPropertyKey, value);
+        internal set => SetReadOnlyValue(IsMovingProperty, value);
     }
 
     public bool IsContextual
@@ -302,7 +288,7 @@ public class ToolBar : ItemsControl
     public bool HasContextualHeader
     {
         get => GetValue<bool>(HasContextualHeaderProperty);
-        private set => SetValue(HasContextualHeaderPropertyKey, value);
+        private set => SetReadOnlyValue(HasContextualHeaderProperty, value);
     }
 
     /// <summary>Whether the context's name down the side stands short - a strip of its color, the name its tooltip -
@@ -310,7 +296,7 @@ public class ToolBar : ItemsControl
     public bool IsContextualHeaderShort
     {
         get => GetValue<bool>(IsContextualHeaderShortProperty);
-        private set => SetValue(IsContextualHeaderShortPropertyKey, value);
+        private set => SetReadOnlyValue(IsContextualHeaderShortProperty, value);
     }
 
     /// <summary>Whether a section a shown context comes from (<see cref="ToolBarGroup.IsInContext"/>) is in the overflow
@@ -318,14 +304,14 @@ public class ToolBar : ItemsControl
     public bool HasContextInOverflow
     {
         get => GetValue<bool>(HasContextInOverflowProperty);
-        private set => SetValue(HasContextInOverflowPropertyKey, value);
+        private set => SetReadOnlyValue(HasContextInOverflowProperty, value);
     }
 
     /// <summary>The color of the context whose section is in the overflow menu - the first, when several are.</summary>
     public Brush OverflowContextAccent
     {
         get => GetValue<Brush>(OverflowContextAccentProperty);
-        private set => SetValue(OverflowContextAccentPropertyKey, value);
+        private set => SetReadOnlyValue(OverflowContextAccentProperty, value);
     }
 
     private static void OnContextualHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

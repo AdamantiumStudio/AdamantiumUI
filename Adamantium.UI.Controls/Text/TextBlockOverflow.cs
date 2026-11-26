@@ -21,10 +21,8 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
         nameof(OverflowContentTarget), typeof(TextBlockOverflow), typeof(TextBlockOverflow),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnChainChanged));
 
-    private static readonly AdamantiumPropertyKey HasOverflowContentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasOverflowContentProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasOverflowContent), typeof(bool), typeof(TextBlockOverflow), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasOverflowContentProperty = HasOverflowContentPropertyKey.Property;
 
     private readonly BaselineGridFollower _grid;
     private Size<double> _room = new(double.NaN, double.NaN);
@@ -51,7 +49,7 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
     public bool HasOverflowContent
     {
         get => GetValue<bool>(HasOverflowContentProperty);
-        internal set => SetValue(HasOverflowContentPropertyKey, value);
+        internal set => SetReadOnlyValue(HasOverflowContentProperty, value);
     }
 
     /// <summary>The block whose text this shows; null while no block's chain reaches it.</summary>

@@ -723,12 +723,6 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         WriteValue(property, AdamantiumProperty.UnsetValue, priority);
     }
 
-    /// <summary>Clears the value of the read-only property <paramref name="key"/> writes.</summary>
-    public void ClearValue(AdamantiumPropertyKey key, ValuePriority priority = ValuePriority.Local)
-    {
-        WriteValue(PropertyWrittenBy(key), AdamantiumProperty.UnsetValue, priority);
-    }
-
     /// <summary>
     /// Gets a <see cref="AdamantiumProperty"/> value.
     /// </summary>
@@ -1120,8 +1114,8 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     }
 
     /// <summary>
-    /// Sets a <see cref="AdamantiumProperty"/> value. A read-only property refuses it: its owner writes it through its
-    /// <see cref="AdamantiumPropertyKey"/>.
+    /// Sets a <see cref="AdamantiumProperty"/> value. A read-only property refuses it: the component itself writes it, by
+    /// <see cref="SetReadOnlyValue"/>.
     /// </summary>
     /// <param name="property">The property.</param>
     /// <param name="value">New value.</param>
@@ -1132,29 +1126,24 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         WriteValue(property, value, priority);
     }
 
-    /// <summary>Sets the value of the read-only property <paramref name="key"/> writes.</summary>
-    public void SetValue(AdamantiumPropertyKey key, object value, ValuePriority priority = ValuePriority.Local)
+    /// <summary>Sets the value of a read-only property of this component: its own, or one it inherited.</summary>
+    /// <param name="property">The property, registered read-only.</param>
+    /// <param name="value">New value.</param>
+    protected void SetReadOnlyValue(AdamantiumProperty property, object value)
     {
-        WriteValue(PropertyWrittenBy(key), value, priority);
-    }
-
-    // The property key writes - only if it is the key made with the property.
-    private static AdamantiumProperty PropertyWrittenBy(AdamantiumPropertyKey key)
-    {
-        ArgumentNullException.ThrowIfNull(key);
-        var property = key.Property;
-        if (!property.IsWrittenBy(key))
+        ArgumentNullException.ThrowIfNull(property);
+        if (!property.ReadOnly)
         {
-            ThrowNotItsKey(property);
+            ThrowNotReadOnly(property);
         }
 
-        return property;
+        WriteValue(property, value, ValuePriority.Local);
     }
 
-    // Apart, so the check above stays small enough to inline into every keyed write.
-    private static void ThrowNotItsKey(AdamantiumProperty property) =>
+    // Apart, so the check above stays small enough to inline into every write.
+    private static void ThrowNotReadOnly(AdamantiumProperty property) =>
         throw new InvalidOperationException(
-            $"{property.OwnerType.Name}.{property.Name}: this key was not made with the property, so it writes nothing.");
+            $"{property.OwnerType.Name}.{property.Name} is not read-only: SetValue and SetCurrentValue write it.");
 
     private static void RefuseReadOnly(AdamantiumProperty property)
     {
@@ -1167,7 +1156,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     // Apart, so the check above stays small enough to inline into every write.
     private static void ThrowReadOnly(AdamantiumProperty property) =>
         throw new InvalidOperationException(
-            $"{property.OwnerType.Name}.{property.Name} is read-only: only its owner writes it, through its key.");
+            $"{property.OwnerType.Name}.{property.Name} is read-only: only the component itself writes it.");
 
     private void WriteValue(AdamantiumProperty property, object value, ValuePriority priority)
     {
@@ -1194,18 +1183,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
         RefuseReadOnly(property);
-        WriteCurrentValue(property, value);
-    }
 
-    /// <summary>Sets the current value of the read-only property <paramref name="key"/> writes, keeping its source.
-    /// </summary>
-    public void SetCurrentValue(AdamantiumPropertyKey key, object value)
-    {
-        WriteCurrentValue(PropertyWrittenBy(key), value);
-    }
-
-    private void WriteCurrentValue(AdamantiumProperty property, object value)
-    {
         // A {Binding} a template's markup set stands at Template: the value goes into its slot whatever shows over it - a
         // trigger, or nothing yet as the binding has written nothing - since raised to Binding it would mask it for good.
         if (Data.BindingEngine.GetBindingExpression(this, property) is { Priority: ValuePriority.Template })

@@ -19,24 +19,18 @@ public class ToolBarGroup : ItemsControl
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
         typeof(object), typeof(ToolBarGroup), new PropertyMetadata(null));
 
-    private static readonly AdamantiumPropertyKey OrientationPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(Orientation), typeof(Orientation), typeof(ToolBarGroup),
         new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty OrientationProperty = OrientationPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey ShowsSeparatorPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ShowsSeparatorProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ShowsSeparator), typeof(bool), typeof(ToolBarGroup),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty ShowsSeparatorProperty = ShowsSeparatorPropertyKey.Property;
-
     // No AffectsMeasure: the rule keeps its room either way, so beginning a line changes how the section looks, not where
     // the lines break.
-    private static readonly AdamantiumPropertyKey BeginsLinePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty BeginsLineProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(BeginsLine), typeof(bool), typeof(ToolBarGroup), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty BeginsLineProperty = BeginsLinePropertyKey.Property;
 
     /// <summary>Whether the section is where a shown context comes from - the picture put in from here, now selected,
     /// its contextual bar shown - so it is framed and washed in the context's <see cref="Accent"/>, and read as kin of
@@ -138,14 +132,14 @@ public class ToolBarGroup : ItemsControl
     public Orientation Orientation
     {
         get => GetValue<Orientation>(OrientationProperty);
-        internal set => SetValue(OrientationPropertyKey, value);
+        internal set => SetReadOnlyValue(OrientationProperty, value);
     }
 
     /// <summary>Whether a rule stands before it: a command stands before it where it is, on its bar or in the menu.</summary>
     public bool ShowsSeparator
     {
         get => GetValue<bool>(ShowsSeparatorProperty);
-        internal set => SetValue(ShowsSeparatorPropertyKey, value);
+        internal set => SetReadOnlyValue(ShowsSeparatorProperty, value);
     }
 
     /// <summary>Whether it begins a line of a bar whose commands wrap - not the first line: its rule is hidden there and
@@ -153,7 +147,7 @@ public class ToolBarGroup : ItemsControl
     public bool BeginsLine
     {
         get => GetValue<bool>(BeginsLineProperty);
-        internal set => SetValue(BeginsLinePropertyKey, value);
+        internal set => SetReadOnlyValue(BeginsLineProperty, value);
     }
 
     /// <summary>How much of the section along its bar its rule takes, margin included: a section beginning a line stands

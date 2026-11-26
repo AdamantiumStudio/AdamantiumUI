@@ -29,17 +29,13 @@ public class Badge : Control
         typeof(bool), typeof(Badge), new PropertyMetadata(false, OnShownChanged));
 
     /// <summary>What the badge says: the count, capped by <see cref="MaxCount"/>.</summary>
-    private static readonly AdamantiumPropertyKey TextPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(Text),
+    public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.RegisterReadOnly(nameof(Text),
         typeof(string), typeof(Badge), new PropertyMetadata("0", PropertyMetadataOptions.AffectsMeasure));
-
-    public static readonly AdamantiumProperty TextProperty = TextPropertyKey.Property;
 
     /// <summary>Whether the badge has nothing to say: a zero count, not a dot, and <see cref="ShowZero"/> off. The theme
     /// hides it then; it takes no room.</summary>
-    private static readonly AdamantiumPropertyKey IsEmptyPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsEmptyProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsEmpty), typeof(bool), typeof(Badge), new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure));
-
-    public static readonly AdamantiumProperty IsEmptyProperty = IsEmptyPropertyKey.Property;
 
     public int Count
     {
@@ -68,13 +64,13 @@ public class Badge : Control
     public string Text
     {
         get => GetValue<string>(TextProperty);
-        private set => SetValue(TextPropertyKey, value);
+        private set => SetReadOnlyValue(TextProperty, value);
     }
 
     public bool IsEmpty
     {
         get => GetValue<bool>(IsEmptyProperty);
-        private set => SetValue(IsEmptyPropertyKey, value);
+        private set => SetReadOnlyValue(IsEmptyProperty, value);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new BadgeAutomationPeer(this);

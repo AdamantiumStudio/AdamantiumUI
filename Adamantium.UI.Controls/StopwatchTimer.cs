@@ -19,15 +19,11 @@ namespace Adamantium.UI.Controls;
 /// methods.</summary>
 public class StopwatchTimer : Control
 {
-    private static readonly AdamantiumPropertyKey ElapsedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ElapsedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(Elapsed), typeof(TimeSpan), typeof(StopwatchTimer), new PropertyMetadata(TimeSpan.Zero));
 
-    public static readonly AdamantiumProperty ElapsedProperty = ElapsedPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsRunningPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsRunningProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsRunning), typeof(bool), typeof(StopwatchTimer), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsRunningProperty = IsRunningPropertyKey.Property;
 
     public static readonly AdamantiumProperty ClockStyleProperty = AdamantiumProperty.Register(nameof(ClockStyle),
         typeof(ClockStyle), typeof(StopwatchTimer), new PropertyMetadata(ClockStyle.Classic));
@@ -41,10 +37,8 @@ public class StopwatchTimer : Control
     public static readonly AdamantiumProperty ShowLapsProperty = AdamantiumProperty.Register(nameof(ShowLaps),
         typeof(bool), typeof(StopwatchTimer), new PropertyMetadata(true));
 
-    private static readonly AdamantiumPropertyKey HasLapsPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasLapsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasLaps), typeof(bool), typeof(StopwatchTimer), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasLapsProperty = HasLapsPropertyKey.Property;
 
     private readonly ClockAction _start;
     private readonly ClockAction _pause;
@@ -73,14 +67,14 @@ public class StopwatchTimer : Control
     public TimeSpan Elapsed
     {
         get => GetValue<TimeSpan>(ElapsedProperty);
-        private set => SetValue(ElapsedPropertyKey, value);
+        private set => SetReadOnlyValue(ElapsedProperty, value);
     }
 
     /// <summary>Whether it is counting now.</summary>
     public bool IsRunning
     {
         get => GetValue<bool>(IsRunningProperty);
-        private set => SetValue(IsRunningPropertyKey, value);
+        private set => SetReadOnlyValue(IsRunningProperty, value);
     }
 
     /// <summary>With hands or in figures, as <see cref="Clock.ClockStyle"/>.</summary>
@@ -117,7 +111,7 @@ public class StopwatchTimer : Control
     public bool HasLaps
     {
         get => GetValue<bool>(HasLapsProperty);
-        private set => SetValue(HasLapsPropertyKey, value);
+        private set => SetReadOnlyValue(HasLapsProperty, value);
     }
 
     /// <summary>The laps taken, the latest first.</summary>

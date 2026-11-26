@@ -520,19 +520,20 @@ public class AutomationCoverageTests
         var canvas = new InfiniteCanvas();
         var session = await Driving(canvas);
         await using var _ = session;
-        var inspector = session.Find(By.Id("PART_Inspector"));
-        var was = await inspector.GetAsync();
+        ((CanvasPane)canvas.GetTemplateChild("PART_MiniMap")).CanResize = true;
+        var map = session.Find(By.Id("PART_MiniMap"));
+        var was = await map.GetAsync();
 
-        await inspector.MoveByAsync(-60, 25);
-        var moved = await inspector.GetAsync();
-        await inspector.ResizeAsync(was.Bounds[2] + 40, was.Bounds[3]);
-        var widened = await inspector.GetAsync();
+        await map.MoveByAsync(60, -25);
+        var moved = await map.GetAsync();
+        await map.ResizeAsync(was.Bounds[2] + 40, was.Bounds[3]);
+        var widened = await map.GetAsync();
 
         Assert.Multiple(() =>
         {
             Assert.That(was.Patterns, Does.Contain("Transform"));
-            Assert.That(moved.Bounds[0], Is.EqualTo(was.Bounds[0] - 60).Within(2));
-            Assert.That(moved.Bounds[1], Is.EqualTo(was.Bounds[1] + 25).Within(2));
+            Assert.That(moved.Bounds[0], Is.EqualTo(was.Bounds[0] + 60).Within(2));
+            Assert.That(moved.Bounds[1], Is.EqualTo(was.Bounds[1] - 25).Within(2));
             Assert.That(widened.Bounds[2], Is.EqualTo(was.Bounds[2] + 40).Within(2));
         });
     }
