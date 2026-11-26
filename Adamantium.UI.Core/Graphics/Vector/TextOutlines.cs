@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Adamantium.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Curves;
 
 namespace Adamantium.UI.Core.Graphics.Vector;
 
@@ -76,8 +77,7 @@ internal static class TextOutlines
     public static List<TextOutline> Of(IReadOnlyList<TextGlyph> glyphs)
     {
         var outlines = new List<TextOutline>();
-        StreamGeometry geometry = null;
-        StreamGeometryContext context = null;
+        PathCurveBuilder builder = null;
         IFont font = null;
         Color? color = null;
         var thickening = 0.0;
@@ -89,21 +89,20 @@ internal static class TextOutlines
                 continue;
             }
 
-            if (geometry == null || !ReferenceEquals(glyph.Font, font) || glyph.Color != color ||
+            if (builder == null || !ReferenceEquals(glyph.Font, font) || glyph.Color != color ||
                 glyph.Thickening != thickening)
             {
-                Close(geometry, color, thickening, outlines);
-                geometry = new StreamGeometry { FillRule = FillRule.NonZero };
-                context = geometry.Open();
+                Close(builder, color, thickening, outlines);
+                builder = new PathCurveBuilder();
                 font = glyph.Font;
                 color = glyph.Color;
                 thickening = glyph.Thickening;
             }
 
-            Trace(context, drawn, glyph.Place);
+            Trace(builder, drawn, glyph.Place);
         }
 
-        Close(geometry, color, thickening, outlines);
+        Close(builder, color, thickening, outlines);
         return outlines;
     }
 
@@ -123,45 +122,42 @@ internal static class TextOutlines
         return whole;
     }
 
-    /// <summary>Traces the contours of <paramref name="glyph"/> into <paramref name="context"/>, carried by
-    /// <paramref name="place"/> from its font's units.</summary>
-    public static void Trace(StreamGeometryContext context, Glyph glyph, Matrix3x2<double> place)
+    /// <summary>Traces the contours of <paramref name="glyph"/> into <paramref name="builder"/>, carried by
+    /// <paramref name="place"/> from its font's units, each a filled figure, closed.</summary>
+    public static void Trace(PathCurveBuilder builder, Glyph glyph, Matrix3x2<double> place)
     {
         foreach (var contour in glyph.GetContours())
         {
-            var figure = context.BeginFigure(At(contour.Segments[0].Start), true, true);
+            builder.BeginFigure(At(contour.Segments[0].Start), true);
             foreach (var segment in contour.Segments)
             {
                 switch (segment.Kind)
                 {
                     case GlyphSegmentKind.Line:
-                        figure.LineTo(At(segment.End));
+                        builder.LineTo(At(segment.End));
                         break;
                     case GlyphSegmentKind.Quadratic:
-                        figure.QuadraticBezierTo(At(segment.Control1), At(segment.End));
+                        builder.QuadraticTo(At(segment.Control1), At(segment.End));
                         break;
                     default:
-                        figure.CubicBezierTo(At(segment.Control1), At(segment.Control2), At(segment.End));
+                        builder.CubicTo(At(segment.Control1), At(segment.Control2), At(segment.End));
                         break;
                 }
             }
 
-            figure.CloseFigure();
+            builder.EndFigure(true);
         }
 
         Vector2<double> At(Vector2<double> point) => Vector2.Transform(point, place);
     }
 
-    private static void Close(StreamGeometry geometry, Color? color, double thickening, List<TextOutline> outlines)
+    private static void Close(PathCurveBuilder builder, Color? color, double thickening,
+        List<TextOutline> outlines)
     {
-        if (geometry == null)
+        if (builder != null)
         {
-            return;
+            outlines.Add(new TextOutline(new CurveGeometry(builder.Build(0, null, FillRule.NonZero)), color, thickening));
         }
-
-        // No bounds of its own: a writer takes its curves' (CurvesForDrawing), where a StreamGeometry's flattens every
-        // curve into points - most of what printing text by its outlines cost.
-        outlines.Add(new TextOutline(geometry, color, thickening));
     }
 
     private static Rect Union(Rect one, Rect other)
