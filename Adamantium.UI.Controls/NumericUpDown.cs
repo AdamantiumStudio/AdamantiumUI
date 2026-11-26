@@ -58,10 +58,8 @@ public class NumericUpDown : RangeLimitsBase
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure,
             static (a, e) => ((NumericUpDown)a).HasUnit = !string.IsNullOrEmpty((string)e.NewValue)));
 
-    private static readonly AdamantiumPropertyKey HasUnitPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(HasUnit),
+    public static readonly AdamantiumProperty HasUnitProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasUnit),
         typeof(bool), typeof(NumericUpDown), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasUnitProperty = HasUnitPropertyKey.Property;
 
     public static readonly AdamantiumProperty AreButtonsVisibleProperty = AdamantiumProperty.Register(
         nameof(AreButtonsVisible), typeof(bool), typeof(NumericUpDown), new PropertyMetadata(true));
@@ -277,7 +275,7 @@ public class NumericUpDown : RangeLimitsBase
     public bool HasUnit
     {
         get => GetValue<bool>(HasUnitProperty);
-        private set => SetValue(HasUnitPropertyKey, value);
+        private set => SetReadOnlyValue(HasUnitProperty, value);
     }
 
     public bool AreButtonsVisible

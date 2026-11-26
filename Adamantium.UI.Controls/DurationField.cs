@@ -41,15 +41,11 @@ public class DurationField : Control, ISegmentHost
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(DurationField), new PropertyMetadata(null, (a, _) => ((DurationField)a).Show()));
 
-    private static readonly AdamantiumPropertyKey ActivePartPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ActivePartProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ActivePart), typeof(DurationParts), typeof(DurationField), new PropertyMetadata(DurationParts.None));
 
-    public static readonly AdamantiumProperty ActivePartProperty = ActivePartPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey ShownValuePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty ShownValueProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ShownValue), typeof(TimeSpan?), typeof(DurationField), new PropertyMetadata(null));
-
-    public static readonly AdamantiumProperty ShownValueProperty = ShownValuePropertyKey.Property;
 
     private const InputModifiers Chords = InputModifiers.LeftControl | InputModifiers.RightControl |
                                           InputModifiers.LeftAlt | InputModifiers.RightAlt;
@@ -134,7 +130,7 @@ public class DurationField : Control, ISegmentHost
     public DurationParts ActivePart
     {
         get => GetValue<DurationParts>(ActivePartProperty);
-        private set => SetValue(ActivePartPropertyKey, value);
+        private set => SetReadOnlyValue(ActivePartProperty, value);
     }
 
     /// <summary>The length as it is shown now, the part being typed included before it is written to
@@ -142,7 +138,7 @@ public class DurationField : Control, ISegmentHost
     public TimeSpan? ShownValue
     {
         get => GetValue<TimeSpan?>(ShownValueProperty);
-        private set => SetValue(ShownValuePropertyKey, value);
+        private set => SetReadOnlyValue(ShownValueProperty, value);
     }
 
     public override void OnApplyTemplate()

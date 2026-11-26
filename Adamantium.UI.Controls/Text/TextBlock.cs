@@ -102,19 +102,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(TextLineBounds), typeof(TextBlock),
         new PropertyMetadata(TextLineBounds.Full, PropertyMetadataOptions.AffectsMeasure));
 
-    private static readonly AdamantiumPropertyKey IsOversetPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsOversetProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsOverset), typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsOversetProperty = IsOversetPropertyKey.Property;
 
     public static readonly AdamantiumProperty OverflowContentTargetProperty = AdamantiumProperty.Register(
         nameof(OverflowContentTarget), typeof(TextBlockOverflow), typeof(TextBlock),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
 
-    private static readonly AdamantiumPropertyKey HasOverflowContentPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty HasOverflowContentProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasOverflowContent), typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty HasOverflowContentProperty = HasOverflowContentPropertyKey.Property;
 
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
@@ -998,7 +994,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     public bool IsOverset
     {
         get => GetValue<bool>(IsOversetProperty);
-        private set => SetValue(IsOversetPropertyKey, value);
+        private set => SetReadOnlyValue(IsOversetProperty, value);
     }
 
     /// <summary>Where the text that does not fit into the block goes on, as WinUI's RichTextBlock sends it on: the
@@ -1016,7 +1012,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     public bool HasOverflowContent
     {
         get => GetValue<bool>(HasOverflowContentProperty);
-        private set => SetValue(HasOverflowContentPropertyKey, value);
+        private set => SetReadOnlyValue(HasOverflowContentProperty, value);
     }
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:

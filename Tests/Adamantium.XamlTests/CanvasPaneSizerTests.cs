@@ -286,7 +286,16 @@ public class CanvasPaneSizerTests
             "a strip of nothing has to declare itself, or it is a strip of nothing");
     }
 
-    // THE PANEL A PERSON ACTUALLY DRAGS - the inspector inside a canvas, not a pane built by hand. Every part of the
+    // The map as a wide sheet against the right edge: the canvas's own pane, not one built by hand.
+    private static CanvasPane WideSheet(InfiniteCanvas canvas)
+    {
+        var pane = (CanvasPane)canvas.GetTemplateChild("PART_MiniMap");
+        pane.Placement = CanvasPanePlacement.TopRight;
+        pane.CanResize = true;
+        pane.Width = 340;
+        return pane;
+    }
+
     // ...AND A PRESS ON THE EDGE REACHES IT. The drag cannot be staged (it reads the pointer off the device), but
     // whether the edge is REACHABLE is a hit-test and nothing more - and an edge nothing can land on is an edge that
     // does not resize anything, however visible it is.
@@ -316,7 +325,8 @@ public class CanvasPaneSizerTests
 
         Settle(window);
 
-        var pane = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+        var pane = WideSheet(canvas);
+        Laid(window, canvas);
         var sizer = Shown(pane);
         var box = sizer.ClipRectangle;
 
@@ -377,9 +387,9 @@ public class CanvasPaneSizerTests
 
         Settle(window);
 
-        var pane = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+        var pane = WideSheet(canvas);
 
-        Assert.That(pane, Is.Not.Null, "the chrome carries no inspector pane");
+        Laid(window, canvas);
 
         Assert.Multiple(() =>
         {
@@ -424,7 +434,8 @@ public class CanvasPaneSizerTests
 
         Laid(window, canvas);
 
-        var pane = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+        var pane = WideSheet(canvas);
+        Laid(window, canvas);
         var grip = pane.GetTemplateChild("PART_Grip") as ButtonBase;
         var width = pane.Width;
         var placement = pane.Placement;
@@ -453,20 +464,20 @@ public class CanvasPaneSizerTests
             Assert.That(pane.Bounds.X, Is.EqualTo(at.X).Within(0.5), "opening moved a pane that fits");
         });
 
-        // Folded and carried to the far right, there is no room to open in place: the pane comes in just far enough.
+        // Folded, and carried to the far right, there is no room to open in place: the pane comes in just far enough.
         grip.PerformClick();
         Laid(window, canvas);
         pane.Placement = CanvasPanePlacement.Free;
         pane.Anchor = new Vector2<double>(1, 0);
         Laid(window, canvas);
 
-        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.RenderSize.Width).Within(0.5),
+        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.ViewportSize.Width).Within(0.5),
             "a folded pane could not be carried up to the far edge");
 
         grip.PerformClick();
         Laid(window, canvas);
 
-        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.RenderSize.Width).Within(0.5),
+        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.ViewportSize.Width).Within(0.5),
             "an open pane that did not fit was not brought in to the edge");
     }
 

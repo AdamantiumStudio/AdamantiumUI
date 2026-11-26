@@ -23,24 +23,18 @@ public class CountdownTimer : Control
         typeof(TimeSpan), typeof(CountdownTimer),
         new PropertyMetadata(TimeSpan.FromMinutes(5), PropertyMetadataOptions.BindsTwoWayByDefault, OnDurationChanged));
 
-    private static readonly AdamantiumPropertyKey RemainingPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty RemainingProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(Remaining), typeof(TimeSpan), typeof(CountdownTimer), new PropertyMetadata(TimeSpan.FromMinutes(5)));
 
-    public static readonly AdamantiumProperty RemainingProperty = RemainingPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsRunningPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsRunningProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsRunning), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsRunningProperty = IsRunningPropertyKey.Property;
 
     public static readonly AdamantiumProperty ClockStyleProperty = AdamantiumProperty.Register(nameof(ClockStyle),
         typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic,
             (a, e) => ((CountdownTimer)a).IsAnalog = Clock.HasHands((ClockStyle)e.NewValue)));
 
-    private static readonly AdamantiumPropertyKey IsAnalogPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsAnalogProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsAnalog), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
-
-    public static readonly AdamantiumProperty IsAnalogProperty = IsAnalogPropertyKey.Property;
 
     public static readonly AdamantiumProperty ShowSecondsProperty = AdamantiumProperty.Register(nameof(ShowSeconds),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
@@ -51,10 +45,8 @@ public class CountdownTimer : Control
     public static readonly AdamantiumProperty ShowDurationFieldProperty = AdamantiumProperty.Register(
         nameof(ShowDurationField), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
-    private static readonly AdamantiumPropertyKey IsAtStartPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsAtStartProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsAtStart), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
-
-    public static readonly AdamantiumProperty IsAtStartProperty = IsAtStartPropertyKey.Property;
 
     public static readonly AdamantiumProperty CompletedCommandProperty = AdamantiumProperty.Register(
         nameof(CompletedCommand), typeof(ICommand), typeof(CountdownTimer), new PropertyMetadata(null));
@@ -92,14 +84,14 @@ public class CountdownTimer : Control
     public TimeSpan Remaining
     {
         get => GetValue<TimeSpan>(RemainingProperty);
-        private set => SetValue(RemainingPropertyKey, value);
+        private set => SetReadOnlyValue(RemainingProperty, value);
     }
 
     /// <summary>Whether it is counting down now.</summary>
     public bool IsRunning
     {
         get => GetValue<bool>(IsRunningProperty);
-        private set => SetValue(IsRunningPropertyKey, value);
+        private set => SetReadOnlyValue(IsRunningProperty, value);
     }
 
     /// <summary>With hands or in figures, as <see cref="Clock.ClockStyle"/>.</summary>
@@ -129,7 +121,7 @@ public class CountdownTimer : Control
     public bool IsAnalog
     {
         get => GetValue<bool>(IsAnalogProperty);
-        private set => SetValue(IsAnalogPropertyKey, value);
+        private set => SetReadOnlyValue(IsAnalogProperty, value);
     }
 
     /// <summary>Lets its <see cref="Duration"/> be set while it stands at its whole length (<see cref="IsAtStart"/>):
@@ -145,7 +137,7 @@ public class CountdownTimer : Control
     public bool IsAtStart
     {
         get => GetValue<bool>(IsAtStartProperty);
-        private set => SetValue(IsAtStartPropertyKey, value);
+        private set => SetReadOnlyValue(IsAtStartProperty, value);
     }
 
     /// <summary>What runs when it reaches zero.</summary>

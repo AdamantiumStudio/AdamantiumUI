@@ -18,15 +18,11 @@ namespace Adamantium.UI.Controls;
 public class OverlayWindow : ContentControl, IRootVisualComponent
 {
     // The manager owns the show/close lifecycle, so IsOpen is read-only state a consumer can bind to.
-    private static readonly AdamantiumPropertyKey IsOpenPropertyKey = AdamantiumProperty.RegisterReadOnly(nameof(IsOpen),
+    public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsOpen),
         typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsOpenProperty = IsOpenPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsActivePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsActive), typeof(bool), typeof(OverlayWindow), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsActiveProperty = IsActivePropertyKey.Property;
 
     public static readonly AdamantiumProperty TitleProperty = AdamantiumProperty.Register(nameof(Title),
         typeof(object), typeof(OverlayWindow), new PropertyMetadata(null));
@@ -136,7 +132,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     public bool IsOpen
     {
         get => GetValue<bool>(IsOpenProperty);
-        private set => SetValue(IsOpenPropertyKey, value);
+        private set => SetReadOnlyValue(IsOpenProperty, value);
     }
 
     /// <summary>True when this is the front-most / last-interacted window (like <c>Window.IsActive</c>); the title bar dims
@@ -144,7 +140,7 @@ public class OverlayWindow : ContentControl, IRootVisualComponent
     public bool IsActive
     {
         get => GetValue<bool>(IsActiveProperty);
-        private set => SetValue(IsActivePropertyKey, value);
+        private set => SetReadOnlyValue(IsActiveProperty, value);
     }
 
     internal void SetActive(bool active) => IsActive = active;

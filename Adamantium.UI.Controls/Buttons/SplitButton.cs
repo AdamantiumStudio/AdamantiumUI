@@ -23,20 +23,14 @@ public class SplitButton : DropDownButton
     public static readonly AdamantiumProperty CommandTargetProperty = AdamantiumProperty.Register(nameof(CommandTarget),
         typeof(IInputComponent), typeof(SplitButton), new PropertyMetadata(null, OnCommandParameterChanged));
 
-    private static readonly AdamantiumPropertyKey IsPressedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsPressedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsPressed), typeof(bool), typeof(SplitButton), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsPressedProperty = IsPressedPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsBodyEnabledPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsBodyEnabledProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsBodyEnabled), typeof(bool), typeof(SplitButton), new PropertyMetadata(true));
 
-    public static readonly AdamantiumProperty IsBodyEnabledProperty = IsBodyEnabledPropertyKey.Property;
-
-    private static readonly AdamantiumPropertyKey IsPointerOverDropDownPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsPointerOverDropDownProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsPointerOverDropDown), typeof(bool), typeof(SplitButton), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsPointerOverDropDownProperty = IsPointerOverDropDownPropertyKey.Property;
 
     public static readonly RoutedEvent ClickEvent = EventManager.RegisterRoutedEvent(nameof(Click),
         RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(SplitButton));
@@ -68,7 +62,7 @@ public class SplitButton : DropDownButton
     public bool IsPressed
     {
         get => GetValue<bool>(IsPressedProperty);
-        private set => SetValue(IsPressedPropertyKey, value);
+        private set => SetReadOnlyValue(IsPressedProperty, value);
     }
 
     /// <summary>Whether the body can be pressed - false while <see cref="Command"/> cannot run. The arrow and the list
@@ -76,14 +70,14 @@ public class SplitButton : DropDownButton
     public bool IsBodyEnabled
     {
         get => GetValue<bool>(IsBodyEnabledProperty);
-        private set => SetValue(IsBodyEnabledPropertyKey, value);
+        private set => SetReadOnlyValue(IsBodyEnabledProperty, value);
     }
 
     /// <summary>Whether the pointer is over the arrow - the theme lights the half a click would press.</summary>
     public bool IsPointerOverDropDown
     {
         get => GetValue<bool>(IsPointerOverDropDownProperty);
-        private set => SetValue(IsPointerOverDropDownPropertyKey, value);
+        private set => SetReadOnlyValue(IsPointerOverDropDownProperty, value);
     }
 
     /// <summary>Raised when the body is clicked, after <see cref="Command"/> ran.</summary>

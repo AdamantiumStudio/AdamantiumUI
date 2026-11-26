@@ -26,11 +26,9 @@ public class SegmentedControlItem : ContentControl, ISelectable
         nameof(CommandParameter), typeof(object), typeof(SegmentedControlItem),
         new PropertyMetadata(null, OnCommandParameterChanged));
 
-    private static readonly AdamantiumPropertyKey IsFirstPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsFirstProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsFirst), typeof(bool), typeof(SegmentedControlItem),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
-
-    public static readonly AdamantiumProperty IsFirstProperty = IsFirstPropertyKey.Property;
 
     public static readonly AdamantiumProperty BackgroundPointerOverProperty = AdamantiumProperty.Register(
         nameof(BackgroundPointerOver), typeof(Brush), typeof(SegmentedControlItem), new PropertyMetadata(default(Brush)));
@@ -106,7 +104,7 @@ public class SegmentedControlItem : ContentControl, ISelectable
     public bool IsFirst
     {
         get => GetValue<bool>(IsFirstProperty);
-        internal set => SetValue(IsFirstPropertyKey, value);
+        internal set => SetReadOnlyValue(IsFirstProperty, value);
     }
 
     public Brush BackgroundPointerOver

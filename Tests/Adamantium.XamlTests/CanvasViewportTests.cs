@@ -95,8 +95,10 @@ public class CanvasViewportTests
     public void ACanvasWithoutAViewportPart_IsItsOwnViewport()
     {
         UseFluent();
-        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
-        canvas.ApplyCurrentTheme();
+        var canvas = (InfiniteCanvas)AumlLoader.Load(
+            $"<InfiniteCanvas {Namespaces}><InfiniteCanvas.Template><ControlTemplate TargetType=\"InfiniteCanvas\">" +
+            "<Grid x:Name=\"PART_Layers\"/></ControlTemplate></InfiniteCanvas.Template></InfiniteCanvas>").Root;
+        canvas.Scene = new CanvasScene();
         Lay(canvas);
 
         Assert.Multiple(() =>
@@ -116,9 +118,9 @@ public class CanvasViewportTests
         var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
         canvas.ApplyCurrentTheme();
         var window = Lay(canvas);
-        var corner = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+        var corner = canvas.GetTemplateChild("PART_ToolRail") as CanvasPane;
         var bar = canvas.GetTemplateChild("PART_MiniMap") as CanvasPane;
-        Assert.That(corner, Is.Not.Null, "the chrome carries no inspector pane");
+        Assert.That(corner, Is.Not.Null, "the chrome carries no tool rail");
         Assert.That(bar, Is.Not.Null, "the chrome carries no map pane");
         corner.IsWanted = true;
         corner.IsNeeded = true;

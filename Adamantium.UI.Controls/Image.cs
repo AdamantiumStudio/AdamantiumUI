@@ -121,15 +121,11 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       typeof(UInt32), typeof(Image),
       new PropertyMetadata(0U, OnLevelChangedCallback));
 
-   private static readonly AdamantiumPropertyKey MipLevelCountPropertyKey = AdamantiumProperty.RegisterReadOnly(
+   public static readonly AdamantiumProperty MipLevelCountProperty = AdamantiumProperty.RegisterReadOnly(
       nameof(MipLevelCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
 
-   public static readonly AdamantiumProperty MipLevelCountProperty = MipLevelCountPropertyKey.Property;
-
-   private static readonly AdamantiumPropertyKey QualityLevelCountPropertyKey = AdamantiumProperty.RegisterReadOnly(
+   public static readonly AdamantiumProperty QualityLevelCountProperty = AdamantiumProperty.RegisterReadOnly(
       nameof(QualityLevelCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
-
-   public static readonly AdamantiumProperty QualityLevelCountProperty = QualityLevelCountPropertyKey.Property;
 
    public static readonly AdamantiumProperty ContentPixelLimitProperty = AdamantiumProperty.Register(
       nameof(ContentPixelLimit), typeof(uint), typeof(Image),
@@ -140,10 +136,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    // Read-only: how many frames the SOURCE turned out to have. Nobody can know it before the decode finishes, and a UI
    // that lets you pick a frame range needs it to bound the choice.
-   private static readonly AdamantiumPropertyKey FrameCountPropertyKey = AdamantiumProperty.RegisterReadOnly(
+   public static readonly AdamantiumProperty FrameCountProperty = AdamantiumProperty.RegisterReadOnly(
       nameof(FrameCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
-
-   public static readonly AdamantiumProperty FrameCountProperty = FrameCountPropertyKey.Property;
 
    private static void OnIsPlayingChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
    {
@@ -294,7 +288,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public UInt32 MipLevelCount
    {
       get => GetValue<UInt32>(MipLevelCountProperty);
-      private set => SetValue(MipLevelCountPropertyKey, value);
+      private set => SetReadOnlyValue(MipLevelCountProperty, value);
    }
 
    /// <summary>The quality levels of the current source: 1 for a picture of one quality, 0 until it has loaded.
@@ -302,7 +296,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public UInt32 QualityLevelCount
    {
       get => GetValue<UInt32>(QualityLevelCountProperty);
-      private set => SetValue(QualityLevelCountPropertyKey, value);
+      private set => SetReadOnlyValue(QualityLevelCountProperty, value);
    }
 
    /// <summary>The longest side, in pixels, of the picture this image draws; 0 for no limit. A larger still bitmap,
@@ -327,7 +321,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public UInt32 FrameCount
    {
       get => GetValue<UInt32>(FrameCountProperty);
-      private set => SetValue(FrameCountPropertyKey, value);
+      private set => SetReadOnlyValue(FrameCountProperty, value);
    }
    
    public UInt32 StartFrame

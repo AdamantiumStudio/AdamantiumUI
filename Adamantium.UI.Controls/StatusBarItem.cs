@@ -12,10 +12,8 @@ namespace Adamantium.UI.Controls;
 /// shows it under the pointer; without them it only tells, and a press goes by it.</summary>
 public class StatusBarItem : ButtonBase
 {
-    private static readonly AdamantiumPropertyKey IsInteractivePropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsInteractiveProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsInteractive), typeof(bool), typeof(StatusBarItem), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsInteractiveProperty = IsInteractivePropertyKey.Property;
 
     private bool _menuIgnoredTargetPress;
     private PlacementMode _menuPlacement;
@@ -29,7 +27,7 @@ public class StatusBarItem : ButtonBase
     public bool IsInteractive
     {
         get => GetValue<bool>(IsInteractiveProperty);
-        private set => SetValue(IsInteractivePropertyKey, value);
+        private set => SetReadOnlyValue(IsInteractiveProperty, value);
     }
 
     protected override bool TakesPresses => IsInteractive;

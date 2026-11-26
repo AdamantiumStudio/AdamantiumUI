@@ -3553,15 +3553,13 @@ public partial class TreeDataGrid : Selector
 
     /// <summary>Whether a cell is open for editing. A real property, not a computed one, because a view-model binds to
     /// it - a plain CLR property would look bindable and quietly never resolve.</summary>
-    private static readonly AdamantiumPropertyKey IsEditingPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsEditingProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsEditing), typeof(bool), typeof(TreeDataGrid), new PropertyMetadata(false));
-
-    public static readonly AdamantiumProperty IsEditingProperty = IsEditingPropertyKey.Property;
 
     public bool IsEditing
     {
         get => GetValue<bool>(IsEditingProperty);
-        private set => SetValue(IsEditingPropertyKey, value);
+        private set => SetReadOnlyValue(IsEditingProperty, value);
     }
 
     public event EventHandler<DataGridCellEditEventArgs> CellEditBeginning;

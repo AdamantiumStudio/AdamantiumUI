@@ -21,16 +21,14 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
     /// <summary>The header as the collapsed button shows it: a name of several words on two lines, broken at the space
     /// nearest its middle, as Office labels a collapsed group. Anything but text, or a header drawn by a
     /// <see cref="HeaderTemplate"/>, is the header itself.</summary>
-    private static readonly AdamantiumPropertyKey CollapsedHeaderPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty CollapsedHeaderProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(CollapsedHeader), typeof(object), typeof(RibbonGroup),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
-
-    public static readonly AdamantiumProperty CollapsedHeaderProperty = CollapsedHeaderPropertyKey.Property;
 
     public object CollapsedHeader
     {
         get => GetValue(CollapsedHeaderProperty);
-        private set => SetValue(CollapsedHeaderPropertyKey, value);
+        private set => SetReadOnlyValue(CollapsedHeaderProperty, value);
     }
 
     private static void OnHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -523,12 +521,10 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
     }
 
     /// <summary>One button now, its commands in the flyout it opens. Decided by the row of groups, never by an author.</summary>
-    private static readonly AdamantiumPropertyKey IsCollapsedPropertyKey = AdamantiumProperty.RegisterReadOnly(
+    public static readonly AdamantiumProperty IsCollapsedProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(IsCollapsed), typeof(bool), typeof(RibbonGroup),
         new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange,
             OnIsCollapsedChanged));
-
-    public static readonly AdamantiumProperty IsCollapsedProperty = IsCollapsedPropertyKey.Property;
 
     private static void OnIsCollapsedChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -542,7 +538,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
     public bool IsCollapsed
     {
         get => GetValue<bool>(IsCollapsedProperty);
-        private set => SetValue(IsCollapsedPropertyKey, value);
+        private set => SetReadOnlyValue(IsCollapsedProperty, value);
     }
 
     /// <summary>Whether the collapsed group's flyout is showing. Set, it opens or closes the flyout; a group that is not

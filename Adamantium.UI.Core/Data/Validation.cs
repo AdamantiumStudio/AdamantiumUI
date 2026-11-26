@@ -8,24 +8,18 @@ namespace Adamantium.UI.Core.Data;
 /// draws a field in error from <c>Validation.HasError</c>; the element's errors are those of all its bindings.</summary>
 public static class Validation
 {
-    private static readonly AdamantiumPropertyKey HasErrorPropertyKey = AdamantiumProperty.RegisterAttachedReadOnly(
-        "HasError", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
-
-    private static readonly AdamantiumPropertyKey ErrorsPropertyKey = AdamantiumProperty.RegisterAttachedReadOnly(
-        "Errors", typeof(IReadOnlyList<string>), typeof(AdamantiumComponent),
-        new PropertyMetadata(System.Array.Empty<string>()));
-
-    private static readonly AdamantiumPropertyKey ErrorPropertyKey = AdamantiumProperty.RegisterAttachedReadOnly(
-        "Error", typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(string.Empty));
-
     /// <summary>Whether a binding of the element has errors.</summary>
-    public static readonly AdamantiumProperty HasErrorProperty = HasErrorPropertyKey.Property;
+    public static readonly AdamantiumProperty HasErrorProperty = AdamantiumProperty.RegisterAttached("HasError",
+        typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
 
     /// <summary>The errors of the element's bindings, in the order the bindings were bound; empty when none.</summary>
-    public static readonly AdamantiumProperty ErrorsProperty = ErrorsPropertyKey.Property;
+    public static readonly AdamantiumProperty ErrorsProperty = AdamantiumProperty.RegisterAttached("Errors",
+        typeof(IReadOnlyList<string>), typeof(AdamantiumComponent),
+        new PropertyMetadata(System.Array.Empty<string>()));
 
     /// <summary>The first of <see cref="ErrorsProperty"/>; empty when none.</summary>
-    public static readonly AdamantiumProperty ErrorProperty = ErrorPropertyKey.Property;
+    public static readonly AdamantiumProperty ErrorProperty = AdamantiumProperty.RegisterAttached("Error",
+        typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(string.Empty));
 
     private static readonly AdamantiumProperty SourcesProperty = AdamantiumProperty.RegisterAttached("ErrorSources",
         typeof(ErrorSources), typeof(AdamantiumComponent), new PropertyMetadata(null));
@@ -59,9 +53,9 @@ public static class Validation
         }
 
         var all = sources.All();
-        element.SetCurrentValue(ErrorsPropertyKey, all);
-        element.SetCurrentValue(ErrorPropertyKey, all.Count > 0 ? all[0] : string.Empty);
-        element.SetCurrentValue(HasErrorPropertyKey, all.Count > 0);
+        element.SetCurrentValue(ErrorsProperty, all);
+        element.SetCurrentValue(ErrorProperty, all.Count > 0 ? all[0] : string.Empty);
+        element.SetCurrentValue(HasErrorProperty, all.Count > 0);
     }
 
     private sealed class ErrorSources

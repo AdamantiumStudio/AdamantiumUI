@@ -149,6 +149,8 @@ public partial class InfiniteCanvas
     /// bars are kept against the room they leave.</summary>
     internal void OnChromeArranged()
     {
+        // The viewport gave room to something else beside it, which the canvas itself is not laid out for.
+        LimitInspector(RenderSize.Width);
         var inset = _chromeLayer?.Inset() ?? new Thickness(0);
         if (Same(inset, _clampedInset)) return;
 

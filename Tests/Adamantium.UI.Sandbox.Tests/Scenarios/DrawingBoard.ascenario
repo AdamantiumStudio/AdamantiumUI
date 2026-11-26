@@ -4,26 +4,26 @@
   <Wait Target="id=Canvas" />
   <Toggle Target="id=PART_ToolRail/id=Rectangle" />
   <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="On" />
-  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
-  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Select Target="id=Canvas>name=Layers,type=RadioButton" />
+  <Invoke Target="id=Canvas>name=Clear the canvas" />
   <Invoke Target="id=PART_Yes" />
   <Expect Target="id=ItemCountLabel" Name="0 items" />
   <Drag Target="id=Canvas" From="500,150" To="650,260" />
   <Expect Target="id=ItemCountLabel" Name="1 item" />
-  <Expect Target="id=PART_Inspector/type=TreeItem" Name="Rectangle" />
+  <Expect Target="id=Canvas/type=TreeItem" Name="Rectangle" />
   <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
   <Expect Target="id=ItemCountLabel" Name="0 items" />
   <!-- Back as the page opens: the clear taken back too. -->
   <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
   <Absent Target="id=ItemCountLabel,name=0 items" />
-  <Wait Target="id=PART_Inspector/type=TreeItem" />
+  <Wait Target="id=Canvas/type=TreeItem" />
   <Toggle Target="id=PART_ToolRail/id=Select" />
   <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="Off" />
   <!-- Ink from a pen and from fingers: a pen pressing harder as it goes draws one stroke, two fingers down together draw
        one each, and a pinch over the drawing zooms rather than draws. -->
   <Toggle Target="id=PART_ToolRail/id=Pen" />
-  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
-  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Select Target="id=Canvas>name=Layers,type=RadioButton" />
+  <Invoke Target="id=Canvas>name=Clear the canvas" />
   <Invoke Target="id=PART_Yes" />
   <Expect Target="id=ItemCountLabel" Name="0 items" />
   <Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1" />
