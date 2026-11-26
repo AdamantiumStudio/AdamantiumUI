@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core.Graphics.Vector;
 
 namespace Adamantium.UI.Core.Media;
 
@@ -69,30 +70,8 @@ public sealed class GlyphRun
         var scale = FontSize / Font.UnitsPerEm;
         foreach (var placed in Glyphs)
         {
-            foreach (var contour in Font.GetGlyphByIndex(placed.Index).GetContours())
-            {
-                var figure = context.BeginFigure(At(contour.Segments[0].Start), true, true);
-                foreach (var segment in contour.Segments)
-                {
-                    switch (segment.Kind)
-                    {
-                        case GlyphSegmentKind.Line:
-                            figure.LineTo(At(segment.End));
-                            break;
-                        case GlyphSegmentKind.Quadratic:
-                            figure.QuadraticBezierTo(At(segment.Control1), At(segment.End));
-                            break;
-                        default:
-                            figure.CubicBezierTo(At(segment.Control1), At(segment.Control2), At(segment.End));
-                            break;
-                    }
-                }
-
-                figure.CloseFigure();
-            }
-
-            Vector2<double> At(Vector2<double> point) =>
-                new(placed.X + point.X * scale, placed.Y - point.Y * scale);
+            TextOutlines.Trace(context, Font.GetGlyphByIndex(placed.Index),
+                new Matrix3x2<double>(scale, 0, 0, -scale, placed.X, placed.Y));
         }
 
         geometry.RecalculateBounds();

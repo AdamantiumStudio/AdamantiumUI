@@ -10,7 +10,7 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Pdf;
 
-// Text: set in fonts the document carries where it is written with them, in one color; by its outlines otherwise.
+// Text: set in fonts the document carries where it is written with them in one color; by its outlines otherwise.
 public sealed partial class PdfContentSession
 {
     /// <summary>The document being written, which carries the fonts; null where none is - an annotation's appearance.
@@ -19,29 +19,16 @@ public sealed partial class PdfContentSession
 
     private void Text(TextRenderingParameters parameters, TextLayout layout, Brush foreground, Matrix4x4F transform)
     {
-        if (layout == null || !Paints(foreground))
+        if (layout == null)
         {
             return;
         }
 
-        if (_document != null && foreground is SolidColorBrush solid)
-        {
-            Set(TextGlyph.Of(parameters, layout, said: true), solid, transform);
-            return;
-        }
-
-        var runs = TextOutlines.RunsOf(parameters, layout, out var whole);
+        var glyphs = TextGlyph.Of(parameters, layout, said: true);
 
         // One gradient or tile across the whole text, however many fonts and sizes it is set in.
-        if (foreground is not (GradientBrush or TileBrush))
-        {
-            whole = null;
-        }
-
-        foreach (var run in runs)
-        {
-            Figures(foreground, null, run.Outline, transform, whole);
-        }
+        var whole = foreground is GradientBrush or TileBrush ? TextOutlines.InkOf(glyphs) : null;
+        Set(glyphs, foreground, transform, whole);
     }
 
     private static List<TextGlyph> GlyphsOf(GlyphRun run)
@@ -51,16 +38,16 @@ public sealed partial class PdfContentSession
         {
             if (double.IsFinite(glyph.X) && double.IsFinite(glyph.Y))
             {
-                glyphs.Add(new TextGlyph(run.Font, run.FontSize, glyph.Index, glyph.X, glyph.Y, null, true));
+                glyphs.Add(TextGlyph.At(run.Font, run.FontSize, glyph.Index, glyph.X, glyph.Y, null));
             }
         }
 
         return glyphs;
     }
 
-    /// <summary>The glyphs a font of the document can draw are set in it, stretch by stretch; the others are filled by
-    /// their outlines.</summary>
-    private void Set(List<TextGlyph> glyphs, SolidColorBrush brush, Matrix4x4F transform)
+    /// <summary>The glyphs a font of the document can draw in one color are set in it, stretch by stretch; the others
+    /// are filled by their outlines.</summary>
+    private void Set(List<TextGlyph> glyphs, Brush foreground, Matrix4x4F transform, Rect? whole = null)
     {
         var place = Through(transform);
         if (!Invertible(place))
@@ -68,35 +55,56 @@ public sealed partial class PdfContentSession
             return;
         }
 
+        var fonts = new PdfEmbeddedFont[glyphs.Count];
+        for (var at = 0; at < glyphs.Count; at++)
+        {
+            fonts[at] = FontOf(glyphs[at], foreground);
+        }
+
         for (var start = 0; start < glyphs.Count;)
         {
-            var font = FontOf(glyphs[start]);
+            var first = glyphs[start];
+            var font = fonts[start];
             var end = start + 1;
-            while (end < glyphs.Count && ReferenceEquals(FontOf(glyphs[end]), font))
+            while (end < glyphs.Count && ReferenceEquals(fonts[end], font) && glyphs[end].Color == first.Color &&
+                   glyphs[end].Thickening == first.Thickening)
             {
                 end++;
             }
 
             var stretch = glyphs.GetRange(start, end - start);
-            if (font != null)
+            var fill = TextOutlines.Paint(first.Color, foreground);
+            if (font == null)
             {
-                Set(font, stretch, brush, place);
+                TextOutlines.Draw(this, TextOutlines.Of(stretch), foreground, Paints,
+                    (paint, thickener, outline) => Figures(paint, thickener, outline, transform, whole));
+            }
+            else if (!Paints(fill))
+            {
+                // Nothing to see is not written, nor its text: a see-through bold as a see-through plain face.
+            }
+            else if (TextOutlines.FadesThickened(first.Thickening, fill, out var opaque, out var alpha) &&
+                     stretch.Exists(glyph => glyph.Ink != null))
+            {
+                // A group of no ink is dropped, and would take blanks' text with it: those are set as they are.
+                PushGroup(new DrawingGroupOptions { Opacity = alpha });
+                Set(font, stretch, (SolidColorBrush)opaque, place);
+                PopGroup();
             }
             else
             {
-                foreach (var run in TextOutlines.RunsOf(stretch))
-                {
-                    Figures(brush, null, run.Outline, transform);
-                }
+                Set(font, stretch, (SolidColorBrush)fill, place);
             }
 
             start = end;
         }
     }
 
-    private PdfEmbeddedFont FontOf(TextGlyph glyph)
+    // Set in a font of the document: a glyph it can draw, in one color.
+    private PdfEmbeddedFont FontOf(TextGlyph glyph, Brush foreground)
     {
-        if (!glyph.IsUpright || !PdfEmbeddedFont.CanEmbed(glyph.Font))
+        if (_document == null || glyph.Color == null && foreground is not SolidColorBrush ||
+            !PdfEmbeddedFont.CanEmbed(glyph.Font))
         {
             return null;
         }
@@ -107,21 +115,43 @@ public sealed partial class PdfContentSession
 
     private void Set(PdfEmbeddedFont font, List<TextGlyph> glyphs, SolidColorBrush brush, PdfMatrix place)
     {
+        if (!Paints(brush))
+        {
+            return;
+        }
+
         var content = Content;
+        var thickening = glyphs[0].Thickening;
         content.SaveState();
-        Opacity(1, Alpha(brush));
+
+        // Set where the layout is: a thickening's width is in its units and turns and stretches with the glyphs, as an
+        // outline's stroke does.
+        content.Transform(place.A, place.B, place.C, place.D, place.E, place.F);
         FillColor(brush.Color);
+        if (thickening > 0)
+        {
+            // A synthesized bold: the glyphs stroked as well, as wide as both sides grow, in their own color.
+            Opacity(Alpha(brush), Alpha(brush));
+            StrokeColor(brush.Color);
+            content.LineWidth(2 * thickening).LineJoin(1).StrokesText(true);
+        }
+        else
+        {
+            Opacity(1, Alpha(brush));
+        }
+
         content.BeginText(font);
         foreach (var glyph in glyphs)
         {
-            var matrix = new PdfMatrix(glyph.Size, 0, 0, -glyph.Size, glyph.X, glyph.Y).Then(place);
-            content.Glyph(glyph.Index, matrix.A, matrix.B, matrix.C, matrix.D, matrix.E, matrix.F, glyph.Text);
-            var box = glyph.Font.GetGlyphByIndex(glyph.Index).BoundingRectangle;
-            if (box.Width > 0 && box.Height > 0)
+            // The font is set at one unit to the em: its units are scaled back to the em.
+            var units = glyph.Font.UnitsPerEm;
+            var at = glyph.Place;
+            content.Glyph(glyph.Index, at.M11 * units, at.M12 * units, at.M21 * units, at.M22 * units, at.M31, at.M32,
+                glyph.Text);
+            if (glyph.Ink is { } ink)
             {
-                var scale = glyph.Size / glyph.Font.UnitsPerEm;
-                GrowBox(new Rect(glyph.X + box.X * scale, glyph.Y - (box.Y + box.Height) * scale, box.Width * scale,
-                    box.Height * scale), place, 0);
+                // A thickened glyph reaches past its outline: the stroke's half on each side.
+                GrowBox(ink, place, glyph.Thickening);
             }
         }
 
