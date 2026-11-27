@@ -338,12 +338,21 @@ public class PrintDialogTests
         Assert.That(command.Parameter, Is.EqualTo(new PrintRequest(document, dialog.Settings, 2)));
     }
 
+    // A page inside a window that does not show lays nothing out: a long document waits until it does.
+    [Test]
+    public void APageInsideAWindow_LaysNothingOut_UntilItShows()
+    {
+        var dialog = new PrintDialog { IsInline = true, Document = new Pages(3) };
+
+        Assert.That(dialog.Sheets, Is.Null);
+    }
+
     // A print a command runs holds the options until it ends; then the sheets are laid out again.
     [Test]
     public void WhileACommandPrints_TheOptionsWait_AndTheSheetsAreLaidOutAgainAfter()
     {
         var printing = new TaskCompletionSource();
-        var dialog = new PrintDialog { Document = new Pages(3), IsInline = true };
+        var dialog = new PrintDialog { Document = new Pages(3) };
         dialog.Command = new Adamantium.MVVM.AdamantiumAsyncCommand(_ => printing.Task);
         var sheets = dialog.Sheets;
 

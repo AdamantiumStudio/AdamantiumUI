@@ -77,7 +77,7 @@ public class PrintDialog : Control
         typeof(Printer), typeof(PrintDialog), new PropertyMetadata(null, OnPrinterChanged));
 
     public static readonly AdamantiumProperty IsInlineProperty = AdamantiumProperty.Register(nameof(IsInline),
-        typeof(bool), typeof(PrintDialog), new PropertyMetadata(false));
+        typeof(bool), typeof(PrintDialog), new PropertyMetadata(false, OnIsInlineChanged));
 
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(PrintDialog), new PropertyMetadata(null, OnCommandChanged));
@@ -118,7 +118,8 @@ public class PrintDialog : Control
     }
 
     /// <summary>Shown inside a window as a page of it - a backstage page, a page over a document - rather than in a
-    /// window of its own: "Print" and the copies head the options, and leaving is the window's to offer.</summary>
+    /// window of its own: "Print" and the copies head the options, and leaving is the window's to offer. The document
+    /// is laid out only while the page shows, anew each time it does.</summary>
     public bool IsInline
     {
         get => GetValue<bool>(IsInlineProperty);
@@ -640,6 +641,18 @@ public class PrintDialog : Control
     /// <summary>The dialog was left without printing.</summary>
     public event EventHandler Canceled;
 
+    /// <summary>Shown inside a window, the document is laid out anew each time the page shows: it may have changed
+    /// since it last did.</summary>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (IsInline)
+        {
+            _laidOut = null;
+            Compose();
+        }
+    }
+
     /// <summary>A pane: the preview and the options on it say what they are.</summary>
     protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
 
@@ -692,6 +705,15 @@ public class PrintDialog : Control
     private bool CommandCanPrint() =>
         Document == null || Command is not { } command ||
         command.CanExecute(new PrintRequest(Document, Settings, CurrentPage));
+
+    private static void OnIsInlineChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is PrintDialog dialog)
+        {
+            dialog._laidOut = null;
+            dialog.Compose();
+        }
+    }
 
     private static void OnCommandChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
@@ -1144,7 +1166,13 @@ public class PrintDialog : Control
         _laidOutFor = _capabilities;
         _laidOutDocument = Document;
         _laidOutCurrentPage = CurrentPage;
-        if (Document is { } document)
+        if (IsInline && !IsAttachedToVisualTree)
+        {
+            _laidOut = null;
+            SetCurrentValue(SheetsProperty, null);
+            SetCurrentValue(SheetCountProperty, 1);
+        }
+        else if (Document is { } document)
         {
             var sheets = new PrintSheets(document, settings, _capabilities, CurrentPage);
             var count = sheets.Paginate(sheets.Sheet);

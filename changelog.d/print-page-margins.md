@@ -11,7 +11,8 @@
 - The print dialog inside a window, as a page of it: `PrintDialog.IsInline` puts "Print" and the copies at the head of
   the options and drops the bottom bar; `PrintDialog.Command` runs with a `PrintRequest` (the document, the settings,
   the current page) for a view model to hand to `IPrintService.PrintAsync(PrintRequest)`, which prints without asking.
-  `IPrintService.Platform` gives the system's printers to show there. The sandbox has a "Print page" tab.
+  `IPrintService.Platform` gives the system's printers to show there. The sandbox has a "Print page" tab. Inside a
+  window the document is laid out only while the page shows, and anew each time it does.
 
 - `ElementPrintDocument.Region`: a part of an element printed alone - a page of an editor showing several - from the
   corner of the sheet the whole element would take.
