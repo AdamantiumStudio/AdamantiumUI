@@ -31,7 +31,8 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
 
     public string Save(SaveFileRequest request)
     {
-        var path = Ask("SaveFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Save", SaveOptions(request));
+        var path = Ask("SaveFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Save", SaveOptions(request))
+            .FirstOrDefault();
         if (path != null && request?.DefaultExtension is { Length: > 0 } extension && Path.GetExtension(path).Length == 0)
         {
             path += "." + extension;
@@ -41,14 +42,27 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
     }
 
     public string Open(OpenFileRequest request) =>
-        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Open", Options(request?.FileTypes));
+        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Open", Options(request?.FileTypes))
+            .FirstOrDefault();
+
+    public IReadOnlyList<string> OpenMany(OpenFileRequest request) =>
+        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Open", ManyOptions(request?.FileTypes));
 
     // A portal older than FileChooser 3 does not know "directory" and lets a file be chosen: that is no answer here.
     public string OpenFolder(OpenFolderRequest request) =>
-        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Choose a folder", FolderOptions()) is { } path
+        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Choose a folder", FolderOptions())
+            .FirstOrDefault() is { } path
         && Directory.Exists(path)
             ? path
             : null;
+
+    /// <summary>The options of an open dialog that lets several files be chosen at once.</summary>
+    public static Dictionary<string, DBusVariant> ManyOptions(IReadOnlyList<FileType> fileTypes)
+    {
+        var options = Options(fileTypes);
+        options["multiple"] = DBusVariant.Boolean(true);
+        return options;
+    }
 
     /// <summary>The options of a save dialog: the filters, the name, and the folder - as bytes ending in a zero.</summary>
     public static Dictionary<string, DBusVariant> SaveOptions(SaveFileRequest request)
@@ -92,7 +106,8 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
         return options;
     }
 
-    private string Ask(string method, IntPtr owner, string title, Dictionary<string, DBusVariant> options)
+    // The local files chosen; none when nothing was, or the portal could not be asked.
+    private IReadOnlyList<string> Ask(string method, IntPtr owner, string title, Dictionary<string, DBusVariant> options)
     {
         try
         {
@@ -100,13 +115,13 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
             var token = $"adamantium{Interlocked.Increment(ref requests)}";
             options["handle_token"] = DBusVariant.String(token);
             var requestPath = $"{PortalPath}/request/{bus.UniqueName.TrimStart(':').Replace('.', '_')}/{token}";
-            string chosen = null;
+            IReadOnlyList<string> chosen = [];
             using var answered = new ManualResetEventSlim();
             using (bus.Subscribe(Portal, requestPath, Request, "Response", response =>
                    {
                        try
                        {
-                           chosen = Chosen(response);
+                           chosen = AllChosen(response);
                        }
                        finally
                        {
@@ -138,20 +153,27 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
         }
         catch (Exception e) when (e is DBusException or SocketException or IOException)
         {
-            return null;
+            return [];
         }
     }
 
     /// <summary>The path a Response signal carries; null when the user chose nothing, or something that is not a local
     /// file.</summary>
-    internal static string Chosen(DBusMessage response)
+    internal static string Chosen(DBusMessage response) => AllChosen(response).FirstOrDefault();
+
+    /// <summary>The local files a Response signal carries, in its order; what is not a local file is passed by.</summary>
+    internal static IReadOnlyList<string> AllChosen(DBusMessage response)
     {
         var reader = response.Reader();
         var code = reader.ReadUInt32();
         var results = (Dictionary<object, object>)reader.ReadValue("a{sv}");
-        return code == 0 && results.TryGetValue("uris", out var uris) && ((DBusVariant)uris).Value is List<object> { Count: > 0 } list
-               && Uri.TryCreate((string)list[0], UriKind.Absolute, out var uri) && uri.IsFile
-            ? uri.LocalPath
-            : null;
+        if (code != 0 || !results.TryGetValue("uris", out var uris) || ((DBusVariant)uris).Value is not List<object> list)
+        {
+            return [];
+        }
+
+        return list.Select(item => Uri.TryCreate(item as string, UriKind.Absolute, out var uri) && uri.IsFile ? uri.LocalPath : null)
+            .Where(path => path != null)
+            .ToArray();
     }
 }

@@ -20,6 +20,10 @@ public static class FileDialog
     /// <summary>Asks which file to open, and returns its full path - or null if the user chose nothing.</summary>
     public static string Open(OpenFileRequest request) => Platform?.Open(request);
 
+    /// <summary>Asks which files to open, several at once if the user wants - a playlist, a batch to import - and
+    /// returns their full paths, in the order the platform gives them; none if the user chose nothing.</summary>
+    public static IReadOnlyList<string> OpenMany(OpenFileRequest request) => Platform?.OpenMany(request) ?? [];
+
     /// <summary>Asks for a folder, and returns its full path - or null if the user chose nothing.</summary>
     public static string OpenFolder(OpenFolderRequest request) => Platform?.OpenFolder(request);
 }
