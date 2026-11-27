@@ -3,11 +3,11 @@
           xmlns:x="http://adamantium/ui/xaml/extensions"
           xmlns:local="clr-namespace:Adamantium.UI.Audio">
 
-    <!-- Small marks in a row: the codec, the sample rate, the bitrate, the channels; a mark of nothing known takes no
-         room. -->
+    <!-- Small marks in a row, lit as a display's: the codec, the sample rate, the bitrate, the channels; a mark of
+         nothing known takes no room. -->
     <Style Selector="AudioFormatBadges">
-        <Setter Property="Background" Value="{ObservableResource ControlFillColorSecondary}"/>
-        <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <Setter Property="Background" Value="{ObservableResource SystemFillColorSuccessBackground}"/>
+        <Setter Property="Foreground" Value="{ObservableResource SystemFillColorSuccess}"/>
         <Setter Property="FontSize" Value="10"/>
         <Setter Property="Template">
             <Setter.Value>

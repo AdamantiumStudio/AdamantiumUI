@@ -10,6 +10,7 @@ public sealed class AudioTrack : INotifyPropertyChanged
 {
     private SoundInfo _info;
     private bool _cannotBeRead;
+    private int _number;
 
     /// <summary>A file on the disk, named by its file until its tags are read.</summary>
     public AudioTrack(string path)
@@ -60,6 +61,20 @@ public sealed class AudioTrack : INotifyPropertyChanged
             if (_cannotBeRead != value)
             {
                 _cannotBeRead = value;
+                Changed();
+            }
+        }
+    }
+
+    /// <summary>Its place in the player's list, from 1; 0 out of one.</summary>
+    public int Number
+    {
+        get => _number;
+        internal set
+        {
+            if (_number != value)
+            {
+                _number = value;
                 Changed();
             }
         }

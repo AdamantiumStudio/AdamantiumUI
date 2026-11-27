@@ -22,41 +22,57 @@
         <Setter Property="DisplayTemplate">
             <Setter.Value>
                 <DataTemplate>
+                    <!-- The display: the title, the format's marks, the time large - pressed, what is left - and under
+                         it the length and what is left; the spectrum beside them. -->
                     <Border Background="{ObservableResource SolidBackgroundFillColorBase}"
                             BorderBrush="{ObservableResource ControlStrokeColorDefault}" BorderThickness="1"
-                            CornerRadius="6" Padding="14 12">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                            <StackPanel Spacing="6" VerticalAlignment="Center">
+                            CornerRadius="7" Padding="14 12">
+                        <Grid ColumnDefinitions="*,190" ColumnSpacing="14">
+                            <StackPanel Spacing="8">
                                 <TextBlock x:Name="Title" Text="{Ancestor local:AudioPlayer, CurrentTrack.Title}"
-                                           FontSize="15" FontWeight="SemiBold" TextTrimming="CharEllipses"
+                                           FontSize="14" FontWeight="SemiBold" TextTrimming="CharEllipses"
                                            AutomationProperties.AutomationId="AudioTitle"/>
                                 <TextBlock x:Name="Nothing" Text="{Localize AudioPlayerStrings.NothingOpen}"
-                                           FontSize="15" Visibility="Collapsed"
+                                           FontSize="14" Visibility="Collapsed"
                                            Foreground="{ObservableResource TextFillColorTertiary}"/>
-                                <TextBlock Text="{Ancestor local:AudioPlayer, CurrentTrack.Artist}"
-                                           Foreground="{ObservableResource TextFillColorSecondary}"
-                                           TextTrimming="CharEllipses"/>
                                 <local:AudioFormatBadges Info="{Ancestor local:AudioPlayer, Info}"
                                                          AutomationProperties.AutomationId="AudioFormat"/>
                                 <ToggleButton IsChecked="{Ancestor local:AudioPlayer, ShowsRemaining, Mode=TwoWay}"
-                                              HorizontalAlignment="Left" Padding="6 2"
+                                              HorizontalAlignment="Left" MarginTop="4"
                                               ToolTipService.ToolTip="{Localize AudioPlayerStrings.TimeLeft}"
                                               AutomationProperties.AutomationId="AudioTime"
                                               AutomationProperties.Name="{Localize AudioPlayerStrings.TimeLeft}">
+                                    <!-- The digits are the button: a display's, not a button's look. -->
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent">
+                                                <ContentPresenter Content="{TemplateBinding Content}"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
                                     <Grid>
-                                        <TextBlock x:Name="Played" FontSize="28" FontWeight="SemiBold"
+                                        <TextBlock x:Name="Played" FontSize="34"
                                                    Foreground="{ThemeResource AccentFillColorDefault}"
                                                    Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"/>
-                                        <TextBlock x:Name="Left" FontSize="28" FontWeight="SemiBold" Visibility="Collapsed"
+                                        <TextBlock x:Name="Left" FontSize="34" Visibility="Collapsed"
                                                    Foreground="{ThemeResource AccentFillColorDefault}"
                                                    Text="{Ancestor local:AudioPlayer, Remaining, Converter={TimeSpanToClockTextConverter}, ConverterParameter=Remaining}"/>
                                     </Grid>
                                 </ToggleButton>
-                                <TextBlock Foreground="{ObservableResource TextFillColorTertiary}"
-                                           Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
-                                           AutomationProperties.AutomationId="AudioDuration"/>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Localize AudioPlayerStrings.Of}"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
+                                               AutomationProperties.AutomationId="AudioDuration"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}" Text="·"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Localize AudioPlayerStrings.Left}"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Ancestor local:AudioPlayer, Remaining, Converter={TimeSpanToClockTextConverter}, ConverterParameter=Remaining}"/>
+                                </StackPanel>
                             </StackPanel>
-                            <local:Spectrum Grid.Column="1" Width="200" Height="84" Bands="24" VerticalAlignment="Bottom"
+                            <local:Spectrum Grid.Column="1" Height="92" Bands="24" VerticalAlignment="Bottom"
                                             Playback="{Ancestor local:AudioPlayer, Playback}"/>
                         </Grid>
                     </Border>
@@ -179,20 +195,18 @@
             </Setter.Value>
         </Setter>
 
-        <!-- A row of the list: the title, the artist, the format, the length; one that can not be played, faded. -->
+        <!-- A row of the list: its number, the title, the format, the length; one that can not be played, faded. -->
         <Setter Property="TrackTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <Grid x:Name="Row" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding Title}" TextTrimming="CharEllipses"/>
-                            <TextBlock Text="{Binding Artist}" TextTrimming="CharEllipses"
-                                       Foreground="{ObservableResource TextFillColorTertiary}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="{Binding Codec}" Foreground="{ObservableResource TextFillColorTertiary}"/>
-                        <TextBlock Grid.Column="2" Width="56" HorizontalTextAlignment="Right"
+                    <Grid x:Name="Row" ColumnDefinitions="28,*,120,56" FontSize="12"
+                          AutomationProperties.Name="{Binding Title}">
+                        <TextBlock Text="{Binding Number}" Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharEllipses"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Codec}" Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        <TextBlock Grid.Column="3" HorizontalTextAlignment="Right"
                                    Text="{Binding Duration, Converter={TimeSpanToClockTextConverter}}"
-                                   Foreground="{ObservableResource TextFillColorSecondary}"/>
+                                   Foreground="{ObservableResource TextFillColorTertiary}"/>
                     </Grid>
                     <DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding CannotBeRead}" Value="true">
@@ -208,16 +222,31 @@
                 <ControlTemplate TargetType="local:AudioPlayer">
                     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
-                            <InfoBar Severity="Error" MarginBottom="10" Title="{Localize AudioPlayerStrings.CannotPlay}"
+                            ClipToBounds="True">
+                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
+                            <InfoBar Severity="Error" Margin="12 12 12 0" Title="{Localize AudioPlayerStrings.CannotPlay}"
                                      Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
                                      IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
                                      AutomationProperties.AutomationId="AudioFailed"/>
-                            <ContentPresenter Grid.Row="1" ContentTemplate="{TemplateBinding DisplayTemplate}"/>
-                            <ContentPresenter Grid.Row="2" MarginTop="10" ContentTemplate="{TemplateBinding PositionTemplate}"/>
-                            <ContentPresenter Grid.Row="3" MarginTop="6" ContentTemplate="{TemplateBinding TransportTemplate}"/>
-                            <ListBox Grid.Row="4" MarginTop="10" MinHeight="84"
+                            <ContentPresenter Grid.Row="1" Margin="12 12 12 0" ContentTemplate="{TemplateBinding DisplayTemplate}"/>
+                            <ContentPresenter Grid.Row="2" Margin="12 12 12 6" ContentTemplate="{TemplateBinding PositionTemplate}"/>
+                            <ContentPresenter Grid.Row="3" Margin="12 6 12 14" ContentTemplate="{TemplateBinding TransportTemplate}"/>
+                            <!-- The list under a line: how many, how long all; then the rows. -->
+                            <Border Grid.Row="4" BorderBrush="{ObservableResource ControlStrokeColorDefault}"
+                                    BorderThickness="0 1 0 0" Padding="12 8">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Localize AudioPlayerStrings.Tracks}"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}" Text="·"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Ancestor local:AudioPlayer, TrackCount}" AutomationProperties.AutomationId="AudioTrackCount"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}" Text="·"/>
+                                    <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                                               Text="{Ancestor local:AudioPlayer, TotalDuration, Converter={TimeSpanToClockTextConverter}}"
+                                               AutomationProperties.AutomationId="AudioTotal"/>
+                                </StackPanel>
+                            </Border>
+                            <ListBox Grid.Row="5" MinHeight="84" BorderThickness="0" Background="Transparent"
                                      ItemsSource="{TemplateBinding Tracks}"
                                      SelectedItem="{TemplateBinding CurrentTrack, Mode=TwoWay}"
                                      ItemTemplate="{TemplateBinding TrackTemplate}"

@@ -76,6 +76,7 @@ public partial class AudioPlayer
         }
 
         player.Shuffle();
+        player.TellList();
         player.TellCommands();
     }
 
@@ -86,8 +87,32 @@ public partial class AudioPlayer
             ReadInfo(e.NewItems.OfType<AudioTrack>());
         }
 
+        if (e.OldItems != null)
+        {
+            foreach (var track in e.OldItems.OfType<AudioTrack>())
+            {
+                track.Number = 0;
+            }
+        }
+
         Shuffle();
+        TellList();
         TellCommands();
+    }
+
+    // Each track's number, how many there are, and how long all are.
+    private void TellList()
+    {
+        var total = TimeSpan.Zero;
+        var number = 0;
+        foreach (var track in Tracks ?? [])
+        {
+            track.Number = ++number;
+            total += track.Duration;
+        }
+
+        TrackCount = number;
+        TotalDuration = total;
     }
 
     private static void OnCurrentTrackChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -481,6 +506,7 @@ public partial class AudioPlayer
             if (info != null)
             {
                 track.Info ??= info;
+                TellList();
             }
             else
             {

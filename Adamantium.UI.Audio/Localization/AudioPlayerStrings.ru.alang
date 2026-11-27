@@ -21,4 +21,6 @@
     <Phrase Key="Surround" Text="Объёмный"/>
     <Phrase Key="CannotPlay" Text="Этот звук не воспроизводится"/>
     <Phrase Key="NothingOpen" Text="Нет звука"/>
+    <Phrase Key="Of" Text="из"/>
+    <Phrase Key="Left" Text="осталось"/>
 </Language>

@@ -65,6 +65,12 @@ public partial class AudioPlayer : Control
     public static readonly AdamantiumProperty PlaybackProperty = AdamantiumProperty.Register(nameof(Playback),
         typeof(AudioPlayback), typeof(AudioPlayer), new PropertyMetadata(null, OnPlaybackChanged));
 
+    public static readonly AdamantiumProperty TrackCountProperty = AdamantiumProperty.RegisterReadOnly(nameof(TrackCount),
+        typeof(int), typeof(AudioPlayer), new PropertyMetadata(0));
+
+    public static readonly AdamantiumProperty TotalDurationProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(TotalDuration), typeof(TimeSpan), typeof(AudioPlayer), new PropertyMetadata(TimeSpan.Zero));
+
     public static readonly AdamantiumProperty InfoProperty = AdamantiumProperty.RegisterReadOnly(nameof(Info),
         typeof(SoundInfo), typeof(AudioPlayer), new PropertyMetadata(null));
 
@@ -203,6 +209,20 @@ public partial class AudioPlayer : Control
     {
         get => GetValue<AudioPlayback>(PlaybackProperty);
         set => SetValue(PlaybackProperty, value);
+    }
+
+    /// <summary>How many tracks the list has.</summary>
+    public int TrackCount
+    {
+        get => GetValue<int>(TrackCountProperty);
+        private set => SetReadOnlyValue(TrackCountProperty, value);
+    }
+
+    /// <summary>Of all the tracks whose length is read so far.</summary>
+    public TimeSpan TotalDuration
+    {
+        get => GetValue<TimeSpan>(TotalDurationProperty);
+        private set => SetReadOnlyValue(TotalDurationProperty, value);
     }
 
     /// <summary>Of the track open; null while none is.</summary>

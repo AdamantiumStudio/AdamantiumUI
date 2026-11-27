@@ -5,6 +5,8 @@
   <Expect Target="id=Player/id=AudioTracks/name=Chirps" Offscreen="False" />
   <Expect Target="id=Player/id=AudioTracks/name=Glass Bells/name=FLAC" Offscreen="False" />
   <Expect Target="id=Player/id=AudioTracks/name=Low Drone/name=00:10" Offscreen="False" />
+  <Wait Target="id=Player/id=AudioTotal" Name="00:39" />
+  <Expect Target="id=Player/id=AudioTrackCount" Name="5" />
   <Expect Target="id=Player/name=No sound" Offscreen="False" />
   <Expect Target="id=Player/id=AudioStop" Enabled="False" />
   <Set Target="id=Player/id=AudioVolume" Value="0" />

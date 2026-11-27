@@ -21,4 +21,6 @@
     <Phrase Key="Surround" Text="Surround"/>
     <Phrase Key="CannotPlay" Text="This sound cannot be played"/>
     <Phrase Key="NothingOpen" Text="No sound"/>
+    <Phrase Key="Of" Text="of"/>
+    <Phrase Key="Left" Text="left"/>
 </Language>
