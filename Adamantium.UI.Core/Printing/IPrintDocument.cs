@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Mathematics;
@@ -30,4 +31,15 @@ public interface IPrintDocument
     /// <see cref="PrintPage.RasterDotsPerInch"/>. Called on the thread that draws; nothing to make ready by default.
     /// </summary>
     Task PrepareAsync(PrintPage page, CancellationToken cancellation) => Task.CompletedTask;
+
+    /// <summary>Makes <paramref name="pages"/> - those of the sheet drawn next - ready right before they are drawn,
+    /// after <see cref="PrepareAsync"/>, and lets go of the ones made ready before: a document too long to hold every
+    /// page drawn at once - a text document of hundreds - holds just these. Called on the thread that draws, sheet by
+    /// sheet; nothing to do by default.</summary>
+    Task PreparePagesAsync(IReadOnlyList<int> pages, PrintPage page, CancellationToken cancellation) =>
+        Task.CompletedTask;
+
+    /// <summary>Whether the document has margins of its own - a text document's sections, a PDF's pages as they are -
+    /// for <see cref="PrintMargins.Document"/> to keep. One without is printed inside the margins chosen.</summary>
+    bool HasOwnMargins => false;
 }

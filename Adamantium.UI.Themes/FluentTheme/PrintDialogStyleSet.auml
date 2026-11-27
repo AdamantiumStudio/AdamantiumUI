@@ -3,7 +3,8 @@
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
     <!-- The print dialog: the preview on the left, the options on the right, the buttons along the bottom. Rows of the
-         printer's options are collapsed until the dialog says the printer offers them (Shows*). -->
+         printer's options are collapsed until the dialog says the printer offers them (Shows*). Shown inside a window
+         (IsInline), "Print" and the copies head the options and there is no bottom bar. -->
 
     <Style Selector="PrintDialog">
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorBase}"/>
@@ -31,24 +32,53 @@
                                           Sheet="{TemplateBinding Sheet}"
                                           PaperBrush="#FFFFFFFF"
                                           ShadowBrush="#33000000"
+                                          ShowsMargins="{TemplateBinding ShowsCustomMargins}"
+                                          MarginsBrush="{ThemeResource AccentFillColorDefault}"
                                           Margin="12"
                                           AutomationProperties.Name="{Localize PrintStrings.Preview}"/>
                             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" MarginBottom="12">
-                                <Button Command="{Ancestor PrintDialog, PreviousSheetCommand}"
+                                <Button Command="{TemplateBinding PreviousSheetCommand}"
                                         Content="‹" Width="32" Height="32" Padding="0"
                                         AutomationProperties.Name="{Localize PrintStrings.PreviousSheet}"/>
                                 <TextBlock x:Name="PART_SheetNumber"
                                            Text="{Localize PrintStrings.SheetOfCount, sheet={TemplateBinding SheetNumber}, count={TemplateBinding SheetCount}}"
                                            VerticalAlignment="Center" MarginLeft="12" MarginRight="12"/>
-                                <Button Command="{Ancestor PrintDialog, NextSheetCommand}"
+                                <Button Command="{TemplateBinding NextSheetCommand}"
                                         Content="›" Width="32" Height="32" Padding="0"
                                         AutomationProperties.Name="{Localize PrintStrings.NextSheet}"/>
                             </StackPanel>
                         </Grid>
 
                         <!-- The options: the printer, then the platform's own, then the printer's. -->
-                        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="Options" Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Orientation="Vertical" Margin="18 16 18 16">
+                                <StackPanel x:Name="InlinePrintRow"
+                                            Orientation="Horizontal"
+                                            MarginBottom="16"
+                                            Visibility="Collapsed">
+                                    <Button x:Name="PART_InlinePrint"
+                                            Classes="Accent"
+                                            Content="{Localize PrintStrings.Print}"
+                                            Command="{TemplateBinding PrintCommand}"
+                                            MinWidth="100"
+                                            Height="40"/>
+                                    <StackPanel x:Name="InlineCopies"
+                                                Orientation="Horizontal"
+                                                MarginLeft="16"
+                                                Visibility="Collapsed">
+                                        <TextBlock x:Name="InlineCopiesLabel"
+                                                   Classes="Label"
+                                                   Text="{Localize PrintStrings.Copies}"
+                                                   MarginRight="8"/>
+                                        <NumericUpDown x:Name="PART_InlineCopies"
+                                                       Width="100"
+                                                       VerticalAlignment="Center"
+                                                       AutomationProperties.LabeledBy="{Binding ElementName=InlineCopiesLabel}"
+                                                       Minimum="1"
+                                                       Maximum="{TemplateBinding MaxCopies}"
+                                                       Value="{TemplateBinding Copies, Mode=TwoWay}"/>
+                                    </StackPanel>
+                                </StackPanel>
                                 <Grid ColumnDefinitions="140,*" MarginBottom="4">
                                     <TextBlock x:Name="PrinterLabel" Classes="Label" Text="{Localize PrintStrings.Printer}"/>
                                     <DropDown x:Name="PART_Printer" Grid.Column="1" HorizontalAlignment="Stretch"
@@ -144,6 +174,89 @@
                                 </Grid>
 
                                 <Grid ColumnDefinitions="140,*" MarginBottom="8">
+                                    <TextBlock x:Name="MarginsLabel" Classes="Label" Text="{Localize PrintStrings.Margins}"/>
+                                    <DropDown x:Name="PART_Margins"
+                                              Grid.Column="1"
+                                              HorizontalAlignment="Stretch"
+                                              AutomationProperties.LabeledBy="{Binding ElementName=MarginsLabel}"
+                                              ItemsSource="{TemplateBinding MarginsChoices}"
+                                              SelectedValuePath="Margins"
+                                              SelectedValue="{TemplateBinding Margins, Mode=TwoWay}">
+                                        <DropDown.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Localize PrintMarginsStrings, Key={Binding Key}}"/>
+                                            </DataTemplate>
+                                        </DropDown.ItemTemplate>
+                                    </DropDown>
+                                </Grid>
+                                <Grid x:Name="CustomMarginsRow"
+                                      ColumnDefinitions="Auto,*,Auto,*"
+                                      RowDefinitions="Auto,Auto"
+                                      MarginBottom="8"
+                                      Visibility="Collapsed">
+                                    <TextBlock x:Name="MarginTopLabel"
+                                               Classes="Label"
+                                               Text="{Localize PrintStrings.MarginTop}"
+                                               MarginRight="8"/>
+                                    <NumericUpDown x:Name="PART_MarginTop"
+                                                   Grid.Column="1"
+                                                   MarginRight="12"
+                                                   AutomationProperties.LabeledBy="{Binding ElementName=MarginTopLabel}"
+                                                   Minimum="{TemplateBinding PaperMarginTopMinimum}"
+                                                   Maximum="{TemplateBinding PaperMarginTopMaximum}"
+                                                   SmallChange="{TemplateBinding MarginsStep}"
+                                                   Unit="{Localize PrintStrings, Key={TemplateBinding MarginsUnit}}"
+                                                   Value="{TemplateBinding PaperMarginTop, Mode=TwoWay}"/>
+                                    <TextBlock x:Name="MarginBottomLabel"
+                                               Grid.Column="2"
+                                               Classes="Label"
+                                               Text="{Localize PrintStrings.MarginBottom}"
+                                               MarginRight="8"/>
+                                    <NumericUpDown x:Name="PART_MarginBottom"
+                                                   Grid.Column="3"
+                                                   AutomationProperties.LabeledBy="{Binding ElementName=MarginBottomLabel}"
+                                                   Minimum="{TemplateBinding PaperMarginBottomMinimum}"
+                                                   Maximum="{TemplateBinding PaperMarginBottomMaximum}"
+                                                   SmallChange="{TemplateBinding MarginsStep}"
+                                                   Unit="{Localize PrintStrings, Key={TemplateBinding MarginsUnit}}"
+                                                   Value="{TemplateBinding PaperMarginBottom, Mode=TwoWay}"/>
+                                    <TextBlock x:Name="MarginLeftLabel"
+                                               Grid.Row="1"
+                                               Classes="Label"
+                                               Text="{Localize PrintStrings.MarginLeft}"
+                                               MarginRight="8"
+                                               MarginTop="6"/>
+                                    <NumericUpDown x:Name="PART_MarginLeft"
+                                                   Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   MarginRight="12"
+                                                   MarginTop="6"
+                                                   AutomationProperties.LabeledBy="{Binding ElementName=MarginLeftLabel}"
+                                                   Minimum="{TemplateBinding PaperMarginLeftMinimum}"
+                                                   Maximum="{TemplateBinding PaperMarginLeftMaximum}"
+                                                   SmallChange="{TemplateBinding MarginsStep}"
+                                                   Unit="{Localize PrintStrings, Key={TemplateBinding MarginsUnit}}"
+                                                   Value="{TemplateBinding PaperMarginLeft, Mode=TwoWay}"/>
+                                    <TextBlock x:Name="MarginRightLabel"
+                                               Grid.Row="1"
+                                               Grid.Column="2"
+                                               Classes="Label"
+                                               Text="{Localize PrintStrings.MarginRight}"
+                                               MarginRight="8"
+                                               MarginTop="6"/>
+                                    <NumericUpDown x:Name="PART_MarginRight"
+                                                   Grid.Row="1"
+                                                   Grid.Column="3"
+                                                   MarginTop="6"
+                                                   AutomationProperties.LabeledBy="{Binding ElementName=MarginRightLabel}"
+                                                   Minimum="{TemplateBinding PaperMarginRightMinimum}"
+                                                   Maximum="{TemplateBinding PaperMarginRightMaximum}"
+                                                   SmallChange="{TemplateBinding MarginsStep}"
+                                                   Unit="{Localize PrintStrings, Key={TemplateBinding MarginsUnit}}"
+                                                   Value="{TemplateBinding PaperMarginRight, Mode=TwoWay}"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="140,*" MarginBottom="8">
                                     <TextBlock x:Name="ScaleLabel" Classes="Label" Text="{Localize PrintStrings.Scale}"/>
                                     <DropDown x:Name="PART_Scaling" Grid.Column="1" HorizontalAlignment="Stretch"
                                               AutomationProperties.LabeledBy="{Binding ElementName=ScaleLabel}"
@@ -228,20 +341,20 @@
                                 <Grid x:Name="DriverSettingsRow" ColumnDefinitions="140,*" MarginBottom="8" Visibility="Collapsed">
                                     <Button x:Name="PART_DriverSettings" Grid.Column="1" HorizontalAlignment="Left"
                                             Content="{Localize PrintStrings.PrinterSettings}"
-                                            Command="{Ancestor PrintDialog, DriverSettingsCommand}"/>
+                                            Command="{TemplateBinding DriverSettingsCommand}"/>
                                 </Grid>
                             </StackPanel>
                         </ScrollViewer>
 
                         <!-- Along the bottom: leave, or print. -->
-                        <Border Grid.Row="1" Grid.ColumnSpan="2"
+                        <Border x:Name="ButtonBar" Grid.Row="1" Grid.ColumnSpan="2"
                                 Background="{ResourceReference SolidBackgroundFillColorSecondary}"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="0 1 0 0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="18 12">
                                 <Button x:Name="PART_Cancel" Content="{Localize PrintStrings.Cancel}" IsCancel="True"
-                                        Command="{Ancestor PrintDialog, CancelCommand}" MinWidth="100" MarginRight="8"/>
+                                        Command="{TemplateBinding CancelCommand}" MinWidth="100" MarginRight="8"/>
                                 <Button x:Name="PART_Print" Classes="Accent" Content="{Localize PrintStrings.Print}" IsDefault="True"
-                                        Command="{Ancestor PrintDialog, PrintCommand}" MinWidth="100"/>
+                                        Command="{TemplateBinding PrintCommand}" MinWidth="100"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -251,8 +364,29 @@
     </Style>
 
     <Style Selector="PrintDialog">
-        <PropertyTrigger Property="ShowsCopies" Value="true">
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="ShowsCopies" Value="true"/>
+                <Condition Property="IsInline" Value="false"/>
+            </MultiTrigger.Conditions>
             <Setter TargetName="CopiesRow" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="ShowsCopies" Value="true"/>
+                <Condition Property="IsInline" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="InlineCopies" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <PropertyTrigger Property="IsInline" Value="true">
+            <Setter TargetName="InlinePrintRow" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="ButtonBar" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsPrinting" Value="true">
+            <Setter TargetName="Options" Property="IsEnabled" Value="False"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowsCustomMargins" Value="true">
+            <Setter TargetName="CustomMarginsRow" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsCollate" Value="true">
             <Setter TargetName="CollateRow" Property="Visibility" Value="Visible"/>
@@ -277,6 +411,7 @@
         </PropertyTrigger>
         <PropertyTrigger Property="PrintsToFile" Value="true">
             <Setter TargetName="PART_Print" Property="Content" Value="{Localize PrintStrings.Save}"/>
+            <Setter TargetName="PART_InlinePrint" Property="Content" Value="{Localize PrintStrings.Save}"/>
             <Setter TargetName="RasterRow" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsDriverSettings" Value="true">

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Adamantium.UI.Core.Printing;
 using Adamantium.Win32;
@@ -20,9 +21,10 @@ internal static class XpsPrintJob
 
     /// <summary>Prints <paramref name="sheets"/> on <paramref name="printer"/>; <paramref name="output"/>, when given,
     /// takes what the driver makes instead of the device. Called off by <paramref name="cancellation"/>, the job is
-    /// canceled and nothing is printed.</summary>
-    public static void Print(string printer, IPrintDocument sheets, PrintPage sheet, XDocument ticket, Stream output,
-        IProgress<PrintProgress> progress, CancellationToken cancellation)
+    /// canceled and nothing is printed. Each sheet is made ready and drawn on the calling thread, which the job comes
+    /// back to between them.</summary>
+    public static async Task PrintAsync(string printer, IPrintDocument sheets, PrintPage sheet, XDocument ticket,
+        Stream output, IProgress<PrintProgress> progress, CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         var factoryClass = PrintDocumentPackage.TargetFactoryClass;
@@ -48,7 +50,7 @@ internal static class XpsPrintJob
                     Check(package.GetXpsOMPackageWriter(sequence, null, out var writer));
                     try
                     {
-                        Write(objects, writer, sheets, sheet, progress, cancellation);
+                        await WriteAsync(objects, writer, sheets, sheet, progress, cancellation);
                     }
                     finally
                     {
@@ -83,8 +85,8 @@ internal static class XpsPrintJob
 
     /// <summary>Writes the sheets as one fixed document through <paramref name="writer"/>, then closes the package.
     /// </summary>
-    internal static void Write(IXpsOMObjectFactory objects, IXpsOMPackageWriter writer, IPrintDocument sheets,
-        PrintPage sheet, IProgress<PrintProgress> progress, CancellationToken cancellation)
+    internal static async Task WriteAsync(IXpsOMObjectFactory objects, IXpsOMPackageWriter writer,
+        IPrintDocument sheets, PrintPage sheet, IProgress<PrintProgress> progress, CancellationToken cancellation)
     {
         Check(objects.CreatePartUri("/Documents/1/FixedDocument.fdoc", out var document));
         Check(writer.StartNewDocument(document, null, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero));
@@ -96,6 +98,7 @@ internal static class XpsPrintJob
         for (var index = 0; index < count; index++)
         {
             cancellation.ThrowIfCancellationRequested();
+            await sheets.PreparePagesAsync([index], sheet, cancellation);
             var part = "/Documents/1/Pages/" + (index + 1).ToString(CultureInfo.InvariantCulture) + ".fpage";
             Check(objects.CreatePartUri(part, out var pageName));
             Check(objects.CreatePage(size, language, pageName, out var page));

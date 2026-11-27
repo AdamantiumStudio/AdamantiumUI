@@ -72,7 +72,8 @@ public class XpsDrawingSessionTests
                 XpsInterleaving.Off, sequence, IntPtr.Zero, IntPtr.Zero, null, IntPtr.Zero, out var writer));
             var sheets = new PrintSheets(document ?? new XpsProbeDocument(), new PrintSettings(), PrinterCapabilities.Pdf);
             sheets.Paginate(sheets.Sheet);
-            XpsPrintJob.Write(factory, writer, sheets, sheets.Sheet, null, CancellationToken.None);
+            XpsPrintJob.WriteAsync(factory, writer, sheets, sheets.Sheet, null, CancellationToken.None)
+                .GetAwaiter().GetResult();
             Marshal.ReleaseComObject(writer);
         }
         finally

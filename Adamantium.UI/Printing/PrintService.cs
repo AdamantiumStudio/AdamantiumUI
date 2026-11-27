@@ -15,14 +15,15 @@ namespace Adamantium.UI.Printing;
 /// the system's printer through <see cref="SystemPrinting.Platform"/>, or into a PDF file the user names.</summary>
 internal sealed class PrintService(IDialogService dialogs) : IPrintService
 {
+    public IPrintPlatform Platform => SystemPrinting.Platform;
+
     public async Task<PrintResult> PrintAsync(IPrintDocument document, int currentPage = 0,
         CancellationToken cancellation = default)
     {
         ArgumentNullException.ThrowIfNull(document);
-        var platform = SystemPrinting.Platform;
         var parameters = new NavigationParameters()
             .Add(PrintDialogViewModel.DocumentKey, document)
-            .Add(PrintDialogViewModel.PlatformKey, platform)
+            .Add(PrintDialogViewModel.PlatformKey, Platform)
             .Add(PrintDialogViewModel.CurrentPageKey, currentPage);
         var answer = await dialogs.ShowDialogAsync(typeof(PrintDialogViewModel), parameters, DialogHostKind.Window,
             cancellation);
@@ -32,6 +33,18 @@ internal sealed class PrintService(IDialogService dialogs) : IPrintService
             return PrintResult.Canceled;
         }
 
+        return await PrintAsync(new PrintRequest(document, settings, currentPage), cancellation);
+    }
+
+    public async Task<PrintResult> PrintAsync(PrintRequest request, CancellationToken cancellation = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Document);
+        ArgumentNullException.ThrowIfNull(request.Settings);
+        var document = request.Document;
+        var settings = request.Settings;
+        var currentPage = request.CurrentPage;
+        var platform = Platform;
         if (!settings.Printer.IsFile && platform != null)
         {
             try

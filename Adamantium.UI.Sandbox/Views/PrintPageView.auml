@@ -1,0 +1,9 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- DataContext is PrintPageViewModel. -->
+    <PrintDialog x:Name="PrintPage"
+                 IsInline="True"
+                 Document="{Binding Document}"
+                 Platform="{Binding Platform}"
+                 Command="{Binding PrintCommand}"/>
+</View>

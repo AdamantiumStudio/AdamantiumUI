@@ -50,6 +50,7 @@
     <Phrase Key="PdfDrawing" Text="PDF drawing"/>
     <Phrase Key="PdfPage" Text="PDF page"/>
     <Phrase Key="Printing" Text="Printing"/>
+    <Phrase Key="PrintPage" Text="Print page"/>
     <Phrase Key="Opacity" Text="Opacity"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>

@@ -17,25 +17,25 @@ internal sealed class SamplePrintDocument(int pages) : IPrintDocument
     private static readonly Color Orange = new((byte)203, (byte)75, (byte)22, (byte)255);
     private static readonly Color Green = new((byte)133, (byte)153, (byte)0, (byte)255);
 
-    private Size<double> _size = new(PaperSize.A4.Width, PaperSize.A4.Height);
+    private Rect _area = new PrintPage(PaperSize.A4) { Margins = new Thickness(72) }.ContentArea;
 
     public string Title => "Sample document";
 
     public int Paginate(PrintPage page)
     {
-        _size = page.Size;
+        _area = page.ContentArea;
         return pages;
     }
 
     public void DrawPage(int index, IDrawingSession session)
     {
-        var margin = 72.0;
-        var width = _size.Width - margin * 2;
-        session.DrawRectangle(new SolidColorBrush(Blue), new Rect(margin, margin, width, 56), new CornerRadius(8));
-        Number(session, index + 1, new Rect(margin + 16, margin + 10, 36, 36), new SolidColorBrush(Colors.White));
+        var left = _area.X;
+        var width = _area.Width;
+        session.DrawRectangle(new SolidColorBrush(Blue), new Rect(left, _area.Y, width, 56), new CornerRadius(8));
+        Number(session, index + 1, new Rect(left + 16, _area.Y + 10, 36, 36), new SolidColorBrush(Colors.White));
 
-        var top = margin + 96;
-        var chart = new Rect(margin, top, width, Math.Min(260, _size.Height * 0.3));
+        var top = _area.Y + 96;
+        var chart = new Rect(left, top, width, Math.Min(260, _area.Height * 0.3));
         session.DrawRectangle(null, chart, new CornerRadius(0), new Pen(new SolidColorBrush(Ink), 1));
         var bars = 8;
         var gap = chart.Width / (bars * 3 + 1);
@@ -47,7 +47,7 @@ internal sealed class SamplePrintDocument(int pages) : IPrintDocument
                 new Rect(chart.X + gap + bar * gap * 3, chart.Bottom - 8 - height, gap * 2, height));
         }
 
-        var band = new Rect(margin, chart.Bottom + 32, width, 60);
+        var band = new Rect(left, chart.Bottom + 32, width, 60);
         session.DrawRectangle(new LinearGradientBrush([new GradientStop(Blue, 0), new GradientStop(Green, 1)])
         {
             StartPoint = new Vector2<double>(0, 0),
@@ -58,18 +58,18 @@ internal sealed class SamplePrintDocument(int pages) : IPrintDocument
         var diameter = Math.Min(48, width / (circles * 1.5));
         for (var circle = 0; circle < circles; circle++)
         {
-            session.DrawEllipse(new Rect(margin + circle * diameter * 1.5, band.Bottom + 32, diameter, diameter),
+            session.DrawEllipse(new Rect(left + circle * diameter * 1.5, band.Bottom + 32, diameter, diameter),
                 new SolidColorBrush(circle % 2 == 0 ? Green : Orange), null, null);
         }
 
         // Lines standing in for text, down to the bottom margin.
         var line = band.Bottom + 32 + diameter + 32;
         var row = 0;
-        while (line + 8 < _size.Height - margin)
+        while (line + 8 < _area.Bottom)
         {
             var length = width * (row % 5 == 4 ? 0.55 : 0.92 - row % 3 * 0.06);
             session.DrawRectangle(new SolidColorBrush(new Color((byte)200, (byte)204, (byte)210, (byte)255)),
-                new Rect(margin, line, length, 6), new CornerRadius(3));
+                new Rect(left, line, length, 6), new CornerRadius(3));
             line += 18;
             row++;
         }

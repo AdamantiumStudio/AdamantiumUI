@@ -6,7 +6,8 @@ namespace Adamantium.UI.Core.Printing;
 /// ANSI "Letter") and its size in DIPs, 96 to the inch.</summary>
 public sealed record PaperSize(string Name, double Width, double Height)
 {
-    private const double PerMillimeter = 96 / 25.4;
+    /// <summary>DIPs - 96 to the inch - to a millimeter.</summary>
+    public const double DipsPerMillimeter = 96 / 25.4;
 
     public static PaperSize A3 { get; } = Millimeters("A3", 297, 420);
 
@@ -29,5 +30,5 @@ public sealed record PaperSize(string Name, double Width, double Height)
 
     /// <summary>A sheet of <paramref name="width"/> by <paramref name="height"/> millimeters.</summary>
     public static PaperSize Millimeters(string name, double width, double height) =>
-        new(name, width * PerMillimeter, height * PerMillimeter);
+        new(name, width * DipsPerMillimeter, height * DipsPerMillimeter);
 }

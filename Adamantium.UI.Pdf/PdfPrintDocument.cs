@@ -36,6 +36,9 @@ public sealed class PdfPrintDocument : IPrintDocument
     /// <summary>The document's own pages, whatever the sheet: a PDF is not laid out again.</summary>
     public int Paginate(PrintPage page) => _document.Pages.Count;
 
+    /// <summary>A PDF's pages carry their own margins: printed as they are unless others are chosen.</summary>
+    public bool HasOwnMargins => true;
+
     public Size<double>? PageSize(int index)
     {
         var page = _document.Pages[index];

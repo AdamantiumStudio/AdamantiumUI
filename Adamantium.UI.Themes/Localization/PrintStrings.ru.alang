@@ -16,6 +16,13 @@
     <Phrase Key="Portrait" Text="Книжная"/>
     <Phrase Key="Landscape" Text="Альбомная"/>
     <Phrase Key="Paper" Text="Бумага"/>
+    <Phrase Key="Margins" Text="Поля"/>
+    <Phrase Key="MarginTop" Text="Сверху"/>
+    <Phrase Key="MarginBottom" Text="Снизу"/>
+    <Phrase Key="MarginLeft" Text="Слева"/>
+    <Phrase Key="MarginRight" Text="Справа"/>
+    <Phrase Key="Millimeters" Text="мм"/>
+    <Phrase Key="Inches" Text="дюйм"/>
     <Phrase Key="Scale" Text="Масштаб"/>
     <Phrase Key="FitToSheet" Text="По размеру листа"/>
     <Phrase Key="ActualSize" Text="Как есть"/>

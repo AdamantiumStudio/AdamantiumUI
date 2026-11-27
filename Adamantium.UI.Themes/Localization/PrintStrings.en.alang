@@ -16,6 +16,13 @@
     <Phrase Key="Portrait" Text="Portrait"/>
     <Phrase Key="Landscape" Text="Landscape"/>
     <Phrase Key="Paper" Text="Paper"/>
+    <Phrase Key="Margins" Text="Margins"/>
+    <Phrase Key="MarginTop" Text="Top"/>
+    <Phrase Key="MarginBottom" Text="Bottom"/>
+    <Phrase Key="MarginLeft" Text="Left"/>
+    <Phrase Key="MarginRight" Text="Right"/>
+    <Phrase Key="Millimeters" Text="mm"/>
+    <Phrase Key="Inches" Text="in"/>
     <Phrase Key="Scale" Text="Scale"/>
     <Phrase Key="FitToSheet" Text="Fit to sheet"/>
     <Phrase Key="ActualSize" Text="Actual size"/>

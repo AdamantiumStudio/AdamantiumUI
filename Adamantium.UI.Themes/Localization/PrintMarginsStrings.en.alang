@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Document" Text="As in the document"/>
+    <Phrase Key="Normal" Text="Normal · 20 mm"/>
+    <Phrase Key="Narrow" Text="Narrow · 12.7 mm"/>
+    <Phrase Key="Wide" Text="Wide · 25.4 mm"/>
+    <Phrase Key="NormalInches" Text="Normal · 0.79 in"/>
+    <Phrase Key="NarrowInches" Text="Narrow · 0.5 in"/>
+    <Phrase Key="WideInches" Text="Wide · 1 in"/>
+    <Phrase Key="None" Text="None"/>
+    <Phrase Key="Custom" Text="Custom…"/>
+</Language>

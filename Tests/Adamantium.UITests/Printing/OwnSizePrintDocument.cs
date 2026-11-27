@@ -19,4 +19,6 @@ internal sealed class OwnSizePrintDocument(params Size<double>[] sizes) : IPrint
             new RectangleGeometry(new Rect(0, 0, sizes[index].Width, sizes[index].Height)), null);
 
     public Size<double>? PageSize(int index) => sizes[index];
+
+    public bool HasOwnMargins => true;
 }

@@ -1,0 +1,25 @@
+<Scenario xmlns="http://adamantium/automation/scenario"
+          Description="The print page shown inside the window: Print heads the options and nothing runs along the bottom; the margins are chosen by name, and Custom shows a box for each side.">
+    <Select Target="id=GalleryTabs/name=Print page" />
+    <Wait Target="id=PART_InlinePrint" Offscreen="False" />
+    <Expect Target="id=PART_Cancel" Offscreen="True" />
+    <Expect Target="id=PART_SheetNumber" Name="Sheet 1 of 6" />
+
+    <!-- A document without margins of its own: the normal ones, and no boxes for the sides. -->
+    <Expect Target="id=PART_Margins" Value="Normal · 20 mm" />
+    <Expect Target="id=PART_MarginTop" Offscreen="True" />
+
+    <!-- Custom: a box for each side; a side set stays custom. -->
+    <Select Target="id=PART_Margins/name=Custom" />
+    <Wait Target="id=PART_MarginTop" Offscreen="False" />
+    <Expect Target="id=PART_MarginBottom" Offscreen="False" />
+    <Expect Target="id=PART_MarginLeft" Offscreen="False" />
+    <Expect Target="id=PART_MarginRight" Offscreen="False" />
+    <Set Target="id=PART_MarginTop" Value="2" />
+    <Expect Target="id=PART_Margins" Value="Custom…" />
+
+    <!-- Named margins again: the boxes go. -->
+    <Select Target="id=PART_Margins/name=Wide" />
+    <Expect Target="id=PART_MarginTop" Offscreen="True" />
+    <Expect Target="id=PART_Margins" Value="Wide · 25.4 mm" />
+</Scenario>

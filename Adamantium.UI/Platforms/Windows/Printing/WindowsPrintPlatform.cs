@@ -185,7 +185,7 @@ internal sealed class WindowsPrintPlatform : IPrintPlatform
 
         var ticket = described.Schema.Write(BaseTicket(described, settings), settings);
         ticket = ReconcilingProvider(settings.Printer.Id).Validate(ticket) ?? ticket;
-        XpsPrintJob.Print(settings.Printer.Id, laid, laid.Sheet, ticket, null, progress, cancellation);
+        await XpsPrintJob.PrintAsync(settings.Printer.Id, laid, laid.Sheet, ticket, null, progress, cancellation);
     }
 
     private Described DescribedOf(Printer printer)

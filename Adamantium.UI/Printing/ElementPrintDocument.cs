@@ -160,10 +160,7 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
     {
         ArgumentNullException.ThrowIfNull(page);
         StopMaking();
-        var size = page.Size;
-        var margins = page.PrintableMargins;
-        _area = new Rect(margins.Left, margins.Top, Math.Max(1, size.Width - margins.Left - margins.Right),
-            Math.Max(1, size.Height - margins.Top - margins.Bottom));
+        _area = page.ContentArea;
 
         var own = _element.RenderSize;
         if (!(own.Width > 0) || !(own.Height > 0))
@@ -179,7 +176,8 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
     }
 
     /// <summary>Draws the part of the element sheet <paramref name="index"/> holds - counted along the first row of sheets,
-    /// then the next - cut to what the printer reaches. The sheets are those of the last <see cref="Paginate"/>.</summary>
+    /// then the next - cut to the sheet's <see cref="PrintPage.ContentArea"/>. The sheets are those of the last
+    /// <see cref="Paginate"/>.</summary>
     public void DrawPage(int index, IDrawingSession session)
     {
         ArgumentNullException.ThrowIfNull(session);

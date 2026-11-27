@@ -50,6 +50,7 @@
     <Phrase Key="PdfDrawing" Text="Рисование PDF"/>
     <Phrase Key="PdfPage" Text="Страница PDF"/>
     <Phrase Key="Printing" Text="Печать"/>
+    <Phrase Key="PrintPage" Text="Страница печати"/>
     <Phrase Key="Opacity" Text="Прозрачность"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>
