@@ -34,6 +34,8 @@ public partial class AudioPlayer
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        // Its own playback is made when shown, its device running: the first play is heard at once.
+        PlaybackToUse();
         if (!_isListening)
         {
             _isListening = true;

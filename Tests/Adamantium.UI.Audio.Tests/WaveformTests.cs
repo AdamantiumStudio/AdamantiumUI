@@ -43,6 +43,21 @@ public class WaveformTests
         Assert.DoesNotThrow(() => waveform.GoTo(5));
     }
 
+    // A quiet sound drawn to the full height: its loudest at full scale.
+    [Test]
+    public void AQuietSound_IsDrawnToItsLoudest()
+    {
+        using var engine = new Pulsar.AudioEngine();
+        using var playback = new Pulsar.AudioPlayback(engine);
+        playback.Open(new Pulsar.SoundMemoryStorage(WavFiles.Tone(0.1, title: "quiet")));
+        var peaks = playback.ReadWaveform(4, CancellationToken.None);
+        Assert.That(SpinWait.SpinUntil(() => peaks.IsComplete, TimeSpan.FromSeconds(20)), Is.True);
+
+        // The tone is a quarter of full scale.
+        Assert.That(Waveform.ScaleOf(peaks, peaks.Parts), Is.EqualTo(1 / 0.25f).Within(0.01f));
+        Assert.That(Waveform.ScaleOf(peaks, 0), Is.EqualTo(1f));
+    }
+
     [Test]
     public void ItIsASliderOfThePosition()
     {

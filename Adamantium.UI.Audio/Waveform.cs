@@ -47,6 +47,9 @@ public class Waveform : RangeBase
     public static readonly AdamantiumProperty CursorBrushProperty = AdamantiumProperty.Register(nameof(CursorBrush),
         typeof(Brush), typeof(Waveform), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
+    public static readonly AdamantiumProperty IsNormalizedProperty = AdamantiumProperty.Register(nameof(IsNormalized),
+        typeof(bool), typeof(Waveform), new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
+
     public static readonly AdamantiumProperty BarWidthProperty = AdamantiumProperty.Register(nameof(BarWidth),
         typeof(double), typeof(Waveform), new PropertyMetadata(2.0, PropertyMetadataOptions.AffectsRender));
 
@@ -77,6 +80,14 @@ public class Waveform : RangeBase
     {
         get => GetValue<Brush>(CursorBrushProperty);
         set => SetValue(CursorBrushProperty, value);
+    }
+
+    /// <summary>The loudest of what is read drawn to the full height, as players draw it, so a quiet sound has a shape
+    /// too; false to draw it at its own loudness, full scale to the full height.</summary>
+    public bool IsNormalized
+    {
+        get => GetValue<bool>(IsNormalizedProperty);
+        set => SetValue(IsNormalizedProperty, value);
     }
 
     /// <summary>Of each bar, in DIPs; at least a pixel.</summary>
@@ -186,6 +197,7 @@ public class Waveform : RangeBase
 
         var middle = high / 2;
         var read = peaks.PartsRead;
+        var scale = IsNormalized ? ScaleOf(peaks, read) : 1f;
         for (var bar = 0; bar < bars; bar++)
         {
             var from = (int)((long)bar * peaks.Parts / bars);
@@ -206,6 +218,9 @@ public class Waveform : RangeBase
                 }
             }
 
+            least *= scale;
+            greatest *= scale;
+
             var left = bar * (width + spacing);
             var brush = left + width / 2 < playedTo ? PlayedBrush ?? WaveBrush : WaveBrush;
             if (brush == null)
@@ -220,6 +235,21 @@ public class Waveform : RangeBase
             this.Snap(ref rect);
             session.DrawRectangle(brush, rect);
         }
+    }
+
+    /// <summary>What brings the loudest of the parts read so far to full scale; 1 for silence.</summary>
+    internal static float ScaleOf(SoundWaveform peaks, int read)
+    {
+        var loudest = 0f;
+        for (var part = 0; part < read; part++)
+        {
+            for (var channel = 0; channel < peaks.Channels; channel++)
+            {
+                loudest = Math.Max(loudest, Math.Max(-peaks.MinimumOf(channel, part), peaks.MaximumOf(channel, part)));
+            }
+        }
+
+        return loudest > 0 ? 1 / loudest : 1;
     }
 
     private void OnPressed(object sender, PointerPressedEventArgs e)

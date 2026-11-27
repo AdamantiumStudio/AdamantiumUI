@@ -441,8 +441,11 @@
                                        Foreground="{ThemeResource AccentFillColorDefault}"
                                        Text="{Ancestor local:AudioPlayer, Position, Converter={TimeSpanToClockTextConverter}}"
                                        AutomationProperties.AutomationId="AudioTime"/>
-                            <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}" Text="/"/>
-                            <TextBlock FontSize="11" Foreground="{ObservableResource TextFillColorTertiary}"
+                            <!-- In the same font and size as the time, so the digits stand on one line. -->
+                            <TextBlock FontSize="12" FontFamily="{ThemeResource CodeFontFamily}"
+                                       Foreground="{ObservableResource TextFillColorTertiary}" Text="/"/>
+                            <TextBlock FontSize="12" FontFamily="{ThemeResource CodeFontFamily}"
+                                       Foreground="{ObservableResource TextFillColorTertiary}"
                                        Text="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToClockTextConverter}}"
                                        AutomationProperties.AutomationId="AudioDuration"/>
                         </StackPanel>

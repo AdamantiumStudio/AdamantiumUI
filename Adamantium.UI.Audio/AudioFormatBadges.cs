@@ -44,6 +44,9 @@ public class AudioFormatBadges : Control
     public static readonly AdamantiumProperty ShowsKilobitsProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(ShowsKilobits), typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty ShowsChannelsProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsChannels), typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
+
     public static readonly AdamantiumProperty ShowsMonoProperty = AdamantiumProperty.RegisterReadOnly(nameof(ShowsMono),
         typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
@@ -114,6 +117,13 @@ public class AudioFormatBadges : Control
         private set => SetReadOnlyValue(ShowsKilobitsProperty, value);
     }
 
+    /// <summary>The channels' mark, whichever it says.</summary>
+    public bool ShowsChannels
+    {
+        get => GetValue<bool>(ShowsChannelsProperty);
+        private set => SetReadOnlyValue(ShowsChannelsProperty, value);
+    }
+
     public bool ShowsMono
     {
         get => GetValue<bool>(ShowsMonoProperty);
@@ -158,5 +168,6 @@ public class AudioFormatBadges : Control
         ShowsMono = channels == 1;
         ShowsStereo = channels == 2;
         ShowsSurround = channels > 2;
+        ShowsChannels = channels > 0;
     }
 }
