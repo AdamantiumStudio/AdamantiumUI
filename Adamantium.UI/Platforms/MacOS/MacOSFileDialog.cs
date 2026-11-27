@@ -31,22 +31,33 @@ internal sealed class MacOSFileDialog(MacOSPlatform platform) : IFileDialogPlatf
     public string Open(OpenFileRequest request) => Ask(() =>
         Run(NSSavePanel.CreateOpen(folders: false), request?.Title, request?.Key, request?.FileTypes));
 
+    public IReadOnlyList<string> OpenMany(OpenFileRequest request) => Ask(() =>
+    {
+        var panel = NSSavePanel.CreateOpen(folders: false);
+        NSSavePanel.SetAllowsMany(panel, true);
+        return Run(panel, request?.Title, request?.Key, request?.FileTypes, NSSavePanel.RunForMany);
+    }) ?? [];
+
     public string OpenFolder(OpenFolderRequest request) => Ask(() =>
         Run(NSSavePanel.CreateOpen(folders: true), request?.Title, request?.Key, null));
 
-    private static string Run(IntPtr panel, string title, string key, IReadOnlyList<FileType> fileTypes)
+    private static string Run(IntPtr panel, string title, string key, IReadOnlyList<FileType> fileTypes) =>
+        Run(panel, title, key, fileTypes, NSSavePanel.Run);
+
+    private static T Run<T>(IntPtr panel, string title, string key, IReadOnlyList<FileType> fileTypes,
+        Func<IntPtr, T> run)
     {
         if (!string.IsNullOrEmpty(title))
             NSSavePanel.SetMessage(panel, title);
         if (!string.IsNullOrEmpty(key))
             NSSavePanel.SetIdentifier(panel, IdentifierPrefix + key);
         using var types = new MacOSFileTypeList(panel, fileTypes);
-        return NSSavePanel.Run(panel);
+        return run(panel);
     }
 
-    private string Ask(Func<string> ask)
+    private T Ask<T>(Func<T> ask)
     {
-        string chosen = null;
+        T chosen = default;
         platform.RunOnMainThreadAndWait(() => chosen = ask());
         return chosen;
     }
