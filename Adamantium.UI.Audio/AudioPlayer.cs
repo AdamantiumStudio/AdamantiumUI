@@ -83,6 +83,12 @@ public partial class AudioPlayer : Control
     public static readonly AdamantiumProperty FailedTrackProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(FailedTrack), typeof(AudioTrack), typeof(AudioPlayer), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty TrackTitleProperty = AdamantiumProperty.RegisterReadOnly(nameof(TrackTitle),
+        typeof(string), typeof(AudioPlayer), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty FailedTrackTitleProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(FailedTrackTitle), typeof(string), typeof(AudioPlayer), new PropertyMetadata(null));
+
     public static readonly AdamantiumProperty HasFailedProperty = AdamantiumProperty.Register(nameof(HasFailed),
         typeof(bool), typeof(AudioPlayer),
         new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
@@ -272,6 +278,20 @@ public partial class AudioPlayer : Control
     {
         get => GetValue<AudioTrack>(FailedTrackProperty);
         private set => SetReadOnlyValue(FailedTrackProperty, value);
+    }
+
+    /// <summary>The current track's title, of its tags once read; its name until then. Null while there is none.</summary>
+    public string TrackTitle
+    {
+        get => GetValue<string>(TrackTitleProperty);
+        private set => SetReadOnlyValue(TrackTitleProperty, value);
+    }
+
+    /// <summary>The title of <see cref="FailedTrack"/>, as <see cref="TrackTitle"/> is the current one's.</summary>
+    public string FailedTrackTitle
+    {
+        get => GetValue<string>(FailedTrackTitleProperty);
+        private set => SetReadOnlyValue(FailedTrackTitleProperty, value);
     }
 
     /// <summary>A track could not be played: the theme says so until this is cleared, as closing what says it does.

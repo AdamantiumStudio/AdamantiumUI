@@ -15,6 +15,14 @@ public partial class AudioPlayer
 
     private readonly SynchronizationContext _context = SynchronizationContext.Current;
     private readonly Random _random = new();
+    // What it read of each track - those listed and the current one -, those it could not, the places in the list: kept
+    // here, told to the rows that show them.
+    private readonly Dictionary<AudioTrack, SoundInfo> _infos = [];
+    private readonly HashSet<AudioTrack> _unreadable = [];
+    private readonly Dictionary<AudioTrack, int> _numbers = [];
+    // How many times each is listed: its length counts as many times in the length of all.
+    private readonly Dictionary<AudioTrack, int> _listed = [];
+    private readonly HashSet<AudioTrackRow> _rows = [];
     private TrackingCollection<AudioTrack> _watchedTracks;
     private AudioPlayback _watchedPlayback;
     // Made by the player for itself, and disposed by it.
@@ -42,6 +50,9 @@ public partial class AudioPlayer
             Listen(Tracks);
             Listen(Playback);
             Shuffle();
+            // The list may have changed while it was told nothing.
+            TellList();
+            ForgetUnlisted();
             TellState();
         }
 
@@ -79,6 +90,7 @@ public partial class AudioPlayer
 
         player.Shuffle();
         player.TellList();
+        player.ForgetUnlisted();
         player.TellCommands();
     }
 
@@ -89,37 +101,126 @@ public partial class AudioPlayer
             ReadInfo(e.NewItems.OfType<AudioTrack>());
         }
 
-        if (e.OldItems != null)
-        {
-            foreach (var track in e.OldItems.OfType<AudioTrack>())
-            {
-                track.Number = 0;
-            }
-        }
-
         Shuffle();
         TellList();
+        if (e.OldItems != null || e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            ForgetUnlisted();
+        }
+
         TellCommands();
     }
 
-    // Each track's number, how many there are, and how long all are.
+    /// <summary>What it read of the track; null until read, or where it can not be.</summary>
+    internal SoundInfo InfoOf(AudioTrack track) =>
+        track != null && _infos.TryGetValue(track, out var info) ? info : null;
+
+    /// <summary>It is no sound file, or one that can not be read: it is passed by.</summary>
+    internal bool CannotRead(AudioTrack track) => track != null && _unreadable.Contains(track);
+
+    /// <summary>Its place in the list, from 1; 0 out of it.</summary>
+    internal int NumberOf(AudioTrack track) => track != null && _numbers.TryGetValue(track, out var number) ? number : 0;
+
+    /// <summary>A row shown in it, told what the player reads from now on.</summary>
+    internal void Follow(AudioTrackRow row) => _rows.Add(row);
+
+    internal void Unfollow(AudioTrackRow row) => _rows.Remove(row);
+
+    // Each track's number, how many there are, and how long all are; every row is told its number.
     private void TellList()
     {
-        var total = TimeSpan.Zero;
+        _numbers.Clear();
+        _listed.Clear();
         var number = 0;
+        var total = TimeSpan.Zero;
         foreach (var track in Tracks ?? [])
         {
-            track.Number = ++number;
-            total += track.Duration;
+            _numbers[track] = ++number;
+            _listed[track] = _listed.GetValueOrDefault(track) + 1;
+            total += InfoOf(track)?.Duration ?? TimeSpan.Zero;
         }
 
         TrackCount = number;
         TotalDuration = total;
+        TellRows(null);
     }
+
+    // The rows of the track, or all of them.
+    private void TellRows(AudioTrack track)
+    {
+        foreach (var row in _rows)
+        {
+            if (track == null || row.Track == track)
+            {
+                row.Show();
+            }
+        }
+    }
+
+    private void TellTitles()
+    {
+        TrackTitle = TitleOf(CurrentTrack);
+        FailedTrackTitle = TitleOf(FailedTrack);
+    }
+
+    private string TitleOf(AudioTrack track) => track == null ? null : InfoOf(track)?.Tags.Title ?? track.Name;
+
+    // Read of the track: kept, its rows, the length of all and the titles told. One that could not be read before - a
+    // file locked then - is readable from now on.
+    private void Know(AudioTrack track, SoundInfo info)
+    {
+        var wasUnreadable = _unreadable.Remove(track);
+        if (!_infos.TryAdd(track, info))
+        {
+            if (wasUnreadable)
+            {
+                TellRows(track);
+            }
+
+            return;
+        }
+
+        if (_listed.TryGetValue(track, out var times))
+        {
+            TotalDuration += info.Duration * times;
+        }
+
+        TellRows(track);
+        TellTitles();
+    }
+
+    private void KnowUnreadable(AudioTrack track)
+    {
+        if (_unreadable.Add(track))
+        {
+            TellRows(track);
+        }
+    }
+
+    // What was read of the tracks no longer listed, nor current: nothing is kept for them.
+    private void ForgetUnlisted()
+    {
+        foreach (var track in _infos.Keys.Where(IsForgotten).ToList())
+        {
+            _infos.Remove(track);
+        }
+
+        _unreadable.RemoveWhere(IsForgotten);
+    }
+
+    private bool IsForgotten(AudioTrack track) =>
+        !_numbers.ContainsKey(track) && track != CurrentTrack && track != FailedTrack;
 
     private static void OnCurrentTrackChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var player = (AudioPlayer)component;
+        if (e.OldValue is AudioTrack old && player.IsForgotten(old))
+        {
+            player._infos.Remove(old);
+            player._unreadable.Remove(old);
+        }
+
+        player.TellTitles();
         var plays = player._playsChosen || player.PlaybackPlays;
         player._playsChosen = false;
         if (player.Open(e.NewValue as AudioTrack) && plays)
@@ -223,14 +324,14 @@ public partial class AudioPlayer
                 break;
             }
 
-            if (!track.CannotBeRead && Choose(track, plays: true))
+            if (!CannotRead(track) && Choose(track, plays: true))
             {
                 return;
             }
         }
 
         // The list wrapped to the one that ended, or a single track: Repeat list plays it again.
-        if (Repeat == AudioRepeat.List && !ended.CannotBeRead && (track == ended || Order.Count == 0))
+        if (Repeat == AudioRepeat.List && !CannotRead(ended) && (track == ended || Order.Count == 0))
         {
             Choose(ended, plays: true);
             return;
@@ -351,7 +452,7 @@ public partial class AudioPlayer
             return false;
         }
 
-        track.Info ??= playback.Info;
+        Know(track, playback.Info);
         Info = playback.Info;
         SetCurrentValue(HasFailedProperty, false);
         TellState();
@@ -397,10 +498,11 @@ public partial class AudioPlayer
 
         if (isBroken)
         {
-            track.CannotBeRead = true;
+            KnowUnreadable(track);
         }
 
         FailedTrack = track;
+        TellTitles();
         SetCurrentValue(HasFailedProperty, true);
     }
 
@@ -481,8 +583,15 @@ public partial class AudioPlayer
     {
         foreach (var track in tracks)
         {
-            if (track.Info != null || track.CannotBeRead)
+            if (_infos.ContainsKey(track) || _unreadable.Contains(track))
             {
+                continue;
+            }
+
+            // With no thread of its own to be told on, it reads here: what it keeps is touched on one thread only.
+            if (_context == null)
+            {
+                ReadInfo(track);
                 continue;
             }
 
@@ -503,16 +612,21 @@ public partial class AudioPlayer
             // Whatever it was - damaged, taken away, locked - it is passed by, and the next is read.
         }
 
+        // Taken off the list while it was read: nothing is kept of it.
         void Say()
         {
+            if (IsForgotten(track))
+            {
+                return;
+            }
+
             if (info != null)
             {
-                track.Info ??= info;
-                TellList();
+                Know(track, info);
             }
             else
             {
-                track.CannotBeRead = true;
+                KnowUnreadable(track);
             }
         }
 

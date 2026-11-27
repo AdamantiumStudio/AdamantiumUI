@@ -41,12 +41,96 @@ public class AudioPlayerTests
     public void WhatEachTrackIs_IsReadOnceListed()
     {
         var tracks = Add(("one", 0.3), ("two", 0.5));
+        var rows = tracks.Select(track => new AudioTrackRow { Track = track }).ToArray();
+        foreach (var row in rows)
+        {
+            row.Join(_player);
+        }
 
-        RunUntil(() => tracks.All(track => track.Info != null));
+        RunUntil(() => rows.All(row => row.Codec != null));
 
-        Assert.That(tracks[0].Title, Is.EqualTo("one"));
-        Assert.That(tracks[1].Duration.TotalSeconds, Is.EqualTo(0.5).Within(0.001));
-        Assert.That(tracks[1].Codec, Is.EqualTo("WAV"));
+        Assert.That(rows.Select(row => row.Number), Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(rows[0].Title, Is.EqualTo("one"));
+        Assert.That(rows[1].Duration.TotalSeconds, Is.EqualTo(0.5).Within(0.001));
+        Assert.That(rows[1].Codec, Is.EqualTo("WAV"));
+        Assert.That(_player.TotalDuration.TotalSeconds, Is.EqualTo(0.8).Within(0.001));
+    }
+
+    // Nothing is kept of a track off the list; the rows left are numbered anew.
+    [Test]
+    public void ATrackTakenOffTheList_IsForgotten()
+    {
+        var tracks = Add(("one", 0.2), ("two", 0.2), ("three", 0.2));
+        var row = new AudioTrackRow { Track = tracks[2] };
+        row.Join(_player);
+        RunUntil(() => tracks.All(track => _player.InfoOf(track) != null));
+
+        _player.Tracks.Remove(tracks[1]);
+
+        Assert.That(_player.InfoOf(tracks[1]), Is.Null);
+        Assert.That(row.Number, Is.EqualTo(2));
+        Assert.That(_player.TotalDuration.TotalSeconds, Is.EqualTo(0.4).Within(0.001));
+    }
+
+    // Locked when the list was read, free when chosen: it plays, and is no longer passed by.
+    [Test]
+    public void ATrackThatCouldNotBeReadAndThenOpens_IsReadable()
+    {
+        var storage = new TakenAwayStorage(WavFiles.Tone(0.2, title: "one")) { IsTaken = true };
+        var track = new AudioTrack(storage, "one");
+        var row = new AudioTrackRow { Track = track };
+        row.Join(_player);
+        _player.Tracks.Add(track);
+        RunUntil(() => _player.CannotRead(track));
+        storage.IsTaken = false;
+
+        _player.CurrentTrack = track;
+
+        Assert.That(_player.CannotRead(track), Is.False);
+        Assert.That(row.CannotBeRead, Is.False);
+    }
+
+    // The title of the one that failed stays while it is said, though another is chosen.
+    [Test]
+    public void TheFailedTrackTitle_StaysAfterAnotherIsChosen()
+    {
+        using var engine = new AudioEngine(new AudioEngineSettings { Voices = 1 });
+        using var playback = new AudioPlayback(engine);
+        var player = new AudioPlayer { Playback = playback };
+        var path = Path.Combine(Path.GetTempPath(), $"audio-player-{Guid.NewGuid():N}.wav");
+        File.WriteAllBytes(path, WavFiles.Tone(2, title: "A song"));
+        try
+        {
+            player.Source = path;
+            player.PlayPauseCommand.Execute();
+            player.Position = TimeSpan.FromSeconds(1);
+            Assert.That(player.FailedTrackTitle, Is.EqualTo("A song"));
+
+            player.Source = null;
+
+            Assert.That(player.FailedTrackTitle, Is.EqualTo("A song"));
+        }
+        finally
+        {
+            player.Source = null;
+            File.Delete(path);
+        }
+    }
+
+    // Its name until its tags are read; their title once they are.
+    [Test]
+    public void TheTitleShown_IsOfTheTags()
+    {
+        var track = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "A song")), "a-file");
+        var row = new AudioTrackRow { Track = track };
+        Assert.That(row.Title, Is.EqualTo("a-file"));
+        row.Join(_player);
+        _player.Tracks.Add(track);
+
+        _player.CurrentTrack = track;
+
+        Assert.That(_player.TrackTitle, Is.EqualTo("A song"));
+        Assert.That(row.Title, Is.EqualTo("A song"));
     }
 
     [Test]
@@ -217,7 +301,8 @@ public class AudioPlayerTests
         _player.CurrentTrack = broken;
         Assert.That(_player.HasFailed, Is.True);
         Assert.That(_player.FailedTrack, Is.SameAs(broken));
-        Assert.That(broken.CannotBeRead, Is.True);
+        Assert.That(_player.CannotRead(broken), Is.True);
+        Assert.That(_player.FailedTrackTitle, Is.EqualTo("broken"));
 
         _player.CurrentTrack = tracks[0];
         Assert.That(_player.HasFailed, Is.False);
@@ -355,13 +440,13 @@ public class AudioPlayerTests
         var three = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "three")), "three");
         _player.Tracks.Add(two);
         _player.Tracks.Add(three);
-        RunUntil(() => two.Info != null);
+        RunUntil(() => _player.InfoOf(two) != null);
         storage.IsTaken = true;
 
         _player.PlayPauseCommand.Execute();
 
         RenderUntil(() => _player.CurrentTrack == three && _player.IsPlaying);
-        Assert.That(two.CannotBeRead, Is.True);
+        Assert.That(_player.CannotRead(two), Is.True);
     }
 
     // Out of the tree, it is told no more of the list, nor of the playback.
@@ -376,9 +461,10 @@ public class AudioPlayerTests
         Thread.Sleep(200);
         _context.Run();
 
-        Assert.That(player.Tracks[0].Info, Is.Null);
+        Assert.That(player.InfoOf(player.Tracks[0]), Is.Null);
         player.Attach();
-        RunUntil(() => player.Tracks[0].Info != null);
+        RunUntil(() => player.InfoOf(player.Tracks[0]) != null);
+        Assert.That(player.TrackCount, Is.EqualTo(1));
     }
 
     // The engine's voices taken: a seek says it could not, and the track is not called broken.
@@ -394,7 +480,7 @@ public class AudioPlayerTests
 
         Assert.DoesNotThrow(() => player.Position = TimeSpan.FromSeconds(1));
         Assert.That(player.HasFailed, Is.True);
-        Assert.That(track.CannotBeRead, Is.False);
+        Assert.That(player.CannotRead(track), Is.False);
     }
 
     // Next on a list of one changes nothing, and leaves nothing to play the one chosen later.

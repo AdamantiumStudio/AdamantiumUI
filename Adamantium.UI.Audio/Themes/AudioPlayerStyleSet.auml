@@ -27,7 +27,7 @@
                             CornerRadius="7" Padding="14 9">
                         <Grid ColumnDefinitions="*,190" ColumnSpacing="14">
                             <StackPanel Spacing="3">
-                                <TextBlock x:Name="Title" Text="{Ancestor local:AudioPlayer, CurrentTrack.Title}"
+                                <TextBlock x:Name="Title" Text="{Ancestor local:AudioPlayer, TrackTitle}"
                                            FontSize="14" FontWeight="SemiBold" TextTrimming="CharEllipses"
                                            AutomationProperties.AutomationId="AudioTitle"/>
                                 <TextBlock x:Name="Nothing" Text="{Localize AudioPlayerStrings.NothingOpen}"
@@ -204,24 +204,11 @@
             </Setter.Value>
         </Setter>
 
-        <!-- A row of the list: its number, the title, the format, the length; one that can not be played, faded. -->
+        <!-- A row of the list: the track's row, which the player tells what it read; its look is AudioTrackRow's. -->
         <Setter Property="TrackTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <Grid x:Name="Row" ColumnDefinitions="28,*,90,48" AutomationProperties.Name="{Binding Title}">
-                        <TextBlock FontSize="12" Text="{Binding Number}" Foreground="{ObservableResource TextFillColorTertiary}"/>
-                        <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Title}" TextTrimming="CharEllipses"/>
-                        <TextBlock Grid.Column="2" FontSize="12" Text="{Binding Codec}" TextTransform="Uppercase"
-                                   Foreground="{ObservableResource TextFillColorTertiary}"/>
-                        <TextBlock Grid.Column="3" FontSize="12" HorizontalTextAlignment="Right"
-                                   Text="{Binding Duration, Converter={TimeSpanToClockTextConverter}}"
-                                   Foreground="{ObservableResource TextFillColorTertiary}"/>
-                    </Grid>
-                    <DataTemplate.Triggers>
-                        <DataTrigger Binding="{Binding CannotBeRead}" Value="true">
-                            <Setter TargetName="Row" Property="Opacity" Value="0.45"/>
-                        </DataTrigger>
-                    </DataTemplate.Triggers>
+                    <local:AudioTrackRow Track="{Binding}"/>
                 </DataTemplate>
             </Setter.Value>
         </Setter>
@@ -234,7 +221,7 @@
                             ClipToBounds="True">
                         <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*">
                             <InfoBar Severity="Error" Margin="12 12 12 0" Title="{Localize AudioPlayerStrings.CannotPlay}"
-                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrackTitle}"
                                      IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
                                      AutomationProperties.AutomationId="AudioFailed"/>
                             <ContentPresenter Grid.Row="1" Margin="12 12 12 0" ContentTemplate="{TemplateBinding DisplayTemplate}"/>
@@ -369,7 +356,7 @@
                             Padding="{TemplateBinding Padding}">
                         <Grid RowDefinitions="Auto,Auto">
                             <InfoBar Severity="Error" MarginBottom="6" Title="{Localize AudioPlayerStrings.CannotPlay}"
-                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrackTitle}"
                                      IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
                                      AutomationProperties.AutomationId="AudioFailed"/>
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="10">
@@ -431,7 +418,7 @@
                 <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                         <TextBlock VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" TextTrimming="CharEllipses"
-                                   Text="{Ancestor local:AudioPlayer, CurrentTrack.Title}"
+                                   Text="{Ancestor local:AudioPlayer, TrackTitle}"
                                    AutomationProperties.AutomationId="AudioTitle"/>
                         <local:AudioFormatBadges Grid.Column="1" VerticalAlignment="Center" FontSize="9" Marks="Codec"
                                                  Info="{Ancestor local:AudioPlayer, Info}"
@@ -486,7 +473,7 @@
                             Padding="{TemplateBinding Padding}">
                         <Grid RowDefinitions="Auto,Auto">
                             <InfoBar Severity="Error" MarginBottom="6" Title="{Localize AudioPlayerStrings.CannotPlay}"
-                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrackTitle}"
                                      IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
                                      AutomationProperties.AutomationId="AudioFailed"/>
                             <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="10">
@@ -550,7 +537,7 @@
                             Padding="{TemplateBinding Padding}" HorizontalAlignment="Left">
                         <StackPanel Spacing="4">
                             <InfoBar Severity="Error" Title="{Localize AudioPlayerStrings.CannotPlay}"
-                                     Message="{Ancestor local:AudioPlayer, FailedTrack.Title}"
+                                     Message="{Ancestor local:AudioPlayer, FailedTrackTitle}"
                                      IsOpen="{TemplateBinding HasFailed, Mode=TwoWay}"
                                      AutomationProperties.AutomationId="AudioFailed"/>
                             <StackPanel Orientation="Horizontal" Spacing="10">

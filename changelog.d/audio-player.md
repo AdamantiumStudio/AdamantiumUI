@@ -1,12 +1,13 @@
 ### Added
 
 - A new package, `Adamantium.UI.Audio`: `AudioPlayer` plays sound files - WAV, FLAC, MP3, Ogg Vorbis and Opus, by
-  the Pulsar engine's `AudioPlayback` - one after another from its `Tracks` (`AudioTrack`, whose title, format, length
-  and number in the list are read in the background once listed): play and pause, stop, the previous and the next,
+  the Pulsar engine's `AudioPlayback` - one after another from its `Tracks` (`AudioTrack`, a sound and its name; its
+  title, format and length the player reads in the background once listed, and shows in the track's
+  `AudioTrackRow`, with its number in the list): play and pause, stop, the previous and the next,
   `Repeat` (off, the list, the track) and `IsShuffled`, `Position` and `Volume`; what plays (`Info`, `Duration`,
-  `Remaining`), how many tracks and how long all are (`TrackCount`, `TotalDuration`), with its spectrum, and its
+  `Remaining`, `TrackTitle`), how many tracks and how long all are (`TrackCount`, `TotalDuration`), with its spectrum, and its
   waveform where `ShowsWaveform`. Its commands - `PlayPauseCommand`, `StopCommand`, `PreviousCommand`, `NextCommand`,
-  `RepeatCommand` - are properties of it. A track that can not be played is said (`HasFailed`, `FailedTrack`) and
+  `RepeatCommand` - are properties of it. A track that can not be played is said (`HasFailed`, `FailedTrack`, `FailedTrackTitle`) and
   passed by. The theme draws it in four looks by `View` - `Full` (a display, the position, the buttons and the
   volume, the list), `Bar` (one row), `Line` (one row with the title), `Mini` (play, the time, a short position) -
   each part of them a template property an application may set alone: `DisplayTemplate`, `PositionTemplate`,
