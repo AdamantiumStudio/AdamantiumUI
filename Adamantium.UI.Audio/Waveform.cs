@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.Pulsar;
 using Adamantium.UI.Audio.Automation;
 using Adamantium.UI.Controls.Primitives;
@@ -10,9 +11,9 @@ using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Audio;
 
-/// <summary>A sound's waveform that is its position, as players with one have it: bars of the least and the greatest
-/// sample of all channels, apart from each other on whole pixels, the played ones in <see cref="PlayedBrush"/>, and a line
-/// where it is. Pressed or dragged it goes there; the arrows step by <see cref="RangeLimitsBase.SmallChange"/>, Page by
+/// <summary>A sound's waveform that is its position, as players with one have it: round-ended bars of how loud the
+/// sound is on average, as far above the middle as below, apart from each other on whole pixels, the played ones in
+/// <see cref="PlayedBrush"/>, and a line where it is. Pressed or dragged it goes there; the arrows step by <see cref="RangeLimitsBase.SmallChange"/>, Page by
 /// <see cref="RangeLimitsBase.LargeChange"/>, Home and End to the ends. <see cref="RangeBase.Value"/> is the position
 /// between <see cref="RangeLimitsBase.Minimum"/> and <see cref="RangeLimitsBase.Maximum"/>, in seconds for a player.
 /// Drawn as it is read, a part at a time.</summary>
@@ -51,10 +52,10 @@ public class Waveform : RangeBase
         typeof(bool), typeof(Waveform), new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty BarWidthProperty = AdamantiumProperty.Register(nameof(BarWidth),
-        typeof(double), typeof(Waveform), new PropertyMetadata(2.0, PropertyMetadataOptions.AffectsRender));
+        typeof(double), typeof(Waveform), new PropertyMetadata(3.0, PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty BarSpacingProperty = AdamantiumProperty.Register(nameof(BarSpacing),
-        typeof(double), typeof(Waveform), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender));
+        typeof(double), typeof(Waveform), new PropertyMetadata(2.0, PropertyMetadataOptions.AffectsRender));
 
     public SoundWaveform Peaks
     {
@@ -195,7 +196,6 @@ public class Waveform : RangeBase
             return;
         }
 
-        var middle = high / 2;
         var read = peaks.PartsRead;
         var scale = IsNormalized ? ScaleOf(peaks, read) : 1f;
         for (var bar = 0; bar < bars; bar++)
@@ -207,20 +207,6 @@ public class Waveform : RangeBase
                 break;
             }
 
-            var least = 0f;
-            var greatest = 0f;
-            for (var part = from; part < to; part++)
-            {
-                for (var channel = 0; channel < peaks.Channels; channel++)
-                {
-                    least = Math.Min(least, peaks.MinimumOf(channel, part));
-                    greatest = Math.Max(greatest, peaks.MaximumOf(channel, part));
-                }
-            }
-
-            least *= scale;
-            greatest *= scale;
-
             var left = bar * (width + spacing);
             var brush = left + width / 2 < playedTo ? PlayedBrush ?? WaveBrush : WaveBrush;
             if (brush == null)
@@ -228,16 +214,40 @@ public class Waveform : RangeBase
                 continue;
             }
 
-            // A bar of silence is still a line, so the wave reads as one.
-            var top = middle - Math.Min(1, greatest) * middle;
-            var height = Math.Max(1, (Math.Min(1, greatest) - Math.Max(-1, least)) * middle);
-            var rect = new Rect(left, top, width, height);
+            var rect = BarOf(left, width, LoudnessOf(peaks, from, to) * scale, high);
             this.Snap(ref rect);
-            session.DrawRectangle(brush, rect);
+            session.DrawRectangle(brush, rect, new CornerRadius(rect.Width / 2));
         }
     }
 
-    /// <summary>What brings the loudest of the parts read so far to full scale; 1 for silence.</summary>
+    /// <summary>A bar of the loudness, from 0 to 1, as tall as it says of the height and as far above the middle as
+    /// below; a bar of silence is a dot as round as it is wide, so the wave reads as one.</summary>
+    internal static Rect BarOf(double left, double width, float loudness, double high)
+    {
+        var height = Math.Max(Math.Min(width, high), Math.Clamp(loudness, 0, 1) * high);
+        return new Rect(left, (high - height) / 2, width, height);
+    }
+
+    // Of the parts a bar stands for, as loud as their samples together; of the louder channel.
+    private static float LoudnessOf(SoundWaveform peaks, int from, int to)
+    {
+        var loudest = 0f;
+        for (var channel = 0; channel < peaks.Channels; channel++)
+        {
+            var squares = 0f;
+            for (var part = from; part < to; part++)
+            {
+                var loudness = peaks.LoudnessOf(channel, part);
+                squares += loudness * loudness;
+            }
+
+            loudest = Math.Max(loudest, MathF.Sqrt(squares / (to - from)));
+        }
+
+        return loudest;
+    }
+
+    /// <summary>What brings the loudest of the parts read so far to full height; 1 for silence.</summary>
     internal static float ScaleOf(SoundWaveform peaks, int read)
     {
         var loudest = 0f;
@@ -245,7 +255,7 @@ public class Waveform : RangeBase
         {
             for (var channel = 0; channel < peaks.Channels; channel++)
             {
-                loudest = Math.Max(loudest, Math.Max(-peaks.MinimumOf(channel, part), peaks.MaximumOf(channel, part)));
+                loudest = Math.Max(loudest, peaks.LoudnessOf(channel, part));
             }
         }
 

@@ -14,8 +14,9 @@
   `TransportTemplate`, `TrackTemplate`. It plays through its own `AudioPlayback` to the default device while shown,
   unless `Playback` gives one; the accent is the theme's, the digits in its code font.
 - Its parts are controls of their own: `Spectrum` (bars that fall, with their peaks); `Waveform`, the position as
-  players with a waveform have it - bars of whole pixels apart from each other (`BarWidth`, `BarSpacing`), the played
-  ones in the accent, a line where it is, pressed, dragged or stepped by the keys, a slider to automation; and
+  players with a waveform have it - round-ended bars of how loud the sound is on average, as far above the middle as
+  below, of whole pixels apart from each other (`BarWidth`, `BarSpacing`), the loudest at full height
+  (`IsNormalized`), the played ones in the accent, a line where it is, pressed, dragged or stepped by the keys, a slider to automation; and
   `AudioFormatBadges` (codec, kilohertz, kilobits, channels - those of `Marks`, in a row or a column - in the
   language's numbers).
 - `TimeSpanToSecondsConverter`, a time to a slider's number and back, and `TimeSpanToClockTextConverter`, a time as a

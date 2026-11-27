@@ -53,9 +53,23 @@ public class WaveformTests
         var peaks = playback.ReadWaveform(4, CancellationToken.None);
         Assert.That(SpinWait.SpinUntil(() => peaks.IsComplete, TimeSpan.FromSeconds(20)), Is.True);
 
-        // The tone is a quarter of full scale.
-        Assert.That(Waveform.ScaleOf(peaks, peaks.Parts), Is.EqualTo(1 / 0.25f).Within(0.01f));
+        // The tone is a sine of a quarter of full scale: as loud as a quarter over the root of two.
+        Assert.That(Waveform.ScaleOf(peaks, peaks.Parts), Is.EqualTo(MathF.Sqrt(2) / 0.25f).Within(0.05f));
         Assert.That(Waveform.ScaleOf(peaks, 0), Is.EqualTo(1f));
+    }
+
+    // As far above the middle as below; silence a dot as wide as the bar, so the wave reads as one.
+    [TestCase(0.5f, 24.0, 12.0)]
+    [TestCase(1f, 48.0, 0.0)]
+    [TestCase(0f, 3.0, 22.5)]
+    [TestCase(2f, 48.0, 0.0)]
+    public void ABar_StandsAboutTheMiddle(float loudness, double height, double top)
+    {
+        var bar = Waveform.BarOf(10, 3, loudness, 48);
+
+        Assert.That(bar.Height, Is.EqualTo(height).Within(1e-9));
+        Assert.That(bar.Y, Is.EqualTo(top).Within(1e-9));
+        Assert.That(bar.X, Is.EqualTo(10));
     }
 
     [Test]
