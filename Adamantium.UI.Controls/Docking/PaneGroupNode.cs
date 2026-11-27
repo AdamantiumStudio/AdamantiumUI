@@ -54,9 +54,11 @@ public class PaneGroupNode : PaneNode
         if (index < 0) return false;
 
         PaneIds.RemoveAt(index);
-        // Keep pointing at a real pane: at the one after the removed (its neighbor takes its place), or at the last.
+        // Keep pointing at a real pane: one before it gone, at the same one; the active one gone, at the one after it (its
+        // neighbor takes its place), or at the last.
         if (PaneIds.Count == 0) ActiveIndex = -1;
-        else if (index < ActiveIndex || ActiveIndex >= PaneIds.Count) ActiveIndex = System.Math.Min(ActiveIndex, PaneIds.Count - 1);
+        else if (index < ActiveIndex) ActiveIndex--;
+        else if (ActiveIndex >= PaneIds.Count) ActiveIndex = PaneIds.Count - 1;
         return true;
     }
 }
