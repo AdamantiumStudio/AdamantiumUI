@@ -13,6 +13,9 @@
   the current page) for a view model to hand to `IPrintService.PrintAsync(PrintRequest)`, which prints without asking.
   `IPrintService.Platform` gives the system's printers to show there. The sandbox has a "Print page" tab.
 
+- `ElementPrintDocument.Region`: a part of an element printed alone - a page of an editor showing several - from the
+  corner of the sheet the whole element would take.
+
 ### Changed
 
 - The print dialog's commands are read-only properties of the control, bound by `TemplateBinding`.

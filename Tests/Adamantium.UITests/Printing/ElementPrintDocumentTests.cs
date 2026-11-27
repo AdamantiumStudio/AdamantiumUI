@@ -68,6 +68,27 @@ public class ElementPrintDocumentTests
         });
     }
 
+    // A part of an element - a page of an editor showing several - is printed alone, its corner where the element's
+    // would be.
+    [Test]
+    public void ARegionOfAnElement_IsPrintedAlone_FromTheCornerThePrinterReaches()
+    {
+        var card = Card(200, 100, out _);
+        var document = new ElementPrintDocument(card) { Region = new Rect(30, 10, 50, 20) };
+        var session = new RecordingDrawingSession();
+
+        Assert.That(document.Paginate(Sheet), Is.EqualTo(1), "the region fits one sheet");
+        document.DrawPage(0, session);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(OriginOf(session.Geometries[1].Transform), Is.EqualTo(new Vector2<double>(20, 30)),
+                "the box filling the region at the corner the printer reaches");
+            Assert.That(OriginOf(session.Geometries[0].Transform), Is.EqualTo(new Vector2<double>(-10, 20)),
+                "the card moved with it");
+        });
+    }
+
     [Test]
     public void ATallElement_RunsOnDownTheSheets()
     {

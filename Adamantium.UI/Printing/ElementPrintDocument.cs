@@ -53,6 +53,10 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
 
     public string Title { get; }
 
+    /// <summary>The part of the element printed, in its own units - a page of an editor showing several; the whole
+    /// element when null.</summary>
+    public Rect? Region { get; init; }
+
     /// <summary>Makes the pictures of what is not vector at <paramref name="page"/>'s raster resolution, at the scale the
     /// element is laid on the sheet at: once for each layout - the element as <see cref="Paginate"/> found it - and
     /// resolution. Called off, only the wait stops. Without a renderer - no application - everything is printed from its
@@ -162,7 +166,7 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
         StopMaking();
         _area = page.ContentArea;
 
-        var own = _element.RenderSize;
+        var own = Region is { } region ? new Size<double>(region.Width, region.Height) : _element.RenderSize;
         if (!(own.Width > 0) || !(own.Height > 0))
         {
             _scale = 1;
@@ -190,7 +194,9 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, _pages);
         var column = index % _columns;
         var row = index / _columns;
-        var place = Matrix4x4.CreateScale((float)_scale, (float)_scale, 1f) *
+        var corner = Region?.TopLeft ?? default;
+        var place = Matrix4x4.CreateTranslation((float)-corner.X, (float)-corner.Y, 0f) *
+                    Matrix4x4.CreateScale((float)_scale, (float)_scale, 1f) *
                     Matrix4x4.CreateTranslation((float)(_area.X - column * _area.Width),
                         (float)(_area.Y - row * _area.Height), 0f);
         session.PushGroup(new DrawingGroupOptions { Clip = new RectangleGeometry(_area) });
