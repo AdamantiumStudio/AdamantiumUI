@@ -94,6 +94,7 @@ public partial class GalleryViewModel
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is ClippingViewModel)), resolver.Resolve<LayoutViewModel>());
         // Printing shows its dialog through the print service: from DI too, right after the PDF page.
         Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is PdfPageViewModel)) + 1, resolver.Resolve<PrintingViewModel>());
+        Tabs.Insert(Tabs.IndexOf(Tabs.First(t => t is PrintingViewModel)) + 1, resolver.Resolve<PrintPageViewModel>());
         Tabs.Add(resolver.Resolve<WebPageViewModel>());
         Tabs.Add(resolver.Resolve<SceneViewModel>());
         SelectedTab = Tabs[2];

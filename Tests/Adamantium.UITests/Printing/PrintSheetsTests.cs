@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
@@ -20,6 +22,8 @@ public class PrintSheetsTests
     private sealed class Pages(int count) : IPrintDocument
     {
         public PrintPage LaidOutOn { get; private set; }
+
+        public bool HasOwnMargins { get; init; }
 
         public string Title => "Pages";
 
@@ -117,14 +121,15 @@ public class PrintSheetsTests
         });
     }
 
+    // Laid out on the sheet with margins of its own, which the printer may not reach: fitted inside what it reaches.
     [Test]
-    public void APage_FitsTheSheetInsideThePrintersMargins_Centred()
+    public void APageWithItsOwnMargins_FitsTheSheetInsideThePrintersMargins_Centred()
     {
         var capabilities = new PrinterCapabilities
         {
             Margins = new Dictionary<string, Thickness> { [PaperSize.A4.Name] = new Thickness(20) },
         };
-        var document = new Pages(1);
+        var document = new Pages(1) { HasOwnMargins = true };
         var sheets = new PrintSheets(document, new PrintSettings { Paper = PaperSize.A4 }, capabilities);
 
         Assert.That(sheets.Paginate(sheets.Sheet), Is.EqualTo(1));
@@ -360,5 +365,113 @@ public class PrintSheetsTests
         var second = Corners(session.Geometries[1]).Box;
         Assert.That(second.Width, Is.EqualTo(first.Width).Within(1e-2), "the half-size page is printed half the size");
         Assert.That(second.Height, Is.EqualTo(first.Height).Within(1e-2));
+    }
+
+    // Four to a sheet: the second sheet makes ready the document's pages five to eight, and only those.
+    [Test]
+    public async Task ASheetMadeReady_MakesReadyThePagesOnIt()
+    {
+        var document = new PreparedPagesDocument(10);
+        var sheets = new PrintSheets(document, new PrintSettings { PagesPerSheet = 4 }, PrinterCapabilities.Pdf);
+        sheets.Paginate(sheets.Sheet);
+
+        await sheets.PreparePagesAsync([1], sheets.Sheet, CancellationToken.None);
+        await sheets.PreparePagesAsync([2], sheets.Sheet, CancellationToken.None);
+
+        int[][] expected = [[4, 5, 6, 7], [8, 9]];
+        Assert.That(document.Prepared, Is.EqualTo(expected));
+    }
+
+    // A document without margins of its own is laid out inside the normal ones; chosen ones replace them.
+    [Test]
+    public void ADocumentWithoutItsOwnMargins_IsLaidOutInsideTheNormalOnes()
+    {
+        var normal = new PreparedPagesDocument(1);
+        new PrintSheets(normal, new PrintSettings(), PrinterCapabilities.Pdf).Paginate(null);
+        var wide = new PreparedPagesDocument(1);
+        new PrintSheets(wide, new PrintSettings { Margins = PrintMargins.Wide }, PrinterCapabilities.Pdf).Paginate(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(normal.LaidOutOn.Margins, Is.EqualTo(PrintSettings.MarginsOf(PrintMargins.Normal)));
+            Assert.That(wide.LaidOutOn.Margins, Is.EqualTo(PrintSettings.MarginsOf(PrintMargins.Wide)));
+        });
+    }
+
+    // One with its own keeps them - no margins are handed to it - until others are chosen.
+    [Test]
+    public void ADocumentWithItsOwnMargins_KeepsThem_UntilOthersAreChosen()
+    {
+        var own = new PreparedPagesDocument(1, hasOwnMargins: true);
+        new PrintSheets(own, new PrintSettings(), PrinterCapabilities.Pdf).Paginate(null);
+        var narrow = new PreparedPagesDocument(1, hasOwnMargins: true);
+        new PrintSheets(narrow, new PrintSettings { Margins = PrintMargins.Narrow }, PrinterCapabilities.Pdf)
+            .Paginate(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(own.LaidOutOn.Margins, Is.Null);
+            Assert.That(narrow.LaidOutOn.Margins, Is.EqualTo(PrintSettings.MarginsOf(PrintMargins.Narrow)));
+        });
+    }
+
+    // Margins are never narrower than the printer reaches, nor so wide no room is left on the sheet.
+    [Test]
+    public void CustomMargins_StayBetweenThePrintersAndWhatLeavesRoom()
+    {
+        var capabilities = new PrinterCapabilities
+        {
+            Margins = new Dictionary<string, Thickness> { [PaperSize.A4.Name] = new Thickness(15) },
+        };
+        var settings = new PrintSettings
+        {
+            Paper = PaperSize.A4,
+            Margins = PrintMargins.Custom,
+            CustomMargins = new Thickness(2, 5000, 40, double.NaN),
+        };
+        var sheet = new PrintSheets(new PreparedPagesDocument(1), settings, capabilities).Sheet;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sheet.Margins.Value.Left, Is.EqualTo(15), "narrower than the printer reaches");
+            Assert.That(sheet.Margins.Value.Top, Is.EqualTo((PaperSize.A4.Height - 96) / 2).Within(1e-9),
+                "an inch is left between top and bottom");
+            Assert.That(sheet.Margins.Value.Right, Is.EqualTo(40), "as chosen");
+            Assert.That(sheet.Margins.Value.Bottom, Is.EqualTo(15), "not a number: the printer's");
+        });
+    }
+
+    // Laid out inside the margins chosen, which the printer reaches, a page goes on the sheet as it is - fitting it to
+    // the printer's reach would shrink the margins chosen.
+    [Test]
+    public void APageLaidOutInsideTheMarginsChosen_GoesOnTheSheetAsItIs()
+    {
+        var capabilities = new PrinterCapabilities
+        {
+            Margins = new Dictionary<string, Thickness> { [PaperSize.A4.Name] = new Thickness(15) },
+        };
+        var sheets = new PrintSheets(new Pages(1), new PrintSettings { Paper = PaperSize.A4 }, capabilities);
+        sheets.Paginate(sheets.Sheet);
+        var session = new RecordingDrawingSession();
+        sheets.DrawPage(0, session);
+
+        Assert.That(Landed(session.Geometries.Single()), Is.EqualTo(new Rect(0, 0, PaperSize.A4.Width, PaperSize.A4.Height)));
+    }
+
+    // A page of its own size, with margins chosen, is fitted inside them rather than inside the printer's.
+    [Test]
+    public void APageOfItsOwnSize_IsFittedInsideTheMarginsChosen()
+    {
+        var sheets = new PrintSheets(new OwnSizePrintDocument(new Size<double>(PaperSize.A4.Width, PaperSize.A4.Height)),
+            new PrintSettings { Paper = PaperSize.A4, Margins = PrintMargins.Wide }, PrinterCapabilities.Pdf);
+        var box = Printed(sheets);
+
+        var inch = 96.0;
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.X, Is.EqualTo(inch).Within(1e-2), "the left margin");
+            Assert.That(box.Width, Is.EqualTo(PaperSize.A4.Width - 2 * inch).Within(1e-2), "fitted between them");
+            Assert.That(box.Y, Is.GreaterThanOrEqualTo(inch - 1e-2), "inside the top margin");
+        });
     }
 }

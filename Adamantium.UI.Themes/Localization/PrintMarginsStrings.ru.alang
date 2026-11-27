@@ -1,0 +1,11 @@
+<Language>
+    <Phrase Key="Document" Text="Как в документе"/>
+    <Phrase Key="Normal" Text="Обычные · 20 мм"/>
+    <Phrase Key="Narrow" Text="Узкие · 12,7 мм"/>
+    <Phrase Key="Wide" Text="Широкие · 25,4 мм"/>
+    <Phrase Key="NormalInches" Text="Обычные · 0,79 дюйма"/>
+    <Phrase Key="NarrowInches" Text="Узкие · 0,5 дюйма"/>
+    <Phrase Key="WideInches" Text="Широкие · 1 дюйм"/>
+    <Phrase Key="None" Text="Без полей"/>
+    <Phrase Key="Custom" Text="Свои…"/>
+</Language>

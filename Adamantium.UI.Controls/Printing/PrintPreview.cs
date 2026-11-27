@@ -17,12 +17,30 @@ namespace Adamantium.UI.Controls.Printing;
 /// by the same layout that goes to the printer or the file.</summary>
 public class PrintPreview : MeasurableUIComponent
 {
+    /// <summary>The room left round the paper, in DIPs.</summary>
+    private const double Room = 12;
+
+    private static readonly double[] MarginsDashes = [4, 3];
+
+    // The sheets being made ready, called off when others are shown or the preview goes; the sheet shown, made ready
+    // once they are, called off when another is shown.
+    private CancellationTokenSource _preparing;
+    private CancellationTokenSource _preparingSheet;
+    private Task _ready;
+    private PrintPage _screen;
+
     public static readonly AdamantiumProperty SheetsProperty = AdamantiumProperty.Register(nameof(Sheets),
         typeof(PrintSheets), typeof(PrintPreview),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSheetsChanged));
 
     public static readonly AdamantiumProperty SheetProperty = AdamantiumProperty.Register(nameof(Sheet),
-        typeof(int), typeof(PrintPreview), new PropertyMetadata(0, PropertyMetadataOptions.AffectsRender));
+        typeof(int), typeof(PrintPreview), new PropertyMetadata(0, PropertyMetadataOptions.AffectsRender, OnSheetChanged));
+
+    public static readonly AdamantiumProperty ShowsMarginsProperty = AdamantiumProperty.Register(nameof(ShowsMargins),
+        typeof(bool), typeof(PrintPreview), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty MarginsBrushProperty = AdamantiumProperty.Register(nameof(MarginsBrush),
+        typeof(Brush), typeof(PrintPreview), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty PaperBrushProperty = AdamantiumProperty.Register(nameof(PaperBrush),
         typeof(Brush), typeof(PrintPreview), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
@@ -58,11 +76,20 @@ public class PrintPreview : MeasurableUIComponent
         set => SetValue(ShadowBrushProperty, value);
     }
 
-    /// <summary>The room left round the paper, in DIPs.</summary>
-    private const double Room = 12;
+    /// <summary>Whether the paper's margins are drawn round what fills the sheet, dashed - while they are being set.
+    /// </summary>
+    public bool ShowsMargins
+    {
+        get => GetValue<bool>(ShowsMarginsProperty);
+        set => SetValue(ShowsMarginsProperty, value);
+    }
 
-    // The sheets being made ready, called off when others are shown or the preview goes.
-    private CancellationTokenSource _preparing;
+    /// <summary>What the margins are drawn in.</summary>
+    public Brush MarginsBrush
+    {
+        get => GetValue<Brush>(MarginsBrushProperty);
+        set => SetValue(MarginsBrushProperty, value);
+    }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PrintPreviewAutomationPeer(this);
 
@@ -82,9 +109,13 @@ public class PrintPreview : MeasurableUIComponent
     private static void OnSheetsChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) =>
         ((PrintPreview)d).Prepare();
 
+    private static void OnSheetChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e) =>
+        ((PrintPreview)d).PrepareSheet();
+
     // New sheets are shown as soon as they are laid out and drawn again once they are ready: pictures of what is not
-    // vector come from the GPU, and until they do, those parts are drawn from their shapes. They are made as fine as the
-    // screen shows a sheet at its own size - the preview shows it smaller - not as fine as the printer prints.
+    // vector come from the GPU, and until they do, those parts are drawn from their shapes; the pages of the sheet shown
+    // are made ready next, and again for each sheet turned to. They are made as fine as the screen shows a sheet at its
+    // own size - the preview shows it smaller - not as fine as the printer prints.
     private void Prepare()
     {
         StopPreparing();
@@ -94,15 +125,28 @@ public class PrintPreview : MeasurableUIComponent
         }
 
         var sheet = sheets.Sheet;
-        var screen = new PrintPage(sheet.Paper, sheet.Orientation, sheet.PrintableMargins)
+        _screen = new PrintPage(sheet.Paper, sheet.Orientation, sheet.PrintableMargins)
         {
             RasterDotsPerInch = Math.Max(1, (int)Math.Round(96 * (RootVisual?.Window?.DpiScale.X ?? 1))),
         };
         _preparing = new CancellationTokenSource();
-        _ = PrepareAsync(sheets, screen, _preparing.Token);
+        _ready = MakeReadyAsync(sheets, _screen, _preparing.Token);
+        PrepareSheet();
     }
 
-    private async Task PrepareAsync(PrintSheets sheets, PrintPage screen, CancellationToken cancellation)
+    private void PrepareSheet()
+    {
+        StopPreparingSheet();
+        if (Sheets is not { } sheets || _preparing == null)
+        {
+            return;
+        }
+
+        _preparingSheet = CancellationTokenSource.CreateLinkedTokenSource(_preparing.Token);
+        _ = PrepareSheetAsync(sheets, Math.Max(0, Sheet), _screen, _ready, _preparingSheet.Token);
+    }
+
+    private static async Task MakeReadyAsync(PrintSheets sheets, PrintPage screen, CancellationToken cancellation)
     {
         try
         {
@@ -110,12 +154,33 @@ public class PrintPreview : MeasurableUIComponent
         }
         catch (OperationCanceledException)
         {
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Error(exception, "Making the print preview's sheets ready failed.");
+        }
+    }
+
+    private async Task PrepareSheetAsync(PrintSheets sheets, int sheet, PrintPage screen, Task ready,
+        CancellationToken cancellation)
+    {
+        await ready;
+        if (cancellation.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await sheets.PreparePagesAsync([sheet], screen, cancellation);
+        }
+        catch (OperationCanceledException)
+        {
             return;
         }
         catch (Exception exception)
         {
-            // Not ready, the sheets are still shown - drawn from their shapes - and what went wrong is told.
-            Serilog.Log.Logger.Error(exception, "Making the print preview's sheets ready failed.");
+            Serilog.Log.Logger.Error(exception, "Making the print preview's sheet ready failed.");
         }
 
         if (ReferenceEquals(Sheets, sheets))
@@ -126,9 +191,18 @@ public class PrintPreview : MeasurableUIComponent
 
     private void StopPreparing()
     {
+        StopPreparingSheet();
         _preparing?.Cancel();
         _preparing?.Dispose();
         _preparing = null;
+        _ready = null;
+    }
+
+    private void StopPreparingSheet()
+    {
+        _preparingSheet?.Cancel();
+        _preparingSheet?.Dispose();
+        _preparingSheet = null;
     }
 
     protected override void OnRender(IDrawingContext context)
@@ -177,5 +251,12 @@ public class PrintPreview : MeasurableUIComponent
             Matrix4x4.CreateScale((float)scale, (float)scale, 1f) *
             Matrix4x4.CreateTranslation((float)paper.X, (float)paper.Y, 0f)));
         session.PopGroup();
+
+        if (ShowsMargins && MarginsBrush is { } margins)
+        {
+            var area = sheets.Sheet.ContentArea;
+            session.DrawRectangle(null, new Rect(paper.X + area.X * scale, paper.Y + area.Y * scale,
+                area.Width * scale, area.Height * scale), new Pen(margins, 1, dashStrokeArray: MarginsDashes));
+        }
     }
 }

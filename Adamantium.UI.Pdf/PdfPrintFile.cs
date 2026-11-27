@@ -15,9 +15,10 @@ public static class PdfPrintFile
     private const double PointsPerDip = 72.0 / 96.0;
 
     /// <summary>Lays <paramref name="document"/> out on <paramref name="page"/>, makes it ready, and writes every page of
-    /// it to <paramref name="output"/>, which is not closed; a document of no pages is one blank sheet, as a printer
-    /// would give - a PDF of none is not opened by many readers. The pages are drawn on the calling thread, as on the
-    /// screen. Called off, it stops between pages; what was written is not a whole file.</summary>
+    /// it, each made ready in turn, to <paramref name="output"/>, which is not closed; a document of no pages is one
+    /// blank sheet, as a printer would give - a PDF of none is not opened by many readers. The pages are drawn on the
+    /// calling thread, as on the screen. Called off, it stops between pages; what was written is not a whole file.
+    /// </summary>
     public static async Task SaveAsync(IPrintDocument document, PrintPage page, Stream output,
         CancellationToken cancellation = default)
     {
@@ -41,6 +42,7 @@ public static class PdfPrintFile
         for (var index = 0; index < count; index++)
         {
             cancellation.ThrowIfCancellationRequested();
+            await document.PreparePagesAsync([index], page, cancellation);
             var content = new PdfContentBuilder();
             var session = new PdfContentSession(content, toPage, pictures, writer);
             document.DrawPage(index, session);

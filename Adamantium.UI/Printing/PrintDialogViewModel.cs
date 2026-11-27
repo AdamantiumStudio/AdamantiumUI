@@ -29,7 +29,7 @@ internal sealed class PrintDialogViewModel : IDialogAware, IWindowAware
 
     public double Width => 980;
 
-    public double Height => 680;
+    public double Height => 720;
 
     public event Action<IDialogResult> RequestClose;
 

@@ -18,6 +18,7 @@ public sealed class PrintSheets : IPrintDocument
     private IReadOnlyList<int> _pages = [];
     private int _columns = 1;
     private int _rows = 1;
+    private bool _ownSized;
 
     /// <param name="document">The document being printed.</param>
     /// <param name="settings">What the print dialog chose.</param>
@@ -34,35 +35,50 @@ public sealed class PrintSheets : IPrintDocument
         _settings = settings;
         _capabilities = capabilities;
         _current = current;
-        Sheet = new PrintPage(settings.Paper, settings.Orientation, Turned(capabilities.MarginsOf(settings.Paper)))
+        var printable = Turned(capabilities.MarginsOf(settings.Paper));
+        var sheet = new PrintPage(settings.Paper, settings.Orientation, printable);
+        Sheet = new PrintPage(settings.Paper, settings.Orientation, printable)
         {
             RasterDotsPerInch = RasterOf(settings, capabilities),
+            Margins = MarginsOf(document, settings, sheet),
         };
     }
 
     public string Title => _document.Title;
 
-    /// <summary>The sheet printed on: the chosen paper, its way up, the printer's margins, the raster resolution.</summary>
+    public bool HasOwnMargins => _document.HasOwnMargins;
+
+    /// <summary>The sheet printed on: the chosen paper, its way up, the printer's margins and the paper's, the raster
+    /// resolution.</summary>
     public PrintPage Sheet { get; }
 
     /// <summary>Makes the document ready for <see cref="Sheet"/> - its options decide the sheet, as for
     /// <see cref="Paginate"/> - at <paramref name="page"/>'s raster resolution where one is given (a preview's, as fine
     /// as the screen shows), the sheet's otherwise. The document is told the resolution its pages are shown at: scaled
     /// up on the sheet, they want finer pictures, scaled down or several to a sheet, coarser.</summary>
-    public Task PrepareAsync(PrintPage page, CancellationToken cancellation)
+    public Task PrepareAsync(PrintPage page, CancellationToken cancellation) =>
+        _document.PrepareAsync(DocumentPageOf(page), cancellation);
+
+    /// <summary>Makes the document's pages on <paramref name="pages"/> - sheets, numbered from 0 - ready to be drawn
+    /// next, at the resolution <see cref="PrepareAsync"/> works out.</summary>
+    public Task PreparePagesAsync(IReadOnlyList<int> pages, PrintPage page, CancellationToken cancellation)
     {
-        var dotsPerInch = page?.RasterDotsPerInch ?? Sheet.RasterDotsPerInch;
-        if (_pages.Count > 0)
+        ArgumentNullException.ThrowIfNull(pages);
+        var perSheet = _columns * _rows;
+        var held = new List<int>(pages.Count * perSheet);
+        foreach (var sheet in pages)
         {
-            var perSheet = _columns * _rows;
-            var place = Place(CellOf(0, perSheet), perSheet == 1, OwnSize(_pages[0]));
-            var scale = Math.Sqrt(Math.Abs(place.M11 * place.M22 - place.M12 * place.M21));
-            dotsPerInch = Math.Max(1, (int)Math.Round(dotsPerInch * scale));
+            for (var slot = 0; slot < perSheet; slot++)
+            {
+                var at = sheet * perSheet + slot;
+                if (at >= 0 && at < _pages.Count)
+                {
+                    held.Add(_pages[at]);
+                }
+            }
         }
 
-        return _document.PrepareAsync(
-            new PrintPage(Sheet.Paper, Sheet.Orientation, Sheet.PrintableMargins) { RasterDotsPerInch = dotsPerInch },
-            cancellation);
+        return _document.PreparePagesAsync(held, DocumentPageOf(page), cancellation);
     }
 
     // A file's raster is the one chosen for it; a printer's is its resolution, no finer than is worth making, and the
@@ -93,7 +109,8 @@ public sealed class PrintSheets : IPrintDocument
         // Several to a sheet are laid out by the first page's size; each is then fitted into its cell by its own.
         var first = _pages.Count > 0 ? OwnSize(_pages[0]) : null;
         var perSheet = Math.Max(1, _settings.PagesPerSheet);
-        (_columns, _rows) = Grid(perSheet, PrintableArea, first ?? Sheet.Size, first != null);
+        _ownSized = first != null;
+        (_columns, _rows) = Grid(perSheet, Area, first ?? Sheet.Size, first != null);
         return Math.Max(1, (_pages.Count + perSheet - 1) / perSheet);
     }
 
@@ -118,10 +135,10 @@ public sealed class PrintSheets : IPrintDocument
         }
     }
 
-    /// <summary>Where page <paramref name="slot"/> of a sheet goes: what the printer reaches, or its cell of it.</summary>
+    /// <summary>Where page <paramref name="slot"/> of a sheet goes: the <see cref="Area"/>, or its cell of it.</summary>
     private Rect CellOf(int slot, int perSheet)
     {
-        var area = PrintableArea;
+        var area = Area;
         if (perSheet == 1)
         {
             return area;
@@ -132,12 +149,25 @@ public sealed class PrintSheets : IPrintDocument
         return new Rect(area.X + slot % _columns * cellWidth, area.Y + slot / _columns * cellHeight, cellWidth, cellHeight);
     }
 
-    /// <summary>What the printer reaches of the sheet.</summary>
-    private Rect PrintableArea
+    /// <summary>What pages are laid in: the paper inside its margins for pages of their own size. Pages laid out on the
+    /// sheet keep the margins inside themselves: alone, inside margins chosen - never narrower than the printer reaches -
+    /// one goes on the sheet as it is; with its own margins, or several to a sheet, they are fitted to what the printer
+    /// reaches.</summary>
+    private Rect Area
     {
         get
         {
             var size = Sheet.Size;
+            if (_ownSized)
+            {
+                return Sheet.ContentArea;
+            }
+
+            if (Sheet.Margins != null && Math.Max(1, _settings.PagesPerSheet) == 1)
+            {
+                return new Rect(0, 0, size.Width, size.Height);
+            }
+
             var margins = Sheet.PrintableMargins;
             return new Rect(margins.Left, margins.Top, Math.Max(1, size.Width - margins.Left - margins.Right),
                 Math.Max(1, size.Height - margins.Top - margins.Bottom));
@@ -226,4 +256,43 @@ public sealed class PrintSheets : IPrintDocument
     private Thickness Turned(Thickness upright) => _settings.Orientation == PageOrientation.Landscape
         ? new Thickness(upright.Bottom, upright.Left, upright.Top, upright.Right)
         : upright;
+
+    /// <summary>The sheet as the document is told of it, at the resolution its pages are shown at.</summary>
+    private PrintPage DocumentPageOf(PrintPage page)
+    {
+        var dotsPerInch = page?.RasterDotsPerInch ?? Sheet.RasterDotsPerInch;
+        if (_pages.Count > 0)
+        {
+            var perSheet = _columns * _rows;
+            var place = Place(CellOf(0, perSheet), perSheet == 1, OwnSize(_pages[0]));
+            var scale = Math.Sqrt(Math.Abs(place.M11 * place.M22 - place.M12 * place.M21));
+            dotsPerInch = Math.Max(1, (int)Math.Round(dotsPerInch * scale));
+        }
+
+        return new PrintPage(Sheet.Paper, Sheet.Orientation, Sheet.PrintableMargins)
+        {
+            RasterDotsPerInch = dotsPerInch,
+            Margins = Sheet.Margins,
+        };
+    }
+
+    /// <summary>The margins chosen, kept between what the printer reaches and what leaves room on the sheet; the
+    /// document's own where it has them, the normal ones where it has none.</summary>
+    private static Thickness? MarginsOf(IPrintDocument document, PrintSettings settings, PrintPage sheet)
+    {
+        var chosen = settings.PaperMargins ??
+                     (document.HasOwnMargins ? null : PrintSettings.MarginsOf(PrintMargins.Normal));
+        if (chosen is not { } margins)
+        {
+            return null;
+        }
+
+        var least = sheet.PrintableMargins;
+        var most = sheet.MaximumMargins;
+        return new Thickness(Keep(margins.Left, least.Left, most.Left), Keep(margins.Top, least.Top, most.Top),
+            Keep(margins.Right, least.Right, most.Right), Keep(margins.Bottom, least.Bottom, most.Bottom));
+    }
+
+    private static double Keep(double value, double least, double most) =>
+        Math.Max(least, Math.Min(double.IsFinite(value) ? value : least, most));
 }

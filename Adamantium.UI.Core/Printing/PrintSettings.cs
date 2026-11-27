@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Adamantium.Mathematics;
 
 namespace Adamantium.UI.Core.Printing;
 
@@ -28,6 +29,12 @@ public sealed record PrintSettings
     public PageOrientation Orientation { get; init; }
 
     public PaperSize Paper { get; init; } = PaperSize.A4;
+
+    /// <summary>The paper's blank edges; never narrower than the printer reaches.</summary>
+    public PrintMargins Margins { get; init; }
+
+    /// <summary>Each side's margin for <see cref="PrintMargins.Custom"/>, in DIPs, the way the sheet is printed.</summary>
+    public Thickness CustomMargins { get; init; } = MarginsOf(PrintMargins.Normal).Value;
 
     public PrintScaling Scaling { get; init; }
 
@@ -60,6 +67,20 @@ public sealed record PrintSettings
     /// keeps them; null for the driver's defaults. Belongs to <see cref="Printer"/>: another printer starts without.
     /// </summary>
     public object DriverSettings { get; init; }
+
+    /// <summary>The margins <see cref="Margins"/> chose, in DIPs; null for the document's own.</summary>
+    public Thickness? PaperMargins => Margins == PrintMargins.Custom ? CustomMargins : MarginsOf(Margins);
+
+    /// <summary>The margins <paramref name="margins"/> stands for, in DIPs: those of <see cref="CustomMargins"/> for
+    /// <see cref="PrintMargins.Custom"/>'s default; null for the document's own.</summary>
+    public static Thickness? MarginsOf(PrintMargins margins) => margins switch
+    {
+        PrintMargins.Normal or PrintMargins.Custom => new Thickness(20 * PaperSize.DipsPerMillimeter),
+        PrintMargins.Narrow => new Thickness(12.7 * PaperSize.DipsPerMillimeter),
+        PrintMargins.Wide => new Thickness(25.4 * PaperSize.DipsPerMillimeter),
+        PrintMargins.None => new Thickness(0),
+        _ => null,
+    };
 
     /// <summary>These settings with each of the printer's choices one <paramref name="capabilities"/> offers - a
     /// choice it does not offer goes back to its default - and the platform's own kept in their bounds.</summary>

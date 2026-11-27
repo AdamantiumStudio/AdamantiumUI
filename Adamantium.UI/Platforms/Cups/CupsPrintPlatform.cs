@@ -125,6 +125,11 @@ internal sealed class CupsPrintPlatform : IPrintPlatform
         public Task PrepareAsync(PrintPage page, CancellationToken cancellation) =>
             sheets.PrepareAsync(page, cancellation);
 
+        public Task PreparePagesAsync(IReadOnlyList<int> pages, PrintPage page, CancellationToken cancellation) =>
+            sheets.PreparePagesAsync(pages, page, cancellation);
+
+        public bool HasOwnMargins => sheets.HasOwnMargins;
+
         public void DrawPage(int index, IDrawingSession session)
         {
             sheets.DrawPage(index, session);

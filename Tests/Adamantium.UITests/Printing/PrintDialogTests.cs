@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.UI.Controls.Printing;
@@ -322,5 +323,103 @@ public class PrintDialogTests
         Assert.That(printed?.Printer, Is.SameAs(Platform.Laser));
         Assert.That(printed?.Copies, Is.EqualTo(2), "a whole number of copies");
         Assert.That(canceled, Is.True);
+    }
+
+    // Shown inside a window, "Print" hands a view model's command what to print and how.
+    [Test]
+    public void Print_RunsTheCommand_WithTheDocumentTheSettingsAndTheCurrentPage()
+    {
+        var document = new Pages(4);
+        var command = new RecordingCommand();
+        var dialog = new PrintDialog { Document = document, CurrentPage = 2, IsInline = true, Command = command };
+
+        dialog.PrintCommand.Execute();
+
+        Assert.That(command.Parameter, Is.EqualTo(new PrintRequest(document, dialog.Settings, 2)));
+    }
+
+    // A page inside a window that does not show lays nothing out: a long document waits until it does.
+    [Test]
+    public void APageInsideAWindow_LaysNothingOut_UntilItShows()
+    {
+        var dialog = new PrintDialog { IsInline = true, Document = new Pages(3) };
+
+        Assert.That(dialog.Sheets, Is.Null);
+    }
+
+    // A print a command runs holds the options until it ends; then the sheets are laid out again.
+    [Test]
+    public void WhileACommandPrints_TheOptionsWait_AndTheSheetsAreLaidOutAgainAfter()
+    {
+        var printing = new TaskCompletionSource();
+        var dialog = new PrintDialog { Document = new Pages(3) };
+        dialog.Command = new Adamantium.MVVM.AdamantiumAsyncCommand(_ => printing.Task);
+        var sheets = dialog.Sheets;
+
+        dialog.PrintCommand.Execute();
+        Assert.That(dialog.IsPrinting, Is.True);
+        Assert.That(dialog.PrintCommand.CanExecute(), Is.False, "not twice at once");
+
+        printing.SetResult();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dialog.IsPrinting, Is.False);
+            Assert.That(dialog.PrintCommand.CanExecute(), Is.True);
+            Assert.That(dialog.Sheets, Is.Not.SameAs(sheets), "laid out again for the preview");
+        });
+    }
+
+    // "As in the document" is offered only for a document with margins of its own; one without starts with the normal.
+    [Test]
+    public void TheDocumentsOwnMargins_AreOfferedOnlyWhereItHasThem()
+    {
+        var plain = new PrintDialog { Document = new Pages(2) };
+        var own = new PrintDialog { Document = new PreparedPagesDocument(2, hasOwnMargins: true) };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.MarginsChoices.Select(choice => choice.Margins), Does.Not.Contain(PrintMargins.Document));
+            Assert.That(plain.Margins, Is.EqualTo(PrintMargins.Normal));
+            Assert.That(own.MarginsChoices.Select(choice => choice.Margins), Does.Contain(PrintMargins.Document));
+            Assert.That(own.Margins, Is.EqualTo(PrintMargins.Document));
+            Assert.That(own.Sheets.Sheet.Margins, Is.Null, "its own kept");
+        });
+    }
+
+    // A side set by hand chooses custom margins, starting from those shown; the sheets are laid out inside them.
+    [Test]
+    public void ASideSetByHand_ChoosesCustomMargins_StartingFromThoseShown()
+    {
+        var dialog = new PrintDialog { Document = new Pages(2) };
+        var unit = dialog.MarginsUnit == "Millimeters" ? 96 / 25.4 : 96;
+        Assert.That(dialog.ShowsCustomMargins, Is.False);
+
+        dialog.PaperMarginLeft = 2 * dialog.PaperMarginLeft;
+
+        var normal = PrintSettings.MarginsOf(PrintMargins.Normal).Value;
+        var laid = dialog.Sheets.Sheet.Margins.Value;
+        Assert.Multiple(() =>
+        {
+            Assert.That(dialog.Margins, Is.EqualTo(PrintMargins.Custom));
+            Assert.That(dialog.ShowsCustomMargins, Is.True);
+            Assert.That(laid.Left, Is.EqualTo(2 * normal.Left).Within(unit / 10), "the side set");
+            Assert.That(laid.Top, Is.EqualTo(normal.Top).Within(unit / 10), "the others as they were shown");
+        });
+    }
+
+    // Each side's box stops at what the printer reaches and at what leaves room on the sheet.
+    [Test]
+    public void EachSidesBox_IsKeptWithinTheSheet()
+    {
+        var dialog = new PrintDialog { Document = new Pages(2), Paper = PaperSize.A4 };
+        var unit = dialog.MarginsUnit == "Millimeters" ? 96 / 25.4 : 96;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dialog.PaperMarginLeftMinimum, Is.EqualTo(0), "the PDF file reaches every edge");
+            Assert.That(dialog.PaperMarginLeftMaximum * unit, Is.LessThanOrEqualTo((PaperSize.A4.Width - 96) / 2));
+            Assert.That(dialog.PaperMarginTopMaximum * unit, Is.LessThanOrEqualTo((PaperSize.A4.Height - 96) / 2));
+            Assert.That(dialog.PaperMarginTopMaximum, Is.GreaterThan(dialog.PaperMarginLeftMaximum), "upright");
+        });
     }
 }
