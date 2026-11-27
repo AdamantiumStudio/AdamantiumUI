@@ -96,6 +96,22 @@ public partial class AudioPlayer : Control
     public static readonly AdamantiumProperty TrackTemplateProperty = AdamantiumProperty.Register(
         nameof(TrackTemplate), typeof(DataTemplate), typeof(AudioPlayer), new PropertyMetadata(null));
 
+    // The buttons' commands: properties of the player, as its template binds them.
+    public static readonly AdamantiumProperty PlayPauseCommandProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(PlayPauseCommand), typeof(AudioPlayerCommand), typeof(AudioPlayer), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty StopCommandProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(StopCommand), typeof(AudioPlayerCommand), typeof(AudioPlayer), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty PreviousCommandProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(PreviousCommand), typeof(AudioPlayerCommand), typeof(AudioPlayer), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty NextCommandProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(NextCommand), typeof(AudioPlayerCommand), typeof(AudioPlayer), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty RepeatCommandProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(RepeatCommand), typeof(AudioPlayerCommand), typeof(AudioPlayer), new PropertyMetadata(null));
+
     static AudioPlayer()
     {
         AddStyleSetToThemes<AudioPlayerStyleSet>();
@@ -103,11 +119,13 @@ public partial class AudioPlayer : Control
 
     public AudioPlayer()
     {
-        PlayPauseCommand = new AudioPlayerCommand(PlayOrPause, () => CurrentTrack != null || Tracks is { Count: > 0 });
-        StopCommand = new AudioPlayerCommand(Stop, () => State != AudioPlaybackState.Stopped);
-        PreviousCommand = new AudioPlayerCommand(PlayPrevious, () => CurrentTrack != null);
-        NextCommand = new AudioPlayerCommand(PlayNext, () => TrackAfter(CurrentTrack, wraps: true) != null);
-        RepeatCommand = new AudioPlayerCommand(RepeatOther, () => true);
+        SetReadOnlyValue(PlayPauseCommandProperty,
+            new AudioPlayerCommand(PlayOrPause, () => CurrentTrack != null || Tracks is { Count: > 0 }));
+        SetReadOnlyValue(StopCommandProperty, new AudioPlayerCommand(Stop, () => State != AudioPlaybackState.Stopped));
+        SetReadOnlyValue(PreviousCommandProperty, new AudioPlayerCommand(PlayPrevious, () => CurrentTrack != null));
+        SetReadOnlyValue(NextCommandProperty,
+            new AudioPlayerCommand(PlayNext, () => TrackAfter(CurrentTrack, wraps: true) != null));
+        SetReadOnlyValue(RepeatCommandProperty, new AudioPlayerCommand(RepeatOther, () => true));
         SetCurrentValue(TracksProperty, new TrackingCollection<AudioTrack>());
     }
 
@@ -283,17 +301,17 @@ public partial class AudioPlayer : Control
     }
 
     /// <summary>Plays, or pauses what plays; with nothing chosen, the first of the list.</summary>
-    public AudioPlayerCommand PlayPauseCommand { get; }
+    public AudioPlayerCommand PlayPauseCommand => GetValue<AudioPlayerCommand>(PlayPauseCommandProperty);
 
-    public AudioPlayerCommand StopCommand { get; }
+    public AudioPlayerCommand StopCommand => GetValue<AudioPlayerCommand>(StopCommandProperty);
 
     /// <summary>The previous track; within the first seconds of one, the same from its beginning.</summary>
-    public AudioPlayerCommand PreviousCommand { get; }
+    public AudioPlayerCommand PreviousCommand => GetValue<AudioPlayerCommand>(PreviousCommandProperty);
 
-    public AudioPlayerCommand NextCommand { get; }
+    public AudioPlayerCommand NextCommand => GetValue<AudioPlayerCommand>(NextCommandProperty);
 
     /// <summary>Repeat: off, then the list, then the track.</summary>
-    public AudioPlayerCommand RepeatCommand { get; }
+    public AudioPlayerCommand RepeatCommand => GetValue<AudioPlayerCommand>(RepeatCommandProperty);
 
     protected override AutomationPeer OnCreateAutomationPeer() => new GroupAutomationPeer(this);
 }

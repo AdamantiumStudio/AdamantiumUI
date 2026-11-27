@@ -186,7 +186,7 @@ public class AutomationAuditTests
         [typeof(AudioPlayer)] = (T.Group, null),
         [typeof(AudioFormatBadges)] = (null, "marks beside the title, read as their texts; the player answers for what plays"),
         [typeof(Spectrum)] = (null, "a picture of what is heard; the player answers for what plays"),
-        [typeof(Waveform)] = (null, "a picture of the sound under the position slider, which answers for the position"),
+        [typeof(Waveform)] = (T.Slider, null),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),

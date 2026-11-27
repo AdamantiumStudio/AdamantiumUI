@@ -3,10 +3,13 @@
           xmlns:x="http://adamantium/ui/xaml/extensions"
           xmlns:local="clr-namespace:Adamantium.UI.Audio">
 
-    <!-- What is played in the theme's accent, what is yet to be in its quiet text. -->
+    <!-- What is played in the theme's accent, what is yet to be in its quiet text, the line where it is in its text;
+         bars of two DIPs, one apart. -->
     <Style Selector="Waveform">
         <Setter Property="WaveBrush" Value="{ObservableResource TextFillColorTertiary}"/>
         <Setter Property="PlayedBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="CursorBrush" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
 
 </StyleSet>

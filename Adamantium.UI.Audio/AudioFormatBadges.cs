@@ -1,12 +1,14 @@
 using Adamantium.Localization;
 using Adamantium.Pulsar;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Audio;
 
-/// <summary>What a sound is, as small marks: its codec, its sample rate, its bitrate, its channels. Its template shows
-/// them; the words of the units are the language's.</summary>
+/// <summary>What a sound is, as small marks: its codec, its sample rate, its bitrate, its channels - those of
+/// <see cref="Marks"/>, in a row or a column. Its template shows them; the words of the units are the language's.
+/// </summary>
 public class AudioFormatBadges : Control
 {
     static AudioFormatBadges()
@@ -15,7 +17,14 @@ public class AudioFormatBadges : Control
     }
 
     public static readonly AdamantiumProperty InfoProperty = AdamantiumProperty.Register(nameof(Info),
-        typeof(SoundInfo), typeof(AudioFormatBadges), new PropertyMetadata(null, OnInfoChanged));
+        typeof(SoundInfo), typeof(AudioFormatBadges), new PropertyMetadata(null, OnShownChanged));
+
+    public static readonly AdamantiumProperty MarksProperty = AdamantiumProperty.Register(nameof(Marks),
+        typeof(AudioFormatMarks), typeof(AudioFormatBadges), new PropertyMetadata(AudioFormatMarks.All, OnShownChanged));
+
+    public static readonly AdamantiumProperty OrientationProperty = AdamantiumProperty.Register(nameof(Orientation),
+        typeof(Orientation), typeof(AudioFormatBadges),
+        new PropertyMetadata(Orientation.Horizontal, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty CodecProperty = AdamantiumProperty.RegisterReadOnly(nameof(Codec),
         typeof(string), typeof(AudioFormatBadges), new PropertyMetadata(null));
@@ -26,26 +35,43 @@ public class AudioFormatBadges : Control
     public static readonly AdamantiumProperty KilobitsProperty = AdamantiumProperty.RegisterReadOnly(nameof(Kilobits),
         typeof(string), typeof(AudioFormatBadges), new PropertyMetadata(null));
 
-    public static readonly AdamantiumProperty HasInfoProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasInfo),
+    public static readonly AdamantiumProperty ShowsCodecProperty = AdamantiumProperty.RegisterReadOnly(nameof(ShowsCodec),
         typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty HasBitrateProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasBitrate),
+    public static readonly AdamantiumProperty ShowsKilohertzProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsKilohertz), typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty ShowsKilobitsProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsKilobits), typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty ShowsMonoProperty = AdamantiumProperty.RegisterReadOnly(nameof(ShowsMono),
         typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsMonoProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsMono),
+    public static readonly AdamantiumProperty ShowsStereoProperty = AdamantiumProperty.RegisterReadOnly(nameof(ShowsStereo),
         typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsStereoProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsStereo),
-        typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
+    public static readonly AdamantiumProperty ShowsSurroundProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsSurround), typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
 
-    public static readonly AdamantiumProperty IsSurroundProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsSurround),
-        typeof(bool), typeof(AudioFormatBadges), new PropertyMetadata(false));
-
-    /// <summary>Of the sound shown; none while null.</summary>
+    /// <summary>Of the sound shown; no marks while null.</summary>
     public SoundInfo Info
     {
         get => GetValue<SoundInfo>(InfoProperty);
         set => SetValue(InfoProperty, value);
+    }
+
+    /// <summary>Which it shows; all by default.</summary>
+    public AudioFormatMarks Marks
+    {
+        get => GetValue<AudioFormatMarks>(MarksProperty);
+        set => SetValue(MarksProperty, value);
+    }
+
+    /// <summary>A row by default; a column where it is tight across.</summary>
+    public Orientation Orientation
+    {
+        get => GetValue<Orientation>(OrientationProperty);
+        set => SetValue(OrientationProperty, value);
     }
 
     /// <summary>In capitals, as the marks write it: "OPUS".</summary>
@@ -69,35 +95,42 @@ public class AudioFormatBadges : Control
         private set => SetReadOnlyValue(KilobitsProperty, value);
     }
 
-    public bool HasInfo
+    public bool ShowsCodec
     {
-        get => GetValue<bool>(HasInfoProperty);
-        private set => SetReadOnlyValue(HasInfoProperty, value);
+        get => GetValue<bool>(ShowsCodecProperty);
+        private set => SetReadOnlyValue(ShowsCodecProperty, value);
     }
 
-    public bool HasBitrate
+    public bool ShowsKilohertz
     {
-        get => GetValue<bool>(HasBitrateProperty);
-        private set => SetReadOnlyValue(HasBitrateProperty, value);
+        get => GetValue<bool>(ShowsKilohertzProperty);
+        private set => SetReadOnlyValue(ShowsKilohertzProperty, value);
     }
 
-    public bool IsMono
+    /// <summary>Not of a bitrate not known.</summary>
+    public bool ShowsKilobits
     {
-        get => GetValue<bool>(IsMonoProperty);
-        private set => SetReadOnlyValue(IsMonoProperty, value);
+        get => GetValue<bool>(ShowsKilobitsProperty);
+        private set => SetReadOnlyValue(ShowsKilobitsProperty, value);
     }
 
-    public bool IsStereo
+    public bool ShowsMono
     {
-        get => GetValue<bool>(IsStereoProperty);
-        private set => SetReadOnlyValue(IsStereoProperty, value);
+        get => GetValue<bool>(ShowsMonoProperty);
+        private set => SetReadOnlyValue(ShowsMonoProperty, value);
+    }
+
+    public bool ShowsStereo
+    {
+        get => GetValue<bool>(ShowsStereoProperty);
+        private set => SetReadOnlyValue(ShowsStereoProperty, value);
     }
 
     /// <summary>Of more than two channels.</summary>
-    public bool IsSurround
+    public bool ShowsSurround
     {
-        get => GetValue<bool>(IsSurroundProperty);
-        private set => SetReadOnlyValue(IsSurroundProperty, value);
+        get => GetValue<bool>(ShowsSurroundProperty);
+        private set => SetReadOnlyValue(ShowsSurroundProperty, value);
     }
 
     // Marks seen beside the title: what is read of them is the player's.
@@ -106,21 +139,23 @@ public class AudioFormatBadges : Control
     /// <summary>The numbers in the new language's way: "44.1", "44,1".</summary>
     protected override void OnLanguageChanged(string previous) => Write();
 
-    private static void OnInfoChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+    private static void OnShownChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
         ((AudioFormatBadges)component).Write();
 
     private void Write()
     {
         var info = Info;
+        var marks = info == null ? AudioFormatMarks.None : Marks;
         var culture = Languages.CultureOf(Languages.Current);
         Codec = info?.Codec?.ToUpperInvariant();
         Kilohertz = info == null ? null : Math.Round(info.Format.SampleRate / 1000.0, 1).ToString("0.#", culture);
         Kilobits = info is { Bitrate: > 0 } ? Math.Round(info.Bitrate / 1000.0).ToString("0", culture) : null;
-        HasInfo = info != null;
-        HasBitrate = info is { Bitrate: > 0 };
-        var channels = info?.Format.Channels ?? 0;
-        IsMono = channels == 1;
-        IsStereo = channels == 2;
-        IsSurround = channels > 2;
+        ShowsCodec = marks.HasFlag(AudioFormatMarks.Codec);
+        ShowsKilohertz = marks.HasFlag(AudioFormatMarks.SampleRate);
+        ShowsKilobits = marks.HasFlag(AudioFormatMarks.Bitrate) && info.Bitrate > 0;
+        var channels = marks.HasFlag(AudioFormatMarks.Channels) ? info.Format.Channels : 0;
+        ShowsMono = channels == 1;
+        ShowsStereo = channels == 2;
+        ShowsSurround = channels > 2;
     }
 }

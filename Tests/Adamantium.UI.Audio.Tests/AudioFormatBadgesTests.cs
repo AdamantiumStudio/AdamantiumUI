@@ -23,8 +23,8 @@ public class AudioFormatBadgesTests
         Assert.That(badges.Codec, Is.EqualTo("OPUS"));
         Assert.That(badges.Kilohertz, Is.EqualTo("44.1"));
         Assert.That(badges.Kilobits, Is.EqualTo("128"));
-        Assert.That(badges.IsStereo, Is.True);
-        Assert.That(badges.IsMono || badges.IsSurround, Is.False);
+        Assert.That(badges.ShowsCodec && badges.ShowsKilohertz && badges.ShowsKilobits && badges.ShowsStereo, Is.True);
+        Assert.That(badges.ShowsMono || badges.ShowsSurround, Is.False);
     }
 
     [Test]
@@ -38,20 +38,36 @@ public class AudioFormatBadgesTests
         badges.TellLanguage();
 
         Assert.That(badges.Kilohertz, Is.EqualTo("22,1"));
-        Assert.That(badges.HasBitrate, Is.False);
-        Assert.That(badges.IsMono, Is.True);
+        Assert.That(badges.ShowsKilobits, Is.False);
+        Assert.That(badges.ShowsMono, Is.True);
+    }
+
+    // As the one-row player shows them: the codec and the channels only.
+    [Test]
+    public void OnlyTheMarksAskedFor_AreShown()
+    {
+        var badges = new AudioFormatBadges
+        {
+            Marks = AudioFormatMarks.Codec | AudioFormatMarks.Channels,
+            Info = new SoundInfo("MP3", new AudioFormat(48000, 2), TimeSpan.FromSeconds(1), 128_000, default),
+        };
+
+        Assert.That(badges.ShowsCodec && badges.ShowsStereo, Is.True);
+        Assert.That(badges.ShowsKilohertz || badges.ShowsKilobits, Is.False);
+        badges.Marks = AudioFormatMarks.All;
+        Assert.That(badges.ShowsKilohertz, Is.True);
     }
 
     [Test]
     public void NoInfo_SaysNothing()
     {
         var badges = new AudioFormatBadges { Info = new SoundInfo("WAV", new AudioFormat(48000, 6), TimeSpan.Zero, 0, default) };
-        Assert.That(badges.IsSurround, Is.True);
+        Assert.That(badges.ShowsSurround, Is.True);
 
         badges.Info = null;
 
-        Assert.That(badges.HasInfo, Is.False);
+        Assert.That(badges.ShowsCodec, Is.False);
         Assert.That(badges.Codec, Is.Null);
-        Assert.That(badges.IsSurround, Is.False);
+        Assert.That(badges.ShowsSurround, Is.False);
     }
 }

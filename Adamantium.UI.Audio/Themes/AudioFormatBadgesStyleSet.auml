@@ -3,8 +3,8 @@
           xmlns:x="http://adamantium/ui/xaml/extensions"
           xmlns:local="clr-namespace:Adamantium.UI.Audio">
 
-    <!-- Small marks in a row, lit as a display's: the codec, the sample rate, the bitrate, the channels; a mark of
-         nothing known takes no room. -->
+    <!-- Small marks in a row or a column, lit as a display's: the codec, the sample rate, the bitrate, the channels -
+         those asked for; a mark of nothing known takes no room. -->
     <Style Selector="AudioFormatBadges">
         <Setter Property="Background" Value="{ObservableResource SystemFillColorSuccessBackground}"/>
         <Setter Property="Foreground" Value="{ObservableResource SystemFillColorSuccess}"/>
@@ -12,44 +12,44 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:AudioFormatBadges">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, HasInfo, Converter={BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="{TemplateBinding Orientation}" Spacing="3">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsCodec, Converter={BooleanToVisibilityConverter}}">
                             <TextBlock Text="{TemplateBinding Codec}" FontWeight="SemiBold"
                                        Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                         </Border>
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, HasInfo, Converter={BooleanToVisibilityConverter}}">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsKilohertz, Converter={BooleanToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal" Spacing="3">
-                                <TextBlock Text="{TemplateBinding Kilohertz}" Foreground="{TemplateBinding Foreground}"
-                                           FontSize="{TemplateBinding FontSize}"/>
-                                <TextBlock Text="{Localize AudioPlayerStrings.Kilohertz}"
+                                <TextBlock Text="{TemplateBinding Kilohertz}" FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Kilohertz}" FontWeight="SemiBold"
                                            Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, HasBitrate, Converter={BooleanToVisibilityConverter}}">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsKilobits, Converter={BooleanToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal" Spacing="3">
-                                <TextBlock Text="{TemplateBinding Kilobits}" Foreground="{TemplateBinding Foreground}"
-                                           FontSize="{TemplateBinding FontSize}"/>
-                                <TextBlock Text="{Localize AudioPlayerStrings.Kilobits}"
+                                <TextBlock Text="{TemplateBinding Kilobits}" FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Kilobits}" FontWeight="SemiBold"
                                            Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, IsMono, Converter={BooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Localize AudioPlayerStrings.Mono}" Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}"/>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsMono, Converter={BooleanToVisibilityConverter}}">
+                            <TextBlock Text="{Localize AudioPlayerStrings.Mono}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                       Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                         </Border>
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, IsStereo, Converter={BooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Localize AudioPlayerStrings.Stereo}" Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}"/>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsStereo, Converter={BooleanToVisibilityConverter}}">
+                            <TextBlock Text="{Localize AudioPlayerStrings.Stereo}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                       Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                         </Border>
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="5 2"
-                                Visibility="{Ancestor local:AudioFormatBadges, IsSurround, Converter={BooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Localize AudioPlayerStrings.Surround}" Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}"/>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsSurround, Converter={BooleanToVisibilityConverter}}">
+                            <TextBlock Text="{Localize AudioPlayerStrings.Surround}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                       Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
                         </Border>
                     </StackPanel>
                 </ControlTemplate>
