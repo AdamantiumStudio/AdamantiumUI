@@ -59,6 +59,9 @@ public partial class AudioPlayer : Control
     public static readonly AdamantiumProperty ShowsWaveformProperty = AdamantiumProperty.Register(nameof(ShowsWaveform),
         typeof(bool), typeof(AudioPlayer), new PropertyMetadata(false, OnShowsWaveformChanged));
 
+    public static readonly AdamantiumProperty WaveformHeightProperty = AdamantiumProperty.Register(
+        nameof(WaveformHeight), typeof(double), typeof(AudioPlayer), new PropertyMetadata(48.0));
+
     public static readonly AdamantiumProperty ShowsRemainingProperty = AdamantiumProperty.Register(nameof(ShowsRemaining),
         typeof(bool), typeof(AudioPlayer), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
 
@@ -212,6 +215,13 @@ public partial class AudioPlayer : Control
     {
         get => GetValue<bool>(ShowsWaveformProperty);
         set => SetValue(ShowsWaveformProperty, value);
+    }
+
+    /// <summary>How high the waveform is drawn; the theme sets it for each look.</summary>
+    public double WaveformHeight
+    {
+        get => GetValue<double>(WaveformHeightProperty);
+        set => SetValue(WaveformHeightProperty, value);
     }
 
     /// <summary>The display's time is what is left, not what was played.</summary>

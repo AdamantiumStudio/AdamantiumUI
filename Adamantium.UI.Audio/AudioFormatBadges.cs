@@ -150,8 +150,9 @@ public class AudioFormatBadges : Control
         Codec = info?.Codec?.ToUpperInvariant();
         Kilohertz = info == null ? null : Math.Round(info.Format.SampleRate / 1000.0, 1).ToString("0.#", culture);
         Kilobits = info is { Bitrate: > 0 } ? Math.Round(info.Bitrate / 1000.0).ToString("0", culture) : null;
-        ShowsCodec = marks.HasFlag(AudioFormatMarks.Codec);
-        ShowsKilohertz = marks.HasFlag(AudioFormatMarks.SampleRate);
+        // A mark of nothing known takes no room.
+        ShowsCodec = marks.HasFlag(AudioFormatMarks.Codec) && !string.IsNullOrEmpty(info.Codec);
+        ShowsKilohertz = marks.HasFlag(AudioFormatMarks.SampleRate) && info.Format.SampleRate > 0;
         ShowsKilobits = marks.HasFlag(AudioFormatMarks.Bitrate) && info.Bitrate > 0;
         var channels = marks.HasFlag(AudioFormatMarks.Channels) ? info.Format.Channels : 0;
         ShowsMono = channels == 1;

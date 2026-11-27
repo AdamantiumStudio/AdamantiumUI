@@ -58,6 +58,16 @@ public class AudioFormatBadgesTests
         Assert.That(badges.ShowsKilohertz, Is.True);
     }
 
+    // A format of no codec named, of no rate: no empty mark for them.
+    [Test]
+    public void AMarkOfNothingKnown_IsNotShown()
+    {
+        var badges = new AudioFormatBadges { Info = new SoundInfo(null, new AudioFormat(48000, 2), TimeSpan.Zero, 0, default) };
+
+        Assert.That(badges.ShowsCodec, Is.False);
+        Assert.That(badges.ShowsKilohertz && badges.ShowsStereo, Is.True);
+    }
+
     [Test]
     public void NoInfo_SaysNothing()
     {

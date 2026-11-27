@@ -114,10 +114,24 @@ public class Waveform : RangeBase
 
         if (CursorBrush != null && range > 0)
         {
-            var cursor = new Rect(Math.Clamp(playedTo - 1, 0, size.Width - 2), 0, 2, size.Height);
+            var cursor = CursorAt(playedTo, size.Width, size.Height);
             this.Snap(ref cursor);
             session.DrawRectangle(CursorBrush, cursor);
         }
+    }
+
+    /// <summary>The line where it is, two DIPs wide, kept within however narrow it is.</summary>
+    internal static Rect CursorAt(double playedTo, double width, double height)
+    {
+        var lineWidth = Math.Min(2, width);
+        return new Rect(Math.Clamp(playedTo - lineWidth / 2, 0, width - lineWidth), 0, lineWidth, height);
+    }
+
+    // Taken away mid-drag - another window, the waveform hidden: the drag is over, and moving over it seeks no more.
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        _isDragging = false;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -243,10 +257,11 @@ public class Waveform : RangeBase
         e.Handled = true;
     }
 
-    // User input, written as a current value: a two-way binding of the position stays.
-    private void GoTo(double value)
+    // User input, written as a current value: a two-way binding of the position stays. The value is kept within the
+    // limits by RangeBase.
+    internal void GoTo(double value)
     {
-        SetCurrentValue(ValueProperty, Math.Clamp(value, Minimum, Maximum));
+        SetCurrentValue(ValueProperty, value);
         InvalidateRender(false);
     }
 

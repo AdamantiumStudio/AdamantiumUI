@@ -96,7 +96,8 @@
             <Setter.Value>
                 <DataTemplate>
                     <Grid>
-                        <local:Waveform Height="48" Minimum="0" Peaks="{Ancestor local:AudioPlayer, Peaks}"
+                        <local:Waveform Height="{Ancestor local:AudioPlayer, WaveformHeight}" Minimum="0"
+                                        Peaks="{Ancestor local:AudioPlayer, Peaks}"
                                         Maximum="{Ancestor local:AudioPlayer, Duration, Converter={TimeSpanToSecondsConverter}}"
                                         Value="{Ancestor local:AudioPlayer, Position, Mode=TwoWay, Converter={TimeSpanToSecondsConverter}}"
                                         Visibility="{Ancestor local:AudioPlayer, ShowsWaveform, Converter={BooleanToVisibilityConverter}}"
@@ -280,6 +281,7 @@
          the length, repeat, the volume. -->
     <Style Selector="AudioPlayer[View=Bar]">
         <Setter Property="Padding" Value="10 6"/>
+        <Setter Property="WaveformHeight" Value="26"/>
         <Setter Property="DisplayTemplate">
             <Setter.Value>
                 <DataTemplate>
@@ -423,6 +425,7 @@
          cards of assets. -->
     <Style Selector="AudioPlayer[View=Line]">
         <Setter Property="Padding" Value="10 8"/>
+        <Setter Property="WaveformHeight" Value="26"/>
         <Setter Property="DisplayTemplate">
             <Setter.Value>
                 <DataTemplate>
@@ -500,6 +503,7 @@
     <!-- Mini: play, the time, a short position - for tight places. -->
     <Style Selector="AudioPlayer[View=Mini]">
         <Setter Property="Padding" Value="6"/>
+        <Setter Property="WaveformHeight" Value="26"/>
         <Setter Property="DisplayTemplate">
             <Setter.Value>
                 <DataTemplate>

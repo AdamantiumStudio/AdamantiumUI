@@ -21,6 +21,28 @@ public class WaveformTests
         Assert.That(waveform.ValueAt(500), Is.EqualTo(10));
     }
 
+    // Laid out narrower than its line: the line is as wide as it, and nothing throws.
+    [TestCase(1.5)]
+    [TestCase(1.0)]
+    [TestCase(300.0)]
+    public void TheCursor_StaysWithinIt(double width)
+    {
+        var cursor = Waveform.CursorAt(width / 2, width, 48);
+
+        Assert.That(cursor.X, Is.GreaterThanOrEqualTo(0));
+        Assert.That(cursor.X + cursor.Width, Is.LessThanOrEqualTo(width + 1e-9));
+    }
+
+    // Limits set the wrong way round by an application: a press is kept within them as RangeBase keeps a value, and
+    // does not throw.
+    [Test]
+    public void APressWithLimitsTheWrongWayRound_DoesNotThrow()
+    {
+        var waveform = new Waveform { Minimum = 10, Maximum = 0 };
+
+        Assert.DoesNotThrow(() => waveform.GoTo(5));
+    }
+
     [Test]
     public void ItIsASliderOfThePosition()
     {
