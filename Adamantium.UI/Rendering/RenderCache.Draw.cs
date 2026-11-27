@@ -6,6 +6,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Rendering.Retained;
 using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
@@ -69,6 +70,32 @@ public partial class RenderCache
     private CanvasArrowCollector _arrowBatch;   // ARROWS and plain lines: one quad each, shaft and heads decided per pixel
     private StrokeBatchCollector _strokeBatch;   // STROKES of one color that are all their unit draws: a record each, one pipeline
     private TextureBatchCollector _texRectBatch;   // SDF family: rounded rects whose fill is SAMPLED from a texture (ImageBrush / NineSliceBrush)
+    /// <summary>What a snapshot through this cache draws (<see cref="SetContent"/>). The bands under or over - outer or
+    /// inner shadows and glows - or the glyphs' effects leave every fill, stroke and glyph out: a print lays those down
+    /// from their shapes around them. Everything else draws as it is.</summary>
+    internal SnapshotContent Content { get; private set; }
+
+    // Whether this snapshot draws shadows and glows alone, every unit's body left out.
+    private bool DrawsBandsAlone => Content is SnapshotContent.BandsUnder or SnapshotContent.BandsOver;
+
+    /// <summary>Says what the units just built draw - on the thread that built them: a block of text drawing its glyphs'
+    /// effects alone builds its glyph run again from its layout.</summary>
+    internal void SetContent(SnapshotContent content)
+    {
+        Content = content;
+        var effectsOnly = content == SnapshotContent.GlyphEffects;
+        foreach (var group in _groupById.Values)
+        {
+            foreach (var unit in group.Units)
+            {
+                if (unit is TextRenderUnit text)
+                {
+                    text.DrawsEffectsOnly = effectsOnly;
+                }
+            }
+        }
+    }
+
     // The soft band (aura / shadow) in its TWO paint positions. An OUTER band goes under every fill; an INNER one over
     // them - drawn under, it would simply be covered by the shape's own fill. Both lazy: most windows have neither.
     private HaloRectCollector _haloUnder;
@@ -1232,7 +1259,8 @@ public partial class RenderCache
 
             // The unit's soft bands (aura / shadow), if it wears any. NOT an alternative to its fill - an addition, so it
             // is collected before the routing chain and drawn first at the flush, which is what puts it UNDER the fills.
-            if (device != null && (HaloRectCollector.WantsBatch(unit.RenderData) || HaloLivingCollector.WantsBatch(unit.RenderData)))
+            if (device != null && Content != SnapshotContent.GlyphEffects &&
+                (HaloRectCollector.WantsBatch(unit.RenderData) || HaloLivingCollector.WantsBatch(unit.RenderData)))
             {
                 // The band reaches PAST the element, so the overlap test uses the grown box: what it must not be drawn
                 // under is whatever the band itself covers, not just what the element covers. A LIVING band wanders
@@ -1249,15 +1277,24 @@ public partial class RenderCache
                 // ones of a soft-edged layer went down under it already; a reflected layer's shadows did, its glow not.
                 var drawnUnder = ReferenceEquals(group, _bandsDrawnUnder);
                 var allUnder = drawnUnder && _bandsDrawnUnderPick == HaloPick.All;
-                var under = !allUnder && CollectHalo(device, unit, wt, scissor, inner: false,
+                var outer = Content != SnapshotContent.BandsOver;
+                var inner = Content != SnapshotContent.BandsUnder;
+                var under = outer && !allUnder && CollectHalo(device, unit, wt, scissor, inner: false,
                     pick: drawnUnder ? HaloPick.Glows : HaloPick.All);
-                var over = CollectHalo(device, unit, wt, scissor, inner: true);
-                under |= !allUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
-                over |= CollectLivingHalo(device, unit, wt, scissor, inner: true);
+                var over = inner && CollectHalo(device, unit, wt, scissor, inner: true);
+                under |= outer && !allUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
+                over |= inner && CollectLivingHalo(device, unit, wt, scissor, inner: true);
                 if ((under || over || drawnUnder) && _recording)
                 {
                     group.NotBatchable("halo");   // a band is not a rect slot; the fast-path patch can't reproduce it
                 }
+            }
+
+            // A snapshot of the bands alone has drawn all it draws of this unit; one of the glyphs' effects draws only a
+            // block of text, which draws its effects alone.
+            if (DrawsBandsAlone || Content == SnapshotContent.GlyphEffects && unit is not TextRenderUnit)
+            {
+                continue;
             }
 
             // Batches: item-background rects (lower layer) + text (upper layer), each one instanced draw. A clip-group

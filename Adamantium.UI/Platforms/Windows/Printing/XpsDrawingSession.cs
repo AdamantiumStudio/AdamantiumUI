@@ -178,6 +178,12 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
+        // The text's own background, under it where the run is, as the screen lays it down.
+        if (background.IsVisible())
+        {
+            DrawGeometry(background, new RectangleGeometry(new Rect(desiredSize)), null, transform);
+        }
+
         if (textLayout != null)
         {
             Text(renderingParameters, textLayout, foreground, transform);

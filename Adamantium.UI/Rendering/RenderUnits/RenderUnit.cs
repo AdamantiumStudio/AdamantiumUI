@@ -1305,6 +1305,31 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     internal bool HasBand => _band != null;
 
+    private bool _drawsEffectsOnly;
+
+    /// <summary>Whether the block draws its glyphs' effects alone - outlines, shadows, glows, reflections - its glyphs left
+    /// out: a snapshot a print lays under the text it draws as vector. Set by a snapshot's cache once it has built its
+    /// units (RenderCache.SetContent); a window's cache never sets it.</summary>
+    internal bool DrawsEffectsOnly
+    {
+        get => _drawsEffectsOnly;
+        set
+        {
+            if (_drawsEffectsOnly == value || TextComponent == null)
+            {
+                _drawsEffectsOnly = value;
+                return;
+            }
+
+            _drawsEffectsOnly = value;
+            Freeze(Payload.TextLayout.BuildGlyphRun(GraphicsDevice, Within(Payload, _band)));
+        }
+    }
+
+    // The run the batch bakes from: all of it, or its effects alone.
+    private void Freeze(Adamantium.Graphics.Fonts.FrozenGlyphRun run) =>
+        TextComponent.GlyphRun = _drawsEffectsOnly ? run.EffectsOnly() : run;
+
     /// <summary>Rebuilds the band of glyphs kept when the shown part of the text has left it. <paramref name="place"/>
     /// is where the text is drawn now - its placement's newest matrix over its element's world - not
     /// <see cref="Place"/>, whose copy of the placement a batched text does not refresh while it pans.</summary>
@@ -1345,7 +1370,10 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     private void Rebuild(RectangleF? band)
     {
         _band = band;
-        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, Within(Payload, band));
+        if (TextComponent != null)
+        {
+            Freeze(Payload.TextLayout.BuildGlyphRun(GraphicsDevice, Within(Payload, band)));
+        }
     }
 
     private RectangleF? BandFor(TextPayload payload)
@@ -1373,7 +1401,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
         // The batch reads this run when it bakes the unit: the cache patches the unit with it, nothing is recorded again.
         var run = layout.BuildGlyphRun(GraphicsDevice, Within(Payload, _band));
-        if (TextComponent != null) TextComponent.GlyphRun = run;
+        if (TextComponent != null) Freeze(run);
         return true;
     }
 
@@ -1407,7 +1435,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
             BufferManager);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
-        TextComponent.GlyphRun = run;   // freeze the shaped glyphs for the render-thread batch bake
+        Freeze(run);   // freeze the shaped glyphs for the render-thread batch bake
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
@@ -1440,7 +1468,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
                     BufferManager);
             }
             // Glyphs were re-shaped in place (reuse) or a new component was built - refresh the frozen snapshot either way.
-            TextComponent.GlyphRun = run;
+            Freeze(run);
         }
         else if (!Equals(Payload.Background, inputPayload.Background) ||
                  !Equals(Payload.Foreground, inputPayload.Foreground) ||

@@ -138,4 +138,8 @@ public interface IDrawingSession
     IDrawingSession PopGroup();
 
     IDrawingSession PushImage(ImageSource image);
+
+    /// <summary>Whether text drawn into it shows its glyphs' outlines, shadows, glows and reflections itself, as the GPU
+    /// does from the glyphs' distance fields; false for a vector writer, which puts the glyphs down alone.</summary>
+    bool DrawsGlyphEffects => false;
 }

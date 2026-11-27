@@ -121,7 +121,7 @@ internal sealed class ElementDrawing : IDrawingContext
         }
         else if (!flat || Reaches(ElementRasters.Outset(component, box).TransformToAABB(matrix), visible))
         {
-            DrawOwn(component, placed, fade * component.SelfOpacity);
+            DrawOwn(component, placed, matrix, flat, fade * component.SelfOpacity, visible);
         }
 
         // What it holds is cut inside its rounded stroke; where the stroke leaves nothing inside, by its edge alone.
@@ -164,6 +164,17 @@ internal sealed class ElementDrawing : IDrawingContext
             placed.PushGroup(new DrawingGroupOptions { Opacity = fade });
         }
 
+        LayTiles(tiles, placed, matrix, flat, visible);
+        if (faded)
+        {
+            placed.PopGroup();
+        }
+    }
+
+    // The squares of a picture, each that reaches the visible part.
+    private static void LayTiles(IReadOnlyList<RasterTile> tiles, IDrawingSession placed, Matrix4x4F matrix, bool flat,
+        Rect visible)
+    {
         foreach (var tile in tiles)
         {
             if (!flat || Reaches(tile.Region.TransformToAABB(matrix), visible))
@@ -174,14 +185,13 @@ internal sealed class ElementDrawing : IDrawingContext
                 placed.DrawImage(tile.Image, null, tile.Region, new CornerRadius(0), share);
             }
         }
-
-        if (faded)
-        {
-            placed.PopGroup();
-        }
     }
 
-    private void DrawOwn(IUIComponent component, IDrawingSession placed, double fade)
+    // Its own drawing from its shapes, with its shadows and glows as the screen lays them: the outer ones under it, the
+    // inner ones and its glyphs' effects over its fills and under its glyphs - so the drawing goes down in two goes
+    // around them. A session that draws glyph effects itself, as the screen's preview does, gets no picture of them.
+    private void DrawOwn(IUIComponent component, IDrawingSession placed, Matrix4x4F matrix, bool flat, double fade,
+        Rect visible)
     {
         var faded = fade < 1;
         if (faded)
@@ -189,8 +199,36 @@ internal sealed class ElementDrawing : IDrawingContext
             placed.PushGroup(new DrawingGroupOptions { Opacity = fade });
         }
 
-        _current = placed;
-        component.RenderReadOnly(this);
+        if (_rasters?.BandsUnderOf(component) is { } under)
+        {
+            LayTiles(under, placed, matrix, flat, visible);
+        }
+
+        var over = _rasters?.BandsOverOf(component);
+        var effects = placed.DrawsGlyphEffects ? null : _rasters?.GlyphEffectsOf(component);
+        if (over != null || effects != null)
+        {
+            _current = new AroundTextSession(placed, false);
+            component.RenderReadOnly(this);
+            if (over != null)
+            {
+                LayTiles(over, placed, matrix, flat, visible);
+            }
+
+            if (effects != null)
+            {
+                LayTiles(effects, placed, matrix, flat, visible);
+            }
+
+            _current = new AroundTextSession(placed, true);
+            component.RenderReadOnly(this);
+        }
+        else
+        {
+            _current = placed;
+            component.RenderReadOnly(this);
+        }
+
         if (faded)
         {
             _session.PopGroup();

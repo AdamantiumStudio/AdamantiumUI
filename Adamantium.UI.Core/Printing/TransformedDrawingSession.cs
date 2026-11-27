@@ -271,4 +271,6 @@ internal sealed class TransformedDrawingSession(IDrawingSession inner, Matrix4x4
         inner.PushImage(image);
         return this;
     }
+
+    public bool DrawsGlyphEffects => inner.DrawsGlyphEffects;
 }
