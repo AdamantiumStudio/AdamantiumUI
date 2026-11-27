@@ -66,6 +66,48 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
     }
 
     [SupportedOSPlatform("windows")]
+    public IReadOnlyList<string> OpenMany(OpenFileRequest request)
+    {
+        var clsid = ShellDialog.ClsidFileOpenDialog;
+        var iid = ShellDialog.IidFileOpenDialog;
+
+        if (Win32Interop.CoCreateInstance(ref clsid, IntPtr.Zero, Win32Interop.ClsCtxInprocServer, ref iid,
+                out var instance) != 0 || instance is not IFileOpenDialog dialog)
+            return [];
+
+        try
+        {
+            Prepare(dialog, request);
+            if (dialog.GetOptions(out var options) == 0) dialog.SetOptions(options | ShellDialog.AllowMultiSelect);
+
+            if (dialog.Show(WindowsDialogOwner.Of(request?.Owner ?? IntPtr.Zero)) != 0) return [];
+            if (dialog.GetResults(out var items) != 0 || items == null) return [];
+
+            try
+            {
+                if (items.GetCount(out var count) != 0) return [];
+
+                var paths = new List<string>((int)count);
+                for (var index = 0u; index < count; index++)
+                {
+                    // An item with no path on disk - a phone, a library - is not a file to open.
+                    if (items.GetItemAt(index, out var item) == 0 && PathOf(item) is { } path) paths.Add(path);
+                }
+
+                return paths;
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(items);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(dialog);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
     public string OpenFolder(OpenFolderRequest request)
     {
         var clsid = ShellDialog.ClsidFileOpenDialog;

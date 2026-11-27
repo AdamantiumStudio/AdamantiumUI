@@ -68,12 +68,51 @@ public class PortalFileDialogTests
         });
     }
 
-    private static DBusMessage Response(uint code, string uri) =>
+    // Several chosen at once: all the local ones, in the order given.
+    [Test]
+    public void AnAnswerOfSeveral_GivesTheirPaths()
+    {
+        var chosen = PortalFileDialog.AllChosen(Response(0,
+            "file:///music/a.flac", "sftp://host/b.mp3", "file:///music/My%20song.opus"));
+
+        Assert.That(chosen, Is.EqualTo(new[] { "/music/a.flac", "/music/My song.opus" }));
+        Assert.That(PortalFileDialog.AllChosen(Response(1, null)), Is.Empty);
+    }
+
+    [Test]
+    public void SeveralAreAskedForAsMultiple()
+    {
+        var options = PortalFileDialog.ManyOptions([new FileType("Sounds", "flac")]);
+
+        Assert.That(options["multiple"].Signature, Is.EqualTo("b"));
+        Assert.That(options["multiple"].Value, Is.EqualTo(true));
+        Assert.That(options.ContainsKey("filters"), Is.True);
+    }
+
+    // A platform of an application's own that knows one file only still answers: with the one.
+    [Test]
+    public void APlatformOfOne_AnswersForSeveralWithIt()
+    {
+        var previous = FileDialog.Platform;
+        try
+        {
+            FileDialog.Platform = new OneFileDialog("/music/a.flac");
+            Assert.That(FileDialog.OpenMany(new OpenFileRequest()), Is.EqualTo(new[] { "/music/a.flac" }));
+            FileDialog.Platform = new OneFileDialog(null);
+            Assert.That(FileDialog.OpenMany(new OpenFileRequest()), Is.Empty);
+        }
+        finally
+        {
+            FileDialog.Platform = previous;
+        }
+    }
+
+    private static DBusMessage Response(uint code, params string[] uris) =>
         DBusMessage.MethodCall("x.y", "/x", "x.y", "Response", "ua{sv}", writer =>
         {
             writer.WriteUInt32(code);
-            writer.WriteDictionary(uri == null
+            writer.WriteDictionary(uris == null || uris.Length == 0 || uris[0] == null
                 ? new Dictionary<string, DBusVariant>()
-                : new Dictionary<string, DBusVariant> { ["uris"] = new("as", new List<object> { uri }) });
+                : new Dictionary<string, DBusVariant> { ["uris"] = new("as", new List<object>(uris)) });
         });
 }
