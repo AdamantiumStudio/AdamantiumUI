@@ -52,6 +52,8 @@ public sealed partial class PdfContentSession : IDrawingSession
     {
     }
 
+    /// <param name="content">Where the page's content is written.</param>
+    /// <param name="toPage">From the drawing's units to the page's.</param>
     /// <param name="pictures">The pictures already turned into images - one for the pages of a document, so a picture
     /// on every page is written once.</param>
     /// <param name="document">The document the content is for, to carry its fonts; null to write text by its outlines.

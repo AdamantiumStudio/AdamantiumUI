@@ -19,6 +19,9 @@ public sealed class PrintSheets : IPrintDocument
     private int _columns = 1;
     private int _rows = 1;
 
+    /// <param name="document">The document being printed.</param>
+    /// <param name="settings">What the print dialog chose.</param>
+    /// <param name="capabilities">What the printer can do.</param>
     /// <param name="current">The page shown when printing was asked for, from 0 - for
     /// <see cref="PageRange.Current"/>.</param>
     public PrintSheets(IPrintDocument document, PrintSettings settings, PrinterCapabilities capabilities,

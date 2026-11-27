@@ -5,7 +5,8 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Maps a slider's double to a SQUARE tile at the origin - a <see cref="TileBrush.Viewport"/> a demo can drag.
+/// <summary>Maps a slider's double to a SQUARE tile at the origin - a <see cref="Core.Media.TileBrush.Viewport"/> a
+/// demo can drag.
 /// One number for both axes because a square tile is what a texture is normally drawn as, and it keeps the Rect UI
 /// primitive out of the view-model.</summary>
 public class DoubleToSquareViewportConverter : ValueConverter

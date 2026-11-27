@@ -1349,7 +1349,7 @@ public class CompositeProperty : PropertyDefinition
     }
 }
 
-/// <summary>Repeats its <see cref="Children"/> lines for every item of the collection its
+/// <summary>Repeats its <see cref="PropertyDefinition.Children"/> lines for every item of the collection its
 /// <see cref="PropertyDefinition.Binding"/> reads; child lines bind against the item. Each item gets its own copies of
 /// them (<see cref="PropertyDefinition.CopyFor"/>), pointed at it for as long as it is listed.</summary>
 public class ItemsProperty : CompositeProperty

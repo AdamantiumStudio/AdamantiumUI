@@ -261,9 +261,6 @@ public sealed class RenderDirtyScope
     // about what changed, so it must not be taken at all.
     private bool _structuralUnknown;
 
-    /// <summary>Records a structural change (add/remove/visibility) of <paramref name="component"/> - it entered or left the
-    /// drawn set, so the paint-order list must be rebuilt. Pass null ONLY when the change genuinely cannot be attributed to a
-    /// component (see <see cref="IsStructuralUnknown"/>).</summary>
     // Something LEFT the visual tree. Its cached groups are withdrawn by the renderer's reconcile, which used to run only
     // inside a full walk - and full walks are rare by design now, so a view that left kept its place in the paint order and
     // the retained op stream went on re-issuing it: the tab that was left drawn on top of the tab that replaced it.
@@ -279,6 +276,9 @@ public sealed class RenderDirtyScope
 
     public long DetachGeneration => System.Threading.Interlocked.Read(ref _detachGeneration);
 
+    /// <summary>Records a structural change (add/remove/visibility) of <paramref name="component"/> - it entered or left the
+    /// drawn set, so the paint-order list must be rebuilt. Pass null ONLY when the change genuinely cannot be attributed to a
+    /// component (see <see cref="IsStructuralUnknown"/>).</summary>
     public void MarkStructural(IUIComponent component = null)
     {
         if (_forgotten)

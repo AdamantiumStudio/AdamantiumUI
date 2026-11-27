@@ -8,7 +8,8 @@ using Adamantium.UI.Core.Automation;
 namespace Adamantium.UI.Controls;
 
 /// <summary>
-/// Shows how far along a [<see cref="RangeBase.Minimum"/>, <see cref="RangeBase.Maximum"/>] operation is as a linear bar:
+/// Shows how far along a [<see cref="Primitives.RangeLimitsBase.Minimum"/>,
+/// <see cref="Primitives.RangeLimitsBase.Maximum"/>] operation is as a linear bar:
 /// the control computes the filled <see cref="Percentage"/> and sizes the template's <c>PART_Indicator</c> fill to that
 /// fraction of <c>PART_Track</c>. Mirrors WPF's ProgressBar. The circular gauge is <see cref="RingProgressBar"/>.
 /// </summary>

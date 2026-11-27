@@ -196,9 +196,9 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         return true;
     }
 
-    /// <summary>Bake ONE textured fill into a record without appending it - what the MOVE path needs to rewrite the
-    /// record a unit already occupies. Refuses a brush that bakes more than one record (a nine-slice): a run of nine
-    /// cannot be rewritten through a single slot, and the caller falls back to the walk.</summary>
+    /// <summary>Bake a textured fill into its records without appending them - what the MOVE path needs to rewrite the
+    /// records a unit already occupies: one for a picture, nine for a nine-slice. The caller checks
+    /// <see cref="RecordCount"/> first, as a run whose length changed cannot be rewritten in place.</summary>
     public static bool BakeRun(RectanglePayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot,
         int clipSlot, out TextureItem[] items, ITexture texture = null)
         => Bake(p.Brush, p.DestinationRect, p.CornerRadius, BrushShape.Rect, world, opacity, transformSlot, fadeSlot,
@@ -209,12 +209,14 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     /// walk.</summary>
     public static int RecordCount(Brush brush) => NineSlice.Count(brush);
 
-    /// <inheritdoc cref="BakeSingle"/>
+    /// <summary>Bake ONE textured ellipse into a record without appending it; false for a brush that bakes more than
+    /// one record (a nine-slice), which cannot be rewritten through a single slot.</summary>
     public static bool BakeSingleEllipse(EllipsePayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot,
         int clipSlot, out TextureItem item)
         => BakeOne(p.Brush, p.DestinationRect, ProceduralGeometry.CornerRadius.Empty, BrushShape.Ellipse, world, opacity, transformSlot, fadeSlot, clipSlot, out item);
 
-    /// <inheritdoc cref="BakeSingle"/>
+    /// <summary>Bake ONE textured regular polygon into a record without appending it; false for a brush that bakes more
+    /// than one record (a nine-slice), which cannot be rewritten through a single slot.</summary>
     public static bool BakeSinglePolygon(RegularPolygonPayload p, Matrix4x4F world, double opacity, int transformSlot, int fadeSlot,
         int clipSlot, out TextureItem item)
         => BakeOne(p.Brush, p.DestinationRect, ProceduralGeometry.CornerRadius.Empty, BrushShape.Polygon(p, (float)world.M11), world, opacity, transformSlot, fadeSlot, clipSlot, out item);

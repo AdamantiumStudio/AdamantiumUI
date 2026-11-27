@@ -2,7 +2,8 @@ using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>The schemes of the application's own: <c>app</c>, whose sites <see cref="WebViewEngine.AddSite"/> serves.
+/// <summary>The schemes of the application's own: <c>app</c>, whose sites <c>WebViewEngine.AddSite</c> serves (a
+/// file the helper process builds too, which has no engine).
 /// Every process of CEF's registers them alike, the browser process and the helper's.</summary>
 internal static unsafe class WebViewSchemes
 {

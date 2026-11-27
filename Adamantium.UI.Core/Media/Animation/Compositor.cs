@@ -172,7 +172,8 @@ public static class Compositor
 
         /// <summary>Recompute this animation's applied state for RIGHT NOW. Idempotent - calling it twice in a frame is
         /// harmless. Opacity: the alpha. Paint: build and publish the brush snapshot (the render cache then re-bakes the
-        /// slots that read it). A transform's matrix is folded from all its animations by <see cref="Tick"/>.</summary>
+        /// slots that read it). A transform's matrix is folded from all its animations by
+        /// <see cref="Tick(List{Entry}, long)"/>.</summary>
         internal void Recompose()
         {
             if (Channel == CompositorChannel.Opacity)

@@ -40,7 +40,7 @@ public enum CefUriUnescapeRule : uint
     PathSeparators = 4,
 
     ///<summary>
-    /// Unescapes various characters that will change the meaning of URLs, including '%', '+', '&', '#'. Does not unescape path separators. If these characters were unescaped, the resulting URL won't be the same as the source one. This flag is used when generating final output like filenames for URLs where we won't be interpreting as a URL and want to do as much unescaping as possible.
+    /// Unescapes various characters that will change the meaning of URLs, including '%', '+', '&amp;', '#'. Does not unescape path separators. If these characters were unescaped, the resulting URL won't be the same as the source one. This flag is used when generating final output like filenames for URLs where we won't be interpreting as a URL and want to do as much unescaping as possible.
     ///</summary>
     UrlSpecialCharsExceptPathSeparators = 8,
 

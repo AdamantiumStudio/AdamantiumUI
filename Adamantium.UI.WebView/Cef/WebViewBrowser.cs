@@ -431,7 +431,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     /// <summary>The page opens <paramref name="url"/> in a window of its own - a link to a new tab, <c>window.open</c>:
-    /// asked of the view by the user's own doing alone. Shown, the browser CEF makes for it is <paramref name="popup"/>'s,
+    /// asked of the view by the user's own doing alone. Shown, the browser CEF makes for it is
+    /// <paramref name="popupClient"/>'s,
     /// drawn off screen like this one, its <c>window.opener</c> this page; false refuses it.</summary>
     internal bool OnBeforePopup(int id, string url, CefWindowOpenDisposition disposition, bool userGesture,
         void* windowInfo, CefClient** popupClient, CefBrowserSettings* settings)

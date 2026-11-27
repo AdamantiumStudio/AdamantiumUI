@@ -69,6 +69,7 @@ public static class CanvasSvg
 
     /// <summary>Reads a document back into items. Anything it does not understand is LEFT OUT rather than guessed at:
     /// a drawing that comes back subtly wrong is worse than one that comes back short and says so.</summary>
+    /// <param name="svg">The SVG document's text.</param>
     /// <param name="skipped">How many elements were passed over - what a caller tells the user about.</param>
     public static IReadOnlyList<ICanvasItem> Load(string svg, out int skipped)
     {

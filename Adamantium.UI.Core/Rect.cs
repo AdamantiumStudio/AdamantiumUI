@@ -400,7 +400,8 @@ public struct Rect : IEquatable<Rect>
 
    /// <summary>
    /// Returns the axis-aligned bounding box of a transformed rectangle, for the single-precision transform used by the
-   /// UI (a component's <c>WorldTransform</c>). Delegates to the <see cref="TransformToAABB(Matrix4x4)"/> overload via
+   /// UI (a component's <c>WorldTransform</c>). Delegates to the <see cref="TransformToAABB(Matrix4x4{double})"/>
+   /// overload via
    /// the lossless float-&gt;double widening, so all four corners are transformed (correct under rotation, unlike a
    /// two-corner shortcut).
    /// </summary>

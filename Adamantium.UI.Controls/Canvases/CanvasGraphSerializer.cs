@@ -18,6 +18,7 @@ public static class CanvasGraphSerializer
     public const int Version = 2;
 
     /// <summary>Writes the graph the canvas is showing: its nodes, the wires between them and the comment frames.</summary>
+    /// <param name="canvas">The node graph whose graph is written.</param>
     /// <param name="describe">What the application knows about a node that the engine does not: its kind and its
     /// payload. Not given, every node is saved as the plain shape it is.</param>
     public static string Save(NodeGraph canvas, Func<CanvasNode, (string Kind, string Payload)> describe = null)
@@ -80,6 +81,8 @@ public static class CanvasGraphSerializer
     /// <summary>Loads a graph (nodes, wires, comment frames, camera) onto the canvas, replacing the previous graph as
     /// one step of the history; false, with nothing changed, for text this version cannot read. What the file does not
     /// hold - a control put on the plane - stays.</summary>
+    /// <param name="canvas">The node graph the graph is loaded onto.</param>
+    /// <param name="text">The text <see cref="Save"/> wrote.</param>
     /// <param name="make">Asked for each node, with the kind and payload the file recorded. Returning null - or not
     /// being given at all - leaves the engine to make a plain node from the shape.</param>
     public static bool Load(NodeGraph canvas, string text, Func<CanvasNodeSeed, CanvasNode> make = null)

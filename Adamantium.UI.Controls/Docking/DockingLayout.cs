@@ -199,6 +199,10 @@ public class DockingLayout
 
     /// <summary>Splits <paramref name="target"/>, putting <paramref name="inserted"/> on the given side of it and
     /// giving the newcomer <paramref name="fraction"/> of the space they now share.</summary>
+    /// <param name="target">The node split.</param>
+    /// <param name="side">The side of the target the newcomer goes to.</param>
+    /// <param name="inserted">The newcomer.</param>
+    /// <param name="fraction">The newcomer's share of the space, 0 to 1.</param>
     /// <param name="nest">Force a split node of its own even when the row runs the right way, so a split inside the document
     /// area does not swallow the row's other panels.</param>
     public void Split(PaneNode target, DockZone side, PaneNode inserted, double fraction = 0.5, bool nest = false)
@@ -260,6 +264,9 @@ public class DockingLayout
 
     /// <summary>Moves a pane into <paramref name="target"/> as a tab (<see cref="DockZone.Center"/>, groups only) or beside it
     /// by splitting; every gesture ends here.</summary>
+    /// <param name="paneId">The pane moved.</param>
+    /// <param name="target">The node it moves into or beside.</param>
+    /// <param name="zone">Where it lands: <see cref="DockZone.Center"/> as a tab, a side beside the target.</param>
     /// <param name="index">Where among the target's tabs it lands, or -1 for last. Center only.</param>
     /// <param name="size">What the newcomer takes; null means half.</param>
     /// <param name="beside">Land next to the target rather than inside it, so an edge anchor does not divide the document
@@ -570,6 +577,10 @@ public class DockingLayout
 
     /// <summary>Moves a whole node, as when a floating window is dropped on the compass: <see cref="DockZone.Center"/> tabs its
     /// panes into the target group, other zones split beside it.</summary>
+    /// <param name="node">The node moved.</param>
+    /// <param name="target">The node it moves into or beside.</param>
+    /// <param name="zone">Where it lands: <see cref="DockZone.Center"/> tabs its panes in, a side splits beside.</param>
+    /// <param name="size">What it takes; null means half.</param>
     /// <param name="beside">Land NEXT TO the target rather than inside it - see <see cref="MovePane"/>.</param>
     public bool MoveNode(PaneNode node, PaneNode target, DockZone zone, PaneLength? size = null, bool beside = false)
     {

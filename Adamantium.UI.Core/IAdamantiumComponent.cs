@@ -32,7 +32,6 @@ public interface IAdamantiumComponent : IComponent
     /// Gets a <see cref="AdamantiumProperty"/> value.
     /// </summary>
     /// <param name="property">The property.</param>
-    /// <param name="priority">Priority for value</param>
     /// <returns>The value.</returns>
     object GetValue(AdamantiumProperty property);
 
@@ -41,7 +40,6 @@ public interface IAdamantiumComponent : IComponent
     /// </summary>
     /// <typeparam name="T">The type of the property.</typeparam>
     /// <param name="property">The property.</param>
-    /// <param name="priority">Priority for value</param>
     /// <returns>The value.</returns>
     T GetValue<T>(AdamantiumProperty property);
 
@@ -83,13 +81,8 @@ public interface IAdamantiumComponent : IComponent
     /// <param name="priority">Priority for value</param>
     void SetValue(string propertyName, object value, ValuePriority priority = ValuePriority.Local);
 
-    /// <summary>
-    /// Sets a <see cref="AdamantiumProperty"/> value.
-    /// </summary>
-    /// <param name="property">The property.</param>
-    /// <param name="value">New value.</param>
-    // void SetEffectiveValue(AdamantiumProperty property, object value);
-
+    /// <summary>The property registered on this object under <paramref name="propertyName"/>.</summary>
+    /// <param name="propertyName">The property's name.</param>
     AdamantiumProperty GetProperty(string propertyName);
 
     public void SetStyleValue(string propertyName, object value, Style style);

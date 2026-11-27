@@ -185,7 +185,7 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     }
 
     /// <summary>Template used to render a data <see cref="Header"/> in the strip. Set from the owning
-    /// <see cref="TabControl.ItemTemplate"/> for generated tabs.</summary>
+    /// <see cref="ItemsControl.ItemTemplate"/> for generated tabs.</summary>
     public DataTemplate HeaderTemplate
     {
         get => GetValue<DataTemplate>(HeaderTemplateProperty);
@@ -215,7 +215,8 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         set => SetValue(IconTemplateProperty, value);
     }
 
-    /// <summary>Picks the header template per item (from the owning <see cref="TabControl.ItemTemplateSelector"/>).</summary>
+    /// <summary>Picks the header template per item (from the owning tab control's
+    /// <see cref="ItemsControl.ItemTemplateSelector"/>).</summary>
     public DataTemplateSelector HeaderTemplateSelector
     {
         get => GetValue<DataTemplateSelector>(HeaderTemplateSelectorProperty);

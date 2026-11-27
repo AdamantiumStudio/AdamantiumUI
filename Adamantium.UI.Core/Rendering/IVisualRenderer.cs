@@ -51,8 +51,8 @@ public interface IVisualRenderer
     /// <summary>
     /// Renders a DETACHED visual off-screen through the same two-stage split: recorded on the loop thread, drawn on the
     /// render thread, delivered to <paramref name="onReady"/> on the UI thread. Prefer this to the synchronous
-    /// <see cref="Render(IUIComponent, Size, double, Color?)"/> anywhere a window is on screen - that one submits and
-    /// waits on the shared GPU device from the caller's thread, which races the window's own frame.
+    /// <see cref="Render(IUIComponent, Size{double}, double, Color?)"/> anywhere a window is on screen - that one
+    /// submits and waits on the shared GPU device from the caller's thread, which races the window's own frame.
     /// </summary>
     void RequestRender(IUIComponent visual, Size<double> size, double scale, Color? clearColor, Action<ImageSource> onReady);
 

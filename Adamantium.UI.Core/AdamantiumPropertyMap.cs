@@ -60,22 +60,21 @@ public static class AdamantiumPropertyMap
    }
 
    /// <summary>
-   /// Get all <see cref="AdamantiumProperty"/>s on <see cref="DependencyComponent"/>
+   /// Every <see cref="AdamantiumProperty"/> registered for the type of <paramref name="o"/> and its base types.
    /// </summary>
-   /// <param name="o"></param>
-   /// <returns></returns>
-   /// <exception cref="ArgumentNullException"></exception>
+   /// <param name="o">The component whose properties are listed.</param>
+   /// <returns>The properties, the type's own and inherited.</returns>
    public static IEnumerable<AdamantiumProperty> GetRegistered(AdamantiumComponent o)
    {
       return GetRegistered(o.GetType());
    }
 
    /// <summary>
-   /// Returns all <see cref="AdamantiumProperty"/>s registered on a type
+   /// Every <see cref="AdamantiumProperty"/> registered for <paramref name="type"/> and its base types.
    /// </summary>
-   /// <param name="type"></param>
-   /// <returns></returns>
-   /// <exception cref="ArgumentNullException"></exception>
+   /// <param name="type">The type whose properties are listed.</param>
+   /// <returns>The properties, the type's own and inherited.</returns>
+   /// <exception cref="ArgumentNullException"><paramref name="type"/> is null.</exception>
    public static IEnumerable<AdamantiumProperty> GetRegistered(Type type)
    {
       if (type == null)
@@ -155,13 +154,14 @@ public static class AdamantiumPropertyMap
    }
 
    /// <summary>
-   /// Returns registered <see cref="AdamantiumProperty"/> on a Type by property Name 
+   /// The <see cref="AdamantiumProperty"/> registered for <paramref name="type"/> or one of its base types under
+   /// <paramref name="name"/>; the most derived one when several share it.
    /// </summary>
-   /// <param name="type"></param>
-   /// <param name="name"></param>
-   /// <returns></returns>
-   /// <exception cref="ArgumentNullException"></exception>
-   /// <exception cref="ArgumentException"></exception>
+   /// <param name="type">The type the property is looked up on.</param>
+   /// <param name="name">The property's name.</param>
+   /// <returns>The property, or null when there is none of that name.</returns>
+   /// <exception cref="ArgumentNullException"><paramref name="type"/> is null, or <paramref name="name"/> is null or
+   /// empty.</exception>
    public static AdamantiumProperty FindRegistered(Type type, String name)
    {
       if (type == null)

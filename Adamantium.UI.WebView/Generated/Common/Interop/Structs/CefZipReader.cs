@@ -60,7 +60,7 @@ public unsafe partial struct CefZipReader
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefZipReader*, int> close_file;
     ///<summary>
-    /// Read uncompressed file contents into the specified buffer. Returns < 0 if an error occurred, 0 if at the end of file, or the number of bytes read.
+    /// Read uncompressed file contents into the specified buffer. Returns &lt; 0 if an error occurred, 0 if at the end of file, or the number of bytes read.
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefZipReader*, void*, ulong, int> read_file;
     ///<summary>

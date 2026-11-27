@@ -47,8 +47,9 @@ public sealed class HeadlessApplication : IUIApplication, IUIContext, IWindowPla
         _themes.SetTheme(theme);
     }
 
-    /// <summary>Where the application's own resources go: <see cref="IResourceManager.AddSource"/> them as the
-    /// application does.</summary>
+    /// <summary>Where the application's own resources go:
+    /// <see cref="IResourceManager.AddSource(IAdamantiumComponent, Type, ResourceScope)"/> them as the application
+    /// does.</summary>
     public IResourceManager ResourceManager { get; }
 
     /// <summary>The themes; style sets the application adds at start go here too.</summary>

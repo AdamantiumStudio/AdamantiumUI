@@ -12,7 +12,7 @@ internal interface IPendingBatch
     /// <summary>Where the batch is flushed among the others.</summary>
     BatchLayer Layer { get; }
 
-    /// <summary>Which <see cref="RenderOp.Batch"/> a recorded op that draws this batch names.</summary>
+    /// <summary>Which <see cref="RenderCache.RenderOp.Batch"/> a recorded op that draws this batch names.</summary>
     byte BatchId { get; }
 
     /// <summary>Whether these window-logical bounds overlap what the batch is still holding.</summary>

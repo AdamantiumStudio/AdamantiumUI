@@ -8,6 +8,8 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Core.Graphics.Vector;
 
 /// <summary>A glyph of laid-out text as a vector writer sets it.</summary>
+/// <param name="Font">The font it is drawn in.</param>
+/// <param name="Index">Its index among the font's glyphs.</param>
 /// <param name="Place">From its font's units, y up, to where it is drawn, y down: pen, baseline, size, stretch, turn
 /// and slant.</param>
 /// <param name="Text">What it stands for; empty for nothing, null for what its font says.</param>

@@ -9,6 +9,12 @@ internal static class TileBrushLayout
 {
     private static readonly Vector4F WholeTile = new(0, 0, 1, 1);
 
+    /// <summary>Where the brush's tiles fall in <paramref name="bounds"/> and which part of its source each one
+    /// shows.</summary>
+    /// <param name="brush">The brush being laid out.</param>
+    /// <param name="bounds">The area it fills.</param>
+    /// <param name="scaleX">The scale the brush's own units are drawn at across.</param>
+    /// <param name="scaleY">The scale the brush's own units are drawn at down.</param>
     /// <param name="sourceIsSlice">The texture this layout will sample holds ONLY the viewbox's slice of the source,
     /// baked at that slice's own resolution (a vector source - see <see cref="SliceOf"/>). Everything about the fit is
     /// unchanged; only the final uv is re-expressed, because the sub-rectangle it names has become the whole picture.

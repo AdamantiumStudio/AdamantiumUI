@@ -31,7 +31,7 @@ public class TabTearOffEventArgs : EventArgs
     public bool Handled { get; set; }
 
     /// <summary>The window the handler put the tab in, if it wants to say. Carrying it under the cursor is the WINDOW's
-    /// own business - call <see cref="WindowBase.DragMove"/> on it and the platform's move loop takes the still-held
+    /// own business - call <see cref="WindowBase.DragMove()"/> on it and the platform's move loop takes the still-held
     /// button, which keeps Aero Snap and edge snapping working. The strip stops tracking the moment the tab leaves it.</summary>
     public WindowBase TornWindow { get; set; }
 }

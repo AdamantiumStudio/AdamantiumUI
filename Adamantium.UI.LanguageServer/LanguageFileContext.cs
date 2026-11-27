@@ -33,7 +33,12 @@ public sealed class LanguageFileContext
     /// <summary>The strings a translation has to give; empty for a base file or when the table is not found.</summary>
     public IReadOnlyList<LanguageStringInfo> BaseStrings { get; }
 
+    /// <summary>What <paramref name="path"/> is to the project: a base file or a translation, and of which
+    /// table.</summary>
+    /// <param name="path">The language file.</param>
+    /// <param name="text">Its text as typed.</param>
     /// <param name="openText">The text of a file open in the editor, or null to read it from disk.</param>
+    /// <param name="model">The project's types.</param>
     public static LanguageFileContext Of(string path, string text, Func<string, string> openText, AumlTypeModel model)
     {
         var project = LanguageProject.Of(path);

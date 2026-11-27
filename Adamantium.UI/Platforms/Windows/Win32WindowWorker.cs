@@ -764,15 +764,7 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
         }
     }
 
-    /// <summary>
-    /// Window Procedure
-    /// </summary>
-    /// <param name="hWnd">windows handler</param>
-    /// <param name="msg">window message (one of window messages)<see cref="WindowMessages"/>"/></param>
-    /// <param name="wParam"></param>
-    /// <param name="lParam"></param>
-    /// <param name="handled"></param>
-    /// <returns></returns>
+    // WM_GETOBJECT: a screen reader asking for the window's UI Automation root.
     private IntPtr HandleGetObject(WindowMessages message, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         handled = (int)(long)lParam == Automation.UiaInterop.RootObjectId && window != null;

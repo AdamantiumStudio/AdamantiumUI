@@ -311,7 +311,7 @@ public class DockingArea : Panel
     }
 
     /// <summary>Auto-hide: puts a docked group away to its strip, or brings a folded one back into the layout. The
-    /// button is a thumbtack, but the word "pin" belongs to a TAB (<see cref="Pane.IsPinned"/>) - what this does to a
+    /// button is a thumbtack, but the word "pin" belongs to a TAB (<see cref="TabItem.IsPinned"/>) - what this does to a
     /// PANEL is hide it until it is wanted.</summary>
     internal void ToggleAutoHide(PaneGroup group)
     {
@@ -562,7 +562,7 @@ public class DockingArea : Panel
         InvalidateMeasure();
     }
 
-    /// <summary>Not usable while busy, whatever <see cref="UIComponent.IsEnabled"/> is set to.</summary>
+    /// <summary>Not usable while busy, whatever <see cref="Base.UIComponent.IsEnabled"/> is set to.</summary>
     protected override bool IsEnabledCore => !_busyShown;
 
     /// <summary>Whether closing panes with unsaved work (<see cref="Pane.IsDirty"/>) asks first - one question for all of
@@ -3178,6 +3178,8 @@ public class DockingArea : Panel
     /// <summary>Builds the layout from the authored groups once; after that the layout is the user's.</summary>
     /// <param name="fromLayoutPass">Called from measure or arrange, where the markup is certainly applied, so an area with no
     /// authored groups is really empty rather than not filled in yet.</param>
+    /// <param name="openDeferred">Opens the floating-only panes in windows of their own and the panes that waited for
+    /// the layout; false when a saved layout is about to be loaded, which decides where they go.</param>
     private void EnsureLayout(bool fromLayoutPass = false, bool openDeferred = true)
     {
         if (_layoutBuilt) return;

@@ -93,7 +93,7 @@ public static unsafe partial class CefInterop
     internal static extern int CefClearCrossOriginWhitelist();
 
     ///<summary>
-    /// Clear all scheme handler factories registered with the global request context. Returns false (0) on error. This function may be called on any thread in the browser process. Using this function is equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- >clear_scheme_handler_factories().
+    /// Clear all scheme handler factories registered with the global request context. Returns false (0) on error. This function may be called on any thread in the browser process. Using this function is equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- &gt;clear_scheme_handler_factories().
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_clear_scheme_handler_factories", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefClearSchemeHandlerFactories();
@@ -117,13 +117,13 @@ public static unsafe partial class CefInterop
     internal static extern CefComponentUpdater* CefComponentUpdaterGet();
 
     ///<summary>
-    /// Returns the global cookie manager. By default data will be stored at cef_settings_t.cache_path if specified or in memory otherwise. If |callback| is non-NULL it will be executed asnychronously on the UI thread after the manager's storage has been initialized. Using this function is equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- >GetDefaultCookieManager().
+    /// Returns the global cookie manager. By default data will be stored at cef_settings_t.cache_path if specified or in memory otherwise. If |callback| is non-NULL it will be executed asnychronously on the UI thread after the manager's storage has been initialized. Using this function is equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- &gt;GetDefaultCookieManager().
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_cookie_manager_get_global_manager", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern CefCookieManager* CefCookieManagerGetGlobalManager(Adamantium.UI.WebView.Cef.Interop.CefCompletionCallback* callback);
 
     ///<summary>
-    /// Crash reporting is configured using an INI-style config file named "crash_reporter.cfg". On Windows and Linux this file must be placed next to the main application executable. On macOS this file must be placed in the top-level app bundle Resources directory (e.g. "<appname>.app/Contents/Resources"). File contents are as follows:
+    /// Crash reporting is configured using an INI-style config file named "crash_reporter.cfg". On Windows and Linux this file must be placed next to the main application executable. On macOS this file must be placed in the top-level app bundle Resources directory (e.g. "&lt;appname&gt;.app/Contents/Resources"). File contents are as follows:
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_crash_reporting_enabled", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefCrashReportingEnabled();
@@ -153,7 +153,7 @@ public static unsafe partial class CefInterop
     internal static extern int CefCreateUrl(Adamantium.UI.WebView.Cef.Interop.CefUrlparts* parts, Adamantium.UI.WebView.Cef.Interop.CefStringUtf16* url);
 
     ///<summary>
-    /// Returns true (1) if called on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)->belongs_to_current_thread().
+    /// Returns true (1) if called on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)-&gt;belongs_to_current_thread().
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_currently_on", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefCurrentlyOn(CefThreadId threadId);
@@ -281,7 +281,7 @@ public static unsafe partial class CefInterop
     internal static extern void CefLoadCrlsetsFile(Adamantium.UI.WebView.Cef.Interop.CefStringUtf16* path);
 
     ///<summary>
-    /// Returns the MediaRouter object associated with the global request context. If |callback| is non-NULL it will be executed asnychronously on the UI thread after the manager's storage has been initialized. Equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- >get_media_router().
+    /// Returns the MediaRouter object associated with the global request context. If |callback| is non-NULL it will be executed asnychronously on the UI thread after the manager's storage has been initialized. Equivalent to calling cef_request_context_t::cef_request_context_get_global_context()- &gt;get_media_router().
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_media_router_get_global", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern CefMediaRouter* CefMediaRouterGetGlobal(Adamantium.UI.WebView.Cef.Interop.CefCompletionCallback* callback);
@@ -335,13 +335,13 @@ public static unsafe partial class CefInterop
     internal static extern CefPostDataElement* CefPostDataElementCreate();
 
     ///<summary>
-    /// Post a task for delayed execution on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)->PostDelayedTask(task, delay_ms).
+    /// Post a task for delayed execution on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)-&gt;PostDelayedTask(task, delay_ms).
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_post_delayed_task", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefPostDelayedTask(CefThreadId threadId, Adamantium.UI.WebView.Cef.Interop.CefTask* task, long delay_ms);
 
     ///<summary>
-    /// Post a task for execution on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)->PostTask(task).
+    /// Post a task for execution on the specified thread. Equivalent to using cef_task_runner_t::GetForThread(threadId)-&gt;PostTask(task).
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_post_task", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefPostTask(CefThreadId threadId, Adamantium.UI.WebView.Cef.Interop.CefTask* task);
@@ -383,7 +383,7 @@ public static unsafe partial class CefInterop
     internal static extern void CefQuitMessageLoop();
 
     ///<summary>
-    /// Register a scheme handler factory with the global request context. An NULL |domain_name| value for a standard scheme will cause the factory to match all domain names. The |domain_name| value will be ignored for non-standard schemes. If |scheme_name| is a built-in scheme and no handler is returned by |factory| then the built-in scheme handler factory will be called. If |scheme_name| is a custom scheme then you must also implement the cef_app_t::on_register_custom_schemes() function in all processes. This function may be called multiple times to change or remove the factory that matches the specified |scheme_name| and optional |domain_name|. Returns false (0) if an error occurs. This function may be called on any thread in the browser process. Using this function is equivalent to calling cef_reques t_context_t::cef_request_context_get_global_context()- >register_scheme_handler_factory().
+    /// Register a scheme handler factory with the global request context. An NULL |domain_name| value for a standard scheme will cause the factory to match all domain names. The |domain_name| value will be ignored for non-standard schemes. If |scheme_name| is a built-in scheme and no handler is returned by |factory| then the built-in scheme handler factory will be called. If |scheme_name| is a custom scheme then you must also implement the cef_app_t::on_register_custom_schemes() function in all processes. This function may be called multiple times to change or remove the factory that matches the specified |scheme_name| and optional |domain_name|. Returns false (0) if an error occurs. This function may be called on any thread in the browser process. Using this function is equivalent to calling cef_reques t_context_t::cef_request_context_get_global_context()- &gt;register_scheme_handler_factory().
     ///</summary>
     [DllImport(LibraryPath, EntryPoint = "cef_register_scheme_handler_factory", ExactSpelling = true, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int CefRegisterSchemeHandlerFactory(Adamantium.UI.WebView.Cef.Interop.CefStringUtf16* scheme_name, Adamantium.UI.WebView.Cef.Interop.CefStringUtf16* domain_name, Adamantium.UI.WebView.Cef.Interop.CefSchemeHandlerFactory* factory);

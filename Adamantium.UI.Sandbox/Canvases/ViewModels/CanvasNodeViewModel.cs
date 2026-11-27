@@ -76,6 +76,9 @@ public partial class CanvasNodeViewModel : ICanvasNode
     /// <summary>Grows or trims a side to that many sockets, keeping the ones that survive. Public because a
     /// specialization shaping a node does exactly this, and writing it again per application is the same loop twice.
     /// </summary>
+    /// <param name="sockets">The side's sockets.</param>
+    /// <param name="count">How many it should have.</param>
+    /// <param name="prefix">What a new socket's name starts with.</param>
     /// <param name="capacity">How many wires each socket MADE here takes - one by default, which is what an input is;
     /// <see cref="Branches"/> for as many as come. Sockets already standing keep whatever they were given.</param>
     public static void Fit(TrackingCollection<ICanvasSocket> sockets, int count, string prefix, int capacity = 1)

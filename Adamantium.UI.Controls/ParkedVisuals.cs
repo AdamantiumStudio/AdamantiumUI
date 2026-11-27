@@ -152,7 +152,9 @@ public static class ParkedVisuals
         return true;
     }
 
-    /// <summary>Whether the visual the last <see cref="TryTake"/> handed back comes home to the same window and theme it
+    /// <summary>Whether the visual the last
+    /// <see cref="TryTake(object, object, IUIComponent, out IUIComponent, out TemplateResult, out DataTemplate, out Mathematics.Size{double})"/>
+    /// handed back comes home to the same window and theme it
     /// left. Read straight after taking it, before it is attached.</summary>
     public static bool IsUnchanged { get; private set; }
 

@@ -1074,7 +1074,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     }
 
     /// <summary>Whether text laid out with <paramref name="left"/> and with <paramref name="right"/> - two answers of
-    /// <see cref="TextShaping"/> - shapes alike, so a layout made with one still stands for the other.</summary>
+    /// <see cref="TextShaping()"/> - shapes alike, so a layout made with one still stands for the other.</summary>
     public static bool ShapesLike(TextAttributes left, TextAttributes right)
     {
         if (left == null || right == null)

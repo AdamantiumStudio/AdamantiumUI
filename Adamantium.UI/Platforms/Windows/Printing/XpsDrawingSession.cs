@@ -41,6 +41,9 @@ internal sealed partial class XpsDrawingSession : IDrawingSession
     /// <summary>Whether a pen's own alpha is laid by a canvas around its runs: its paint is then written opaque.</summary>
     private bool _alphaApart;
 
+    /// <param name="factory">Makes the XPS objects written.</param>
+    /// <param name="pictures">The pictures already turned into images, shared by the document's pages.</param>
+    /// <param name="fonts">The fonts already embedded, shared by the document's pages.</param>
     /// <param name="visuals">The visuals of the page written into.</param>
     public XpsDrawingSession(IXpsOMObjectFactory factory, XpsPictures pictures, XpsFonts fonts,
         IXpsOMVisualCollection visuals)

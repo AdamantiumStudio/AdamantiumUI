@@ -72,6 +72,13 @@ internal static class NineSlice
 
     /// <summary>Cuts world-space <paramref name="bounds"/> into nine pieces; corners use <see cref="NineSliceBrush.Border"/>
     /// (or 1:1) and scale down proportionally when the shape is too small, as CSS border-image does.</summary>
+    /// <param name="brush">The brush cut.</param>
+    /// <param name="bounds">The area it fills, in world space.</param>
+    /// <param name="opacity">Folded into every piece.</param>
+    /// <param name="transformSlot">The transform slot every piece reads.</param>
+    /// <param name="fadeSlot">The fade slot every piece reads.</param>
+    /// <param name="scaleX">The scale the brush's own units are drawn at across.</param>
+    /// <param name="scaleY">The scale the brush's own units are drawn at down.</param>
     /// <param name="texels">The bound texture's size, for the half-texel inset; unset means the source's own (differs for a
     /// baked vector source).</param>
     public static TextureItem[] Bake(NineSliceBrush brush, Rect bounds, double opacity, int transformSlot, int fadeSlot,

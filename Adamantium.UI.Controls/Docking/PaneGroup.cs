@@ -630,7 +630,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     }
 
     /// <summary>Auto-hide: folds a docked group to its edge's strip, or brings a folded one back. Not "pin", which belongs to a
-    /// tab (<see cref="Pane.IsPinned"/>).</summary>
+    /// tab (<see cref="TabItem.IsPinned"/>).</summary>
     private void OnAutoHideClicked(object sender, RoutedEventArgs e)
     {
         e.Handled = true;

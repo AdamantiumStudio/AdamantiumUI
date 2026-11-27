@@ -685,7 +685,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// <param name="availableSize">The size available to the control.</param>
     /// <returns>The desired size for the control.</returns>
     /// <remarks>
-    /// This method calls <see cref="MeasureOverride(Size)"/> which is probably the method you
+    /// This method calls <see cref="MeasureOverride(Size{double})"/> which is probably the method you
     /// want to override in order to modify a control's arrangement.
     /// </remarks>
     protected Size<double> MeasureCore(Size<double> availableSize)
@@ -751,7 +751,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// </summary>
     /// <param name="finalRect">The control's new bounds.</param>
     /// <remarks>
-    /// This method calls <see cref="ArrangeOverride(Size)"/> which is probably the method you
+    /// This method calls <see cref="ArrangeOverride(Size{double})"/> which is probably the method you
     /// want to override in order to modify a control's arrangement.
     /// </remarks>
     protected void ArrangeCore(Rect finalRect)

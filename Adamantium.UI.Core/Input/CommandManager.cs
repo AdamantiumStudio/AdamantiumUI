@@ -89,7 +89,7 @@ public static class CommandManager
     }
 
     /// <summary>Raised when command sources should ask their commands again: after
-    /// <see cref="InvalidateRequerySuggested"/>, at most once a frame.</summary>
+    /// <see cref="InvalidateRequerySuggested()"/>, at most once a frame.</summary>
     public static event EventHandler RequerySuggested;
 
     /// <summary>Where a command goes when neither a target nor a source is named: the keyboard focus.</summary>

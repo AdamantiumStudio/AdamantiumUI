@@ -7,9 +7,10 @@ namespace Adamantium.UI.Controls.Canvases;
 
 /// <summary>Draws items of a plane into any session, away from a canvas: one world unit is one unit of the session, and
 /// nothing is put on whole pixels. The same <see cref="ICanvasItem.Render"/> a canvas draws them with, groups opened
-/// out as a canvas opens them - what writes them into a file shows them as the canvas does. <see cref="Draw"/> draws
-/// each item by a copy of it, so what an item keeps for its canvas is not touched, and a wire and a control are not
-/// drawn - neither is copied. <see cref="DrawUncopied"/> draws the items themselves, for items made for the picture.
+/// out as a canvas opens them - what writes them into a file shows them as the canvas does.
+/// <see cref="Draw(IEnumerable{ICanvasItem}, IDrawingSession)"/> draws each item by a copy of it, so what an item keeps
+/// for its canvas is not touched, and a wire and a control are not drawn - neither is copied.
+/// <see cref="DrawUncopied"/> draws the items themselves, for items made for the picture.
 /// </summary>
 public static class CanvasPicture
 {

@@ -119,7 +119,7 @@ public class RenderTargetPanel : Grid
 
    /// <summary>
    /// Binds an externally produced surface and triggers a redraw. A frame recorded with the previously bound surface
-   /// draws this one instead. Pass <c>null</c> to unbind (equivalent to <see cref="ClearSource"/>).
+   /// draws this one instead. Pass <c>null</c> to unbind (equivalent to <see cref="ClearSource()"/>).
    /// </summary>
    public void SetSource(SharedSurfaceDescriptor descriptor)
    {

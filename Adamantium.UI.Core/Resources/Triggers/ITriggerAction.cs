@@ -26,6 +26,8 @@ public interface ITargetedTriggerAction : ITriggerAction
 /// <see cref="TriggerActivatorBase.TearDown"/> when an activator is removed while its condition holds.</summary>
 public interface IUndoableTriggerAction : ITriggerAction
 {
+    /// <summary>Undoes what the action started on <paramref name="target"/>.</summary>
+    /// <param name="context">The trigger's execution context.</param>
     /// <param name="target">The component the action was actually INVOKED on, remembered by the activator. Re-resolving
     /// the name here would be wrong on a template swap: by teardown time it resolves to the NEW part, so the animation
     /// would be stopped on a part that never started one while the old part kept ticking forever.</param>

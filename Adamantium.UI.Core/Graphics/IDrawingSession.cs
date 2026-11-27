@@ -19,11 +19,23 @@ public interface IDrawingSession
     /// anything. Fill and border are ONE draw on purpose - as two shapes they share an outline, both anti-alias it, and
     /// the two halves of that edge composite into a dark hairline all the way round.</para></summary>
     IDrawingSession DrawBorder(Brush background, Rect destinationRect, CornerRadius corners, Brush borderBrush, Thickness borderThickness);
+
+    /// <summary>An ellipse inscribed in the rect, whole or a part of it.</summary>
+    /// <param name="destinationRect">The rect the ellipse is inscribed in.</param>
+    /// <param name="brush">Its fill; null for none.</param>
+    /// <param name="startAngle">Where the part drawn starts, in degrees.</param>
+    /// <param name="sweepAngle">How far the part drawn sweeps, in degrees.</param>
+    /// <param name="ellipseType">Whether a part is a sector to the center or closed edge to edge.</param>
+    /// <param name="pen">Its outline; null for none.</param>
     /// <param name="ringThickness">Leave a RING this thick (DIPs, inward from the outline) instead of a solid shape: an
     /// annulus, or with a sweep an annular sector. It is geometry, not a stroke - so the pen stays free to outline it.</param>
     IDrawingSession DrawEllipse(Rect destinationRect, Brush brush, Double startAngle, Double sweepAngle, EllipseType ellipseType, Pen pen = null, Double ringThickness = 0);
     /// <summary>A REGULAR POLYGON inscribed in the rect: N corners evenly round it, the first on the +x axis. Three is a
     /// triangle and enough of them is a circle, so one shape covers chevrons, ticks, diamonds and hexagons.</summary>
+    /// <param name="brush">Its fill; null for none.</param>
+    /// <param name="destinationRect">The rect the polygon is inscribed in.</param>
+    /// <param name="corners">How many corners it has.</param>
+    /// <param name="pen">Its outline; null for none.</param>
     /// <param name="ringThickness">Leave a RING this thick (DIPs, inward) instead of a solid shape - a hollow triangle,
     /// as geometry rather than a stroke.</param>
     /// <param name="startAngle">Where corner 0 sits, in DEGREES from the +x axis - what stands a triangle on a corner

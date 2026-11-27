@@ -15,6 +15,11 @@ namespace Adamantium.UI.Pdf;
 // the renderer lays it - its points a fraction of them - and its stops' alpha a soft mask of the same shape.
 public sealed partial class PdfContentSession
 {
+    /// <summary>Fills and strokes <paramref name="geometry"/> where <paramref name="transform"/> puts it.</summary>
+    /// <param name="brush">Its fill; null for none.</param>
+    /// <param name="pen">Its outline; null for none.</param>
+    /// <param name="geometry">The shape.</param>
+    /// <param name="transform">From the geometry's units to the drawing's.</param>
     /// <param name="gradientBox">The box a gradient is laid over, in the geometry's units; null for the geometry's own
     /// bounds.</param>
     private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform, Rect? gradientBox = null)

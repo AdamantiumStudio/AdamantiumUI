@@ -34,11 +34,11 @@ public interface IThemeManager : IThemeEngine
     /// gives its own controls their look whichever theme is current. Each theme gets an instance of its own, and its
     /// styles count as the theme's, so the application's styles still outrank them. Adding a set twice adds it once.
     /// Elements styled before the call keep their styles, so call it before they exist - a control's static
-    /// constructor is the place, through <see cref="FundamentalUIComponent.AddStyleSetToThemes{T}"/>.</summary>
+    /// constructor is the place, through <see cref="FundamentalUIComponent.AddStyleSetToThemes{T}()"/>.</summary>
     void AddStyleSet<T>() where T : StyleSet, new();
 
-    /// <summary>Adds the style set of <paramref name="styleSetType"/> to every theme, as <see cref="AddStyleSet{T}"/> does,
-    /// for a type known only at run time - an application blueprint's style includes.</summary>
+    /// <summary>Adds the style set of <paramref name="styleSetType"/> to every theme, as
+    /// <see cref="AddStyleSet{T}()"/> does, for a type known only at run time - an application blueprint's style includes.</summary>
     void AddStyleSet(Type styleSetType);
 
     /// <summary>Adds a style set per theme, the themes added later included: for a theme <paramref name="byTheme"/>
