@@ -204,11 +204,11 @@
             </Setter.Value>
         </Setter>
 
-        <!-- A row of the list: the track's row, which the player tells what it read; its look is AudioTrackRow's. -->
+        <!-- An item of the list: the track's item, which the player tells what it read; its look is AudioTrackItem's. -->
         <Setter Property="TrackTemplate">
             <Setter.Value>
                 <DataTemplate>
-                    <local:AudioTrackRow Track="{Binding}"/>
+                    <local:AudioTrackItem Track="{Binding}"/>
                 </DataTemplate>
             </Setter.Value>
         </Setter>

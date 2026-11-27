@@ -3,35 +3,35 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Audio;
 
-/// <summary>A row of an <see cref="AudioPlayer"/>'s list: its <see cref="Track"/> as the player has read it - its number,
+/// <summary>An item of an <see cref="AudioPlayer"/>'s list: its <see cref="Track"/> as the player has read it - its number,
 /// title, format and length - and whether it can not be played. The player it is in tells it; its look is its theme's.
 /// </summary>
-public class AudioTrackRow : Control
+public class AudioTrackItem : Control
 {
     public static readonly AdamantiumProperty TrackProperty = AdamantiumProperty.Register(nameof(Track),
-        typeof(AudioTrack), typeof(AudioTrackRow),
-        new PropertyMetadata(null, static (row, _) => ((AudioTrackRow)row).Show()));
+        typeof(AudioTrack), typeof(AudioTrackItem),
+        new PropertyMetadata(null, static (item, _) => ((AudioTrackItem)item).Show()));
 
     public static readonly AdamantiumProperty NumberProperty = AdamantiumProperty.RegisterReadOnly(nameof(Number),
-        typeof(int), typeof(AudioTrackRow), new PropertyMetadata(0));
+        typeof(int), typeof(AudioTrackItem), new PropertyMetadata(0));
 
     public static readonly AdamantiumProperty TitleProperty = AdamantiumProperty.RegisterReadOnly(nameof(Title),
-        typeof(string), typeof(AudioTrackRow), new PropertyMetadata(null));
+        typeof(string), typeof(AudioTrackItem), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty CodecProperty = AdamantiumProperty.RegisterReadOnly(nameof(Codec),
-        typeof(string), typeof(AudioTrackRow), new PropertyMetadata(null));
+        typeof(string), typeof(AudioTrackItem), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty DurationProperty = AdamantiumProperty.RegisterReadOnly(nameof(Duration),
-        typeof(TimeSpan), typeof(AudioTrackRow), new PropertyMetadata(TimeSpan.Zero));
+        typeof(TimeSpan), typeof(AudioTrackItem), new PropertyMetadata(TimeSpan.Zero));
 
     public static readonly AdamantiumProperty CannotBeReadProperty = AdamantiumProperty.RegisterReadOnly(
-        nameof(CannotBeRead), typeof(bool), typeof(AudioTrackRow), new PropertyMetadata(false));
+        nameof(CannotBeRead), typeof(bool), typeof(AudioTrackItem), new PropertyMetadata(false));
 
     private AudioPlayer _player;
 
-    static AudioTrackRow()
+    static AudioTrackItem()
     {
-        AddStyleSetToThemes<Themes.AudioTrackRowStyleSet>();
+        AddStyleSetToThemes<Themes.AudioTrackItemStyleSet>();
     }
 
     public AudioTrack Track

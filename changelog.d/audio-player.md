@@ -3,7 +3,7 @@
 - A new package, `Adamantium.UI.Audio`: `AudioPlayer` plays sound files - WAV, FLAC, MP3, Ogg Vorbis and Opus, by
   the Pulsar engine's `AudioPlayback` - one after another from its `Tracks` (`AudioTrack`, a sound and its name; its
   title, format and length the player reads in the background once listed, and shows in the track's
-  `AudioTrackRow`, with its number in the list): play and pause, stop, the previous and the next,
+  `AudioTrackItem`, with its number in the list): play and pause, stop, the previous and the next,
   `Repeat` (off, the list, the track) and `IsShuffled`, `Position` and `Volume`; what plays (`Info`, `Duration`,
   `Remaining`, `TrackTitle`), how many tracks and how long all are (`TrackCount`, `TotalDuration`), with its spectrum, and its
   waveform where `ShowsWaveform`. Its commands - `PlayPauseCommand`, `StopCommand`, `PreviousCommand`, `NextCommand`,

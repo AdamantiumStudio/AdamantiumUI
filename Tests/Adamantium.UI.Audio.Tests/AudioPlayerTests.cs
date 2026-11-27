@@ -41,34 +41,34 @@ public class AudioPlayerTests
     public void WhatEachTrackIs_IsReadOnceListed()
     {
         var tracks = Add(("one", 0.3), ("two", 0.5));
-        var rows = tracks.Select(track => new AudioTrackRow { Track = track }).ToArray();
-        foreach (var row in rows)
+        var items = tracks.Select(track => new AudioTrackItem { Track = track }).ToArray();
+        foreach (var item in items)
         {
-            row.Join(_player);
+            item.Join(_player);
         }
 
-        RunUntil(() => rows.All(row => row.Codec != null));
+        RunUntil(() => items.All(item => item.Codec != null));
 
-        Assert.That(rows.Select(row => row.Number), Is.EqualTo(new[] { 1, 2 }));
-        Assert.That(rows[0].Title, Is.EqualTo("one"));
-        Assert.That(rows[1].Duration.TotalSeconds, Is.EqualTo(0.5).Within(0.001));
-        Assert.That(rows[1].Codec, Is.EqualTo("WAV"));
+        Assert.That(items.Select(item => item.Number), Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(items[0].Title, Is.EqualTo("one"));
+        Assert.That(items[1].Duration.TotalSeconds, Is.EqualTo(0.5).Within(0.001));
+        Assert.That(items[1].Codec, Is.EqualTo("WAV"));
         Assert.That(_player.TotalDuration.TotalSeconds, Is.EqualTo(0.8).Within(0.001));
     }
 
-    // Nothing is kept of a track off the list; the rows left are numbered anew.
+    // Nothing is kept of a track off the list; the items left are numbered anew.
     [Test]
     public void ATrackTakenOffTheList_IsForgotten()
     {
         var tracks = Add(("one", 0.2), ("two", 0.2), ("three", 0.2));
-        var row = new AudioTrackRow { Track = tracks[2] };
-        row.Join(_player);
+        var item = new AudioTrackItem { Track = tracks[2] };
+        item.Join(_player);
         RunUntil(() => tracks.All(track => _player.InfoOf(track) != null));
 
         _player.Tracks.Remove(tracks[1]);
 
         Assert.That(_player.InfoOf(tracks[1]), Is.Null);
-        Assert.That(row.Number, Is.EqualTo(2));
+        Assert.That(item.Number, Is.EqualTo(2));
         Assert.That(_player.TotalDuration.TotalSeconds, Is.EqualTo(0.4).Within(0.001));
     }
 
@@ -78,8 +78,8 @@ public class AudioPlayerTests
     {
         var storage = new TakenAwayStorage(WavFiles.Tone(0.2, title: "one")) { IsTaken = true };
         var track = new AudioTrack(storage, "one");
-        var row = new AudioTrackRow { Track = track };
-        row.Join(_player);
+        var item = new AudioTrackItem { Track = track };
+        item.Join(_player);
         _player.Tracks.Add(track);
         RunUntil(() => _player.CannotRead(track));
         storage.IsTaken = false;
@@ -87,7 +87,7 @@ public class AudioPlayerTests
         _player.CurrentTrack = track;
 
         Assert.That(_player.CannotRead(track), Is.False);
-        Assert.That(row.CannotBeRead, Is.False);
+        Assert.That(item.CannotBeRead, Is.False);
     }
 
     // The title of the one that failed stays while it is said, though another is chosen.
@@ -117,20 +117,38 @@ public class AudioPlayerTests
         }
     }
 
+    // Made where no thread waits to be told, as a view built before the application's loop: what each track is is read
+    // once it is shown, in the background, and told on the thread it is shown on.
+    [Test]
+    public void APlayerMadeWithNoContext_ReadsOnceShown()
+    {
+        SynchronizationContext.SetSynchronizationContext(null);
+        var player = new DetachablePlayer { Playback = _playback };
+        SynchronizationContext.SetSynchronizationContext(_context);
+        var track = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "one")), "one");
+        player.Tracks.Add(track);
+        Assert.That(player.InfoOf(track), Is.Null);
+
+        player.Attach();
+
+        Assert.That(player.InfoOf(track), Is.Null);
+        RunUntil(() => player.InfoOf(track) != null);
+    }
+
     // Its name until its tags are read; their title once they are.
     [Test]
     public void TheTitleShown_IsOfTheTags()
     {
         var track = new AudioTrack(new SoundMemoryStorage(WavFiles.Tone(0.2, title: "A song")), "a-file");
-        var row = new AudioTrackRow { Track = track };
-        Assert.That(row.Title, Is.EqualTo("a-file"));
-        row.Join(_player);
+        var item = new AudioTrackItem { Track = track };
+        Assert.That(item.Title, Is.EqualTo("a-file"));
+        item.Join(_player);
         _player.Tracks.Add(track);
 
         _player.CurrentTrack = track;
 
         Assert.That(_player.TrackTitle, Is.EqualTo("A song"));
-        Assert.That(row.Title, Is.EqualTo("A song"));
+        Assert.That(item.Title, Is.EqualTo("A song"));
     }
 
     [Test]

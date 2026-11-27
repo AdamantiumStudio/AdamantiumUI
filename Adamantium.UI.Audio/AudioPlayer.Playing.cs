@@ -13,16 +13,20 @@ public partial class AudioPlayer
     // Within these of a track's beginning, "previous" is the track before; after them, its own beginning.
     private static readonly TimeSpan RestartAfter = TimeSpan.FromSeconds(3);
 
-    private readonly SynchronizationContext _context = SynchronizationContext.Current;
+    // Where it is told what was read: the thread it was made on, or else the one it is shown on.
+    private SynchronizationContext _context = SynchronizationContext.Current;
+    // Queued to be read, not read yet: queued once.
+    private readonly HashSet<AudioTrack> _beingRead = [];
+    private bool _isShown;
     private readonly Random _random = new();
     // What it read of each track - those listed and the current one -, those it could not, the places in the list: kept
-    // here, told to the rows that show them.
+    // here, told to the items that show them.
     private readonly Dictionary<AudioTrack, SoundInfo> _infos = [];
     private readonly HashSet<AudioTrack> _unreadable = [];
     private readonly Dictionary<AudioTrack, int> _numbers = [];
     // How many times each is listed: its length counts as many times in the length of all.
     private readonly Dictionary<AudioTrack, int> _listed = [];
-    private readonly HashSet<AudioTrackRow> _rows = [];
+    private readonly HashSet<AudioTrackItem> _items = [];
     private TrackingCollection<AudioTrack> _watchedTracks;
     private AudioPlayback _watchedPlayback;
     // Made by the player for itself, and disposed by it.
@@ -42,6 +46,8 @@ public partial class AudioPlayer
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _isShown = true;
+        _context ??= SynchronizationContext.Current;
         // Its own playback is made when shown, its device running: the first play is heard at once.
         PlaybackToUse();
         if (!_isListening)
@@ -56,6 +62,8 @@ public partial class AudioPlayer
             TellState();
         }
 
+        // What was listed before it was shown, or while it was told nothing.
+        ReadInfo(Tracks ?? []);
         Tick();
     }
 
@@ -71,6 +79,7 @@ public partial class AudioPlayer
 
         StopListening();
         _isListening = false;
+        _isShown = false;
         _waveformReading?.Cancel();
     }
 
@@ -91,21 +100,27 @@ public partial class AudioPlayer
         player.Shuffle();
         player.TellList();
         player.ForgetUnlisted();
+        if (player._isListening)
+        {
+            player.ReadInfo(player.Tracks ?? []);
+        }
+
         player.TellCommands();
     }
 
+    // Numbered first: a track read is kept only while it is listed.
     private void OnTracksListChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.NewItems != null)
-        {
-            ReadInfo(e.NewItems.OfType<AudioTrack>());
-        }
-
         Shuffle();
         TellList();
         if (e.OldItems != null || e.Action == NotifyCollectionChangedAction.Reset)
         {
             ForgetUnlisted();
+        }
+
+        if (e.NewItems != null)
+        {
+            ReadInfo(e.NewItems.OfType<AudioTrack>());
         }
 
         TellCommands();
@@ -121,12 +136,12 @@ public partial class AudioPlayer
     /// <summary>Its place in the list, from 1; 0 out of it.</summary>
     internal int NumberOf(AudioTrack track) => track != null && _numbers.TryGetValue(track, out var number) ? number : 0;
 
-    /// <summary>A row shown in it, told what the player reads from now on.</summary>
-    internal void Follow(AudioTrackRow row) => _rows.Add(row);
+    /// <summary>An item shown in it, told what the player reads from now on.</summary>
+    internal void Follow(AudioTrackItem item) => _items.Add(item);
 
-    internal void Unfollow(AudioTrackRow row) => _rows.Remove(row);
+    internal void Unfollow(AudioTrackItem item) => _items.Remove(item);
 
-    // Each track's number, how many there are, and how long all are; every row is told its number.
+    // Each track's number, how many there are, and how long all are; every item is told its number.
     private void TellList()
     {
         _numbers.Clear();
@@ -142,17 +157,17 @@ public partial class AudioPlayer
 
         TrackCount = number;
         TotalDuration = total;
-        TellRows(null);
+        TellItems(null);
     }
 
-    // The rows of the track, or all of them.
-    private void TellRows(AudioTrack track)
+    // The items of the track, or all of them.
+    private void TellItems(AudioTrack track)
     {
-        foreach (var row in _rows)
+        foreach (var item in _items)
         {
-            if (track == null || row.Track == track)
+            if (track == null || item.Track == track)
             {
-                row.Show();
+                item.Show();
             }
         }
     }
@@ -165,7 +180,7 @@ public partial class AudioPlayer
 
     private string TitleOf(AudioTrack track) => track == null ? null : InfoOf(track)?.Tags.Title ?? track.Name;
 
-    // Read of the track: kept, its rows, the length of all and the titles told. One that could not be read before - a
+    // Read of the track: kept, its items, the length of all and the titles told. One that could not be read before - a
     // file locked then - is readable from now on.
     private void Know(AudioTrack track, SoundInfo info)
     {
@@ -174,7 +189,7 @@ public partial class AudioPlayer
         {
             if (wasUnreadable)
             {
-                TellRows(track);
+                TellItems(track);
             }
 
             return;
@@ -185,7 +200,7 @@ public partial class AudioPlayer
             TotalDuration += info.Duration * times;
         }
 
-        TellRows(track);
+        TellItems(track);
         TellTitles();
     }
 
@@ -193,7 +208,7 @@ public partial class AudioPlayer
     {
         if (_unreadable.Add(track))
         {
-            TellRows(track);
+            TellItems(track);
         }
     }
 
@@ -534,7 +549,6 @@ public partial class AudioPlayer
         if (tracks != null)
         {
             tracks.CollectionChanged += OnTracksListChanged;
-            ReadInfo(tracks);
         }
     }
 
@@ -588,14 +602,22 @@ public partial class AudioPlayer
                 continue;
             }
 
-            // With no thread of its own to be told on, it reads here: what it keeps is touched on one thread only.
+            // With no thread to be told on, it waits to be shown - the thread it is shown on is one; shown, and none still,
+            // it reads here: what it keeps is touched on one thread only.
             if (_context == null)
             {
-                ReadInfo(track);
+                if (_isShown)
+                {
+                    ReadInfo(track);
+                }
+
                 continue;
             }
 
-            _infoReading = _infoReading.ContinueWith(_ => ReadInfo(track), TaskScheduler.Default);
+            if (_beingRead.Add(track))
+            {
+                _infoReading = _infoReading.ContinueWith(_ => ReadInfo(track), TaskScheduler.Default);
+            }
         }
     }
 
@@ -615,6 +637,7 @@ public partial class AudioPlayer
         // Taken off the list while it was read: nothing is kept of it.
         void Say()
         {
+            _beingRead.Remove(track);
             if (IsForgotten(track))
             {
                 return;

@@ -3,7 +3,7 @@ using Adamantium.Pulsar;
 namespace Adamantium.UI.Audio;
 
 /// <summary>A sound in an <see cref="AudioPlayer"/>'s list: where it is, and what it is called until its tags are read.
-/// What it is - title, format, length - the player reads and keeps; its row in the list shows it.</summary>
+/// What it is - title, format, length - the player reads and keeps; its <see cref="AudioTrackItem"/> in the list shows it.</summary>
 public sealed class AudioTrack
 {
     /// <summary>A file on the disk, named by its file until its tags are read.</summary>

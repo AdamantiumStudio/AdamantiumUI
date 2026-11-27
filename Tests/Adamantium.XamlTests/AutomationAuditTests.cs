@@ -187,7 +187,7 @@ public class AutomationAuditTests
         [typeof(AudioFormatBadges)] = (null, "marks beside the title, read as their texts; the player answers for what plays"),
         [typeof(Spectrum)] = (null, "a picture of what is heard; the player answers for what plays"),
         [typeof(Waveform)] = (T.Slider, null),
-        [typeof(AudioTrackRow)] = (null, "the content of a list item, which answers for it; its row is named by the title"),
+        [typeof(AudioTrackItem)] = (null, "the content of a list item, which answers for it; it is named by the title"),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),
