@@ -9,6 +9,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Printing;
+using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Printing;
 using Adamantium.UITests.Rendering;
 using NUnit.Framework;
@@ -16,9 +17,10 @@ using NUnit.Framework;
 namespace Adamantium.UITests.Printing;
 
 /// <summary>What is not vector is printed as pictures the GPU makes ahead, at the sheet's raster resolution, unfaded:
-/// an element with a shadow, or one showing a live surface, has its own drawing printed as a picture - its shadow past
-/// its edges with it - while what it holds stays vector; a soft edge or a reflection makes all it holds a picture. They
-/// are faded as shapes are, made once a resolution, in squares the GPU can draw, and freed with the document.</summary>
+/// an element's shadows and glows are pictures of their own - the outer under it, the inner between its fills and its
+/// text - and the element stays vector, its text too; one showing a live surface has its own drawing printed as a
+/// picture; a soft edge or a reflection makes all it holds a picture. They are faded as shapes are, made once a layout
+/// and resolution, in squares the GPU can draw, and freed with the document.</summary>
 public class ElementRasterPrintTests
 {
     // 192 dpi: two device pixels to the DIP.
@@ -52,7 +54,7 @@ public class ElementRasterPrintTests
     }
 
     [Test]
-    public async Task AShadowedElement_HasItsOwnDrawingPrintedAsAPicture_ShadowWithIt_AndWhatItHoldsStaysVector()
+    public async Task AShadowedElement_HasItsShadowPrintedAsAPicture_AndItselfAndWhatItHoldsStayVector()
     {
         var card = Card(out _);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(card);
@@ -63,14 +65,105 @@ public class ElementRasterPrintTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(gpu.Asked, Has.Count.EqualTo(1), "one picture, of the card's own drawing");
-            Assert.That(gpu.Asked[0].Alone, Is.True, "without the box it holds");
+            Assert.That(gpu.Asked, Has.Count.EqualTo(1), "one picture, of the card's shadow");
+            Assert.That(gpu.Asked[0].Content, Is.EqualTo(SnapshotContent.BandsUnder), "the shadow alone, under it");
             Assert.That(gpu.Asked[0].Region, Is.EqualTo(new Rect(-12, -8, 224, 124)),
                 "the card grown by its shadow: 12 blur round it, thrown 4 down");
             Assert.That(gpu.Asked[0].Scale, Is.EqualTo(2), "192 dpi");
             Assert.That(session.PlacedImages.Single().Destination, Is.EqualTo(new Rect(-12, -8, 224, 124)));
             Assert.That(session.Geometries.Select(entry => (entry.Brush as SolidColorBrush)?.Color),
-                Is.EqualTo(new Color?[] { Colors.Blue }), "the box, from its shape; the card's own fill is in the picture");
+                Is.EqualTo(new Color?[] { Colors.Red, Colors.Blue }), "the card and the box, from their shapes");
+        });
+    }
+
+    [Test]
+    public async Task AClippedElementsOuterShadow_IsAPictureOfItsBox_WhereItShowsThroughItsFill()
+    {
+        var card = Card(out _);
+        card.ClipToBounds = true;
+        card.Background = new SolidColorBrush(new Color(255, 0, 0, 128));
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(card);
+        var gpu = new SnapshotRecorder();
+        using var document = new ElementPrintDocument(card, null, ElementFit.Width, gpu);
+
+        await PrintAsync(document);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.BandsUnder));
+            Assert.That(gpu.Asked.Single().Region, Is.EqualTo(new Rect(0, 0, 200, 100)), "cut to its box by its clip");
+        });
+    }
+
+    [Test]
+    public async Task TextWithAShadow_StaysVector_OverItsShadowsPicture()
+    {
+        var heading = new Adamantium.UI.Controls.Text.TextBlock
+        {
+            Text = "A heading", FontSize = 28, Shadow = new Shadow { BlurRadius = 4, OffsetY = 2 },
+        };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(heading);
+        var gpu = new SnapshotRecorder();
+        using var document = new ElementPrintDocument(heading, null, ElementFit.Width, gpu);
+
+        var session = await PrintAsync(document);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.BandsUnder));
+            Assert.That(session.PlacedImages, Has.Count.EqualTo(1), "the shadow, as its picture");
+            Assert.That(session.Texts, Has.Count.EqualTo(1), "the heading itself, as text - selectable in the PDF");
+        });
+    }
+
+    [Test]
+    public async Task ATextsShadowAndGlow_AreAPictureUnderTheText_AndTheTextStaysVector()
+    {
+        var heading = new Adamantium.UI.Controls.Text.TextBlock
+        {
+            Text = "A heading", FontSize = 28, TextShadow = new TextShadow { Blur = 3 },
+            TextGlow = new TextGlow { Radius = 2 },
+        };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(heading);
+        var gpu = new SnapshotRecorder();
+        using var document = new ElementPrintDocument(heading, null, ElementFit.Width, gpu);
+
+        var session = await PrintAsync(document);
+
+        var screen = new RecordingDrawingSession { DrawsGlyphEffects = true };
+        document.DrawPage(0, screen);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.GlyphEffects),
+                "the glyphs' shadow and glow alone, the glyphs left out of the picture");
+            Assert.That(session.PlacedImages, Has.Count.EqualTo(1));
+            Assert.That(session.Texts, Has.Count.EqualTo(1), "the heading itself, as text");
+            Assert.That(screen.PlacedImages, Is.Empty, "a screen draws the effects with the text: no second shadow");
+            Assert.That(screen.Texts, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task AnInnerShadow_IsLaidBetweenTheFillsAndTheText_EachDrawnOnce()
+    {
+        var field = new Adamantium.UI.Controls.Text.TextBlock
+        {
+            Text = "Recessed", FontSize = 20, Background = new SolidColorBrush(Colors.LightGray),
+            Shadow = new Shadow { Inner = true, BlurRadius = 6, OffsetY = 2 },
+        };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(field);
+        var gpu = new SnapshotRecorder();
+        using var document = new ElementPrintDocument(field, null, ElementFit.Width, gpu);
+
+        var session = await PrintAsync(document);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.BandsOver), "inside it: no outer picture");
+            Assert.That(gpu.Asked.Single().Region.X, Is.Zero, "an inner band never leaves its box");
+            Assert.That(session.PlacedImages, Has.Count.EqualTo(1));
+            Assert.That(session.Texts, Has.Count.EqualTo(1), "the text once, in the second go");
         });
     }
 
@@ -89,7 +182,7 @@ public class ElementRasterPrintTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(gpu.Asked.Single().Alone, Is.False, "the soft edge reaches the box too");
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.Subtree), "the soft edge reaches the box too");
             Assert.That(session.Geometries, Is.Empty, "nothing of it from its shapes");
             Assert.That(session.PlacedImages, Has.Count.EqualTo(1));
             Assert.That(session.Groups.Select(group => group.Opacity).Where(opacity => opacity < 1),
@@ -113,11 +206,11 @@ public class ElementRasterPrintTests
         Assert.Multiple(() =>
         {
             Assert.That(session.Geometries.Select(entry => (entry.Brush as SolidColorBrush)?.Color),
-                Is.EquivalentTo(new Color?[] { Colors.Transparent, Colors.Green, Colors.Blue }),
-                "the panel's empty background, the strip and the box in the card, from their shapes");
-            Assert.That(session.PlacedImages, Has.Count.EqualTo(1), "the card's own drawing, as its picture");
+                Is.EquivalentTo(new Color?[] { Colors.Transparent, Colors.Green, Colors.Red, Colors.Blue }),
+                "the panel's empty background, the strip, the card and the box in it, from their shapes");
+            Assert.That(session.PlacedImages, Has.Count.EqualTo(1), "the card's shadow, as its picture");
             Assert.That(session.Groups.Count(group => group.Opacity == 0.5), Is.EqualTo(4),
-                "the panel's own drawing, the strip's, the card's picture and the box, each faded by the panel");
+                "the panel's own drawing, the strip's, the card's - its shadow in it - and the box, each faded by the panel");
         });
     }
 
@@ -223,7 +316,8 @@ public class ElementRasterPrintTests
             Assert.That(gpu.Asked, Has.Count.EqualTo(3), "the third square failed; the fourth was not asked for");
             Assert.That(gpu.Given.All(image => image.IsDisposed), Is.True, "the two made are freed");
             Assert.That(session.PlacedImages, Is.Empty);
-            Assert.That(session.Geometries, Has.Count.EqualTo(1), "a hole nowhere: the strip from its shape");
+            Assert.That(session.Geometries, Has.Count.EqualTo(1),
+                "a hole nowhere: the strip from its shape, without the shadow that could not be made whole");
         });
     }
 
@@ -256,7 +350,7 @@ public class ElementRasterPrintTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(gpu.Asked.Single().Alone, Is.False);
+            Assert.That(gpu.Asked.Single().Content, Is.EqualTo(SnapshotContent.Subtree));
             Assert.That(session.Groups.Where(group => group.Mask != null), Is.Empty, "the mask is in the picture");
             Assert.That(session.Geometries, Is.Empty);
         });

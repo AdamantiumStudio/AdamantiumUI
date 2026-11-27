@@ -184,6 +184,12 @@ public sealed partial class PdfContentSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
+        // The text's own background, under it where the run is, as the screen lays it down.
+        if (background.IsVisible())
+        {
+            Figures(background, null, new RectangleGeometry(new Rect(desiredSize)), transform);
+        }
+
         Text(renderingParameters, textLayout, foreground, transform);
         return this;
     }

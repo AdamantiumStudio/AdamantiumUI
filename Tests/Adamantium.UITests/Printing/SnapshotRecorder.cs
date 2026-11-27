@@ -12,7 +12,7 @@ namespace Adamantium.UITests.Printing;
 /// with a blank bitmap of the pixels the region covers at its scale.</summary>
 internal sealed class SnapshotRecorder : IVisualRenderer
 {
-    public List<(IUIComponent Visual, Rect Region, double Scale, bool Alone)> Asked { get; } = [];
+    public List<(IUIComponent Visual, Rect Region, double Scale, SnapshotContent Content)> Asked { get; } = [];
 
     public List<ImageSource> Given { get; } = [];
 
@@ -22,9 +22,10 @@ internal sealed class SnapshotRecorder : IVisualRenderer
     /// <summary>From which snapshot on, counted from 0, they fail - the GPU running out partway.</summary>
     public int FailsFrom { get; init; } = int.MaxValue;
 
-    public void RequestSnapshot(IUIComponent visual, Rect region, double scale, bool alone, Action<ImageSource> onReady)
+    public void RequestSnapshot(IUIComponent visual, Rect region, double scale, SnapshotContent content,
+        Action<ImageSource> onReady)
     {
-        Asked.Add((visual, region, scale, alone));
+        Asked.Add((visual, region, scale, content));
         if (Fails || Asked.Count > FailsFrom)
         {
             onReady(null);

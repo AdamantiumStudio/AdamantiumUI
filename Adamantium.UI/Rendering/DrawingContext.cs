@@ -330,7 +330,10 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    {
       throw new NotImplementedException();
    }
-   
+
+   /// <summary>The GPU draws a text's glyph effects with its glyphs.</summary>
+   public bool DrawsGlyphEffects => true;
+
    IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke)
    {
       // Only emit the text's background rect when it's actually visible. Every TextBlock passed its Background here

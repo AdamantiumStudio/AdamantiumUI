@@ -60,6 +60,19 @@ public class PdfPrintedTextTests
 
     private static string Text(PdfDocument document) => document.Pages[0].ReadText().Text.Trim();
 
+    [Test]
+    public void ATextsBackground_IsLaidUnderIt_AsOnTheScreen()
+    {
+        var red = new SolidColorBrush(new Color(255, 0, 0, 255));
+        var saved = Save(session =>
+            session.DrawText(new TextRenderingParameters(), new Size<double>(100, 30), Lay("Back"), Black, red, null));
+
+        var content = System.Text.Encoding.ASCII.GetString(saved.Pages[0].GetContents().Span);
+        var fill = content.IndexOf("1 0 0 rg", StringComparison.Ordinal);
+        Assert.That(fill, Is.GreaterThanOrEqualTo(0).And.LessThan(content.IndexOf("BT", StringComparison.Ordinal)),
+            "the red background, before the text");
+    }
+
     [TestCase("The quick brown fox, 2025")]
     [TestCase("office affluent waffle")]
     [TestCase("a\tb")]

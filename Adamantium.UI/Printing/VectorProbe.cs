@@ -11,18 +11,32 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Printing;
 
-/// <summary>Whether an element's own drawing can be printed as vector: it paints with no visual brush and puts down no
-/// picture whose pixels live on the GPU - a live 3D view, a game. It draws nothing; it only looks.</summary>
+/// <summary>What of an element's own drawing a print cannot put down as vector: a visual brush, a picture whose pixels
+/// live on the GPU - a live 3D view, a game - and the effects of its text's glyphs, outlines, shadows, glows and
+/// reflections, which the GPU draws from the glyphs' distance fields. It draws nothing; it only looks.</summary>
 internal sealed class VectorProbe : IDrawingContext, IDrawingSession
 {
     private bool _isVector = true;
 
-    /// <summary>Whether what <paramref name="component"/> draws itself, its subtree aside, is all vector.</summary>
-    public static bool DrawsVector(IUIComponent component)
+    /// <summary>Whether what it draws itself, its subtree aside, is all vector - its text's glyphs too.</summary>
+    public bool DrawsVector => _isVector;
+
+    /// <summary>Whether its text wears effects on its glyphs, which a print lays under the glyphs as a picture.</summary>
+    public bool DrawsTextEffects { get; private set; }
+
+    /// <summary>Looks at what <paramref name="component"/> draws itself.</summary>
+    public static VectorProbe Of(IUIComponent component)
     {
         var probe = new VectorProbe();
         component.RenderReadOnly(probe);
-        return probe._isVector;
+        return probe;
+    }
+
+    // A text drawn: its glyphs are vector, their effects are not.
+    private IDrawingSession Writes(TextLayout layout, params Brush[] brushes)
+    {
+        DrawsTextEffects |= layout?.HasGlyphEffects == true;
+        return Paints(brushes);
     }
 
     public IDrawingSession ForControl(IUIComponent component) => this;
@@ -99,23 +113,24 @@ internal sealed class VectorProbe : IDrawingContext, IDrawingSession
         int frameLayer, Rect sourceUv) => Shows(image, frameLayer, filter);
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
-        TextLayout textLayout, Brush foreground, Brush background, Brush stroke) => Paints(foreground, background, stroke);
+        TextLayout textLayout, Brush foreground, Brush background, Brush stroke) =>
+        Writes(textLayout, foreground, background, stroke);
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform) =>
-        Paints(foreground, background, stroke);
+        Writes(textLayout, foreground, background, stroke);
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Placement placement) =>
-        Paints(foreground, background, stroke);
+        Writes(textLayout, foreground, background, stroke);
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects) =>
-        Paints(foreground, background, stroke);
+        Writes(textLayout, foreground, background, stroke);
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize,
         TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects,
-        RectangleF window) => Paints(foreground, background, stroke);
+        RectangleF window) => Writes(textLayout, foreground, background, stroke);
 
     public IDrawingSession DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform) =>
         Paints(fill, stroke?.Brush);

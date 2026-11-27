@@ -11,15 +11,19 @@ using Adamantium.UI.Rendering;
 namespace Adamantium.UI.Printing;
 
 /// <summary>Pictures of the parts of an element that are not vector, made by the GPU at one resolution, unfaded - the
-/// print fades them as it fades shapes. An element with a shadow or a glow, or whose own drawing shows a live surface or
-/// paints with a visual brush, has its own drawing made a picture - its shadow past its edges with it - and what it
-/// holds stays vector, its text too. A soft edge or a reflection reaches all an element holds: that one is made a picture
+/// print fades them as it fades shapes. An element's shadows and glows are pictures of their own - the outer ones, and
+/// its glyphs' outlines, shadows, glows and reflections, laid under its drawing, the inner ones between its fills and
+/// its text - and the element itself stays vector, its text too. One whose own drawing shows a live surface or paints with a visual brush has its own drawing made a picture,
+/// what it holds staying vector. A soft edge or a reflection reaches all an element holds: that one is made a picture
 /// whole. Large pictures are made in squares the GPU can draw.</summary>
 internal sealed class ElementRasters : IDisposable
 {
     // The largest texture side the GPU is asked to draw, as for a raster on the screen.
     private const int LargestTexture = 8192;
 
+    private readonly Dictionary<IUIComponent, List<RasterTile>> _under = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IUIComponent, List<RasterTile>> _over = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IUIComponent, List<RasterTile>> _effects = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IUIComponent, List<RasterTile>> _own = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IUIComponent, List<RasterTile>> _whole = new(ReferenceEqualityComparer.Instance);
 
@@ -36,6 +40,21 @@ internal sealed class ElementRasters : IDisposable
     public IReadOnlyList<RasterTile> OwnTilesOf(IUIComponent component) =>
         _own.TryGetValue(component, out var tiles) ? tiles : null;
 
+    /// <summary>The picture of <paramref name="component"/>'s outer shadows and glows, laid under its drawing; null for
+    /// none.</summary>
+    public IReadOnlyList<RasterTile> BandsUnderOf(IUIComponent component) =>
+        _under.TryGetValue(component, out var tiles) ? tiles : null;
+
+    /// <summary>The picture of <paramref name="component"/>'s inner shadows and glows, laid over its fills and under its
+    /// text; null for none.</summary>
+    public IReadOnlyList<RasterTile> BandsOverOf(IUIComponent component) =>
+        _over.TryGetValue(component, out var tiles) ? tiles : null;
+
+    /// <summary>The picture of <paramref name="component"/>'s glyph effects - its text's outlines, shadows, glows and
+    /// reflections - laid over its fills and under its glyphs; null for none.</summary>
+    public IReadOnlyList<RasterTile> GlyphEffectsOf(IUIComponent component) =>
+        _effects.TryGetValue(component, out var tiles) ? tiles : null;
+
     /// <summary>The pictures <paramref name="component"/> and all it holds are printed as; null where they are not.
     /// </summary>
     public IReadOnlyList<RasterTile> WholeTilesOf(IUIComponent component) =>
@@ -47,10 +66,16 @@ internal sealed class ElementRasters : IDisposable
     public static bool NeedsWholeRaster(IUIComponent component) =>
         component.SoftEdge > 0 || component.Reflection is { Shows: true };
 
-    /// <summary>Whether <paramref name="component"/>'s own drawing has to be a picture.</summary>
-    public static bool NeedsOwnRaster(IUIComponent component) =>
-        component.Shadow is { IsEnabled: true } || component.Aura is { IsEnabled: true } ||
-        !VectorProbe.DrawsVector(component);
+    /// <summary>Whether <paramref name="component"/> wears a shadow or a glow.</summary>
+    public static bool WearsBands(IUIComponent component) =>
+        component.Shadow is { IsEnabled: true } || component.Aura is { IsEnabled: true };
+
+    // Whether it wears an outer band, which reaches past its edges under its fills; an inner one lies over them.
+    private static bool WearsOuterBand(IUIComponent component) =>
+        component.Shadow is { IsEnabled: true, Inner: false } || component.Aura is { IsEnabled: true, Inner: false };
+
+    private static bool WearsInnerBand(IUIComponent component) =>
+        component.Shadow is { IsEnabled: true, Inner: true } || component.Aura is { IsEnabled: true, Inner: true };
 
     /// <summary>Takes the pictures of everything in <paramref name="element"/> that needs one, one after another, from
     /// <paramref name="renderer"/>. On the UI thread: the snapshots come back there.</summary>
@@ -75,24 +100,55 @@ internal sealed class ElementRasters : IDisposable
             // A picture that could not be made - no GPU to spare, no tree to read it in - is none: the element is printed
             // from its shapes instead of not at all. Each is made as fine in its own units as the sheet shows it, so one a
             // view box enlarges is made finer.
-            var own = NeedsOwnRaster(component);
+            var probe = VectorProbe.Of(component);
+            var vector = probe.DrawsVector;
+            var textEffects = probe.DrawsTextEffects;
+            var bands = WearsBands(component) || textEffects;
             var relative = component.WorldTransform * toElement;
             var scale = Scale * Math.Sqrt(Math.Abs(relative.M11 * relative.M22 - relative.M12 * relative.M21));
-            if (NeedsWholeRaster(component) || own && component.OpacityMask != null)
+            var box = BoxOf(component);
+
+            // A masked element with a picture is one picture whole: its mask, in it, reaches what it holds once.
+            if (NeedsWholeRaster(component) || (bands || !vector) && component.OpacityMask != null)
             {
-                if (await SnapAsync(renderer, component, InkOf(component), scale, false, cancellation) is { Count: > 0 } whole)
+                if (await SnapAsync(renderer, component, InkOf(component), scale, SnapshotContent.Subtree,
+                        cancellation) is { Count: > 0 } whole)
                 {
                     _whole[component] = whole;
                     continue;
                 }
             }
-            else if (own)
+            else if (!vector)
             {
-                var box = BoxOf(component);
-                if (await SnapAsync(renderer, component, component.ClipToBounds ? box : Outset(component, box), scale, true,
-                        cancellation) is { Count: > 0 } tiles)
+                if (await SnapAsync(renderer, component, component.ClipToBounds ? box : Outset(component, box), scale,
+                        SnapshotContent.Own, cancellation) is { Count: > 0 } own)
                 {
-                    _own[component] = tiles;
+                    _own[component] = own;
+                }
+            }
+            else if (bands)
+            {
+                // Its outer bands - cut to its box by its own clip, where they still show through a fill that lets them -
+                // its inner ones, which never leave its box, and its glyphs' effects, cut to its box by its own clip.
+                if (WearsOuterBand(component) &&
+                    await SnapAsync(renderer, component, component.ClipToBounds ? box : Outset(component, box), scale,
+                        SnapshotContent.BandsUnder, cancellation) is { Count: > 0 } under)
+                {
+                    _under[component] = under;
+                }
+
+                if (textEffects &&
+                    await SnapAsync(renderer, component, component.ClipToBounds ? box : Outset(component, box), scale,
+                        SnapshotContent.GlyphEffects, cancellation) is { Count: > 0 } effects)
+                {
+                    _effects[component] = effects;
+                }
+
+                if (WearsInnerBand(component) &&
+                    await SnapAsync(renderer, component, box, scale, SnapshotContent.BandsOver, cancellation) is
+                        { Count: > 0 } over)
+                {
+                    _over[component] = over;
                 }
             }
 
@@ -106,18 +162,15 @@ internal sealed class ElementRasters : IDisposable
 
     public void Dispose()
     {
-        foreach (var tiles in _own.Values)
+        foreach (var pictures in new[] { _under, _over, _effects, _own, _whole })
         {
-            Free(tiles);
-        }
+            foreach (var tiles in pictures.Values)
+            {
+                Free(tiles);
+            }
 
-        foreach (var tiles in _whole.Values)
-        {
-            Free(tiles);
+            pictures.Clear();
         }
-
-        _own.Clear();
-        _whole.Clear();
     }
 
     private static void Free(List<RasterTile> tiles)
@@ -131,7 +184,7 @@ internal sealed class ElementRasters : IDisposable
     // The pictures of a region, square by square; none at all where one of them could not be made - a band left out of
     // the picture would be a hole in the print.
     private static async Task<List<RasterTile>> SnapAsync(IVisualRenderer renderer, IUIComponent component, Rect region,
-        double scale, bool alone, CancellationToken cancellation)
+        double scale, SnapshotContent content, CancellationToken cancellation)
     {
         var tiles = new List<RasterTile>();
         if (!(scale > 0))
@@ -141,7 +194,7 @@ internal sealed class ElementRasters : IDisposable
 
         foreach (var piece in PiecesOf(region, scale))
         {
-            if (await SnapPieceAsync(renderer, component, piece, scale, alone, cancellation) is not { } image)
+            if (await SnapPieceAsync(renderer, component, piece, scale, content, cancellation) is not { } image)
             {
                 Free(tiles);
                 tiles.Clear();
@@ -156,11 +209,11 @@ internal sealed class ElementRasters : IDisposable
 
     // One snapshot, awaited. Called off, it is let go of; a picture that comes after is nobody's and is freed.
     private static Task<ImageSource> SnapPieceAsync(IVisualRenderer renderer, IUIComponent component, Rect piece,
-        double scale, bool alone, CancellationToken cancellation)
+        double scale, SnapshotContent content, CancellationToken cancellation)
     {
         var taken = new TaskCompletionSource<ImageSource>(TaskCreationOptions.RunContinuationsAsynchronously);
         var stop = cancellation.Register(() => taken.TrySetCanceled(cancellation));
-        renderer.RequestSnapshot(component, piece, scale, alone, image =>
+        renderer.RequestSnapshot(component, piece, scale, content, image =>
         {
             stop.Dispose();
             if (!taken.TrySetResult(image))
