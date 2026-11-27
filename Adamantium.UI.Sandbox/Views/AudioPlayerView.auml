@@ -10,6 +10,10 @@
                 <ToggleSwitch Content="{Localize AudioPlayerPageStrings.Waveform}"
                               IsChecked="{Binding ShowsWaveform, Mode=TwoWay}"
                               AutomationProperties.AutomationId="AudioShowsWaveform"/>
+                <Button Content="{Localize AudioPlayerPageStrings.AddFile}" Command="{Binding AddFileCommand}"
+                        IsEnabled="{Binding CanAddFiles}" AutomationProperties.AutomationId="AudioAddFile"/>
+                <Button Content="{Localize AudioPlayerPageStrings.AddFolder}" Command="{Binding AddFolderCommand}"
+                        IsEnabled="{Binding CanAddFiles}" AutomationProperties.AutomationId="AudioAddFolder"/>
             </StackPanel>
             <audio:AudioPlayer Tracks="{Binding Tracks}" View="{Binding View}" ShowsWaveform="{Binding ShowsWaveform}"
                                MinWidth="320" AutomationProperties.AutomationId="Player"/>
