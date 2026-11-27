@@ -1,0 +1,26 @@
+<Language>
+    <Phrase Key="Player" Text="Audio player"/>
+    <Phrase Key="Play" Text="Play"/>
+    <Phrase Key="Pause" Text="Pause"/>
+    <Phrase Key="Stop" Text="Stop"/>
+    <Phrase Key="Previous" Text="Previous"/>
+    <Phrase Key="Next" Text="Next"/>
+    <Phrase Key="Repeat" Text="Repeat"/>
+    <Phrase Key="RepeatOff" Text="Repeat is off"/>
+    <Phrase Key="RepeatList" Text="Repeat the list"/>
+    <Phrase Key="RepeatTrack" Text="Repeat the track"/>
+    <Phrase Key="Shuffle" Text="Shuffle"/>
+    <Phrase Key="Volume" Text="Volume"/>
+    <Phrase Key="Position" Text="Position"/>
+    <Phrase Key="Tracks" Text="Tracks"/>
+    <Phrase Key="TimeLeft" Text="Show the time left"/>
+    <Phrase Key="Kilohertz" Text="kHz"/>
+    <Phrase Key="Kilobits" Text="kbit/s"/>
+    <Phrase Key="Mono" Text="Mono"/>
+    <Phrase Key="Stereo" Text="Stereo"/>
+    <Phrase Key="Surround" Text="Surround"/>
+    <Phrase Key="CannotPlay" Text="This sound cannot be played"/>
+    <Phrase Key="NothingOpen" Text="No sound"/>
+    <Phrase Key="Of" Text="of"/>
+    <Phrase Key="Left" Text="left"/>
+</Language>

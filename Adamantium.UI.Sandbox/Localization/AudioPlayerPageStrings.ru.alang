@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="View" Text="Вид"/>
+    <Phrase Key="Waveform" Text="Волна"/>
+    <Phrase Key="AddFile" Text="Добавить файл…"/>
+    <Phrase Key="AddFolder" Text="Добавить папку…"/>
+    <Phrase Key="SoundFiles" Text="Звуковые файлы"/>
+</Language>

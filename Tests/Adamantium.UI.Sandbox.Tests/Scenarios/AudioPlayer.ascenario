@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The audio player page: the list says what each sound is once read - its title, its format, its length; with the volume at nothing first, so nothing is heard, play plays the first - its title and its format marks shown, the button then a pause - and next the next; each of the other looks shows its parts and not the others', and the full one comes back with its list.">
+  <Select Target="id=GalleryTabs/id=AudioPlayer" />
+  <Wait Target="id=Player/id=AudioTracks/name=Rising Tones" />
+  <Expect Target="id=Player/id=AudioTracks/name=Chirps" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioTracks/name=Glass Bells/name=FLAC" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioTracks/name=Low Drone/name=00:10" Offscreen="False" />
+  <Wait Target="id=Player/id=AudioTotal" Name="00:39" />
+  <Expect Target="id=Player/id=AudioTrackCount" Name="5" />
+  <Expect Target="id=Player/name=No sound" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioStop" Enabled="False" />
+  <Set Target="id=Player/id=AudioVolume" Value="0" />
+
+  <Invoke Target="id=Player/id=AudioPlayPause" />
+  <Expect Target="id=Player/id=AudioTitle" Name="Rising Tones" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioPlayPause" Name="Pause" />
+  <Expect Target="id=Player/name=OPUS" Offscreen="False" />
+  <Expect Target="id=Player/name=Stereo" Offscreen="False" />
+  <Expect Target="id=Player/name=Mono" Offscreen="True" />
+  <Expect Target="id=Player/id=AudioDuration" Name="00:10" />
+  <Expect Target="id=Player/id=AudioStop" Enabled="True" />
+  <Invoke Target="id=Player/id=AudioNext" />
+  <Expect Target="id=Player/id=AudioTitle" Name="Pink Rain" />
+  <Expect Target="id=Player/name=VORBIS" Offscreen="False" />
+  <Invoke Target="id=Player/id=AudioPlayPause" />
+  <Expect Target="id=Player/id=AudioPlayPause" Name="Play" />
+
+  <!-- The waveform is the position then, and no slider over it: set, it is where the track is. -->
+  <Expect Target="id=Player/id=AudioWaveform" Offscreen="True" />
+  <Toggle Target="id=AudioShowsWaveform" />
+  <Wait Target="id=Player/id=AudioWaveform" Type="Slider" Name="Position" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioPosition" Offscreen="True" />
+  <Set Target="id=Player/id=AudioWaveform" Value="4" />
+  <Expect Target="id=Player/id=AudioTime" Name="Show the time left" />
+  <Toggle Target="id=AudioShowsWaveform" />
+  <WaitIdle />
+  <Expect Target="id=Player/id=AudioWaveform" Offscreen="True" />
+  <Expect Target="id=Player/id=AudioPrevious" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioTitle" Offscreen="False" />
+  <Wait Target="id=Player/id=AudioPosition" Value="4" Offscreen="False" />
+
+  <Expand Target="id=AudioView" />
+  <Select Target="id=AudioView/name=Bar" />
+  <Wait Target="id=Player/id=AudioStop" />
+  <Expect Target="id=Player/id=AudioTime" Offscreen="False" />
+  <Expect Target="id=Player/name=VORBIS" Offscreen="False" />
+  <Expect Target="id=Player/name=Stereo" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioPosition" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioDuration" Name="00:08" />
+  <Expect Target="id=Player/id=AudioRepeat" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioVolume" Offscreen="False" />
+  <Absent Target="id=Player/id=AudioTracks" />
+  <Absent Target="id=Player/id=AudioTitle" />
+  <Absent Target="id=Player/id=AudioNext" />
+
+  <Expand Target="id=AudioView" />
+  <Select Target="id=AudioView/name=Line" />
+  <Wait Target="id=Player/id=AudioTitle" Name="Pink Rain" />
+  <Expect Target="id=Player/name=VORBIS" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioDuration" Name="00:08" />
+  <Expect Target="id=Player/id=AudioPosition" Offscreen="False" />
+  <Absent Target="id=Player/id=AudioNext" />
+
+  <Expand Target="id=AudioView" />
+  <Select Target="id=AudioView/name=Mini" />
+  <Wait Target="id=Player/id=AudioTime" />
+  <Expect Target="id=Player/id=AudioPlayPause" Name="Play" Offscreen="False" />
+  <Expect Target="id=Player/id=AudioPosition" Offscreen="False" />
+  <Absent Target="id=Player/id=AudioTitle" />
+
+  <Expand Target="id=AudioView" />
+  <Select Target="id=AudioView/name=Full" />
+  <Wait Target="id=Player/id=AudioTracks/name=Rising Tones" />
+  <Expect Target="id=Player/id=AudioTitle" Name="Pink Rain" />
+</Scenario>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.Audio">
+
+    <!-- Small marks in a row or a column, lit as a display's cells: the codec, the sample rate, the bitrate, the channels -
+         those asked for; a mark of nothing known takes no room. Each cell is as wide as the widest it can say - a sample
+         of it, hidden, keeps the room - so the marks are as wide for every sound, and what they stand in does not change
+         its width from track to track. What a cell says comes before its samples: it is what is found by its text. -->
+    <Style Selector="AudioFormatBadges">
+        <Setter Property="Background" Value="{ObservableResource SystemFillColorSuccessBackground}"/>
+        <Setter Property="Foreground" Value="{ObservableResource SystemFillColorSuccess}"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioFormatBadges">
+                    <StackPanel Orientation="{TemplateBinding Orientation}" Spacing="3">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsCodec, Converter={BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <TextBlock Text="{TemplateBinding Codec}" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                           Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                                <TextBlock Text="VORBIS" Visibility="Hidden" FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                            </Grid>
+                        </Border>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsKilohertz, Converter={BooleanToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                <Grid>
+                                    <TextBlock Text="{TemplateBinding Kilohertz}" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                               Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                                    <TextBlock Text="88.2" Visibility="Hidden" FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                                    <TextBlock Text="192" Visibility="Hidden" FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                                </Grid>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Kilohertz}" FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsKilobits, Converter={BooleanToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                <Grid>
+                                    <TextBlock Text="{TemplateBinding Kilobits}" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                               Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                                    <TextBlock Text="8888" Visibility="Hidden" FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                                </Grid>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Kilobits}" FontWeight="SemiBold"
+                                           Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="4 1"
+                                Visibility="{Ancestor local:AudioFormatBadges, ShowsChannels, Converter={BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Mono}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" Foreground="{TemplateBinding Foreground}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Visibility="{Ancestor local:AudioFormatBadges, ShowsMono, Converter={BooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Stereo}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" Foreground="{TemplateBinding Foreground}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Visibility="{Ancestor local:AudioFormatBadges, ShowsStereo, Converter={BooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Surround}" TextTransform="Uppercase" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" Foreground="{TemplateBinding Foreground}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Visibility="{Ancestor local:AudioFormatBadges, ShowsSurround, Converter={BooleanToVisibilityConverter}}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Mono}" TextTransform="Uppercase" Visibility="Hidden"
+                                           FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Stereo}" TextTransform="Uppercase" Visibility="Hidden"
+                                           FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                                <TextBlock Text="{Localize AudioPlayerStrings.Surround}" TextTransform="Uppercase" Visibility="Hidden"
+                                           FontWeight="SemiBold" FontSize="{TemplateBinding FontSize}"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>

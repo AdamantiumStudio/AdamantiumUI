@@ -40,6 +40,7 @@ public partial class GalleryViewModel
         new ShapesViewModel(),
         new LoadersViewModel(),
         new InfoBarViewModel(),
+        new AudioPlayerViewModel(),
         new AnimationsViewModel(),
         new SlidePanelViewModel(),
         new ImageViewModel(),

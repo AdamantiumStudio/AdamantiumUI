@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net11.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Platforms>AnyCPU</Platforms>
+        <Configurations>Debug;Release</Configurations>
+        <LangVersion>latest</LangVersion>
+        <IsPackable>true</IsPackable>
+        <Description>An audio player for Adamantium UI: WAV, FLAC, MP3, Ogg Vorbis and Opus, played by the Pulsar engine, with a playlist, a spectrum and a waveform, in four looks the theme draws.</Description>
+        <PackageTags>adamantium;ui;audio;player;playlist;spectrum;waveform</PackageTags>
+        <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Adamantium.UI.Audio.Tests" />
+    </ItemGroup>
+
+    <!-- The player's style set (Themes/*.auml) is compiled by the markup generator, as in the UI's other libraries. -->
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
+        <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+        <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Pulsar" />
+        <AdamantiumEngineReference Include="Adamantium.Core" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
+        <!-- The string tables from .alang files, and the parser the markup generator reads them with. -->
+        <AdamantiumEngineReference Include="Adamantium.Localization.Generators" Role="Generator" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <Analyzer Include="$(PkgAdamantium_Core_Shared)\lib\netstandard2.0\Adamantium.Core.Shared.dll" Condition="'$(PkgAdamantium_Core_Shared)' != ''" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="$(ProjectDir)Themes\**\*.auml" />
+        <AdditionalFiles Include="$(ProjectDir)Localization\**\*.alang" />
+        <CompilerVisibleProperty Include="RootNamespace" />
+        <CompilerVisibleProperty Include="NeutralLanguage" />
+        <CompilerVisibleProperty Include="OutputType" />
+    </ItemGroup>
+
+</Project>

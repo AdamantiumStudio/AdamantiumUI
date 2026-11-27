@@ -1,0 +1,22 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:audio="clr-namespace:Adamantium.UI.Audio;assembly=Adamantium.UI.Audio">
+    <!-- The player with the sandbox's five sounds; above it, its look and whether it shows the waveform. -->
+    <ScrollViewer Margin="24" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical" Spacing="12" MaxWidth="760" HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <DropDown ItemsSource="{Binding Views}" SelectedItem="{Binding View, Mode=TwoWay}" Width="140"
+                          AutomationProperties.AutomationId="AudioView"
+                          AutomationProperties.Name="{Localize AudioPlayerPageStrings.View}"/>
+                <ToggleSwitch Content="{Localize AudioPlayerPageStrings.Waveform}"
+                              IsChecked="{Binding ShowsWaveform, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="AudioShowsWaveform"/>
+                <Button Content="{Localize AudioPlayerPageStrings.AddFile}" Command="{Binding AddFileCommand}"
+                        IsEnabled="{Binding CanAddFiles}" AutomationProperties.AutomationId="AudioAddFile"/>
+                <Button Content="{Localize AudioPlayerPageStrings.AddFolder}" Command="{Binding AddFolderCommand}"
+                        IsEnabled="{Binding CanAddFiles}" AutomationProperties.AutomationId="AudioAddFolder"/>
+            </StackPanel>
+            <audio:AudioPlayer Tracks="{Binding Tracks}" View="{Binding View}" ShowsWaveform="{Binding ShowsWaveform}"
+                               MinWidth="320" AutomationProperties.AutomationId="Player"/>
+        </StackPanel>
+    </ScrollViewer>
+</View>

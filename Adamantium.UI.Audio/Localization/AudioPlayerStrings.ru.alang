@@ -1,0 +1,26 @@
+<Language>
+    <Phrase Key="Player" Text="Аудиоплеер"/>
+    <Phrase Key="Play" Text="Играть"/>
+    <Phrase Key="Pause" Text="Пауза"/>
+    <Phrase Key="Stop" Text="Стоп"/>
+    <Phrase Key="Previous" Text="Предыдущий"/>
+    <Phrase Key="Next" Text="Следующий"/>
+    <Phrase Key="Repeat" Text="Повтор"/>
+    <Phrase Key="RepeatOff" Text="Повтор выключен"/>
+    <Phrase Key="RepeatList" Text="Повторять список"/>
+    <Phrase Key="RepeatTrack" Text="Повторять трек"/>
+    <Phrase Key="Shuffle" Text="Перемешать"/>
+    <Phrase Key="Volume" Text="Громкость"/>
+    <Phrase Key="Position" Text="Позиция"/>
+    <Phrase Key="Tracks" Text="Треки"/>
+    <Phrase Key="TimeLeft" Text="Показывать, сколько осталось"/>
+    <Phrase Key="Kilohertz" Text="кГц"/>
+    <Phrase Key="Kilobits" Text="кбит/с"/>
+    <Phrase Key="Mono" Text="Моно"/>
+    <Phrase Key="Stereo" Text="Стерео"/>
+    <Phrase Key="Surround" Text="Объёмный"/>
+    <Phrase Key="CannotPlay" Text="Этот звук не воспроизводится"/>
+    <Phrase Key="NothingOpen" Text="Нет звука"/>
+    <Phrase Key="Of" Text="из"/>
+    <Phrase Key="Left" Text="осталось"/>
+</Language>

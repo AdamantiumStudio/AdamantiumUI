@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.Audio">
+
+    <!-- An item of the player's list, in a row: its number, the title, the format, the length; one that can not be played, faded.
+         It is found by its title. -->
+    <Style Selector="AudioTrackItem">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:AudioTrackItem">
+                    <Grid x:Name="Row" ColumnDefinitions="28,*,90,48" AutomationProperties.Name="{TemplateBinding Title}">
+                        <TextBlock Text="{Ancestor local:AudioTrackItem, Number}" Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        <TextBlock Grid.Column="1" Text="{TemplateBinding Title}" TextTrimming="CharEllipses"/>
+                        <TextBlock Grid.Column="2" Text="{TemplateBinding Codec}" TextTransform="Uppercase"
+                                   Foreground="{ObservableResource TextFillColorTertiary}"/>
+                        <TextBlock Grid.Column="3" HorizontalTextAlignment="Right"
+                                   Text="{Ancestor local:AudioTrackItem, Duration, Converter={TimeSpanToClockTextConverter}}"
+                                   Foreground="{ObservableResource TextFillColorTertiary}"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="CannotBeRead" Value="true">
+                            <Setter TargetName="Row" Property="Opacity" Value="0.45"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>
