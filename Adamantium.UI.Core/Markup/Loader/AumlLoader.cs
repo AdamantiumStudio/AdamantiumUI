@@ -21,6 +21,9 @@ public static class AumlLoader
 {
     private static readonly ConditionalWeakTable<Assembly, LanguageTableShape[]> TablesByAssembly = new();
 
+    /// <summary>Builds the element tree of an AUML text without compiling it.</summary>
+    /// <param name="aumlText">The AUML markup.</param>
+    /// <param name="assemblies">Where the types it names are looked up, besides the UI's own.</param>
     /// <param name="typeMapper">Optional substitution applied to every resolved type before instantiation
     /// (e.g. map a root <c>IWindow</c> to a headless virtual window). Returns the type to instantiate.</param>
     public static AumlLoadResult Load(string aumlText, IEnumerable<Assembly> assemblies = null, Func<Type, Type> typeMapper = null)

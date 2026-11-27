@@ -41,6 +41,9 @@ public sealed class ElementPrintDocument : IPrintDocument, IDisposable
     {
     }
 
+    /// <param name="element">The element printed.</param>
+    /// <param name="title">The document's name in the print queue; null for none.</param>
+    /// <param name="fit">How the element is laid on the sheet.</param>
     /// <param name="renderer">What makes the pictures; the application's when null.</param>
     internal ElementPrintDocument(IUIComponent element, string title, ElementFit fit, IVisualRenderer renderer)
     {

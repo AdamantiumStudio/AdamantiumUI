@@ -1,8 +1,9 @@
 namespace Adamantium.UI.Controls;
 
-/// <summary>How much room a ribbon command takes in its group. The author states a RANGE
-/// (<see cref="Ribbon.MaxSizeProperty"/> / <see cref="Ribbon.MinSizeProperty"/>); the group decides the actual
-/// <see cref="Ribbon.SizeProperty"/> within it.</summary>
+/// <summary>How much room a ribbon command takes in its group. The author states the largest
+/// (<see cref="Ribbon.MaxSizeProperty"/>) and the steps of its group at which it shrinks
+/// (<see cref="Ribbon.CollapseToMediumProperty"/>, <see cref="Ribbon.CollapseToSmallProperty"/>); the group decides the
+/// actual <see cref="Ribbon.SizeProperty"/>.</summary>
 public enum RibbonSize
 {
     /// <summary>Big icon over the label - one per column.</summary>

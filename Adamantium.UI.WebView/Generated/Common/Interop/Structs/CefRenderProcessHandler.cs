@@ -48,7 +48,7 @@ public unsafe partial struct CefRenderProcessHandler
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefRenderProcessHandler*, Adamantium.UI.WebView.Cef.Interop.CefBrowser*, Adamantium.UI.WebView.Cef.Interop.CefFrame*, Adamantium.UI.WebView.Cef.Interop.CefV8Context*, void> on_context_released;
     ///<summary>
-    /// Called for global uncaught exceptions in a frame. Execution of this callback is disabled by default. To enable set cef_settings_t.uncaught_exception_stack_size > 0.
+    /// Called for global uncaught exceptions in a frame. Execution of this callback is disabled by default. To enable set cef_settings_t.uncaught_exception_stack_size &gt; 0.
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefRenderProcessHandler*, Adamantium.UI.WebView.Cef.Interop.CefBrowser*, Adamantium.UI.WebView.Cef.Interop.CefFrame*, Adamantium.UI.WebView.Cef.Interop.CefV8Context*, Adamantium.UI.WebView.Cef.Interop.CefV8Exception*, Adamantium.UI.WebView.Cef.Interop.CefV8StackTrace*, void> on_uncaught_exception;
     ///<summary>

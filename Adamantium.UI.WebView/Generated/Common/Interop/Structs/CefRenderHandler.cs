@@ -72,7 +72,7 @@ public unsafe partial struct CefRenderHandler
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefRenderHandler*, Adamantium.UI.WebView.Cef.Interop.CefBrowser*, Adamantium.UI.WebView.Cef.Interop.CefDragData*, CefDragOperationsMask, int, int, int> start_dragging;
     ///<summary>
-    /// Called when the web view wants to update the mouse cursor during a drag & drop operation. |operation| describes the allowed operation (none, move, copy, link).
+    /// Called when the web view wants to update the mouse cursor during a drag &amp; drop operation. |operation| describes the allowed operation (none, move, copy, link).
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefRenderHandler*, Adamantium.UI.WebView.Cef.Interop.CefBrowser*, CefDragOperationsMask, void> update_drag_cursor;
     ///<summary>

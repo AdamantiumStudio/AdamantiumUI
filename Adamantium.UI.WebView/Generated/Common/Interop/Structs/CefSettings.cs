@@ -29,7 +29,7 @@ public unsafe partial struct CefSettings
     ///</summary>
     public int no_sandbox;
     ///<summary>
-    /// The path to a separate executable that will be launched for sub-processes. If this value is empty on Windows or Linux then the main process executable will be used. If this value is empty on macOS then a helper executable must exist at "Contents/Frameworks/<app> Helper.app/Contents/MacOS/<app> Helper" in the top-level app bundle. See the comments on CefExecuteProcess() for details. If this value is non-empty then it must be an absolute path. Also configurable using the "browser-subprocess-path" command-line switch.
+    /// The path to a separate executable that will be launched for sub-processes. If this value is empty on Windows or Linux then the main process executable will be used. If this value is empty on macOS then a helper executable must exist at "Contents/Frameworks/&lt;app&gt; Helper.app/Contents/MacOS/&lt;app&gt; Helper" in the top-level app bundle. See the comments on CefExecuteProcess() for details. If this value is non-empty then it must be an absolute path. Also configurable using the "browser-subprocess-path" command-line switch.
     ///</summary>
     public CefStringUtf16 browser_subprocess_path;
     ///<summary>
@@ -105,7 +105,7 @@ public unsafe partial struct CefSettings
     ///</summary>
     public CefStringUtf16 locales_dir_path;
     ///<summary>
-    /// Set to a value between 1024 and 65535 to enable remote debugging on the specified port. Also configurable using the "remote-debugging-port" command-line switch. Specifying 0 via the command-line switch will result in the selection of an ephemeral port and the port number will be printed as part of the WebSocket endpoint URL to stderr. If a cache directory path is provided the port will also be written to the <cache-dir>/DevToolsActivePort file. Remote debugging can be accessed by loading the chrome://inspect page in Google Chrome. Port numbers 9222 and 9229 are discoverable by default. Other port numbers may need to be configured via "Discover network targets" on the Devices tab.
+    /// Set to a value between 1024 and 65535 to enable remote debugging on the specified port. Also configurable using the "remote-debugging-port" command-line switch. Specifying 0 via the command-line switch will result in the selection of an ephemeral port and the port number will be printed as part of the WebSocket endpoint URL to stderr. If a cache directory path is provided the port will also be written to the &lt;cache-dir&gt;/DevToolsActivePort file. Remote debugging can be accessed by loading the chrome://inspect page in Google Chrome. Port numbers 9222 and 9229 are discoverable by default. Other port numbers may need to be configured via "Discover network targets" on the Devices tab.
     ///</summary>
     public int remote_debugging_port;
     ///<summary>

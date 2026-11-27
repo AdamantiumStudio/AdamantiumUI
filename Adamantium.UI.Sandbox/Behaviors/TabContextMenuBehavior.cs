@@ -11,7 +11,7 @@ using Adamantium.UI.Sandbox.Localization;
 namespace Adamantium.UI.Sandbox.Behaviors;
 
 /// <summary>The application-built tab context menu, calling the docking area's own API (e.g.
-/// <see cref="DockingArea.ClosePane"/>) so its policies apply.</summary>
+/// <see cref="DockingArea.ClosePaneAsync(string)"/>) so its policies apply.</summary>
 public class TabContextMenuBehavior : Behavior<DockingArea>
 {
     private DockingArea _area;

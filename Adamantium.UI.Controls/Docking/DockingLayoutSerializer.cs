@@ -20,6 +20,9 @@ public static class DockingLayoutSerializer
 
     public const int Version = 1;
 
+    /// <summary>Writes a layout as text.</summary>
+    /// <param name="layout">The layout written.</param>
+    /// <param name="keepPane">Whether a pane is written; null writes every pane.</param>
     /// <param name="restoreKeyOf">What the application needs in order to make a pane again (<see cref="Pane.RestoreKey"/>).
     /// Written beside the id, so a pane that was opened by code - and therefore does not exist at start-up - can be
     /// recreated instead of silently dropped.</param>

@@ -682,12 +682,14 @@ public class PropertyGrid : Control
     /// report; a row on screen keeps its bindings live instead.</summary>
     public object ValueOf(object target, PropertyDefinition definition) => definition?.ReadValue(target);
 
-    /// <summary>What a BINDING answers on one object, asked once. The same question <see cref="ValueOf"/> asks, for a
+    /// <summary>What a BINDING answers on one object, asked once. The same question
+    /// <see cref="ValueOf(object, PropertyDefinition)"/> asks, for a
     /// caller holding a binding that belongs to no line of its own - an items list naming each of its items.</summary>
     public object Read(object target, BindingBase binding) => BoundValue.ReadOnce(target, binding);
 
-    /// <summary>Writes one value to ONE object through a definition's binding - the mirror of <see cref="ValueOf"/>;
-    /// <see cref="PropertyDefinition.WriteValue"/> does it with no grid at hand.</summary>
+    /// <summary>Writes one value to ONE object through a definition's binding - the mirror of
+    /// <see cref="ValueOf(object, PropertyDefinition)"/>; <see cref="PropertyDefinition.WriteValue(object, object)"/>
+    /// does it with no grid at hand.</summary>
     public bool WriteTo(object target, PropertyDefinition definition, object value) =>
         definition != null && definition.WriteValue(target, value);
 

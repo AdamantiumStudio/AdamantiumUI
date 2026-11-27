@@ -89,7 +89,7 @@ public enum CefResourceType : uint
     Xhr = 13,
 
     ///<summary>
-    /// A request for a "<ping>".
+    /// A request for a "&lt;ping&gt;".
     ///</summary>
     Ping = 14,
 

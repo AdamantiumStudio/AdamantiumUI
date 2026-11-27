@@ -16,6 +16,11 @@ namespace Adamantium.UI.Platforms.Windows.Printing;
 // as the stroke shader lays it - runs stroked with XPS's own caps where both their ends allow, the rest as shapes.
 internal sealed partial class XpsDrawingSession
 {
+    /// <summary>Fills and strokes <paramref name="geometry"/> where <paramref name="transform"/> puts it.</summary>
+    /// <param name="brush">Its fill; null for none.</param>
+    /// <param name="pen">Its outline; null for none.</param>
+    /// <param name="geometry">The shape.</param>
+    /// <param name="transform">From the geometry's units to the page's.</param>
     /// <param name="gradientBox">The box a gradient or tile is laid over, in the geometry's units; null for the
     /// geometry's own bounds.</param>
     private void Figures(Brush brush, Pen pen, Geometry geometry, Matrix4x4F transform, Rect? gradientBox = null)

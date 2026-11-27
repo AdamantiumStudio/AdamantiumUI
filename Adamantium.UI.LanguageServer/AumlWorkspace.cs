@@ -76,15 +76,15 @@ public sealed class AumlWorkspace : IDisposable
         }
     }
 
-    /// <summary>
-    /// Builds an assembly-only type model from every managed dll in <paramref name="binDir"/> plus the runtime
-    /// (used by the console --demo). The per-project path uses <see cref="SourceProjectGraph"/> for live source.
-    /// </summary>
     private static IEnumerable<string> MarkupFiles(string projectDir) =>
         Directory.EnumerateFiles(projectDir, "*.auml", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                      && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"));
 
+    /// <summary>
+    /// Builds an assembly-only type model from every managed dll in <paramref name="binDir"/> plus the runtime
+    /// (used by the console --demo). The per-project path uses <see cref="SourceProjectGraph"/> for live source.
+    /// </summary>
     public static AumlTypeModel BuildFromBin(string binDir)
     {
         var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

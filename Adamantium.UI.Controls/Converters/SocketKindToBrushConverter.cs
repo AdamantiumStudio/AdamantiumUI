@@ -8,7 +8,7 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Converters;
 
-/// <summary>A socket's kind into its color, from the application's <see cref="InfiniteCanvas.SocketKinds"/> table; an unknown
+/// <summary>A socket's kind into its color, from the application's <see cref="NodeGraph.SocketKinds"/> table; an unknown
 /// or empty kind keeps the theme's.</summary>
 internal class SocketKindToBrushConverter : IValueConverter
 {

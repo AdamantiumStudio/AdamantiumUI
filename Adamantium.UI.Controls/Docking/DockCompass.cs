@@ -136,6 +136,8 @@ public class DockCompass : Panel
 
     /// <summary>Aims at the group under the pointer (a rectangle in this control's coordinates, which cover the whole docking
     /// area) and lights the indicator under the pointer.</summary>
+    /// <param name="group">The group under the pointer, in this control's coordinates.</param>
+    /// <param name="armed">The indicator under the pointer, lit.</param>
     /// <param name="isEdge">The armed indicator is one of the four EDGE anchors rather than one of the cross - which is
     /// what decides whether the preview covers part of the group or part of the whole area.</param>
     /// <param name="edgeExtent">How wide the band an edge anchor would take is, so the preview shows what the drop does.</param>

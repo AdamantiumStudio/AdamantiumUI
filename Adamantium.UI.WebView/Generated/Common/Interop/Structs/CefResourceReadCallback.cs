@@ -24,7 +24,7 @@ public unsafe partial struct CefResourceReadCallback
     ///</summary>
     public CefBaseRefCounted @base;
     ///<summary>
-    /// Callback for asynchronous continuation of read(). If |bytes_read| == 0 the response will be considered complete. If |bytes_read| > 0 then read() will be called again until the request is complete (based on either the result or the expected content length). If |bytes_read| < 0 then the request will fail and the |bytes_read| value will be treated as the error code.
+    /// Callback for asynchronous continuation of read(). If |bytes_read| == 0 the response will be considered complete. If |bytes_read| &gt; 0 then read() will be called again until the request is complete (based on either the result or the expected content length). If |bytes_read| &lt; 0 then the request will fail and the |bytes_read| value will be treated as the error code.
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefResourceReadCallback*, int, void> cont;
 }

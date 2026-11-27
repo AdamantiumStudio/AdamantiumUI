@@ -41,6 +41,9 @@ public static class ResourceResolver
 
     /// <summary>Applies a <c>{ResourceReference}</c> written directly on any component's property: resolves Theme/Global
     /// now and, for visual-tree targets, re-resolves tree-scoped on attach.</summary>
+    /// <param name="target">The component the property is on.</param>
+    /// <param name="property">The property's name.</param>
+    /// <param name="key">The resource's key.</param>
     /// <param name="priority">The priority a literal written there would get: Template inside a ControlTemplate, so
     /// triggers can still change it; Local on an element.</param>
     public static void SetDeferred(IAdamantiumComponent target, string property, string key,

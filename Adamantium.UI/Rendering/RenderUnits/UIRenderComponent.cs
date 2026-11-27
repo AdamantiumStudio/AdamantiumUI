@@ -445,8 +445,8 @@ public class ImageRenderComponent : UIRenderComponent
 
     private SamplerState Sampler => ImageSamplers.Of(Image);
 
-    /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
-    /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>
+    /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via
+    /// <see cref="Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>
     public SharedSurface SharedSource { get; set; }
 
     public override bool AwaitsFrame => SharedSource?.AwaitsFrame == true;

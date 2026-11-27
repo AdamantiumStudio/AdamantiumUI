@@ -11,7 +11,7 @@ namespace Adamantium.UI.Controls;
 /// <summary>
 /// The default physical <see cref="IScrollableContent"/>: it hosts a <see cref="ScrollViewer"/>'s content, measures
 /// it unbounded on the scrollable axes (so it reports its full extent), and shows a window onto it by translating the
-/// child by -<see cref="Offset"/> and clipping to the viewport (<see cref="UIComponent.ClipToBounds"/> -&gt; a
+/// child by -<see cref="Offset"/> and clipping to the viewport (<see cref="Base.UIComponent.ClipToBounds"/> -&gt; a
 /// renderer scissor). A virtualizing panel can replace it later by implementing the same seam.
 /// </summary>
 public class ScrollContentPresenter : ContentPresenter, IScrollableContent

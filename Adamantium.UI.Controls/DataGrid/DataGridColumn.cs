@@ -545,8 +545,8 @@ public abstract class DataGridColumn : FundamentalUIComponent
     protected internal virtual object ValueOfText(string text, object current, System.Globalization.CultureInfo culture) =>
         text;
 
-    /// <summary>Whether a cell's text is <see cref="TextOf"/> its value - true for a column that draws the value in its
-    /// own form, and so what automation reads rather than the pieces the drawing is made of.</summary>
+    /// <summary>Whether a cell's text is <see cref="TextOf(object)"/> its value - true for a column that draws the
+    /// value in its own form, and so what automation reads rather than the pieces the drawing is made of.</summary>
     protected internal virtual bool DrawsItsText => false;
 
     /// <summary>Whether the column is in the table: <see cref="IsVisible"/> and not grouped by, since a grouped value already

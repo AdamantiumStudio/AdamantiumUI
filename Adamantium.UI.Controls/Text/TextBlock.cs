@@ -895,7 +895,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     /// <summary>How many columns text wrapped by words flows through, side by side, the next taking up where the last
-    /// ends; 1 by default. Without a <see cref="Height"/> the columns are as tall as the text split evenly needs.</summary>
+    /// ends; 1 by default. Without a <see cref="MeasurableUIComponent.Height"/> the columns are as tall as the text
+    /// split evenly needs.</summary>
     public int Columns
     {
         get => GetValue<int>(ColumnsProperty);
@@ -1039,7 +1040,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     /// <summary>Which way lines run: across (the default), or down and stacked from right to left, as Chinese and
-    /// Japanese are set vertically. A vertical line is as long as the block is high - its <see cref="Height"/>, else the
+    /// Japanese are set vertically. A vertical line is as long as the block is high - its
+    /// <see cref="MeasurableUIComponent.Height"/>, else the
     /// height it is given - the block asks to be as wide as its lines take, the first line stands at its right edge
     /// unless <see cref="VerticalTextAlignment"/> is set to place the lines across a wider block (Top at its right edge,
     /// Bottom at its left), <see cref="HorizontalTextAlignment"/> places text along

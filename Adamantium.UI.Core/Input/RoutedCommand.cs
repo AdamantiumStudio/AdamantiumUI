@@ -25,7 +25,7 @@ public class RoutedCommand : ICommand
     public IReadOnlyList<KeyGesture> InputGestures { get; }
 
     /// <summary>Raised when what elements say of it may have changed - the focus moved, or one called
-    /// <see cref="CommandManager.InvalidateRequerySuggested"/>; at most once a frame.</summary>
+    /// <see cref="CommandManager.InvalidateRequerySuggested()"/>; at most once a frame.</summary>
     public event EventHandler CanExecuteChanged
     {
         add => CommandManager.RequerySuggested += value;

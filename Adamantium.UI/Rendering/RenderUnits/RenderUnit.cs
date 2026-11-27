@@ -1332,7 +1332,8 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     /// <summary>Rebuilds the band of glyphs kept when the shown part of the text has left it. <paramref name="place"/>
     /// is where the text is drawn now - its placement's newest matrix over its element's world - not
-    /// <see cref="Place"/>, whose copy of the placement a batched text does not refresh while it pans.</summary>
+    /// <see cref="RenderUnit{TPayload}.Place(Matrix4x4F)"/>, whose copy of the placement a batched text does not
+    /// refresh while it pans.</summary>
     internal bool FitBand(Matrix4x4F place, Rect shown, Rect band)
     {
         if (_band is not { } held)

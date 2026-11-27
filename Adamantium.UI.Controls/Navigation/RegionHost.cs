@@ -17,6 +17,9 @@ internal static class RegionHost
     private static readonly ConditionalWeakTable<IUIComponent, IRegion> RegionOf = new();
     private static readonly ConditionalWeakTable<IRegion, List<WeakReference<IUIComponent>>> HostsOf = new();
 
+    /// <summary>Records <paramref name="host"/> as showing <paramref name="region"/>.</summary>
+    /// <param name="region">The region shown.</param>
+    /// <param name="host">The element that shows it.</param>
     /// <param name="named">Declared by name (<c>RegionManager.RegionName</c>): the window it is declared in owns it. A
     /// region a view model hands over (<c>Region.Source</c>) is the view model's, and outlives any window showing it.</param>
     public static void Attach(IRegion region, IUIComponent host, bool named)

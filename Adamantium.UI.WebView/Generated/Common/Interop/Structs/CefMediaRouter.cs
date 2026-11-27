@@ -28,7 +28,7 @@ public unsafe partial struct CefMediaRouter
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefMediaRouter*, Adamantium.UI.WebView.Cef.Interop.CefMediaObserver*, Adamantium.UI.WebView.Cef.Interop.CefRegistration*> add_observer;
     ///<summary>
-    /// Returns a MediaSource object for the specified media source URN. Supported URN schemes include "cast:" and "dial:", and will be already known by the client application (e.g. "cast:<appId>?clientId=<clientId>").
+    /// Returns a MediaSource object for the specified media source URN. Supported URN schemes include "cast:" and "dial:", and will be already known by the client application (e.g. "cast:&lt;appId&gt;?clientId=&lt;clientId&gt;").
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefMediaRouter*, Adamantium.UI.WebView.Cef.Interop.CefStringUtf16*, Adamantium.UI.WebView.Cef.Interop.CefMediaSource*> get_source;
     ///<summary>

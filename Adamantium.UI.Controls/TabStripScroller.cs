@@ -163,6 +163,8 @@ public class TabStripScroller : InputUIComponent, IContainer
     /// in one place, because three things drag over a strip - a tab being reordered, a whole window being docked, and a
     /// payload being dragged over - and they must feel the same.</summary>
     /// <param name="along">Where the pointer is along the strip's own axis, in the strip's coordinates.</param>
+    /// <param name="margin">How far in from each edge the panning starts.</param>
+    /// <param name="rate">How fast it pans per unit past the margin.</param>
     public bool PanNear(double along, double margin, double rate)
     {
         var extent = IsHorizontal ? RenderSize.Width : RenderSize.Height;

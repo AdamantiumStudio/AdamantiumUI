@@ -8,6 +8,12 @@ namespace Adamantium.UI.Core.Input;
 // only on elements that left or joined its ancestor chain.
 internal static class AncestorState
 {
+    /// <summary>Raises <paramref name="leaveEvent"/> on the elements only <paramref name="oldLeaf"/> stood under and
+    /// <paramref name="enterEvent"/> on those only <paramref name="newLeaf"/> stands under.</summary>
+    /// <param name="oldLeaf">The element the state was on; null for none.</param>
+    /// <param name="newLeaf">The element the state moves to; null for none.</param>
+    /// <param name="enterEvent">Raised on the elements that joined the chain.</param>
+    /// <param name="leaveEvent">Raised on the elements that left it.</param>
     /// <param name="makeArgs">Creates a fresh event-args for the given event - one per raise, so per-element Handled /
     /// Source state never leaks between targets.</param>
     public static void Transition(IInputComponent oldLeaf, IInputComponent newLeaf,

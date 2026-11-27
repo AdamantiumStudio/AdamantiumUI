@@ -157,7 +157,8 @@ public class ItemContainerGenerator
     /// <summary>The indices currently realized (for a virtualizing panel: only the visible window).</summary>
     public IReadOnlyCollection<int> RealizedIndices => _byIndex.Keys;
 
-    /// <summary>In-window slots the last <see cref="SetWindow"/> DEFERRED because the per-frame rebind budget was spent.
+    /// <summary>In-window slots the last <see cref="SetWindow(int, int, double, int, Action{IUIComponent})"/>
+    /// DEFERRED because the per-frame rebind budget was spent.
     /// They have no real container yet (the panel shows a skeleton there); the next pass rebinds them. Empty when the
     /// whole window fit the budget (normal/slow scroll).</summary>
     public IReadOnlyList<int> PendingIndices => _pendingBuf;
@@ -511,7 +512,7 @@ public class ItemContainerGenerator
 
     /// <summary>Pools a generated container that is attached but no longer mapped to any index (a scroll/recycle edge
     /// case left it visible). Returning it to the pool makes it reusable instead of leaking - the panel hides it and the
-    /// next <see cref="SetWindow"/> draws it as a donor again.</summary>
+    /// next <see cref="SetWindow(int, int, double, int, Action{IUIComponent})"/> draws it as a donor again.</summary>
     public void ReclaimDetached(IUIComponent container)
     {
         if (container == null) return;

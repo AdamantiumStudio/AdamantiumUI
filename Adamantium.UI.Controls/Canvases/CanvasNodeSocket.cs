@@ -10,8 +10,8 @@ namespace Adamantium.UI.Controls.Canvases;
 /// found under the pointer. No behavior.</summary>
 public class CanvasNodeSocket : Border
 {
-    /// <summary>The socket this disc stands for - its own <see cref="DataContext"/>, said out loud so that whoever
-    /// found the disc does not have to know how the template was wired.</summary>
+    /// <summary>The socket this disc stands for - its own <see cref="FundamentalUIComponent.DataContext"/>, said out
+    /// loud so that whoever found the disc does not have to know how the template was wired.</summary>
     public CanvasNodePin Pin => DataContext as CanvasNodePin;
 
     /// <summary>The middle of it, in the coordinates of <paramref name="within"/> - the node, usually. Null while the

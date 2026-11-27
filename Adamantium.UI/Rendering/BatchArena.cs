@@ -13,7 +13,8 @@ namespace Adamantium.UI.Rendering;
 // staged inside the arena and referred to by range.
 internal abstract class BatchArena
 {
-    /// <summary>Which <see cref="RenderOp.Batch"/> draws this arena - how a recorded op is matched back to it. Set per
+    /// <summary>Which <see cref="RenderCache.RenderOp.Batch"/> draws this arena - how a recorded op is matched back to
+    /// it. Set per
     /// INSTANCE, not per type: the halo family runs two arenas of one type, one drawn under its shapes and one over.</summary>
     public byte BatchId { get; set; }
 

@@ -882,7 +882,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject, IPendin
     /// <summary>Where this batch is flushed among the others.</summary>
     public BatchLayer Layer => BatchLayer.InstancedFill;
 
-    /// <summary>Which <see cref="RenderOp.Batch"/> its flush op names - <see cref="ArenaBatchId"/>.</summary>
+    /// <summary>Which <see cref="RenderCache.RenderOp.Batch"/> its flush op names -
+    /// <see cref="ArenaBatchId"/>.</summary>
     public byte BatchId => ArenaBatchId;
 
     int IPendingBatch.Flush(IGraphicsDevice device, Rect2D fullScissor, Matrix4x4F projection) =>

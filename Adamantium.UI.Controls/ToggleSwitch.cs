@@ -7,7 +7,8 @@ namespace Adamantium.UI.Controls;
 /// A modern on/off switch - a pill track with a thumb that slides between the off and on positions on click. It is a
 /// strictly two-state <see cref="ToggleButton"/> (a switch is never indeterminate), so <see cref="ToggleButton.IsChecked"/>
 /// (true = on) carries the state and the inherited Checked/Unchecked events fire on a flip. The track + sliding thumb
-/// are entirely the theme template (a trigger on IsChecked moves the thumb); <see cref="Control"/> content is the label.
+/// are entirely the theme template (a trigger on IsChecked moves the thumb); <see cref="ContentControl.Content"/> is
+/// the label.
 /// </summary>
 public class ToggleSwitch : ToggleButton
 {

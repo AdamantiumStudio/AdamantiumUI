@@ -159,7 +159,8 @@ public sealed class VisualRenderer : IVisualRenderer
         LoopSignal.Request();
     }
 
-    /// <summary>Queue a DETACHED visual, split the same way <see cref="RequestSnapshot"/> is. Rendering it synchronously
+    /// <summary>Queue a DETACHED visual, split the same way
+    /// <see cref="RequestSnapshot(IUIComponent, Action{ImageSource})"/> is. Rendering it synchronously
     /// instead submits and waits on the SHARED VkDevice from whatever thread asked, racing the window's own frame - and
     /// the picture that came back was intermittently wrong.</summary>
     public void RequestRender(IUIComponent visual, Size<double> size, double scale, Color? clearColor, Action<ImageSource> onReady)

@@ -7,7 +7,7 @@ using Adamantium.UI.Core.Media;
 namespace Adamantium.UI.Controls;
 
 /// <summary>Scales its child to fit per <see cref="Stretch"/> and <see cref="StretchDirection"/>. It owns the child's
-/// <see cref="UIComponent.RenderTransform"/>; wrap the child to use your own.</summary>
+/// <see cref="Base.UIComponent.RenderTransform"/>; wrap the child to use your own.</summary>
 public class Viewbox : Decorator
 {
     public static readonly AdamantiumProperty StretchProperty = AdamantiumProperty.Register(nameof(Stretch),

@@ -16,7 +16,8 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls;
 
 /// <summary>
-/// Picks a value from a continuous [<see cref="RangeBase.Minimum"/>, <see cref="RangeBase.Maximum"/>] range by
+/// Picks a value from a continuous [<see cref="Primitives.RangeLimitsBase.Minimum"/>,
+/// <see cref="Primitives.RangeLimitsBase.Maximum"/>] range by
 /// dragging a thumb along a track (or clicking the track to page, or arrow/page keys). Reuses the <see cref="Track"/>
 /// primitive for thumb sizing/positioning and pixel-to-value mapping, so this class only owns the interaction; the
 /// track, thumb and (optional) ticks are the theme template. Mirrors WPF's Slider, minus the IsMoveToPointEnabled knob.
@@ -82,7 +83,8 @@ public class Slider : RangeBase
     }
 
     /// <summary>When true, clicking anywhere on the track jumps the thumb straight to that point (and stays there),
-    /// instead of paging by <see cref="RangeBase.LargeChange"/>. Mirrors WPF's Slider.IsMoveToPointEnabled.</summary>
+    /// instead of paging by <see cref="Primitives.RangeLimitsBase.LargeChange"/>. Mirrors WPF's
+    /// Slider.IsMoveToPointEnabled.</summary>
     public bool IsMoveToPointEnabled
     {
         get => GetValue<bool>(IsMoveToPointEnabledProperty);

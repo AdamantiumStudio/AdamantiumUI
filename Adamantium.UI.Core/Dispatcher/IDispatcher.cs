@@ -15,7 +15,7 @@ public interface IDispatcher
     Task InvokeAsync(Delegate action, object args);
 
     /// <summary>Queues <paramref name="action"/> to run on the UI LOOP thread (drained at the start of the next Update),
-    /// running inline when already on it. Unlike <see cref="Invoke"/> - which the dispatcher executes on the OS
-    /// message-pump thread - this marshals onto the layout/render loop thread (<see cref="UIThread"/>).</summary>
+    /// running inline when already on it. Unlike <see cref="Invoke(Action, DispatcherPriority)"/> - which the
+    /// dispatcher executes on the OS message-pump thread - this marshals onto the layout/render loop thread (<see cref="UIThread"/>).</summary>
     void Post(Action action);
 }

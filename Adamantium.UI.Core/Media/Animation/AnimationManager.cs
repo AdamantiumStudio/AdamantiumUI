@@ -8,7 +8,7 @@ namespace Adamantium.UI.Core.Media.Animation;
 /// <summary>
 /// The animation heartbeat: holds the running animations and advances them once per frame. The application loop calls
 /// <see cref="Tick"/> with the frame delta (see UIApplication.Update); animations register themselves via
-/// <see cref="AdamantiumComponent.BeginAnimation"/>. Minimal and allocation-light - finished animations are removed in
+/// <see cref="AnimatableUIComponent.BeginAnimation"/>. Minimal and allocation-light - finished animations are removed in
 /// place, so an idle UI does no per-frame work.
 /// </summary>
 public static class AnimationManager

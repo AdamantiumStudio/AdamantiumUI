@@ -17,7 +17,8 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls;
 
 /// <summary>
-/// Picks a SPAN out of [<see cref="Minimum"/>, <see cref="Maximum"/>] with two thumbs. Where a pair of Sliders leaves it
+/// Picks a SPAN out of
+/// [<see cref="Primitives.RangeLimitsBase.Minimum"/>, <see cref="Primitives.RangeLimitsBase.Maximum"/>] with two thumbs. Where a pair of Sliders leaves it
 /// to the caller to keep "from" below "to" - and lets the user drag them past each other - this control cannot express
 /// an inverted range at all: the bounds coerce against each other, keeping at least <see cref="MinimumRange"/> between
 /// them. Interaction lives here; the geometry is <see cref="RangeTrack"/>, exactly as Slider leaves it to Track.

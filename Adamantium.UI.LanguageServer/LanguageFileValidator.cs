@@ -8,7 +8,11 @@ namespace Adamantium.UI.LanguageServer;
 /// the project's language files with the editor's text in place of the saved one.</summary>
 public static class LanguageFileValidator
 {
+    /// <summary>What the build would say of <paramref name="path"/> with <paramref name="text"/> in it.</summary>
+    /// <param name="path">The language file.</param>
+    /// <param name="text">Its text as typed.</param>
     /// <param name="openText">The text of a file open in the editor, or null to read it from disk.</param>
+    /// <param name="model">The project's types.</param>
     public static IReadOnlyList<AumlDiagnostic> Validate(string path, string text, Func<string, string> openText, AumlTypeModel model)
     {
         var project = LanguageProject.Of(path);

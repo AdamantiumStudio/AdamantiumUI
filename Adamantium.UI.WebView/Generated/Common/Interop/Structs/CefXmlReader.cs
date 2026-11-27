@@ -72,7 +72,7 @@ public unsafe partial struct CefXmlReader
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefXmlReader*, Adamantium.UI.WebView.Cef.Interop.CefStringUserfree> get_xml_lang;
     ///<summary>
-    /// Returns true (1) if the node represents an NULL element. "<a/>" is considered NULL but "<a></a>" is not.
+    /// Returns true (1) if the node represents an NULL element. "&lt;a/&gt;" is considered NULL but "&lt;a&gt;&lt;/a&gt;" is not.
     ///</summary>
     public delegate* unmanaged<Adamantium.UI.WebView.Cef.Interop.CefXmlReader*, int> is_empty_element;
     ///<summary>

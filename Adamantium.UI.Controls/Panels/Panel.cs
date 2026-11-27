@@ -21,8 +21,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
    public virtual IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction) =>
       TabNeighbor(from, IsForward(direction));
 
-   /// <summary>The neighbor in TAB order: by <see cref="KeyboardNavigation.TabIndex"/> first, and by the order the
-   /// children stand in for the ties. The arrows deliberately do NOT use this - they are a question about the layout,
+   /// <summary>The neighbor in TAB order: by <see cref="KeyboardNavigation.TabIndexProperty"/> first, and by the order
+   /// the children stand in for the ties. The arrows deliberately do NOT use this - they are a question about the layout,
    /// and an explicit tab order says nothing about which control is physically to the left of another.</summary>
    private IUIComponent TabNeighbor(IUIComponent from, bool forward)
    {

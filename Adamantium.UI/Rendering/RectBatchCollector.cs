@@ -78,22 +78,40 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     internal static bool IsDashPatternBatchable(IReadOnlyList<double> dash)
         => dash.Count is >= 2 and <= 6 && dash.Count % 2 == 0;
 
-    // Bake a pen into the instance's stroke fields (shared by the rect + ellipse batches). Color with opacity folded;
-    // width/dash/offset scale by the world device scale (sx) into device px, matching the arc-length `s` the shader
-    // computes; trim is a 0..1 fraction. CENTER-aligned (half in / half out). No pen -> a zero stroke (fill only).
-    /// <param name="contourLength">Length of the outline being stroked, in LOCAL units, or 0 when the caller cannot say.
-    /// Only <see cref="Pen.FitDashesToContour"/> needs it: the pattern is stretched so a whole number of periods goes
-    /// round, which is what keeps a closed dashed ring from carrying one long dash at its seam.</param>
     /// <summary>The least a pen is drawn wide, in device pixels, whatever its element's scale - what every shape batch
     /// carries to its vertex shader beside the pen; 0 for no floor.</summary>
     internal static float FloorOf(Pen pen) => pen == null ? 0f : (float)Math.Max(pen.MinimumDeviceThickness, 0);
 
+    /// <summary>Bakes a pen into the instance's stroke fields, without the dash runs past the first pair - see
+    /// <see cref="BakeStroke(Pen, double, float, out Vector4F, out Vector4F, out Vector4F, out Vector4F, double)"/>.
+    /// </summary>
+    /// <param name="pen">The pen; null for a zero stroke (fill only).</param>
+    /// <param name="opacity">Folded into its color.</param>
+    /// <param name="sx">The world's device scale its width, dashes and offset are scaled by.</param>
+    /// <param name="strokeColor">Its color.</param>
+    /// <param name="stroke0">Its width and first dash pair.</param>
+    /// <param name="stroke1">Its dash offset, trim, and cap and join flags.</param>
+    /// <param name="contourLength">Length of the outline being stroked, in LOCAL units, or 0 when the caller cannot
+    /// say.</param>
     internal static void BakeStroke(Pen pen, double opacity, float sx,
         out Vector4F strokeColor, out Vector4F stroke0, out Vector4F stroke1, double contourLength = 0)
         => BakeStroke(pen, opacity, sx, out strokeColor, out stroke0, out stroke1, out _, contourLength);
 
+    /// <summary>Bakes a pen into the instance's stroke fields (shared by the rect + ellipse batches). Color with opacity
+    /// folded; width/dash/offset scale by the world device scale (sx) into device px, matching the arc-length `s` the
+    /// shader computes; trim is a 0..1 fraction. CENTER-aligned (half in / half out). No pen -> a zero stroke (fill
+    /// only).</summary>
+    /// <param name="pen">The pen; null for a zero stroke (fill only).</param>
+    /// <param name="opacity">Folded into its color.</param>
+    /// <param name="sx">The world's device scale its width, dashes and offset are scaled by.</param>
+    /// <param name="strokeColor">Its color.</param>
+    /// <param name="stroke0">Its width and first dash pair.</param>
+    /// <param name="stroke1">Its dash offset, trim, and cap and join flags.</param>
     /// <param name="dash">Dash runs 2..5, in device px - the pattern beyond the first ON/GAP pair. Zero for the plain
     /// two-run pattern, which is what nearly every pen carries.</param>
+    /// <param name="contourLength">Length of the outline being stroked, in LOCAL units, or 0 when the caller cannot say.
+    /// Only <see cref="Pen.FitDashesToContour"/> needs it: the pattern is stretched so a whole number of periods goes
+    /// round, which is what keeps a closed dashed ring from carrying one long dash at its seam.</param>
     internal static void BakeStroke(Pen pen, double opacity, float sx,
         out Vector4F strokeColor, out Vector4F stroke0, out Vector4F stroke1, out Vector4F dash, double contourLength = 0)
     {
@@ -356,7 +374,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         }
     }
 
-    /// <summary>A re-bake changes how a slot LOOKS, not whose it is. <see cref="BakeItem"/> answers with an UNOWNED
+    /// <summary>A re-bake changes how a slot LOOKS, not whose it is.
+    /// <see cref="BakeItem(RectanglePayload, Matrix4x4F, double, int, int, out RectItem)"/> answers with an UNOWNED
     /// record - it is handed a payload, not a group - so writing it whole would erase the tag the orphan sweep asks for,
     /// and the control could then leave the paint order without anyone able to blank its instances. A caller that does
     /// know the owner (the patch stage) still wins.</summary>

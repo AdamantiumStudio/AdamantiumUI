@@ -6,6 +6,10 @@ namespace Adamantium.UI.LanguageServer;
 
 public enum AumlCompletionItemKind { Element, Property, Value, Directive }
 
+/// <summary>One completion offered at the caret.</summary>
+/// <param name="Label">What the list shows.</param>
+/// <param name="Kind">What sort of thing it completes.</param>
+/// <param name="Detail">A line about it beside the label, such as its type; null for none.</param>
 /// <param name="InsertText">Optional snippet to insert instead of <paramref name="Label"/> (LSP snippet syntax,
 /// e.g. <c>Name="$0"</c> to drop the caret between the quotes). Null = insert the label verbatim.</param>
 /// <param name="ReplaceBack">When set, the item replaces this many characters immediately before the caret (an

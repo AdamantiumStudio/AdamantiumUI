@@ -28,52 +28,52 @@ public enum CefCertStatus : uint
     AuthorityInvalid = 4,
 
     ///<summary>
-    /// 1 << 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
+    /// 1 &lt;&lt; 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
     ///</summary>
     NoRevocationMechanism = 16,
 
     ///<summary>
-    /// 1 << 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
+    /// 1 &lt;&lt; 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
     ///</summary>
     UnableToCheckRevocation = 32,
 
     ///<summary>
-    /// 1 << 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
+    /// 1 &lt;&lt; 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
     ///</summary>
     Revoked = 64,
 
     ///<summary>
-    /// 1 << 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
+    /// 1 &lt;&lt; 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
     ///</summary>
     Invalid = 128,
 
     ///<summary>
-    /// 1 << 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
+    /// 1 &lt;&lt; 3 is reserved for ERR_CERT_CONTAINS_ERRORS (not useful with WinHTTP).
     ///</summary>
     WeakSignatureAlgorithm = 256,
 
     ///<summary>
-    /// 1 << 9 was used for CERT_STATUS_NOT_IN_DNS
+    /// 1 &lt;&lt; 9 was used for CERT_STATUS_NOT_IN_DNS
     ///</summary>
     NonUniqueName = 1024,
 
     ///<summary>
-    /// 1 << 9 was used for CERT_STATUS_NOT_IN_DNS
+    /// 1 &lt;&lt; 9 was used for CERT_STATUS_NOT_IN_DNS
     ///</summary>
     WeakKey = 2048,
 
     ///<summary>
-    /// 1 << 12 was used for CERT_STATUS_WEAK_DH_KEY
+    /// 1 &lt;&lt; 12 was used for CERT_STATUS_WEAK_DH_KEY
     ///</summary>
     PinnedKeyMissing = 8192,
 
     ///<summary>
-    /// 1 << 12 was used for CERT_STATUS_WEAK_DH_KEY
+    /// 1 &lt;&lt; 12 was used for CERT_STATUS_WEAK_DH_KEY
     ///</summary>
     NameConstraintViolation = 16384,
 
     ///<summary>
-    /// 1 << 12 was used for CERT_STATUS_WEAK_DH_KEY
+    /// 1 &lt;&lt; 12 was used for CERT_STATUS_WEAK_DH_KEY
     ///</summary>
     ValidityTooLong = 32768,
 

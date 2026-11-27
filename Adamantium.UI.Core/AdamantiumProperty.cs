@@ -189,6 +189,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
 
    /// <param name="source">The component whose property changed - passed as the event <c>sender</c> so handlers have the
    /// source's identity (the missing piece that previously forced blind reactions).</param>
+   /// <param name="e">What changed.</param>
    internal void RaiseChanged(object source, AdamantiumPropertyChangedEventArgs e)
    {
       Changed?.Invoke(source, e);

@@ -34,8 +34,12 @@ public sealed partial class PdfContentSession
     /// <summary>Strokes the pen's runs along <paramref name="curves"/>, in the content's current units: the bites of
     /// concave ends cut out first, the runs stroked without caps, then the convex ends filled with the same paint.
     /// <paramref name="paintCaps"/> fills the path given with the stroke's paint.</summary>
+    /// <param name="pen">The pen stroked.</param>
+    /// <param name="curves">The path stroked.</param>
+    /// <param name="width">The stroke's width, in the content's current units.</param>
     /// <param name="reach">How far past the line the stroke reaches - its miters and ends: what a run's bites leave
     /// uncut around it.</param>
+    /// <param name="paintCaps">Fills the path given with the stroke's paint.</param>
     private bool StrokeRuns(Pen pen, PathCurves curves, double width, double reach, Action paintCaps)
     {
         reach = Math.Max(reach, width) * 2;

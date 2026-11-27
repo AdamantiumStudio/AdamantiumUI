@@ -33,6 +33,8 @@ internal sealed class SplashScreen : ISplashScreen
 
     private readonly bool _wearsMacOsTheme;
 
+    /// <param name="application">The application starting.</param>
+    /// <param name="windowType">The type of the splash window.</param>
     /// <param name="startupPlacement">Where the startup window was remembered: the splash window appears over it.</param>
     /// <param name="wearsMacOsTheme">Whether the application is, or is to be, on the MacOs theme, whose close light the
     /// splash window then has.</param>
