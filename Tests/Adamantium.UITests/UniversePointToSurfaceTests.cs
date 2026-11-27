@@ -15,24 +15,10 @@ namespace Adamantium.UITests;
 
 /// <summary>The pointer's point on a universe's surface, asked from the universe's thread: through where the surface
 /// stood when its own thread last placed it - the same point a walk of the tree gives - and, the surface taken out of the
-/// tree, the last point it answered instead of a walk that finds no window.</summary>
+/// tree, by where it last stood instead of a walk that finds no window.</summary>
 [TestFixture]
 public class UniversePointToSurfaceTests
 {
-    private sealed class TestWindowRoot : Grid, IRootVisualComponent
-    {
-        public Vector2<double> PointToClient(PixelPoint point) => new(point.X - Position.X, point.Y - Position.Y);
-        public PixelPoint PointToScreen(Vector2<double> point) => new((int)point.X + Position.X, (int)point.Y + Position.Y);
-        public PixelPoint Position { get; set; }
-        public void AttachContextAndInitialize(IUIContext context) { }
-        public double Left { get; set; }
-        public double Top { get; set; }
-        public string Title { get; set; }
-        public double ClientWidth { get; set; }
-        public double ClientHeight { get; set; }
-        public IUIContext UIContext => null;
-    }
-
     [Test]
     public void APointOnThePanel_IsWhereTheTreeSaysItIs()
     {
@@ -101,9 +87,9 @@ public class UniversePointToSurfaceTests
         Assert.That(output.PointToSurface(new Vector2F(140, 90)), Is.EqualTo(before));
     }
 
-    private static (TestWindowRoot Root, Border Holder, RenderTargetPanel Panel) Placed()
+    private static (MovableTestWindowRoot Root, Border Holder, RenderTargetPanel Panel) Placed()
     {
-        var root = new TestWindowRoot { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600 };
+        var root = new MovableTestWindowRoot { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600 };
         var panel = new RenderTargetPanel { Width = 300, Height = 200 };
         var holder = new Border
         {

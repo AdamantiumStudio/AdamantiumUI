@@ -25,6 +25,10 @@ namespace Adamantium.UI.Universes
         private readonly List<IUIComponent> watchedAncestors = [];
         private readonly object ancestorsLock = new();
         private bool watchingAncestors;
+        private PixelPoint heldFrom;
+        // Where the surface stands, kept by its own thread for the universe's to read.
+        private volatile SurfacePlacement placement;
+        private LayoutManager placedBy;
 
         public override UniverseOutputDescription Description { get; protected set; }
 
@@ -59,63 +63,6 @@ namespace Adamantium.UI.Universes
             return new Vector2F(point.X, point.Y) * PixelsPerPoint;
         }
 
-        // Where the surface stands in its window: the window, and its client points into the surface's own, read on
-        // the surface's thread.
-        private sealed record SurfacePlacement(IRootVisualComponent Root, Matrix4x4F RootWorld, Matrix4x4F SurfaceWorld,
-            Matrix4x4F WorldToSurface);
-
-        private volatile SurfacePlacement placement;
-        private LayoutManager placedBy;
-
-        // On the surface's own thread: after a layout pass or an overlay arranged, a pointer move, a render transform
-        // given to it or above it, and as it comes into the tree.
-        private void Place()
-        {
-            IUIComponent root = InputComponent;
-            while (root is not IRootVisualComponent && root != null)
-            {
-                root = root.VisualParent;
-            }
-
-            if (root is not IRootVisualComponent window || !InputComponent.IsAttachedToVisualTree)
-            {
-                return;
-            }
-
-            // Made anew only when it moved: a pointer move asks every time.
-            var rootWorld = root.WorldTransform;
-            var surfaceWorld = InputComponent.WorldTransform;
-            if (placement is { } placed && ReferenceEquals(placed.Root, window) && placed.RootWorld == rootWorld
-                && placed.SurfaceWorld == surfaceWorld)
-            {
-                return;
-            }
-
-            placement = new SurfacePlacement(window, rootWorld, surfaceWorld, Matrix4x4F.Invert(surfaceWorld));
-        }
-
-        private void FollowLayout(bool attached)
-        {
-            var wanted = attached ? LayoutManager.For(InputComponent) : null;
-            if (ReferenceEquals(wanted, placedBy))
-            {
-                return;
-            }
-
-            if (placedBy != null)
-            {
-                placedBy.PlacesSettled -= OnPlacesSettled;
-            }
-
-            placedBy = wanted;
-            if (placedBy != null)
-            {
-                placedBy.PlacesSettled += OnPlacesSettled;
-            }
-        }
-
-        private void OnPlacesSettled(object sender, EventArgs e) => Place();
-
         /// <summary>The host window's scale, pixels per point; 1 while the surface has no window.</summary>
         protected float HostScale => HostWindow is { } window ? (float)window.DpiScale.X : 1;
 
@@ -134,8 +81,6 @@ namespace Adamantium.UI.Universes
 
             root.SetRelativeMouseMode(hold, hold ? default : heldFrom);
         }
-
-        private PixelPoint heldFrom;
 
         protected UIUniverseOutput(IEventAggregator eventAggregator) : base(eventAggregator)
         {
@@ -420,6 +365,55 @@ namespace Adamantium.UI.Universes
 
             return false;
         }
+
+        // On the surface's own thread: after a layout pass or an overlay arranged, a pointer move, a render transform
+        // given to it or above it, and as it comes into the tree.
+        private void Place()
+        {
+            IUIComponent root = InputComponent;
+            while (root is not IRootVisualComponent && root != null)
+            {
+                root = root.VisualParent;
+            }
+
+            if (root is not IRootVisualComponent window || !InputComponent.IsAttachedToVisualTree)
+            {
+                return;
+            }
+
+            // Made anew only when it moved: a pointer move asks every time.
+            var rootWorld = root.WorldTransform;
+            var surfaceWorld = InputComponent.WorldTransform;
+            if (placement is { } placed && ReferenceEquals(placed.Root, window) && placed.RootWorld == rootWorld
+                && placed.SurfaceWorld == surfaceWorld)
+            {
+                return;
+            }
+
+            placement = new SurfacePlacement(window, rootWorld, surfaceWorld, Matrix4x4F.Invert(surfaceWorld));
+        }
+
+        private void FollowLayout(bool attached)
+        {
+            var wanted = attached ? LayoutManager.For(InputComponent) : null;
+            if (ReferenceEquals(wanted, placedBy))
+            {
+                return;
+            }
+
+            if (placedBy != null)
+            {
+                placedBy.PlacesSettled -= OnPlacesSettled;
+            }
+
+            placedBy = wanted;
+            if (placedBy != null)
+            {
+                placedBy.PlacesSettled += OnPlacesSettled;
+            }
+        }
+
+        private void OnPlacesSettled(object sender, EventArgs e) => Place();
 
         /// <summary>Whether input that reached the listened element is meant for the universe. Everything is, by default;
         /// a host that lays controls over the picture keeps theirs (see <see cref="RenderTargetUniverseOutput"/>). Only
